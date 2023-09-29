@@ -1333,7 +1333,7 @@ module Shostak(X : ALIEN) = struct
     | { bv = Other _ | Ext _ ; sz } as st :: rst ->
       None, if sz > 1 then { st with sz = sz - 1 } :: rst else rst
 
-  (* Fills an initial segment of [buf] from [0] to [sz] with a bitvector that is
+  (* Fills the segment of [buf] from [pos] to [sz] with a bitvector that is
      different from all those in [abstracts].
 
      Uninterpreted ("Other" and "Ext") components in [abstracts] are ignored.
@@ -1353,7 +1353,7 @@ module Shostak(X : ALIEN) = struct
     | _, [] -> Bytes.fill buf pos sz '0'
     | [], _ -> Bytes.fill buf pos sz '1'
     | _, _ ->
-      (* Prefer searching where there are less candidates. *)
+      (* Prefer searching where there are more candidates, i.e. less constraints. *)
       let x, cx, y, cy =
         if nt < nf then t, '1', f, '0' else f, '0', t, '1'
       in
