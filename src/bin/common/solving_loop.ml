@@ -536,10 +536,15 @@ let main () =
               solver;
             st
       )
+    | ":produce-assignments",  Symbol { name = Simple b; _ } ->
+      begin
+        match bool_of_string_opt b with
+        | None -> print_wrn_opt ~name:":verbosity" st_loc "integer" value
+        | Some b -> Options.set_produce_assignments b
+      end
     | (":global-declarations"
       | ":interactive-mode"
       | ":produce-assertions"
-      | ":produce-assignments"
       | ":produce-proofs"
       | ":produce-unsat-assumptions"
       | ":print-success"

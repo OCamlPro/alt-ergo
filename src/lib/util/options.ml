@@ -345,6 +345,7 @@ let output_format = ref Native
 let model_type = ref Value
 let infer_output_format = ref true
 let unsat_core = ref false
+let produce_assignments = ref false
 
 let set_interpretation b = interpretation := b
 let set_optimize b = optimize := b
@@ -354,6 +355,7 @@ let set_output_format b = output_format := b
 let set_model_type t = model_type := t
 let set_infer_output_format b = infer_output_format := b
 let set_unsat_core b = unsat_core := b
+let set_produce_assignments b = produce_assignments := b
 
 let equal_mode a b =
   match a, b with
@@ -394,6 +396,7 @@ let get_model_type () = !model_type
 let get_model_type_constraints () = equal_mode_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
+let get_produce_assignments () = !produce_assignments
 
 (** Profiling options *)
 
