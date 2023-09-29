@@ -340,6 +340,8 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 let interpretation = ref INone
 let dump_models = ref false
 let interpretation_use_underscore = ref false
+let all_models = ref false
+let show_prop_model = ref false
 let output_format = ref Native
 let model_type = ref Value
 let infer_output_format = ref true
@@ -348,6 +350,8 @@ let unsat_core = ref false
 let set_interpretation b = interpretation := b
 let set_dump_models b = dump_models := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
+let set_all_models b = all_models := b
+let set_show_prop_model b = show_prop_model := b
 let set_output_format b = output_format := b
 let set_model_type t = model_type := t
 let set_infer_output_format b = infer_output_format := b
@@ -385,6 +389,8 @@ let get_first_interpretation () = equal_mode !interpretation IFirst
 let get_every_interpretation () = equal_mode !interpretation IEvery
 let get_last_interpretation () = equal_mode !interpretation ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
+let get_all_models () = !all_models
+let get_show_prop_model () = !show_prop_model
 let get_output_format () = !output_format
 let get_output_smtlib () = equal_output_format !output_format Smtlib2
 let get_model_type () = !model_type

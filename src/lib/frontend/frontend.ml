@@ -161,24 +161,42 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some SAT.ProofSearch -> "ProofSearch"
     | Some SAT.ModelGen -> "ModelGen"
 
-  let print_model env timeout =
-    if Options.(get_interpretation () && get_dump_models ()) then begin
-      let s = timeout_reason_to_string timeout in
+  (* TODO: This function is a temporary fix. Printing Models
+     should be done in the binary part of AE and will be done after
+     merging OptimAE. *)
+  let print_model_aux mdl timeout =
+    let s = timeout_reason_to_string timeout in
+    Printer.print_fmt
+      (Options.Output.get_fmt_diagnostic ())
+      "@[<v 0>; Returned timeout reason = %s@]" s;
+    Models.output_concrete_model ~pp_prop_model:false
+      (Options.Output.get_fmt_models ()) mdl
+
+  let print_model ?(all_sat=false) env timeout =
+    let pp_prop_model = all_sat || Options.get_show_prop_model () in
+    if Options.(get_interpretation ()
+                && (get_dump_models () || pp_prop_model)) then begin
       match SAT.get_model env with
       | None ->
+        let s = timeout_reason_to_string timeout in
         Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
           "@[<v 0>It seems that no model has been computed so \
            far. You may need to change your model generation strategy \
            or to increase your timeouts. Returned timeout reason = %s@]" s
 
-      | Some (lazy model) ->
-        Printer.print_fmt
-          (Options.Output.get_fmt_diagnostic ())
-          "@[<v 0>; Returned timeout reason = %s@]" s;
-        Models.output_concrete_model (Options.Output.get_fmt_models ()) model
+      | Some (lazy mdl) ->
+        print_model_aux mdl timeout
     end
 
-  let process_decl print_status used_context consistent_dep_stack
+  let filter_by_all_sat propositional filter =
+    if filter == E.Set.empty then propositional
+    else
+      E.Set.filter
+        (fun t ->
+           E.Set.mem t filter || E.Set.mem (E.neg t) filter
+        )propositional
+
+  let rec process_decl print_status used_context consistent_dep_stack
       ((env, consistent, dep) as acc) d =
     try
       match d.st_decl with
@@ -269,9 +287,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | SAT.Sat t ->
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
-      print_status (Sat (d,t)) (Steps.get_steps ());
-      print_model env (Some SAT.NoTimeout);
-      env, `Sat t, dep
+      process_unknown
+        print_status used_context consistent_dep_stack
+        t t dep d SAT.NoTimeout
+
     | SAT.Unsat dep' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
@@ -280,6 +299,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_debug_unsat_core () then check_produced_unsat_core dep;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env , `Unsat, dep
+
     | SAT.I_dont_know {env = t; timeout} ->
       (* TODO: always print Unknown for why3 ? *)
       let status =
@@ -287,17 +307,111 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         else (Unknown (d, t))
       in
       print_status status (Steps.get_steps ());
-      print_model t (Some timeout);
-      (* TODO: Is it an appropriate behaviour? *)
-      (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env, `Unknown t, dep
+      process_unknown
+        print_status used_context consistent_dep_stack
+        env t dep d timeout
 
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,
          since we exit right after  *)
       print_status (Timeout (Some d)) (Steps.get_steps ());
-      print_model env None;
+      (* dont call 'process_unknown' in this case. Timeout stops
+         all-models listing *)
+      (*       print_model (SAT.get_model env) None; *)
       raise e
+
+  and process_unknown
+      print_status used_context consistent_dep_stack env t dep d
+      timeout_kind =
+    match d.st_decl with
+    | Assume _ | PredDef _ | RwtDef _ | Push _ | Pop _ | ThAssume _->
+      (* cannot raise Sat or Unknown in this case *)
+      assert false
+
+    | Query (n, _, sort) ->
+      (* 1. check if we are in all-sat mode, and build the filter
+         that'll be applied on the boolean model *)
+      let all_sat_mode =
+        match sort with
+        | AllSat l ->
+          (* 1.A SMT command check-all-sat *)
+          Some (List.fold_left
+                  (fun acc s ->
+                     (*transform string to propositional vars (E.t)*)
+                     let t = E.mk_term (Symbols.name s) [] Ty.Tbool in
+                     E.Set.add t acc
+                  )E.Set.empty l)
+
+        | Thm | Sat ->
+          (* 1.B if user rather set option --all-models: empty
+             filter. Otherwise, all_sat_mode = None *)
+          if Options.get_all_models () then Some E.Set.empty
+          else None
+
+        | Cut | Check ->
+          (* 1.3 all_sat_mode = None for cut and check *)
+          None
+      in
+      let m = match SAT.get_model env with
+        | None ->
+          if all_sat_mode != None then
+            (* all-sat enabled but interpretation disabled. No timeout
+               here! Return a model with just the propositional part
+            *)
+            Some (lazy {
+                Models.propositional = SAT.get_propositional_model env;
+                constants = ModelMap.empty;
+                functions = ModelMap.empty;
+                arrays = ModelMap.empty;
+              })
+          else
+            None
+        | Some _ as md -> md
+      in
+      match m, all_sat_mode with
+      | Some m, Some filter ->
+        (* 1. case where all-bool-models wrt. given filter is
+           requested *)
+        let m = Lazy.force m in
+        let propositional = filter_by_all_sat m.propositional filter in
+        let m = { m with propositional } in
+        print_model_aux m (Some timeout_kind);
+        (* we build the conjunction that corresponds to the current
+           filtered model *)
+        let f =
+          Expr.Set.fold
+            (fun e acc -> E.mk_and e acc false) propositional E.vrai
+        in
+        if E.equal f E.vrai then
+          begin
+            (* this may happen if current propositional model is empty
+               (for instance, in case of timeout and no model computed
+               so far). We should stop to avoid infinite loop *)
+            if timeout_kind != NoTimeout then raise Util.Timeout;
+            (* TODO: is it the appropriate status? *)
+            env , `Unknown t, dep
+          end
+        else
+          (* we negate and propagate the current filtered boolean model
+             to force the SAT to explore other branches *)
+          let d = { d with st_decl = Query (n, E.neg f, sort) } in
+          (* re-set timelimit *)
+          Options.Time.set_timeout (Options.get_timelimit ());
+          let env = SAT.reset_last_saved_model env in
+          (* TODO: The last call of process_decl will produce a
+             unexpected `unsat` as we have excludes all the possible
+             propositional model. We can fix it easily as soon as we
+             prevent process_decl to print itself results. *)
+          process_decl
+            print_status used_context consistent_dep_stack
+            (env, `Unknown t, dep) d
+
+      | _ ->
+        (* 2. default case + case where a simple interpretation is
+           requested *)
+        print_model t (Some timeout_kind);
+        (* TODO: is it the appropriate status? *)
+        env , `Unknown t, dep
 
   let print_status status steps =
     let check_status_consistency s =
@@ -372,10 +486,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Preprocess ->
       Printer.print_status_preprocess ~validity_mode
         (Some time) (Some steps)
-
-
-
-
 
 
   let init_with_replay_used acc f =

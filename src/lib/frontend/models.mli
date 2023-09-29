@@ -37,6 +37,6 @@ type t = {
   arrays : ModelMap.t;
 }
 
-val output_concrete_model : t Fmt.t
+val output_concrete_model : pp_prop_model:bool -> t Fmt.t
 (** [output_concrete_model ppf mdl] prints the model [mdl] on
     the formatter [ppf]. *)
