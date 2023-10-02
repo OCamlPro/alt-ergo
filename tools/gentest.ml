@@ -178,9 +178,9 @@ end = struct
           pp_output tst
     in
     let accepted_ae_exit_code =
-      if tst.params.ae_should_succeed then
-        "0"
-      else "(or 1 123 124 125 142)"
+      if tst.params.ae_should_succeed
+      then "0"
+      else "1"
     in
     Format.fprintf fmt "\
 @[<v 1>\
