@@ -31,18 +31,22 @@
 (* We put an ml file for the module type, to avoid issues when
    building the lib *)
 
+type timeout_reason =
+  | Assume
+  | ProofSearch
+  | ModelGen
+
+type unknown_reason =
+  | Incomplete
+  | Memout
+  | Timeout of timeout_reason
+
 module type S = sig
   type t
 
-  type timeout_reason =
-    | NoTimeout
-    | Assume
-    | ProofSearch
-    | ModelGen
-
   exception Sat of t
   exception Unsat of Explanation.t
-  exception I_dont_know of { env : t; timeout : timeout_reason }
+  exception I_dont_know of t
 
   (* the empty sat-solver context *)
   val empty : unit -> t
@@ -82,6 +86,9 @@ module type S = sig
   (** [get_model t] produces the current model. *)
   val get_model: t -> Models.t Lazy.t option
 
+  (** [get_unknown_reason t] returns the reason Alt-Ergo raised
+      [I_dont_know] if it did. If it did not, returns None. *)
+  val get_unknown_reason : t -> unknown_reason option
 end
 
 

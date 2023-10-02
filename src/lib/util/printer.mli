@@ -175,9 +175,9 @@ val print_status_preprocess :
   float option ->
   int option -> unit
 
-(** Print smtlib error message on the error formatter accessible with
-    {!val:Options.get_fmt_err} and set by default to stderr.
-    The err formatter is flushed after the print if flushed is set *)
+(** Print smtlib error message on the regular formatter, accessible with
+    {!val:Options.get_fmt_regular} and set by default to stdout.
+    The regular formatter is flushed after the print if flushed is set. *)
 val print_smtlib_err :
   ?flushed:bool ->
   ('a, Format.formatter, unit) format -> 'a

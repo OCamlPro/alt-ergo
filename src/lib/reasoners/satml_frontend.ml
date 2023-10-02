@@ -62,6 +62,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     guards : guards;
     last_saved_model : Models.t Lazy.t option ref;
     model_gen_phase : bool ref;
+    unknown_reason : Sat_solver_sig.unknown_reason option;
+    (** The reason why satml raised [I_dont_know] if it does; [None] by
+        default. *)
   }
 
   let empty_guards () = {
@@ -91,20 +94,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       add_inst = (fun _ -> true);
       last_saved_model = ref None;
       model_gen_phase = ref false;
+      unknown_reason = None;
     }
 
   let empty_with_inst add_inst =
     { (empty ()) with add_inst = add_inst }
 
-  type timeout_reason =
-    | NoTimeout
-    | Assume
-    | ProofSearch
-    | ModelGen
-
   exception Sat of t
   exception Unsat of Explanation.t
-  exception I_dont_know of { env : t; timeout : timeout_reason }
+  exception I_dont_know of t
+
+  let i_dont_know env ur =
+    raise (I_dont_know {env with unknown_reason = Some ur})
 
   exception IUnsat of t * Explanation.t
 
@@ -1005,15 +1006,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
     end
 
-  let update_model_and_return_unknown env compute_model ~timeout =
+  let update_model_and_return_unknown env compute_model ~unknown_reason =
     try
       let env = may_update_last_saved_model env compute_model in
       Options.Time.unset_timeout ();
-      raise (I_dont_know {env; timeout })
+      i_dont_know env unknown_reason
     with Util.Timeout when !(env.model_gen_phase) ->
       (* In this case, timeout reason becomes 'ModelGen' *)
-      raise (I_dont_know {env; timeout = ModelGen })
-
+      i_dont_know env (Timeout ModelGen)
 
   let model_gen_on_timeout env =
     let i = Options.get_interpretation () in
@@ -1022,7 +1022,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
        Stdlib.(=) ti 0. (* no time allocated for extra model search *)
     then
-      raise (I_dont_know {env; timeout = ProofSearch})
+      i_dont_know env (Timeout ProofSearch)
     else
       begin
         (* Beware: models generated on timeout of ProofSearch phase may
@@ -1032,7 +1032,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.Time.unset_timeout ();
         Options.Time.set_timeout ti;
         update_model_and_return_unknown
-          env i ~timeout:ProofSearch (* may becomes ModelGen *)
+          env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
   let rec unsat_rec env ~first_call:_ : unit =
@@ -1079,7 +1079,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if not updated then
           update_model_and_return_unknown
             env (Options.get_last_interpretation ())
-            ~timeout:NoTimeout; (* may becomes ModelGen *)
+            ~unknown_reason:Incomplete; (* may becomes ModelGen *)
         unsat_rec env ~first_call:false
 
       with
@@ -1214,7 +1214,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | Util.Timeout ->
            (* don't attempt to compute a model if timeout before
               calling unsat function *)
-           raise (I_dont_know {env; timeout = Assume})
+           i_dont_know env (Timeout Assume)
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
@@ -1246,6 +1246,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env
 
   let get_model env = !(env.last_saved_model)
+
+  let get_unknown_reason env = env.unknown_reason
 
   let reinit_ctx () =
     Steps.reinit_steps ();

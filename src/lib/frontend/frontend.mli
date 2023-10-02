@@ -63,3 +63,5 @@ module type S = sig
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t
+
+val unknown_reason_to_string : Sat_solver_sig.unknown_reason -> string

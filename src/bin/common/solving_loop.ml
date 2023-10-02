@@ -50,6 +50,9 @@ let empty_solver_ctx = {
   global = [];
 }
 
+let unsupported_opt () =
+  Printer.print_std "unsupported"
+
 let main () =
   let () = Dolmen_loop.Code.init [] in
 
@@ -399,8 +402,52 @@ let main () =
       | ":produce-unsat-assumptions"
       | ":print-success"
       | ":random-seed"), _
-      -> Printer.print_wrn "unsupported option %s" name
-    | _ -> Printer.print_wrn "unsupported option %s" name
+      ->
+      unsupported_opt ();
+      Printer.print_wrn "unsupported option '%s'" name
+    | _ ->
+      unsupported_opt ();
+      Printer.print_err "unknown option '%s'" name
+  in
+
+  let handle_get_info (st : State.t) (name: string) =
+    let print_std =
+      fun (type a) (pp :a Fmt.t) (a : a) ->
+        Printer.print_std "(%s %a)" name pp a
+    in
+    let pp_reason_unknown st =
+      let err () =
+        let msg = "Invalid (get-info :reason-unknown)" in
+        Printer.print_smtlib_err "%s" msg
+      in
+      match State.get partial_model_key st with
+      | None -> err ()
+      | Some sat ->
+        match SAT.get_unknown_reason sat with
+        | None -> err ()
+        | Some s ->
+          print_std
+            Format.pp_print_string
+            (Frontend.unknown_reason_to_string s)
+    in
+    match name with
+    | ":authors" ->
+      print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo developers"
+    | ":error-behavior" ->
+      print_std Fmt.string "immediate-exit"
+    | ":name" ->
+      print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo"
+    | ":reason-unknown" ->
+      pp_reason_unknown st
+    | ":version" ->
+      print_std Fmt.string Version._version
+    | ":all-statistics"
+    | ":assertion-stack-levels" ->
+      unsupported_opt ();
+      Printer.print_wrn "unsupported option '%s'" name
+    | _ ->
+      unsupported_opt ();
+      Printer.print_err "unknown option '%s'" name
   in
 
   let handle_stmt :
@@ -503,6 +550,10 @@ let main () =
               "Model generation disabled (try --produce-models)";
             st
           end
+
+      | {contents = `Get_info kind; _ } ->
+        handle_get_info st kind;
+        st
 
       | _ ->
         (* TODO:
