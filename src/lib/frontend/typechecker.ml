@@ -2217,7 +2217,7 @@ let type_one_th_decl env e =
   | Function_def(loc,_,_,_,_)
   | MutRecDefs ((loc,_,_,_,_) :: _)
   | TypeDecl ((loc, _, _, _)::_)
-  | Push (loc,_) | Pop (loc,_) ->
+  | Push (loc,_) | Pop (loc,_) | Reset loc | Exit loc ->
     Errors.typing_error WrongDeclInTheory loc
   | MutRecDefs []
   | TypeDecl [] -> assert false
@@ -2551,6 +2551,14 @@ let rec type_decl (acc, env) d assertion_stack =
       (fun (acc, env) ty_d ->
          type_user_defined_type_body ~is_recursive:true env acc ty_d)
       (acc, env) are_rec
+
+  | Reset l ->
+    let td = {c = TReset l; annot = new_id () } in
+    (td,Env.empty) :: acc, Env.empty
+
+  | Exit l ->
+    let td = {c = TExit l; annot = new_id () } in
+    (td,env) :: acc, env
 
 let type_parsed env s d =
   let l, env' = type_decl ([], env) d s in

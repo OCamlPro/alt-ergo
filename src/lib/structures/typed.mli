@@ -280,6 +280,10 @@ and 'a tdecl =
   (** [push (loc,n)] pushs n new assertions levels onto the assertion stack *)
   | TPop of Loc.t * int
   (** [pop (loc,n)] pops n assertions levels from the assertion stack *)
+  | TReset of Loc.t
+  (** Resets all the context. *)
+  | TExit of Loc.t
+  (** Exits the solver. *)
 
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
@@ -304,3 +308,6 @@ val print_rwt :
   (Format.formatter -> 'a -> unit) ->
   Format.formatter -> 'a rwt_rule -> unit
 (** Print a rewrite rule *)
+
+val print_atdecl : Format.formatter -> ('a tdecl, 'a) annoted -> unit
+(** Print an annoted term decl. *)

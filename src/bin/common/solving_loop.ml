@@ -103,7 +103,8 @@ let main () =
       | `Sat partial_model | `Unknown partial_model ->
         Some partial_model
       | `Unsat -> None
-    with Util.Timeout ->
+    with
+    | Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit 142;
       None
   in
@@ -134,6 +135,9 @@ let main () =
       | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
         let cnf = Cnf.make state.solver_ctx.local td in
         { state with solver_ctx = { state.solver_ctx with local = cnf; }}
+      | Typed.TReset _ ->
+        { state with solver_ctx = {ctx = []; local = []; global = []}}
+      | Typed.TExit _ -> raise Exit
       | _ ->
         let cnf = Cnf.make state.solver_ctx.ctx td in
         { state with solver_ctx = { state.solver_ctx with ctx = cnf; }}
@@ -206,6 +210,7 @@ let main () =
           if e != Warning_as_error then
             Printer.print_err "%a" Errors.report e;
           exit 1
+        | Exit -> exit 0
       end
     in
 
@@ -260,6 +265,7 @@ let main () =
     | Errors.Error e ->
       Printer.print_err "%a" Errors.report e;
       exit 1
+    | Exit -> exit 0
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
@@ -550,6 +556,13 @@ let main () =
               "Model generation disabled (try --produce-models)";
             st
           end
+
+      | {contents = `Reset; _} ->
+        st
+        |> State.set partial_model_key None
+        |> State.set solver_ctx_key empty_solver_ctx
+
+      | {contents = `Exit; _} -> raise Exit
 
       | {contents = `Get_info kind; _ } ->
         handle_get_info st kind;

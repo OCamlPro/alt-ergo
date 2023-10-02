@@ -434,6 +434,8 @@ module Translate = struct
     | Cmd_DefineFunsRec(fun_def_list,term_list) ->
       let l = List.map2 translate_fun_def fun_def_list term_list in
       l @ acc
+    | Cmd_Reset -> Reset (pos command) :: acc
+    | Cmd_Exit -> Exit (pos command) :: acc
     | Cmd_DefineSort _ -> acc
     | Cmd_GetModel -> requires_dolmen "get-model"; acc
     | Cmd_Echo _ -> not_supported "echo"; acc
@@ -445,7 +447,6 @@ module Translate = struct
     | Cmd_GetOption _ -> not_supported "get-option"; acc
     | Cmd_GetInfo _ -> not_supported "get-info"; acc
     | Cmd_GetUnsatAssumptions -> not_supported "get-unsat-assumptions"; acc
-    | Cmd_Reset -> not_supported "reset"; assert false
     | Cmd_ResetAssert -> not_supported "reset-asserts"; assert false
     | Cmd_SetLogic _ -> not_supported "set-logic"; acc
     | Cmd_SetOption _ -> not_supported "set-option"; acc
@@ -455,7 +456,6 @@ module Translate = struct
     | Cmd_CheckAllSat _ -> not_supported "check-all-sat"; acc
     | Cmd_Maximize _ -> not_supported "maximize"; acc
     | Cmd_Minimize _ -> not_supported "minimize"; acc
-    | Cmd_Exit -> acc
 
   let init () =
     if Psmt2Frontend.Options.get_is_int_real () then
