@@ -107,14 +107,24 @@ end = struct
 end
 
 module Test : sig
+
+  type params = {
+    exclude: string list;
+    filters: string list option;
+    compare_should_succeed: bool;
+    ae_should_succeed: bool;
+  }
+
   type t = private {
     cmd: Cmd.t;
     pb_file: string;
-    should_succeed: bool
+    params: params
   }
   (** Type of a test. *)
 
-  val make: cmd: Cmd.t -> pb_file: string -> should_succeed: bool -> t
+  val base_params : params
+
+  val make: cmd: Cmd.t -> pb_file: string -> params:params -> t
   (** Set up the test. *)
 
   val pp_expected_output: t printer
@@ -123,13 +133,28 @@ module Test : sig
   val pp_stanza: t printer
   (** Pretty print the dune test. *)
 end = struct
+
+  type params = {
+    exclude: string list;
+    filters: string list option;
+    compare_should_succeed: bool;
+    ae_should_succeed: bool;
+  }
+
   type t = {
     cmd: Cmd.t;
     pb_file: string;
-    should_succeed: bool
+    params: params;
   }
 
-  let make ~cmd ~pb_file ~should_succeed = {cmd; pb_file; should_succeed}
+  let base_params = {
+    exclude = [];
+    filters = None;
+    compare_should_succeed = true;
+    ae_should_succeed = true;
+  }
+
+  let make ~cmd ~pb_file ~params = {cmd; pb_file; params}
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
@@ -142,7 +167,7 @@ end = struct
 
   let pp_stanza fmt tst =
     let pp_diff_command fmt tst =
-      if tst.should_succeed then
+      if tst.params.compare_should_succeed then
         Format.fprintf fmt "@[(diff %a %a)@]"
           pp_expected_output tst
           pp_output tst
@@ -151,6 +176,11 @@ end = struct
           "@[(ignore-stdout (with-accepted-exit-codes (not 0) (run diff %a %a)))@]"
           pp_expected_output tst
           pp_output tst
+    in
+    let accepted_ae_exit_code =
+      if tst.params.ae_should_succeed
+      then "0"
+      else "1"
     in
     Format.fprintf fmt "\
 @[<v 1>\
@@ -162,7 +192,7 @@ end = struct
 @[<v 1>(chdir %%{workspace_root}@,\
 @[<v 1>(with-stdout-to %%{target}@,\
 @[<v 1>(ignore-stderr@,\
-@[<v 1>(with-accepted-exit-codes 0@,\
+@[<v 1>(with-accepted-exit-codes %s@,\
 @[<v 1>(run @[<hv>%a@])))))))@]@]@]@]@]@]@]@ \
 @[<v 1>(rule@,\
 @[<v 1>(deps %a)@,\
@@ -171,6 +201,7 @@ end = struct
 @[<v 1>(action@ %a))@]@]@]@]@]"
       pp_output tst
       tst.pb_file
+      accepted_ae_exit_code
       Cmd.pp tst.cmd
       pp_output tst
       (Cmd.group tst.cmd)
@@ -198,40 +229,43 @@ end = struct
     tests: Test.t list;
   }
 
-  let filter ?(exclude = []) filters cmd =
-    not (List.exists (String.equal (Cmd.name cmd)) exclude) &&
-    match filters with
+  let filter (params : Test.params) cmd =
+    not (List.exists (String.equal (Cmd.name cmd)) params.exclude) &&
+    match params.filters with
     | Some filters -> List.exists (String.equal (Cmd.name cmd)) filters
     | None -> true
 
   let make ~root ~path ~cmds ~pb_files =
     let tests = List.fold_left (fun acc1 pb_file ->
-        let exclude, filters, should_succeed =
+        let params =
           List.fold_left (
-            fun (exclude, filters_opt, should_succeed) ->
+            fun (acc : Test.params) ->
               function
               | "fail" ->
-                exclude,
-                filters_opt,
-                false
-              | "dolmen" ->
-                "legacy" :: exclude,
-                Some ["dolmen"],
-                should_succeed
-              | "models" ->
-                "legacy" :: "fpa" :: exclude,
-                Some ["tableaux"],
-                should_succeed
+                {acc with compare_should_succeed = false}
+              | "err" ->
+                {acc with ae_should_succeed = false}
+              | "dolmen" -> {
+                  acc with
+                  exclude = "legacy" :: acc.exclude;
+                  filters = Some ["dolmen"]
+                }
+              | "models" -> {
+                  acc with
+                  exclude =
+                    "legacy" :: "fpa" :: acc.exclude;
+                  filters = Some ["tableaux"]
+                }
               | "fpa" ->
-                exclude,
-                Some ["fpa"],
-                should_succeed
-              | _ -> (exclude, filters_opt, should_succeed)
-          ) ([], None, true) (String.split_on_char '.' pb_file)
+                {acc with filters = Some ["fpa"]}
+              | _ -> acc
+          )
+            Test.base_params
+            (String.split_on_char '.' pb_file)
         in
         List.fold_left (fun acc2 cmd ->
-            if filter ~exclude filters cmd then
-              Test.make ~cmd ~pb_file ~should_succeed :: acc2
+            if filter params cmd then
+              Test.make ~cmd ~pb_file ~params :: acc2
             else
               acc2
           ) acc1 cmds) [] pb_files
