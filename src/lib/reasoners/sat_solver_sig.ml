@@ -41,9 +41,6 @@ type unknown_reason =
   | Memout
   | Timeout of timeout_reason
 
-(* TODO: use an ADT and add Timeout when library starts acting like a
-   library. *)
-
 module type S = sig
   type t
 
