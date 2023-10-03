@@ -6,7 +6,7 @@ Now we will have some tests for the models. Note that it is okay if the format
 changes slightly, you should be concerned with ensuring the semantic is
 appropriate here.
 
-  $ alt-ergo --frontend dolmen --produce-models model555.smt2 --no-forced-flush-in-output 2>/dev/null
+  $ alt-ergo --produce-models model555.smt2 --no-forced-flush-in-output 2>/dev/null
   
   unknown
   (
@@ -17,14 +17,7 @@ appropriate here.
 
 Now we will test some semantic triggers.
 
-  $ alt-ergo --frontend legacy -o smtlib2 semantic_triggers.ae 2>/dev/null
-  
-  unknown
-  
-  unsat
-  
-  unsat
-  $ alt-ergo --frontend dolmen -o smtlib2 semantic_triggers.ae 2>/dev/null
+  $ alt-ergo -o smtlib2 semantic_triggers.ae 2>/dev/null
   
   unknown
   
@@ -34,7 +27,7 @@ Now we will test some semantic triggers.
 
 And some SMT2 action.
 
-  $ alt-ergo --frontend dolmen -o smtlib2 --prelude prelude.ae postlude.smt2 2>/dev/null
+  $ alt-ergo -o smtlib2 --prelude prelude.ae postlude.smt2 2>/dev/null
   
   unknown
   
@@ -50,37 +43,37 @@ combinations of produce-models et al.
 First, if model generation is not enabled, we should error out when a
 `(get-model)` statement is issued:
 
-  $ echo '(get-model)' | alt-ergo --frontend dolmen -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2
   (error "Model generation disabled (try --produce-models)")
 
 This should be the case Tableaux solver as well:
 
-  $ echo '(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2
   (error "Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
 
-  $ echo '(get-model)' | alt-ergo --frontend dolmen --produce-models -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2
   (error "No model produced.")
 
-  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2
+  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2
   (error "No model produced.")
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
 
-  $ echo '(check-sat)(get-model)' | alt-ergo --frontend dolmen --produce-models -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
 
-  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --frontend dolmen -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
-  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --frontend dolmen --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (

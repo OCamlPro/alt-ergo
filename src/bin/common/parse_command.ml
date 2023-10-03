@@ -879,24 +879,18 @@ let parse_output_opt =
 
 
     let frontend =
-      let doc = "Select the parsing and typing frontend." in
+      let doc =
+        "Select the parsing and typing frontend. Support for non-default \
+         frontends is deprecated and will be removed in the next release."
+      in
       let docv = "FTD" in
-      Arg.(value & opt (some string) None &
-           info ["frontend"] ~docv ~docs:s_execution ~doc)
+      let deprecated =
+        "this option is deprecated and will be ignored in the \
+         next version"
+      in
+      Arg.(value & opt string "dolmen" &
+           info ["frontend"] ~docv ~docs:s_execution ~doc ~deprecated)
     in
-
-    (* Use the dolmen frontend by default with --produce-models *)
-    let mk_frontend frontend produce_models =
-      match frontend with
-      | None ->
-        if produce_models then
-          "dolmen"
-        else
-          get_frontend ()
-      | Some frontend -> frontend
-    in
-
-    let frontend = Term.(const mk_frontend $ frontend $ produce_models) in
 
     let dump_models =
       let doc =
