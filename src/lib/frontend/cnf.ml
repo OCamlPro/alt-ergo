@@ -463,7 +463,8 @@ let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
   | TTypeDecl _ | TLogic _  -> acc
   | TReset _
   | TExit _ ->
-    (* These cases only appear on smt2 files, which are handled by Solving_loop. *)
+    (* These cases only appear on smt2 files, which are handled by
+       Solving_loop. *)
     Printer.print_wrn "Ignoring instruction %a" Typed.print_atdecl d;
     acc
 
