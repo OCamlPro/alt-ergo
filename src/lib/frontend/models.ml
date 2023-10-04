@@ -243,7 +243,8 @@ module SmtlibCounterExample = struct
     | Ty.Tbool -> Fmt.pf ppf "false"
     | Ty.Tfarray (_, rty) ->
       Fmt.pf ppf "((as const %a) %a)" Ty.pp_smtlib ty pp_dummy_value_of_type rty
-    | _ -> Fmt.pf ppf "@@%a" pp_term (Expr.fresh_name ty)
+    | _ ->
+      Fmt.pf ppf "(as @@%a %a)" pp_term (Expr.fresh_name ty) Ty.pp_smtlib ty
 
   let pp_dummy_value_of_type fmt ty =
     if not (Options.get_interpretation_use_underscore ()) then
@@ -457,6 +458,8 @@ type value_defn =
   | Value of X.r * string
   (* A leaf semantic value. This must be an actual value, i.e. it must not
      contain any uninterpreted terms. *)
+  | Abstract of string
+  (* An unique abstract value *)
 
 let value (r, s) =
   match X.term_extract r with
@@ -476,6 +479,7 @@ let rec pp_value ppk ppf = function
       (pp_value ppk) v
   | Constant (sy, t) -> ppk ppf (sy, t)
   | Value (_, s) -> Format.pp_print_string ppf s
+  | Abstract s -> Format.pp_print_string ppf s
 
 let pp_constant ppf (_, t) =
   Format.fprintf ppf "%a" SmtlibCounterExample.pp_dummy_value_of_type t
@@ -494,6 +498,13 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
     end;
 
   let values = Hashtbl.create 17 in
+  let find_or_add sy f =
+    try Hashtbl.find values sy
+    with Not_found ->
+      let value = f () in
+      Hashtbl.replace values sy value;
+      value
+  in
   (* Add the constants *)
   ModelMap.iter (fun (f, xs_ty, _) st ->
       assert (Lists.is_empty xs_ty);
@@ -516,8 +527,16 @@ let output_concrete_model fmt props ~functions ~constants ~arrays =
     arrays;
 
   let pp_value =
-    pp_value (fun ppf (sy, _) ->
-        pp_value pp_constant ppf (Hashtbl.find values sy))
+    pp_value (fun ppf (sy, ty) ->
+        let v =
+          find_or_add sy @@ fun () ->
+          (* NB: It is important that we call `pp_dummy_value_of_type`
+             immediately (not in a delayed fashion) so that we make sure that
+             the same abstract value will get printed each time. *)
+          Abstract (
+            Fmt.to_to_string SmtlibCounterExample.pp_dummy_value_of_type ty)
+        in
+        pp_value pp_constant ppf v)
   in
 
   let pp_x ppf xs = pp_value ppf (value xs) in
