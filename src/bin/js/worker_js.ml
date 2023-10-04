@@ -110,18 +110,18 @@ let main worker_id content =
     let get_status_and_print status n =
       returned_status :=
         begin match status with
-          | FE.Unsat _ -> Worker_interface.Unsat n
-          | FE.Inconsistent _ -> Worker_interface.Inconsistent n
-          | FE.Sat _ -> Worker_interface.Sat n
-          | FE.Unknown _ -> Worker_interface.Unknown n
-          | FE.Timeout _ -> Worker_interface.LimitReached "timeout"
-          | FE.Preprocess -> Worker_interface.Unknown n
+          | Frontend.Unsat _ -> Worker_interface.Unsat n
+          | Inconsistent _ -> Worker_interface.Inconsistent n
+          | Sat _ -> Worker_interface.Sat n
+          | Unknown _ -> Worker_interface.Unknown n
+          | Timeout _ -> Worker_interface.LimitReached "timeout"
+          | Preprocess -> Worker_interface.Unknown n
         end;
-      FE.print_status status n
+      Frontend.print_status status n
     in
 
     let solve all_context (cnf, goal_name) =
-      let used_context = FE.choose_used_context all_context ~goal_name in
+      let used_context = Frontend.choose_used_context all_context ~goal_name in
       let consistent_dep_stack = Stack.create () in
       SAT.reset_refs ();
       let env = SAT.empty_with_inst add_inst in
@@ -182,7 +182,7 @@ let main worker_id content =
         Printer.print_err "%a" Errors.report e;
         raise Exit
     in
-    let all_used_context = FE.init_all_used_context () in
+    let all_used_context = Frontend.init_all_used_context () in
     let assertion_stack = Stack.create () in
     let typing_loop state p =
       try

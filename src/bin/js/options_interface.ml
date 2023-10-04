@@ -190,7 +190,6 @@ let set_options r =
     (get_no_decisions_on r.no_decisions_on);
   set_options_opt Options.set_no_sat_learning r.no_sat_learning;
   set_options_opt Options.set_sat_solver (get_sat_solver r.sat_solver);
-  set_options_opt Options.set_tableaux_cdcl r.tableaux_cdcl;
 
   set_options_opt Options.set_disable_ites r.disable_ites;
   set_options_opt Options.set_inline_lets r.inline_lets;

@@ -424,9 +424,6 @@ val set_sat_plugin : string -> unit
 (** Set [sat_solver] accessible with {!val:get_sat_solver} *)
 val set_sat_solver : Util.sat_solver -> unit
 
-(** Set [tableaux_cdcl] accessible with {!val:get_tableaux_cdcl} *)
-val set_tableaux_cdcl : bool -> unit
-
 (** Set [disable_ites] accessible with {!val:get_disable_ites} *)
 val set_disable_ites : bool -> unit
 

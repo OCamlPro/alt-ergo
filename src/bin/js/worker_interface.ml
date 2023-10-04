@@ -261,7 +261,6 @@ type options = {
   no_decisions_on : (string list) option;
   no_sat_learning : bool option;
   sat_solver : sat_solver option;
-  tableaux_cdcl : bool option;
 
   disable_ites : bool option;
   inline_lets : bool option;
@@ -365,7 +364,6 @@ let init_options () = {
   no_decisions_on = None;
   no_sat_learning = None;
   sat_solver = None;
-  tableaux_cdcl = None;
 
   disable_ites = None;
   inline_lets = None;
@@ -515,11 +513,10 @@ let opt6_encoding =
   conv
     (fun opt6 -> opt6)
     (fun opt6 -> opt6)
-    (obj10
+    (obj9
        (opt "no_decisions_on" (list string))
        (opt "no_sat_learning" bool)
        (opt "sat_solver" sat_solver_encoding)
-       (opt "tableaux_cdcl" bool)
        (opt "disable_ites" bool)
        (opt "inline_lets" bool)
        (opt "rewriting" bool)
@@ -645,7 +642,6 @@ let options_to_json opt =
     (opt.no_decisions_on,
      opt.no_sat_learning,
      opt.sat_solver,
-     opt.tableaux_cdcl,
      opt. disable_ites,
      opt.inline_lets,
      opt.rewriting,
@@ -763,7 +759,6 @@ let options_from_json options =
     let (no_decisions_on,
          no_sat_learning,
          sat_solver,
-         tableaux_cdcl,
          disable_ites,
          inline_lets,
          rewriting,
@@ -851,7 +846,6 @@ let options_from_json options =
       no_decisions_on;
       no_sat_learning;
       sat_solver;
-      tableaux_cdcl;
       disable_ites;
       inline_lets;
       rewriting;
