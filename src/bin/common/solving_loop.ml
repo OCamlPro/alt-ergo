@@ -161,8 +161,8 @@ let main () =
         let with_infer_output_format =
           with_opt Options.(get_infer_output_format, set_infer_output_format)
         in
-        let with_infer_input_format =
-          with_opt Options.(get_infer_input_format, set_infer_input_format)
+        let with_input_format =
+          with_opt Options.(get_input_format, set_input_format)
         in
         let theory_preludes =
           Options.get_theory_preludes ()
@@ -170,7 +170,7 @@ let main () =
           |> Seq.flat_map (fun theory ->
               let filename = Theories.filename theory in
               let content = Theories.content theory in
-              with_infer_input_format true @@ fun () ->
+              with_input_format None @@ fun () ->
               with_infer_output_format false @@ fun () ->
               I.parse_file
                 ~content
@@ -309,11 +309,10 @@ let main () =
     let dir = Filename.dirname path in
     let filename = Filename.basename path in
     let lang =
-      if Options.get_infer_input_format() then None else
-        match Options.get_input_format () with
-        | Options.Native -> Some Dl.Logic.Alt_ergo
-        | Options.Smtlib2 -> Some (Dl.Logic.Smtlib2 `Latest)
-        | Options.Why3 | Options.Unknown _ -> None
+      match Options.get_input_format () with
+      | Some Native -> Some Dl.Logic.Alt_ergo
+      | Some Smtlib2 -> Some (Dl.Logic.Smtlib2 `Latest)
+      | None | Some (Why3 | Unknown _) -> None
     in
     let source =
       if Filename.check_suffix path ".zip" then (

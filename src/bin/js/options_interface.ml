@@ -140,10 +140,7 @@ let set_options r =
   set_options_opt Options.set_save_used_context r.save_used_context;
 
   set_options_opt Options.set_answers_with_loc r.answers_with_loc;
-  set_options_opt Options.set_input_format
-    (get_input_format r.input_format);
-  Options.set_infer_input_format
-    (get_input_format r.input_format |> Option.is_none);
+  Options.set_input_format (get_input_format r.input_format);
   set_options_opt Options.set_parse_only r.parse_only;
   set_options_opt Options.set_preludes r.preludes;
   set_options_opt Options.set_type_only r.type_only;

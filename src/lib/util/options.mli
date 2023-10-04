@@ -204,7 +204,7 @@ val set_instantiation_heuristic : instantiation_heuristic -> unit
 val set_inline_lets : bool -> unit
 
 (** Set [input_format] accessible with {!val:get_input_format} *)
-val set_input_format : input_format -> unit
+val set_input_format : input_format option -> unit
 
 (** Set [interpretation] accessible with {!val:get_interpretation}
 
@@ -337,9 +337,6 @@ val set_output_with_formatting : bool -> unit
 (** Set [output_with_forced_flush] accessible with
     {!val:get_output_with_forced_flush} *)
 val set_output_with_forced_flush : bool -> unit
-
-(** Set [infer_input_format] accessible with {!val:get_infer_input_format} *)
-val set_infer_input_format : bool -> unit
 
 (** Set [infer_output_format] accessible with {!val:get_infer_output_format} *)
 val set_infer_output_format : bool -> unit
@@ -615,14 +612,12 @@ val get_frontend : unit -> string
 (** Value specifying the default input format. Useful when the extension
     does not allow to automatically select a parser (eg. JS mode, GUI
     mode, ...). possible values are
-    {ul {- native} {- smtlib2} {- why3}} *)
-val get_input_format : unit -> input_format
-(** Default to [Native] *)
+    {ul {- native} {- smtlib2} {- why3}}
 
-(** [true] if Alt-Ergo infers automatically the input format according to the
-    file extension. [false] if an input format is set with -i option *)
-val get_infer_input_format : unit -> bool
-(** Default to [true] *)
+    If [None], Alt-Ergo will automatically infer the input format according to
+    the file extension. *)
+val get_input_format : unit -> input_format option
+(** Default to [None] *)
 
 (** [true] if the program shall stop after parsing. *)
 val get_parse_only : unit -> bool
