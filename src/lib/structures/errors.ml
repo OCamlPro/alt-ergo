@@ -240,24 +240,20 @@ let report_run_error fmt = function
 
 let report fmt = function
   | Parser_error s ->
-    Options.pp_comment fmt
-      (Format.sprintf "Parser Error: %s" s);
+    Format.fprintf fmt "Parser Error: %s" s;
   | Lexical_error (l,s) ->
     Loc.report fmt l;
-    Options.pp_comment fmt
-      (Format.sprintf "Lexical Error: %s" s);
+    Format.fprintf fmt "Lexical Error: %s" s;
   | Syntax_error (l,s) ->
     Loc.report fmt l;
-    Options.pp_comment fmt
-      (Format.sprintf "Syntax Error: %s" s);
+    Format.fprintf fmt "Syntax Error: %s" s;
   | Typing_error (l,e) ->
     Loc.report fmt l;
-    Options.pp_comment fmt "Typing Error: ";
+    Format.fprintf fmt "Typing Error: ";
     report_typing_error fmt e
   | Run_error e ->
-    Options.pp_comment fmt "Fatal Error: ";
+    Format.fprintf fmt "Fatal Error: ";
     report_run_error fmt e
   | Dolmen_error (code, descr) ->
-    Options.pp_comment fmt
-      (Format.sprintf "Error %s (code %i)" descr code);
+    Format.fprintf fmt "Error %s (code %i)" descr code;
   | Warning_as_error -> ()

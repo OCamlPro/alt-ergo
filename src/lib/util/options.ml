@@ -299,14 +299,17 @@ let get_type_smt2 () = !type_smt2
 let disable_weaks = ref false
 let enable_assertions = ref false
 let warning_as_error = ref false
+let exit_on_error = ref true
 
 let set_disable_weaks b = disable_weaks := b
 let set_enable_assertions b = enable_assertions := b
 let set_warning_as_error b = warning_as_error := b
+let set_exit_on_error b = exit_on_error := b
 
 let get_disable_weaks () = !disable_weaks
 let get_enable_assertions () = !enable_assertions
 let get_warning_as_error () = !warning_as_error
+let get_exit_on_error () = !exit_on_error
 
 (** Limit options *)
 
