@@ -477,6 +477,7 @@ module Translate = struct
     | Cmd_CheckAllSat _ -> not_supported "check-all-sat"; acc
     | Cmd_Maximize _ -> not_supported "maximize"; acc
     | Cmd_Minimize _ -> not_supported "minimize"; acc
+    | Cmd_Exit -> acc
 
   let init () =
     if Psmt2Frontend.Options.get_is_int_real () then
