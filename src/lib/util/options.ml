@@ -260,8 +260,7 @@ let output_with_headers = ref true
 let output_with_formatting = ref true
 let output_with_forced_flush = ref true
 let frontend = ref "legacy"
-let input_format = ref Native
-let infer_input_format = ref true
+let input_format = ref None
 let parse_only = ref false
 let preludes = ref []
 let theory_preludes = ref Theories.default_preludes
@@ -275,7 +274,6 @@ let set_output_with_formatting b = output_with_formatting := b
 let set_output_with_forced_flush b = output_with_forced_flush := b
 let set_frontend f = frontend := f
 let set_input_format f = input_format := f
-let set_infer_input_format b = infer_input_format := b
 let set_parse_only b = parse_only := b
 let set_preludes p = preludes := p
 
@@ -290,7 +288,6 @@ let get_output_with_formatting () = !output_with_formatting
 let get_output_with_forced_flush () = !output_with_forced_flush
 let get_frontend () = !frontend
 let get_input_format () = !input_format
-let get_infer_input_format () = !infer_input_format
 let get_parse_only () = !parse_only
 let get_preludes () = !preludes
 let get_theory_preludes () = !theory_preludes

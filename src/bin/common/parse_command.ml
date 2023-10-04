@@ -307,11 +307,6 @@ let mk_execution_opt input_format parse_only ()
   let output_with_formatting = (not no_formatting_in_output) || pretty_output in
   let output_with_forced_flush =
     (not no_forced_flush_in_output) && (not pretty_output) in
-  set_infer_input_format (Option.is_none input_format);
-  let input_format = match input_format with
-    | None -> Native
-    | Some fmt -> fmt
-  in
   set_answers_with_loc answers_with_loc;
   set_output_with_colors output_with_colors;
   set_output_with_headers output_with_headers;

@@ -82,15 +82,15 @@ let get_input_parser fmt =
   | Options.Unknown s -> find_parser s s
 
 let get_parser ext_opt =
-  if Options.get_infer_input_format () then
+  match Options.get_input_format () with
+  | Some input_format -> get_input_parser input_format
+  | None ->
     match ext_opt with
     | Some ext ->
       get_input_parser (Options.match_extension ext)
     | None ->
       error
         (Parser_error "Error: no extension found, can't infer input format@.")
-  else
-    get_input_parser (Options.get_input_format ())
 
 let parse_file ?lang lexbuf =
   let module Parser = (val get_parser lang : PARSER_INTERFACE) in
