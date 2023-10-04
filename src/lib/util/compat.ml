@@ -4,6 +4,13 @@ module String = struct
   let starts_with ~prefix s =
     length s >= length prefix &&
     equal (sub s 0 (length prefix)) prefix
+
+  let fold_left f x a =
+    let r = ref x in
+    for i = 0 to length a - 1 do
+      r := f !r (unsafe_get a i)
+    done;
+    !r
 end
 
 module Seq = struct

@@ -964,7 +964,7 @@ let real r =
     mk_term (Sy.Op Sy.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
   | _ -> positive_real r
 
-let bitv bt ty = mk_term (Sy.Bitv bt) [] ty
+let bitv bt ty = mk_term (Sy.bitv bt) [] ty
 
 let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
@@ -2813,11 +2813,10 @@ type const =
 let const_view t =
   match term_view t with
   | { f = Int n; _ } ->
-    let n = Hstring.view n in
-    begin match int_of_string n with
+    begin match Z.to_int n with
       | n -> Int n
-      | exception Failure _ ->
-        Fmt.failwith "error when trying to convert %s to an int" n
+      | exception Z.Overflow ->
+        Fmt.failwith "error when trying to convert %a to an int" Z.pp_print n
     end
   | { f = Op (Constr c); ty; _ }
     when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->

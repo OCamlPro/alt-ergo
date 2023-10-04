@@ -85,9 +85,9 @@ type t =
   | False
   | Void
   | Name of Hstring.t * name_kind * bool
-  | Int of Hstring.t
-  | Real of Hstring.t
-  | Bitv of string
+  | Int of Z.t
+  | Real of Q.t
+  | Bitv of int * Z.t
   | Op of operator
   | Lit of lit
   | Form of form
@@ -100,6 +100,7 @@ val name : ?kind:name_kind -> ?defined:bool -> string -> t
 val var : Var.t -> t
 val underscore : t
 val int : string -> t
+val bitv : string -> t
 val real : string -> t
 val constr : string -> t
 val destruct : guarded:bool -> string -> t
