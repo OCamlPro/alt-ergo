@@ -394,12 +394,12 @@ module Main_Default : S = struct
             ()
           | Pinfinity | Minfinity ->
             (* We should block case-split at infinite values.
-               Otherwise. Otherwise, we may have soundness issues. We
+               Otherwise, we may have soundness issues. We
                may think an objective is unbounded, but some late
                constraints may make it bounded.
 
                An alternative is to only allow further splits when we
-               know that no extra-assumpptions will be propagated to
+               know that no extra assumptions will be propagated to
                the env. Hence the test 'if for_model' *)
             if for_model then ()
             else
