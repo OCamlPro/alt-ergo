@@ -1,5 +1,7 @@
 ## unreleased
+
 ### Deprecated
+* make Dolmen the default and deprecate the legacy frontend (PR #857)
 * printing underscore instead of fresh value in model (PR #805)
 
 ### Build

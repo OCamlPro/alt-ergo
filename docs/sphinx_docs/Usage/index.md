@@ -27,12 +27,19 @@ See the [Input section] for more information about the format of the input files
 
 The `--frontend` option lets you select the frontend used to parse and type the input file. Since version 2.5.0,
 Alt-Ergo integrates two frontends:
-- The `legacy` frontend is the historical frontend of Alt-Ergo supporting the native language
-  and (partially) supporting the SMT-LIB language. The legacy frontend is currently the default.
-- The `dolmen` frontend is a new frontend using the [Dolmen library](https://github.com/Gbury/dolmen).
-  The native and SMT-LIB languages are both supported by this frontend.
-  You can select it with the `--frontend dolmen` option, which is planned to become the
-  default in a future release.
+- The `dolmen` frontend is the default frontend, powered by the
+  [Dolmen](https://github.com/Gbury/dolmen) library.  The native and SMT-LIB
+  languages are both supported by this frontend.
+- The `legacy` frontend is the historical frontend of Alt-Ergo supporting the
+  native language. You can select it with the `--frontend legacy` option. The
+  legacy frontend is deprecated, and will be removed in a future release.
+
+```{admonition} Note
+
+The `legacy` frontend has limited support for the SMT-LIB language, but many
+SMT-LIB features will not work with the `legacy` frontend. Use the (default)
+`dolmen` frontend for SMT-LIB inputs.
+```
 
 ### Generating models
 Alt-Ergo can generates best-effort models in the case it cannot conclude the unsatisfiability of
@@ -51,8 +58,7 @@ Model generation is disabled by default. There are two recommended ways to enabl
   on demand using the statement `(get-model)`.
 
   Alternatively, you can enable model generation using the statement
-  `(set-option :produce-models true)`. This currently requires using the option
-  `--frontend dolmen`.
+  `(set-option :produce-models true)`.
 
 #### Examples
 
@@ -142,7 +148,7 @@ Model generation is disabled by default. There are two recommended ways to enabl
    (get-model)
 
   ```
-  and the command `alt-ergo --frontend dolmen INPUT.smt2` produces
+  and the command `alt-ergo INPUT.smt2` produces
   the output model
   ```
   unknown
@@ -151,11 +157,6 @@ Model generation is disabled by default. There are two recommended ways to enabl
     (define-fun b () Int 0)
     (define-fun c () Int 0)
   )
-  ```
-
-  ```{admonition} Note
-  You need to select the Dolmen frontend. The options `--dump-models` and
-  `--produce-models` select the right frontend for you.
   ```
 
   - As a more didactic example, let us imagine while checking the loop invariant
@@ -177,7 +178,7 @@ Model generation is disabled by default. There are two recommended ways to enabl
   ```
   Execute the command
   ```sh
-  alt-ergo --frontend dolmen --produce-models INPUT.smt2
+  alt-ergo --produce-models INPUT.smt2
   ```
   We got the output
   ```

@@ -141,8 +141,8 @@ logic real_of_int : int -> real
 
 `real_of_int` converts an integer into its representation as a real number.
 
-*Note*: When using the `dolmen` frontend, `real_of_int` is also available in
-the smtlib2 format as the `to_real` function from the `Reals_Ints` theory.
+*Note*: `real_of_int` is also available in the smtlib2 format as the `to_real`
+function from the `Reals_Ints` theory.
 
 ```alt-ergo
 logic int_floor : real -> int
@@ -156,9 +156,9 @@ greater than a real, respectively.
 
 `real_is_int` is true for reals that are exact integers, and false otherwise.
 
-*Note*: When using the Dolmen frontend, `int_floor` and `real_is_int` are
-also available in the smtlib2 format as the `to_int` and `is_int` functions
-from the `Reals_Ints` theory respectively.
+*Note*: `int_floor` and `real_is_int` are also available in the smtlib2 format
+as the `to_int` and `is_int` functions from the `Reals_Ints` theory
+respectively.
 
 ### Square root
 
