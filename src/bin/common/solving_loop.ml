@@ -213,7 +213,7 @@ let main () =
         FE.print_status (FE.Timeout None) 0;
         exit_as_timeout ()
       | Parsing.Parse_error ->
-        (* TODO(Steven): display a dummy value is a bad idea.
+        (* TODO(Steven): displaying a dummy value is a bad idea.
            This should only be executed with the legacy frontend, which should
            be deprecated in a near future, so this code will be removed (or at
            least, its behavior unspecified). *)
@@ -589,11 +589,11 @@ let main () =
             (* TODO: add the location of the statement. *)
             recoverable_error "No model produced."; st
         else
-          (* TODO: add the location of the statement. *)
-          let () =
-            recoverable_error "Model generation disabled (try --produce-models)"
-          in
-          st
+          begin
+            (* TODO: add the location of the statement. *)
+            recoverable_error "Model generation disabled (try --produce-models)";
+            st
+          end
 
       | {contents = `Reset; _} ->
         st
