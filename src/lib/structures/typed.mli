@@ -309,5 +309,5 @@ val print_rwt :
   Format.formatter -> 'a rwt_rule -> unit
 (** Print a rewrite rule *)
 
-val print_atdecl : Format.formatter -> ('a tdecl, 'a) annoted -> unit
+val print_atdecl : Format.formatter -> _ atdecl -> unit
 (** Print an annoted term decl. *)
