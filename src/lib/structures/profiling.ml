@@ -45,210 +45,28 @@ type inst_info = {
 }
 
 type t = {
-  decisions : int ref;
-  assumes : int ref;
-  assumes_current_lvl : int ref;
-  queries : int ref;
-  instantiation_rounds : int ref;
-  instances : int ref;
-  decision_lvl : int ref;
-  instantiation_lvl : int ref;
-
+  mutable decisions : int;
+  mutable assumes : int;
+  mutable assumes_current_lvl : int;
+  mutable queries : int;
+  mutable instantiation_rounds : int;
+  mutable instances : int;
+  mutable decision_lvl : int;
+  mutable instantiation_lvl : int;
   (* 4 kinds of conflicts *)
-  th_conflicts : int ref;
-  b_conflicts : int ref;
-  bcp_th_conflicts : int ref;
-  bcp_b_conflicts : int ref;
-  bcp_mix_conflicts : int ref;
-
+  mutable th_conflicts : int;
+  mutable b_conflicts : int;
+  mutable bcp_th_conflicts : int;
+  mutable bcp_b_conflicts : int;
+  mutable bcp_mix_conflicts : int;
   (* 4 kinds of red/elim *)
-  t_red : int ref;
-  b_red : int ref;
-  t_elim : int ref;
-  b_elim : int ref;
-  (* first int: counter ok kept instances,
-     second int: counter of removed instances*)
-  instances_map : inst_info MS.t ref;
-  instances_map_printed : bool ref
+  mutable t_red : int;
+  mutable b_red : int;
+  mutable t_elim : int;
+  mutable b_elim : int;
+  mutable instances_map : inst_info MS.t;
+  mutable instances_map_printed : bool;
 }
-
-let state = {
-  decisions = ref 0;
-  assumes = ref 0;
-  assumes_current_lvl = ref 0;
-  queries = ref 0;
-  instantiation_rounds = ref 0;
-  instances = ref 0;
-  decision_lvl = ref 0;
-  instantiation_lvl = ref 0;
-
-  th_conflicts = ref 0;
-  b_conflicts = ref 0;
-  bcp_th_conflicts = ref 0;
-  bcp_b_conflicts = ref 0;
-  bcp_mix_conflicts = ref 0;
-
-  t_red  = ref 0;
-  b_red  = ref 0;
-  t_elim = ref 0;
-  b_elim = ref 0;
-
-  instances_map = ref MS.empty;
-  instances_map_printed = ref false
-}
-
-let set_sigprof () =
-  let tm =
-    let v = Options.get_profiling_period () in
-    if (Stdlib.compare v 0.) > 0 then v else -. v
-  in
-  ignore
-    (Unix.setitimer Unix.ITIMER_PROF
-       { Unix.it_value = tm; Unix.it_interval = 0. })
-
-let init () =
-  state.decisions := 0;
-  state.assumes := 0;
-  state.queries := 0;
-  state.instantiation_rounds := 0;
-  state.instances := 0;
-  state.decision_lvl := 0;
-  state.instantiation_lvl := 0;
-  state.assumes_current_lvl := 0;
-  state.th_conflicts := 0;
-  state.b_conflicts := 0;
-  state.bcp_th_conflicts := 0;
-  state.bcp_b_conflicts := 0;
-  state.bcp_mix_conflicts := 0;
-  state.t_red  := 0;
-  state.b_red  := 0;
-  state.t_elim := 0;
-  state.b_elim := 0;
-  state.instances_map := MS.empty;
-  state.instances_map_printed := false;
-  set_sigprof ()
-
-(* update functions of the internal state *)
-
-let assume nb =
-  state.assumes := nb + !(state.assumes);
-  state.assumes_current_lvl := nb + !(state.assumes_current_lvl)
-
-let query () =
-  incr state.queries
-
-let instances l =
-  state.instances := !(state.instances) + List.length l
-
-let instantiation ilvl =
-  incr state.instantiation_rounds;
-  incr state.instantiation_lvl;
-  if not (!(state.instantiation_lvl) = ilvl) then begin
-    Printer.print_err
-      "state.instantiation_lvl = %d et ilvl = %d"
-      !(state.instantiation_lvl) ilvl;
-    assert false
-  end
-
-let bool_conflict () =
-  incr state.b_conflicts
-
-let theory_conflict () =
-  incr state.th_conflicts
-
-let bcp_conflict b1 b2 =
-  if b1 && b2 then incr state.bcp_b_conflicts
-  else if (not b1) && (not b2) then incr state.bcp_th_conflicts
-  else incr state.bcp_mix_conflicts
-
-let red b = if b then incr state.b_red else incr state.t_red
-
-let elim b = if b then incr state.b_elim else incr state.t_elim
-
-let reset_ilevel n = state.instantiation_lvl := n
-
-let reset_dlevel n = state.decision_lvl := n
-
-let empty_inst_info loc =
-  {
-    loc = loc;
-    kept = 0;
-    ignored = 0;
-    confl = 0;
-    decided = 0;
-    all_insts = SE.empty;
-    consumed = SE.empty;
-    all  = SE.empty;
-    produced  = SE.empty;
-    _new  = SE.empty;
-  }
-
-let new_instance_of axiom inst loc kept =
-  let () = state.instances_map_printed := false in
-  let ii =
-    try MS.find axiom !(state.instances_map)
-    with Not_found -> empty_inst_info loc
-  in
-  assert (ii.loc == loc);
-  let ii =
-    if kept then
-      {ii with kept = ii.kept + 1; all_insts = SE.add inst ii.all_insts}
-    else
-      {ii with ignored = ii.ignored + 1}
-  in
-  state.instances_map := MS.add axiom ii !(state.instances_map)
-
-let conflicting_instance axiom loc =
-  let ii =
-    try MS.find axiom !(state.instances_map)
-    with Not_found -> empty_inst_info loc
-  in
-  let ii = {ii with confl = ii.confl + 1} in
-  assert (ii.loc == loc);
-  state.instances_map := MS.add axiom ii !(state.instances_map)
-
-let decision_on_instance axiom_name =
-  try
-    let ii =
-      MS.find axiom_name !(state.instances_map)
-    in
-    let ii = {ii with decided = ii.decided + 1} in
-    (*assert (ii.loc == loc);*)
-    state.instances_map := MS.add axiom_name ii !(state.instances_map)
-  with Not_found -> ()
-
-
-let decision d origin =
-  incr state.decisions;
-  incr state.decision_lvl;
-  if not (!(state.decision_lvl) = d) then begin
-    Printer.print_err
-      "state.decision_lvl = %d et d = %d"
-      !(state.decision_lvl) d;
-    assert false
-  end;
-  state.assumes_current_lvl := 0;
-  decision_on_instance origin
-
-
-let register_produced_terms axiom loc consumed all produced _new =
-  let ii =
-    try MS.find axiom !(state.instances_map)
-    with Not_found -> empty_inst_info loc
-  in
-  assert (ii.loc == loc);
-  let ii =
-    {ii with
-     consumed = SE.union ii.consumed consumed;
-     all      = SE.union ii.all all;
-     produced = SE.union ii.produced produced;
-     _new     = SE.union ii._new _new }
-  in
-  state.instances_map := MS.add axiom ii !(state.instances_map)
-
-(******************************************************************************
-   printing the internal state
- ******************************************************************************)
 
 type mode =
   | Stats
@@ -265,6 +83,197 @@ let nb_prints = ref max_nb_prints
 
 let initial_info = ref true
 
+let state = {
+  decisions = 0;
+  assumes = 0;
+  assumes_current_lvl = 0;
+  queries = 0;
+  instantiation_rounds = 0;
+  instances = 0;
+  decision_lvl = 0;
+  instantiation_lvl = 0;
+
+  th_conflicts = 0;
+  b_conflicts = 0;
+  bcp_th_conflicts = 0;
+  bcp_b_conflicts = 0;
+  bcp_mix_conflicts = 0;
+
+  t_red = 0;
+  b_red = 0;
+  t_elim = 0;
+  b_elim = 0;
+
+  instances_map = MS.empty;
+  instances_map_printed = false
+}
+
+let set_sigprof () =
+  let tm =
+    let v = Options.get_profiling_period () in
+    if (Stdlib.compare v 0.) > 0 then v else -. v
+  in
+  ignore
+    (Unix.setitimer Unix.ITIMER_PROF
+       { Unix.it_value = tm; Unix.it_interval = 0. })
+
+let init () =
+  state.decisions <- 0;
+  state.assumes <- 0;
+  state.queries <- 0;
+  state.instantiation_rounds <- 0;
+  state.instances <- 0;
+  state.decision_lvl <- 0;
+  state.instantiation_lvl <- 0;
+  state.assumes_current_lvl <- 0;
+  state.th_conflicts <- 0;
+  state.b_conflicts <- 0;
+  state.bcp_th_conflicts <- 0;
+  state.bcp_b_conflicts <- 0;
+  state.bcp_mix_conflicts <- 0;
+  state.t_red <- 0;
+  state.b_red <- 0;
+  state.t_elim <- 0;
+  state.b_elim <- 0;
+  state.instances_map <- MS.empty;
+  state.instances_map_printed <- false;
+  set_sigprof ()
+
+(* update functions of the internal state *)
+
+let assume nb =
+  state.assumes <- nb + state.assumes;
+  state.assumes_current_lvl <- nb + state.assumes_current_lvl
+
+let query () = state.queries <- state.queries + 1
+
+let instances l =
+  state.instances <- state.instances + List.length l
+
+let instantiation ilvl =
+  state.instantiation_rounds <- state.instantiation_rounds + 1;
+  state.instantiation_lvl <- state.instantiation_lvl + 1;
+  if not (state.instantiation_lvl = ilvl) then begin
+    Printer.print_err
+      "state.instantiation_lvl = %d et ilvl = %d"
+      state.instantiation_lvl ilvl;
+    assert false
+  end
+
+let bool_conflict () =
+  state.b_conflicts <- state.b_conflicts + 1
+
+let theory_conflict () =
+  state.th_conflicts <- state.th_conflicts + 1
+
+let bcp_conflict b1 b2 =
+  if b1 && b2 then
+    state.bcp_b_conflicts <- state.bcp_b_conflicts + 1
+  else if (not b1) && (not b2) then
+    state.bcp_th_conflicts <- state.bcp_th_conflicts + 1
+  else
+    state.bcp_mix_conflicts <- state.bcp_mix_conflicts + 1
+
+let red b =
+  if b then
+    state.b_red <- state.b_red + 1
+  else
+    state.t_red <- state.t_red + 1
+
+let elim b =
+  if b then
+    state.b_elim <- state.b_elim + 1
+  else
+    state.t_elim <- state.t_elim + 1
+
+let reset_ilevel n = state.instantiation_lvl <- n
+
+let reset_dlevel n = state.decision_lvl <- n
+
+let empty_inst_info loc =
+  {
+    loc = loc;
+    kept = 0;
+    ignored = 0;
+    confl = 0;
+    decided = 0;
+    all_insts = SE.empty;
+    consumed = SE.empty;
+    all  = SE.empty;
+    produced  = SE.empty;
+    _new  = SE.empty;
+  }
+
+let new_instance_of axiom inst loc kept =
+  let () = state.instances_map_printed <- false in
+  let ii =
+    try MS.find axiom state.instances_map
+    with Not_found -> empty_inst_info loc
+  in
+  assert (ii.loc == loc);
+  let ii =
+    if kept then
+      {ii with kept = ii.kept + 1; all_insts = SE.add inst ii.all_insts}
+    else
+      {ii with ignored = ii.ignored + 1}
+  in
+  state.instances_map <- MS.add axiom ii state.instances_map
+
+let conflicting_instance axiom loc =
+  let ii =
+    try MS.find axiom state.instances_map
+    with Not_found -> empty_inst_info loc
+  in
+  let ii = {ii with confl = ii.confl + 1} in
+  assert (ii.loc == loc);
+  state.instances_map <- MS.add axiom ii state.instances_map
+
+let decision_on_instance axiom_name =
+  try
+    let ii =
+      MS.find axiom_name state.instances_map
+    in
+    let ii = {ii with decided = ii.decided + 1} in
+    (*assert (ii.loc == loc);*)
+    state.instances_map <- MS.add axiom_name ii state.instances_map
+  with Not_found -> ()
+
+
+let decision d origin =
+  state.decisions <- state.decisions + 1;
+  state.decision_lvl <- state.decision_lvl + 1;
+  if state.decision_lvl <> d then begin
+    Printer.print_err
+      "state.decision_lvl = %d et d = %d"
+      state.decision_lvl d;
+    (* TODO(Steven): if nobody knows how to use the previous print to debug
+       anything, I suggest we either remove `d` or get rid the invariant:
+       #(calls to Profiling.decision) = d. *)
+    assert false
+  end;
+  state.assumes_current_lvl <- 0;
+  decision_on_instance origin
+
+
+let register_produced_terms axiom loc consumed all produced _new =
+  let ii =
+    try MS.find axiom state.instances_map
+    with Not_found -> empty_inst_info loc
+  in
+  assert (ii.loc == loc);
+  let ii =
+    {ii with
+     consumed = SE.union ii.consumed consumed;
+     all      = SE.union ii.all all;
+     produced = SE.union ii.produced produced;
+     _new     = SE.union ii._new _new }
+  in
+  state.instances_map <- MS.add axiom ii state.instances_map
+
+(******************************************************************************
+   printing the internal state
+ ******************************************************************************)
+
 let string_resize s i =
   let sz = max 0 (i - (String.length s)) in
   let tmp = String.make sz ' ' in
@@ -277,7 +286,15 @@ let float_resize f i = string_resize (Format.sprintf "%f" f) i
 let percent total a =
   (string_of_int (int_of_float (a *. 100. /. total))) ^ "%"
 
-let columns =
+(* Profiling columns:
+   - Name
+   - Description
+   - Length of the cell
+   - Is the column linked to a statistic (Some true), a timer (Some false) or
+     not (None)?
+   - To be discovered
+*)
+let columns : (string * string * int * bool option * 'a) list =
   [
     "GTimer", "Global timer", 11, None,
     (fun _ gtime _ sz -> float_resize gtime sz);
@@ -311,63 +328,63 @@ let columns =
     (*-----------------------------------------------------------------*)
 
     "ilvl", "Current Instantiaton level", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.instantiation_lvl) sz);
+    (fun _ _ _ sz -> int_resize state.instantiation_lvl sz);
 
     "#i rnds", "Number of intantiation rounds", 8, Some true,
     (fun _ _ _ sz ->
-       int_resize !(state.instantiation_rounds) sz);
+       int_resize state.instantiation_rounds sz);
 
 
     "#insts", "Number of generated instances", 8, Some true,
-    (fun _ _ _ sz -> int_resize !(state.instances) sz);
+    (fun _ _ _ sz -> int_resize state.instances sz);
 
     "i/r", "AVG number of generated instances per instantiation rounds",
     8, Some true,
     (fun _ _ _ sz ->
        int_resize
-         (!(state.instances) / (max 1 !(state.instantiation_rounds))) sz);
+         (state.instances / (max 1 state.instantiation_rounds)) sz);
 
     "dlvl", "Current Decision level", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.decision_lvl) sz);
+    (fun _ _ _ sz -> int_resize state.decision_lvl sz);
 
     "#decs", "Number of decisions", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.decisions) sz);
+    (fun _ _ _ sz -> int_resize state.decisions sz);
 
     "T-asm", "Number of calls to Theory.assume", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.assumes) sz);
+    (fun _ _ _ sz -> int_resize state.assumes sz);
 
     "T/d", "Number of Theory.assume after last decision", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.assumes_current_lvl) sz);
+    (fun _ _ _ sz -> int_resize state.assumes_current_lvl sz);
 
     "T-qr", "Number of calls to Theory.query", 15, Some true,
-    (fun _ _ _ sz -> int_resize !(state.queries) sz);
+    (fun _ _ _ sz -> int_resize state.queries sz);
 
     "B-R", "Number of reduced clauses by Boolean propagation", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.b_red) sz);
+    (fun _ _ _ sz -> int_resize state.b_red sz);
 
     "B-E", "Number of eliminated clauses by Boolean propagation", 6,
-    Some true, (fun _ _ _ sz -> int_resize !(state.b_elim) sz);
+    Some true, (fun _ _ _ sz -> int_resize state.b_elim sz);
 
     "T-R", "Number of reduced clauses by Theory propagation", 6, Some true,
-    (fun _ _ _ sz -> int_resize !(state.t_red) sz);
+    (fun _ _ _ sz -> int_resize state.t_red sz);
 
     "T-E", "Number of eliminated clauses by Theory propagation", 6,
-    Some true, (fun _ _ _ sz -> int_resize !(state.t_elim) sz);
+    Some true, (fun _ _ _ sz -> int_resize state.t_elim sz);
 
     "B-!",  "Number of direct Boolean conflicts", 5, Some true,
-    (fun _ _ _ sz -> int_resize !(state.b_conflicts) sz);
+    (fun _ _ _ sz -> int_resize state.b_conflicts sz);
 
     "T-!", "Number of direct Theory conflicts" , 5, Some true,
-    (fun _ _ _ sz -> int_resize !(state.th_conflicts) sz);
+    (fun _ _ _ sz -> int_resize state.th_conflicts sz);
 
     "B>!", "Number of Boolean conflicts deduced by BCP", 5, Some true,
-    (fun _ _ _ sz -> int_resize !(state.bcp_b_conflicts) sz);
+    (fun _ _ _ sz -> int_resize state.bcp_b_conflicts sz);
 
     "T>!", "Number of Theory conflicts deduced by BCP", 5, Some true,
-    (fun _ _ _ sz -> int_resize !(state.bcp_th_conflicts) sz);
+    (fun _ _ _ sz -> int_resize state.bcp_th_conflicts sz);
 
     "M>!", "Number of Mix conflicts deduced by BCP", 5, Some true,
-    (fun _ _ _ sz -> int_resize !(state.bcp_mix_conflicts) sz);
+    (fun _ _ _ sz -> int_resize state.bcp_mix_conflicts sz);
 
     (*-----------------------------------------------------------------*)
     "SAT", "Time spent in SAT module(s)", 16, Some false,
@@ -448,23 +465,24 @@ let print_initial_info fmt =
 
 let stats_limit, timers_limit =
   let aux tmp sz =
-    tmp := Format.sprintf "%s|" !tmp;
-    for _ = 1 to sz do tmp := Format.sprintf "%s-" !tmp done
+    tmp := Format.sprintf "%s%s|" !tmp (String.make (max 0 sz) '-');
   in
-  let tmp_s = ref "" in
-  let tmp_t = ref "" in
+  let tmp_s = ref "|" in
+  let tmp_t = ref "|" in
   List.iter
     (fun (_, _, sz, opt, _) ->
        match opt with
        | Some true  -> aux tmp_s sz
        | Some false -> aux tmp_t sz
        | _          -> aux tmp_s sz; aux tmp_t sz
-    )columns;
-  !tmp_s ^ "|", !tmp_t ^ "|"
+    )
+    columns;
+  !tmp_s, !tmp_t
 
 let print_header header fmt =
   let pp_stats =
-    match !mode with Stats -> true | Timers -> false | _ -> assert false in
+    match !mode with Stats -> true | Timers -> false | _ -> assert false
+  in
   if header || !nb_prints >= max_nb_prints then begin
     nb_prints := 0;
     Format.fprintf fmt "%s@." (if pp_stats then stats_limit else timers_limit);
@@ -502,32 +520,13 @@ let print_timers header steps fmt timers =
     )columns;
   Format.fprintf fmt "|@."
 
-(* unused
-   let report2 axiom fmt (b,e) =
-   let open Lexing in
-   let l = b.pos_lnum in
-   let fc = b.pos_cnum - b.pos_bol + 1 in
-   let lc = e.pos_cnum - b.pos_bol + 1 in
-   fprintf fmt "(Sub) Axiom \"%s\", line %d, characters %d-%d:"
-    axiom l fc lc
-*)
-
-(* unused
-   let report3 fmt (b,e) =
-   let open Lexing in
-   let l = b.pos_lnum in
-   let fc = b.pos_cnum - b.pos_bol + 1 in
-   let lc = e.pos_cnum - b.pos_bol + 1 in
-   fprintf fmt "line %d, chars %d-%d." l fc lc
-*)
-
-let (@@) a b = if a <> 0 then a else b
 
 let print_instances_generation forced _steps fmt _timers =
-  if not forced && !(state.instances_map_printed) then
+  let (@@) a b = if a <> 0 then a else b in
+  if not forced && state.instances_map_printed then
     Format.fprintf fmt "[Instances profiling] No change since last print@."
   else
-    let () = state.instances_map_printed := true in
+    let () = state.instances_map_printed <- true in
     if not forced then ignore(Sys.command("clear"));
     Format.fprintf fmt "[Instances profiling] ...@.";
     let insts =
@@ -538,7 +537,7 @@ let print_instances_generation forced _steps fmt _timers =
            let ratio = f1 /. (f1 +. f2) in
            let all_card = SE.cardinal ii.all_insts in
            (name, ii, all_card, ratio) :: acc)
-        !(state.instances_map) []
+        state.instances_map []
     in
     let insts =
       List.fast_sort (fun (_, i1, c1, _) (_, i2, c2, _) ->
@@ -566,54 +565,8 @@ let print_instances_generation forced _steps fmt _timers =
          fprintf fmt "new: %s|| "
            (int_resize (SE.cardinal i._new) 5);
          fprintf fmt "%s" (string_resize name 30);
-         (*fprintf fmt "%s | " (string_resize name 30);
-           fprintf fmt "%a@." report3 i.loc (* too long *) *)
          fprintf fmt "@."
       )insts;
-    (*if forced then
-      let () = fprintf fmt "digraph v{@." in
-      fprintf fmt "size=\"10,7.5\"@.";
-      fprintf fmt "ratio=\"fill\"@.";
-      fprintf fmt "rotate=90@.";
-      fprintf fmt "fontsize=\"12pt\"@.";
-      fprintf fmt "rankdir = TB@." ;
-      let terms = ref SE.empty in
-      List.iter
-      (fun (name, i, _) ->
-      SE.iter
-      (fun t ->
-      fprintf fmt "\"%d\" -> \"%s\";@." (T.hash t) name
-      )i.consumed;
-      terms := SE.union !terms i.consumed;
-      SE.iter
-      (fun t ->
-      fprintf fmt "\"%s\" -> \"%d\";@." name (T.hash t)
-      )i._new;
-      terms := SE.union !terms i._new;
-      fprintf fmt "\"%s\" [fillcolor=yellow];@." name;
-      )insts;
-      SE.iter
-      (fun t ->
-      fprintf fmt "\"%d\" [fillcolor=green];@." (T.hash t);
-      )!terms;
-      fprintf fmt "}@."*)
-    (*
-      if forced then
-      let () = fprintf fmt "digraph v{@." in
-      fprintf fmt "size=\"10,7.5\"@.";
-      fprintf fmt "ratio=\"fill\"@.";
-      fprintf fmt "rotate=90@.";
-      fprintf fmt "fontsize=\"12pt\"@.";
-      fprintf fmt "rankdir = TB@." ;
-      List.iter
-      (fun (s1, i1, _) ->
-      List.iter
-      (fun (s2, i2, _) ->
-      if SE.is_empty (SE.inter i1.produced i2.consumed) then ()
-      else fprintf fmt "\"%s\" -> \"%s\";@." s1 s2
-      )insts
-      )insts;
-      fprintf fmt "}@."*)
     ()
 
 let print_call_tree _forced _steps fmt timers =
@@ -656,12 +609,12 @@ let float_print =
 
 let line_of_module =
   let open Format in
-  fun arr fmt f ->
+  fun timers fmt f ->
     fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
     let cpt = ref 0. in
     List.iter
       (fun m ->
-         let v = arr.(Timers.mtag m).(Timers.ftag f) in
+         let v = Timers.get_value timers m f in
          cpt := !cpt +. v;
          fprintf fmt "| %a  " float_print v
       ) Timers.all_modules;
@@ -694,10 +647,7 @@ let timers_table =
     fprintf fmt "|@.";
     for _ = 0 to 206 do fprintf fmt "-" done;
     fprintf fmt "|@.";
-    let arr_timers = Timers.get_timers_array timers in
-    List.iter
-      (line_of_module arr_timers fmt)
-      Timers.all_functions;
+    List.iter (line_of_module timers fmt) Timers.all_functions;
     line_of_sum_module fmt timers
 
 let print =
@@ -706,6 +656,7 @@ let print =
     print_initial_info fmt;
     set_sigprof();
     if all then begin
+      let old_mode = !mode in
       mode := Stats;
       fprintf fmt "@.";
       print_stats true steps fmt timers;
@@ -717,6 +668,7 @@ let print =
       fprintf fmt "@.";
       print_instances_generation true steps fmt timers;
       fprintf fmt "@.";
+      mode := old_mode
     end
     else match !mode with
       | Stats           -> print_stats false steps fmt timers

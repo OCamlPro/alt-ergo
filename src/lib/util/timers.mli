@@ -99,12 +99,6 @@ val string_of_ty_function : ty_function -> string
 
 val get_stack : t -> (ty_module * ty_function * int) list
 
-val get_timers_array : t -> (float array) array
-
-val mtag : ty_module -> int
-
-val ftag : ty_function -> int
-
 val all_modules : ty_module list
 
 val all_functions : ty_function list

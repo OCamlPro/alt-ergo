@@ -28,8 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t
-
 val init : unit -> unit
 val decision : int -> string -> unit
 val assume : int -> unit
