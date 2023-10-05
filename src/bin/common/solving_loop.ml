@@ -484,7 +484,11 @@ let main () =
       pp_reason_unknown st
     | ":version" ->
       print_std Fmt.string Version._version
-    | ":all-statistics"
+    | ":all-statistics" ->
+      if Options.get_profiling () then
+        Printer.print_std "%t" Profiling.print_get_statistics
+      else
+        Printer.print_smtlib_err "Profiling disactivated (try --profiling)"
     | ":assertion-stack-levels" ->
       unsupported_opt name
     | _ ->

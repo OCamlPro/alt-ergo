@@ -709,14 +709,17 @@ let register_int_stat (key : string) (getter : unit -> int) =
   register_stat key (fun () -> string_of_int (getter ()))
 
 let register_float_stat (key : string) (getter : unit -> float) =
-  register_stat key (fun () -> string_of_float (getter ()))
+  register_stat
+    key
+    (fun () ->
+       Format.sprintf "%.9f" (getter ()))
 
 let print_get_statistics fmt =
-  Format.fprintf fmt "(@[<v 0>";
+  Format.fprintf fmt "(@[<v 0>@,";
   Hashtbl.iter
     (fun key getter -> Format.fprintf fmt ":%s %s@," key (getter ()))
     statistics_table;
-  Format.fprintf fmt ")@]"
+  Format.fprintf fmt "@])@,"
 
 (* Now, registering the statistics we want in get-statistics. *)
 let () =
