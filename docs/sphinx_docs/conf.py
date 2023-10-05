@@ -9,10 +9,10 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
@@ -20,6 +20,16 @@
 project = 'Alt-Ergo Documentation'
 copyright = '2020 - 2023, Alt-Ergo developers'
 author = 'Alt-Ergo developers'
+
+# -- Custom lexer ------------------------------------------------------------
+
+# Import our custom lexer
+from alt_ergo_lexer import AltErgoLexer
+from sphinx.highlighting import lexers
+lexers['alt-ergo'] = AltErgoLexer()
+
+# Use alt-ergo as the default language
+highlight_language = 'alt-ergo'
 
 # -- Entry point -------------------------------------------------------------
 
