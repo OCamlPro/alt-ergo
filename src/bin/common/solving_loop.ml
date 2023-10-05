@@ -294,7 +294,9 @@ let main () =
     | Util.Timeout ->
       Printer.print_status_timeout None None None None;
       exit_as_timeout ()
-    | Errors.Error e -> recoverable_error "%a" Errors.report e; st
+    | Errors.Error e ->
+      recoverable_error "%a" Errors.report e;
+      st
     | Exit -> exit 0
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
@@ -563,6 +565,10 @@ let main () =
         let dloc_file = (State.get State.logic_file st).loc in
         let loc = DStd.Loc.(lexing_positions (loc dloc_file l)) in
         handle_option loc name value;
+        st
+
+      | {contents = `Set_option _; _} ->
+        recoverable_error "Invalid set-option";
         st
 
       | {contents = `Get_model; _ } ->

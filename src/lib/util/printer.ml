@@ -386,6 +386,7 @@ let print_status_preprocess ?(validity_mode=true)
 
 let print_smtlib_err ?(flushed=true) s =
   (* The smtlib error messages are printed on the regular output. *)
+  pp_std_smt ();
   let fmt = Options.Output.get_fmt_regular () in
   let k fmt =
     if flushed || Options.get_output_with_forced_flush () then

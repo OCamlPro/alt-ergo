@@ -78,3 +78,18 @@ And now some cases where it should work (using either `--produce-models` or `set
   unknown
   (
   )
+
+We now test the --continue-on-error strategy where alt-ergo fails (legitimately) on some commands but keeps running.
+  $ echo '(get-info :foo) (set-option :bar) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
+  unsupported
+  
+  (error "Invalid set-option")
+  
+  unknown
+
+Some errors are unescapable though. It its the case of syntax error in commands.
+  $ echo '(get-info :foo) (set-option :bar) (exil) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
+  unsupported
+  
+  (error "Invalid set-option")
+  (error "Error on parsing errors (code 3)")
