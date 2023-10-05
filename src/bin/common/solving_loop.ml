@@ -120,7 +120,6 @@ let main () =
       if Options.get_profiling() then
         Profiling.print true
           (Steps.get_steps ())
-          (Signals_profiling.get_timers ())
           (Options.Output.get_fmt_diagnostic ());
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent

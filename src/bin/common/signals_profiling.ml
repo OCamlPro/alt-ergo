@@ -30,10 +30,6 @@
 
 open AltErgoLib
 
-let timers = Timers.empty ()
-
-let get_timers () = timers
-
 let init_sigterm_6 () =
   (* what to do with Ctrl+C ? *)
   Sys.set_signal Sys.sigint(*-6*)
@@ -58,7 +54,7 @@ let init_sigterm_11_9 () =
            (Sys.Signal_handle
               (fun _ ->
                  Profiling.print true (Steps.get_steps ())
-                   timers (Options.Output.get_fmt_diagnostic ());
+                   (Options.Output.get_fmt_diagnostic ());
                  exit 1
               )
            )
@@ -71,7 +67,7 @@ let init_sigterm_21 () =
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-            Profiling.print false (Steps.get_steps ()) timers
+            Profiling.print false (Steps.get_steps ())
               (Options.Output.get_fmt_diagnostic ());
          )
       )
@@ -84,10 +80,7 @@ let init_sigalarm () =
 
 let init_profiling () =
   if Options.get_profiling () then begin
-    Timers.reset timers;
     assert (Options.get_timers());
-    Timers.set_timer_start (Timers.start timers);
-    Timers.set_timer_pause (Timers.pause timers);
     Profiling.init ();
   end
 

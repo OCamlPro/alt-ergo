@@ -61,5 +61,10 @@ val register_produced_terms :
   Expr.Set.t -> (* produced that are new *)
   unit
 
-val print : bool -> int -> Timers.t -> Format.formatter -> unit
+val print : bool -> int -> Format.formatter -> unit
 val switch : Format.formatter -> unit
+
+val get_timers : unit -> Timers.t
+
+(** Prints the statistics for the SMT instruction get-statistics *)
+val print_get_statistics : Format.formatter -> unit
