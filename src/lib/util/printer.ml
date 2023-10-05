@@ -267,12 +267,13 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     force_new_line fmt;
     if Options.get_output_with_colors () then
       Format.fprintf fmt
-        "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@,@[<v 0>"
+        "@{<fg_blue>@{<bold>[Debug]%s%s@}@} @[<v 0>"
         mname fname
     else
       Format.fprintf fmt
-        "[Debug]%s%s@,@[<v 0>" mname fname
+        "[Debug]%s%s @[<v 0>" mname fname
   end;
+  pp_std_smt ();
   if flushed || Options.get_output_with_forced_flush ()
   then Format.kfprintf flush fmt s else Format.fprintf fmt s
 

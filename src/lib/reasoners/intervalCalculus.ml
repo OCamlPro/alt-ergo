@@ -2050,8 +2050,7 @@ let optimizing_split env uf opt =
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
-    Format.eprintf
-      "%a has a %s: %a@."
+    Printer.print_dbg "%a has a %s: %a@."
       E.print e
       (if to_max then "maximum" else "minimum")
       Q.print optim;
@@ -2073,7 +2072,7 @@ let optimizing_split env uf opt =
     | Sim.Core.Sat _   -> assert false (* because we maximized *)
     | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
     | Sim.Core.Unbounded _ ->
-      Format.eprintf
+      Printer.print_dbg
         "%a is unbounded. Let other methods assign a value for it@."
         E.print e;
       let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
@@ -2083,8 +2082,7 @@ let optimizing_split env uf opt =
       let {Sim.Core.max_v; _} = Lazy.force mx in
       let max_p = Q.add max_v.bvalue.v c in
       let optim = if to_max then max_p else Q.mult Q.m_one max_p in
-      Format.eprintf
-        "%a has a %s: %a@."
+      Printer.print_dbg "%a has a %s: %a@."
         E.print e
         (if to_max then "maximum" else "minimum")
         Q.print optim;
