@@ -362,8 +362,17 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt
     interpretation use_underscore unsat_core output_format model_type
-    () () () ()
+    produce_models dump_models dump_models_on () ()
   =
+  let _ =
+    match dump_models_on with
+    | None ->
+      Options.set_dump_models dump_models
+    | Some ch ->
+      let out = Options.Output.create_channel ch in
+      Options.Output.set_dump_models out;
+      Options.set_dump_models true
+  in
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
     | None -> Native
@@ -373,7 +382,14 @@ let mk_output_opt
     | None -> Value
     | Some v -> v
   in
-  set_interpretation interpretation;
+  let _ =
+    match interpretation with
+    | INone when produce_models || dump_models
+                 || Option.is_some dump_models_on ->
+      set_interpretation ILast
+    | interpretation ->
+      set_interpretation interpretation
+  in
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -844,7 +860,7 @@ let parse_output_opt =
 
   (* Use the --interpretation and --produce-models (which is equivalent to
      --interpretation last) to determine the interpretation value. *)
-  let interpretation, dump_models, dump_models_on, frontend =
+  let interpretation, produce_models, dump_models, dump_models_on, frontend =
     let interpretation =
       let doc = Format.sprintf
           "Best effort support for counter-example generation. \
@@ -903,30 +919,15 @@ let parse_output_opt =
     let dump_models_on =
       let doc =
         "Select a channel to output the models dumped by the option \
-         --dump-model."
+         --dump-models (implies --dump-models)."
       in
       let docv = "VAL" in
-      let chan =
-        Arg.conv
-          ~docv
-          (
-            (fun s -> Ok (Output.create_channel s)),
-            (fun fmt f -> Format.pp_print_string fmt (Output.to_string f))
-          )
-      in
-      Arg.(value & opt chan (Output.create_channel "stderr") &
+      Arg.(value & opt (some string) None &
            info ["dump-models-on"] ~docv ~docs:s_models ~doc)
     in
 
-    let mk_interpretation interpretation produce_models dump_models =
-      match interpretation with
-      | INone when produce_models || dump_models -> ILast
-      | interpretation -> interpretation
-    in
-    Term.(
-      const mk_interpretation $ interpretation $
-      produce_models $ dump_models
-    ),
+    interpretation,
+    produce_models,
     dump_models,
     dump_models_on,
     frontend
@@ -1058,22 +1059,14 @@ let parse_output_opt =
     )
   in
 
-  let set_dump_models =
-    Term.(const set_dump_models $ dump_models)
-  in
-
-  let set_dump_models_on =
-    Term.(const Output.set_dump_models $ dump_models_on)
-  in
-
   let set_frontend =
     Term.(const set_frontend $ frontend)
   in
 
   Term.(ret (const mk_output_opt $
              interpretation $ use_underscore $ unsat_core $
-             output_format $ model_type $
-             set_dump_models $ set_dump_models_on $
+             output_format $ model_type $ produce_models $
+             dump_models $ dump_models_on $
              set_sat_options $ set_frontend
             ))
 
