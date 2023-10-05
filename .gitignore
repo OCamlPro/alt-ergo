@@ -41,5 +41,8 @@ alt-ergo.js
 alt-ergo-worker.js
 www/
 
+# Generated python files
+__pycache__
+
 # Generated nix files
 /result*
