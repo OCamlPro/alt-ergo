@@ -173,6 +173,8 @@ and 'a tdecl =
   | TTypeDecl of Loc.t * Ty.t
   | TPush of Loc.t * int
   | TPop of Loc.t * int
+  | TReset of Loc.t
+  | TExit of Loc.t
 
 (*****)
 
@@ -338,23 +340,28 @@ and print_formula =
       fprintf fmt "%a" print_formula f
     | _ -> fprintf fmt "(formula pprint not implemented)"
 
-(*
+
 let rec print_tdecl fmt = function
   | TTheory (_, name, _, l) ->
     Format.fprintf fmt "th %s: @[<v>%a@]" name
       (Util.print_list_pp ~sep:Format.pp_print_space ~pp:print_atdecl) l
-  | TAxiom (_, name, kind, f) ->
+  | TAxiom (_, name, _kind, f) ->
     Format.fprintf fmt "ax %s: @[<hov>%a@]" name print_formula f
   | TRewriting (_, name, l) ->
     Format.fprintf fmt "rwt %s: @[<hov>%a@]" name
       (Util.print_list_pp ~sep:Format.pp_print_space
          ~pp:(print_rwt print_term)) l
-  | TGoal (_, sort, name, f) ->
+  | TGoal (_, _sort, name, f) ->
     Format.fprintf fmt "goal %s: @[<hov>%a@]" name print_formula f
   | TPush (_loc,n) ->
     Format.fprintf fmt "push %d" n
   | TPop (_loc,n) ->
-    Format.fprintf fmt "pop %d" n
+    Format.fprintf fmt "pop %d"n
+  | TLogic _ -> Format.fprintf fmt "logic"
+  | TPredicate_def _ -> Format.fprintf fmt "predicate def"
+  | TFunction_def _ -> Format.fprintf fmt "function def"
+  | TTypeDecl _ -> Format.fprintf fmt "type decl"
+  | TReset _ -> Format.fprintf fmt "reset"
+  | TExit _ -> Format.fprintf fmt "exit"
 
 and print_atdecl fmt a = print_tdecl fmt a.c
-*)

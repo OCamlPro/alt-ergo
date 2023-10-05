@@ -461,5 +461,11 @@ let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
   | TPredicate_def(loc, n, _args, f) -> mk_preddef acc f n loc
   | TFunction_def(loc, n, _args, _rety, f) -> mk_function acc f n loc
   | TTypeDecl _ | TLogic _  -> acc
+  | TReset _
+  | TExit _ ->
+    (* These cases only appear on smt2 files, which are handled by
+       Solving_loop. *)
+    Printer.print_wrn "Ignoring instruction %a" Typed.print_atdecl d;
+    acc
 
 let make_list l = List.fold_left make [] (List.rev l)

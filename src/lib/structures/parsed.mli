@@ -137,5 +137,7 @@ type decl =
   | TypeDecl of type_decl list
   | Push of Loc.t * int
   | Pop of Loc.t * int
+  | Reset of Loc.t
+  | Exit of Loc.t
 
 type file = decl list

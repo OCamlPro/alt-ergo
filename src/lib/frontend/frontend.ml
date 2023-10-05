@@ -262,17 +262,18 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env, `Unsat, dep
 
       | ThAssume ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) ->
-        if unused_context ax_name used_context then
-          acc
-        else
-          match consistent with
-          | `Sat _ | `Unknown _ ->
-            let dep = mk_root_dep ax_name ax_form d.st_loc in
-            let env = SAT.assume_th_elt env th_elt dep in
-            env, consistent, dep
-          | `Unsat ->
-            env, consistent, dep
-
+        begin
+          if unused_context ax_name used_context then
+            acc
+          else
+            match consistent with
+            | `Sat _ | `Unknown _ ->
+              let dep = mk_root_dep ax_name ax_form d.st_loc in
+              let env = SAT.assume_th_elt env th_elt dep in
+              env, consistent, dep
+            | `Unsat ->
+              env, consistent, dep
+        end
     with
     | SAT.Sat t ->
       (* This case should mainly occur when a query has a non-unsat result,
