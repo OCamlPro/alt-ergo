@@ -58,10 +58,10 @@ module type S = sig
     r Sig_rel.facts ->
     t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
-  val case_split :
-    t -> for_model:bool ->
-    to_optimize: Th_util.optimized_split option ->
-    Sig_rel.case_split * t
+  val case_split : t -> for_model:bool -> Th_util.case_split list * t
+  val optimizing_split :
+    t -> Th_util.optimized_split -> Th_util.optimized_split option
+
   val query :  t -> Expr.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.Set.t

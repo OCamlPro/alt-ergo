@@ -66,10 +66,10 @@ module type S = sig
     r Sig_rel.facts ->
     t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
-  val case_split :
-    t -> for_model:bool ->
-    to_optimize: Th_util.optimized_split option ->
-    Sig_rel.case_split * t
+  val case_split : t -> for_model:bool -> Th_util.case_split list * t
+  val optimizing_split :
+    t -> Th_util.optimized_split -> Th_util.optimized_split option
+
   val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
   val class_of : t -> Expr.t -> Expr.Set.t
@@ -698,16 +698,18 @@ module Main : S = struct
 
   (* End: new implementation of add, add_term, assume_literals and all that *)
 
-  let case_split env ~for_model ~to_optimize =
-    let cs = Rel.case_split env.relation env.uf ~for_model ~to_optimize in
+  let case_split env ~for_model =
+    let cs = Rel.case_split env.relation env.uf ~for_model in
     match cs with
-    | Sig_rel.Split [] when for_model ->
+    | [] when for_model ->
       let l, uf = Uf.assign_next env.uf in
-      (* try to not to modify uf in the future. It's currently done only
-         to add fresh terms in UF to avoid loops *)
-      Sig_rel.Split l, {env with uf}
-    | Sig_rel.Split _ -> cs, env
-    | Sig_rel.Optimized_split _ -> cs, env
+      (* TODO: Try to not to modify uf in the future. It's currently done only
+         to add fresh terms in UF to avoid loops. *)
+      l, {env with uf}
+    | _ -> cs, env
+
+  let optimizing_split env opt_split =
+    Rel.optimizing_split env.relation env.uf opt_split
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in

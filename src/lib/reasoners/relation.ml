@@ -28,6 +28,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module X = Shostak.Combine
+
 (*** Combination module of Relations ***)
 
 module Rel1 : Sig_rel.RELATION = IntervalCalculus
@@ -122,40 +124,40 @@ let query env uf a =
             | Some _ as ans -> ans
             | None -> Rel7.query env.r7 uf a
 
-let case_split env uf ~for_model ~to_optimize =
+let case_split env uf ~for_model =
   Options.exec_thread_yield ();
-  let seq1 = Rel1.case_split env.r1 uf ~for_model ~to_optimize in
-  let seq2 = Rel2.case_split env.r2 uf ~for_model ~to_optimize in
-  let seq3 = Rel3.case_split env.r3 uf ~for_model ~to_optimize in
-  let seq4 = Rel4.case_split env.r4 uf ~for_model ~to_optimize in
-  let seq5 = Rel5.case_split env.r5 uf ~for_model ~to_optimize in
-  let seq6 = Rel6.case_split env.r6 uf ~for_model ~to_optimize in
-  let seq7 = Rel7.case_split env.r7 uf ~for_model ~to_optimize in
-  let splits, unbounded =
-    Lists.partition_map ~keep_ordering:false (function
-        | Sig_rel.Split l -> Ok l
-        | Optimized_split res -> Error res
-      ) [ seq1; seq2; seq3; seq4; seq5; seq6; seq7 ]
-  in
-  let unbounded =
-    List.fast_sort (fun a b -> a .Th_util.order - b.Th_util.order) unbounded in
-  match unbounded with
-  | [] ->
-    assert (to_optimize == None);
-    let splits = List.fold_left (|@|) [] splits in
-    Sig_rel.Split (
-      List.fast_sort
-        (fun (_,_,sz1) (_,_,sz2) ->
-           match sz1, sz2 with
-           | Th_util.CS(_,_,sz1), Th_util.CS(_,_,sz2) ->
-             Numbers.Q.compare sz1 sz2
-           | _ -> assert false
-        )splits
-    )
-  | [u] ->
-    assert (to_optimize != None);
-    Sig_rel.Optimized_split u
-  | _ -> assert false (* optimize one expr per call *)
+  let seq1 = Rel1.case_split env.r1 uf ~for_model in
+  let seq2 = Rel2.case_split env.r2 uf ~for_model in
+  let seq3 = Rel3.case_split env.r3 uf ~for_model in
+  let seq4 = Rel4.case_split env.r4 uf ~for_model in
+  let seq5 = Rel5.case_split env.r5 uf ~for_model in
+  let seq6 = Rel6.case_split env.r6 uf ~for_model in
+  let seq7 = Rel7.case_split env.r7 uf ~for_model in
+  let splits = [seq1; seq2; seq3; seq4; seq5; seq6; seq7] in
+  let splits = List.fold_left (|@|) [] splits in
+  List.fast_sort
+    (fun (_ ,_ , sz1) (_ ,_ , sz2) ->
+       match sz1, sz2 with
+       | Th_util.CS (_ ,_ , sz1), Th_util.CS(_ ,_ , sz2) ->
+         Numbers.Q.compare sz1 sz2
+       | _ -> assert false
+    ) splits
+
+let optimizing_split env uf ({ Th_util.r; _ } as opt_split) =
+  Options.exec_thread_yield ();
+  match X.type_info r with
+  | Ty.Tint | Ty.Treal ->
+      Rel1.optimizing_split env.r1 uf opt_split
+  | Ty.Trecord _ ->
+      Rel2.optimizing_split env.r2 uf opt_split
+  | Ty.Tbitv _ ->
+      Rel3.optimizing_split env.r3 uf opt_split
+  | Ty.Tfarray _ ->
+      Rel4.optimizing_split env.r4 uf opt_split
+  | Ty.Tadt _ ->
+      Rel5.optimizing_split env.r5 uf opt_split
+  | _ ->
+      None
 
 let add env uf r t =
   Options.exec_thread_yield ();

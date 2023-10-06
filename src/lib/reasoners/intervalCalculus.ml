@@ -1388,9 +1388,6 @@ let fm (module Oracle : S with type p = P.t) uf are_eq rclass_of env eqs =
 let is_num r =
   let ty = X.type_info r in ty == Ty.Tint || ty == Ty.Treal
 
-let is_num_term r =
-  let ty = E.type_info r in ty == Ty.Tint || ty == Ty.Treal
-
 let add_disequality are_eq env eqs p expl =
   let ty = P.type_info p in
   match P.to_list p with
@@ -2036,10 +2033,23 @@ let mk_const_term c ty =
   | Ty.Treal -> E.real c
   | _ -> assert false
 
-let optimizing_split env uf opt =
+let case_split env uf ~for_model =
+  let res = default_case_split env uf ~for_model in
+  match res with
+  | [] ->
+    if not for_model then []
+    else
+      begin
+        match case_split_union_of_intervals env uf with
+        | [] -> model_from_unbounded_domains env uf
+        | l -> l
+      end
+  | _ -> res
+
+let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  let {Th_util.order; r = r; is_max = to_max; e; value } = opt in
+  let {Th_util.order; r = r; is_max = to_max; e; value } = opt_split in
   assert (match value with
       | Unknown -> true
       | _ -> false
@@ -2059,63 +2069,42 @@ let optimizing_split env uf opt =
     Debug.case_split r1 r2;
     let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
     let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
-    Sig_rel.Optimized_split { opt with value = Value s; }
+    Some { opt_split with value = Value s }
 
   | None ->
-    let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
-    let p = if to_max then p else P.mult_const Q.m_one p in
-    let l, c = P.to_list p in
-    let l = List.rev_map (fun (x, y) -> y, x) (List.rev l) in
-    let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
-    match Sim.Result.get mx_res sim with
-    | Sim.Core.Unknown -> assert false
-    | Sim.Core.Sat _   -> assert false (* because we maximized *)
-    | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
-    | Sim.Core.Unbounded _ ->
-      Printer.print_dbg
-        "%a is unbounded. Let other methods assign a value for it@."
-        E.print e;
-      let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
-      Sig_rel.Optimized_split { opt with value }
+    begin
+      let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
+      let p = if to_max then p else P.mult_const Q.m_one p in
+      let l, c = P.to_list p in
+      let l = List.rev_map (fun (x, y) -> y, x) (List.rev l) in
+      let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
+      match Sim.Result.get mx_res sim with
+      | Sim.Core.Unknown -> assert false
+      | Sim.Core.Sat _   -> assert false (* because we maximized *)
+      | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
+      | Sim.Core.Unbounded _ ->
+        Printer.print_dbg
+          "%a is unbounded. Let other methods assign a value for it@."
+          E.print e;
+        let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
+        Some { opt_split with value }
 
-    | Sim.Core.Max(mx,_sol) ->
-      let {Sim.Core.max_v; _} = Lazy.force mx in
-      let max_p = Q.add max_v.bvalue.v c in
-      let optim = if to_max then max_p else Q.mult Q.m_one max_p in
-      Printer.print_dbg "%a has a %s: %a@."
-        E.print e
-        (if to_max then "maximum" else "minimum")
-        Q.print optim;
+      | Sim.Core.Max(mx,_sol) ->
+        let {Sim.Core.max_v; _} = Lazy.force mx in
+        let max_p = Q.add max_v.bvalue.v c in
+        let optim = if to_max then max_p else Q.mult Q.m_one max_p in
+        Printer.print_dbg "%a has a %s: %a@."
+          E.print e
+          (if to_max then "maximum" else "minimum")
+          Q.print optim;
 
-      let r2 = alien_of (P.create [] optim  ty) in
-      Debug.case_split r1 r2;
-      let t2 = mk_const_term optim ty in
-      let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
-      let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
-      Sig_rel.Optimized_split { opt with value = Value s; }
-
-
-let case_split env uf ~for_model ~to_optimize =
-  match to_optimize with
-  | Some x ->
-    if is_num_term x.Th_util.e then
-      optimizing_split env uf x
-    else
-      (* Some other theory should find an optimium for e *)
-      Sig_rel.Split []
-
-  | None ->
-    let res = default_case_split env uf ~for_model in
-    match res with
-    | [] ->
-      if not for_model then Sig_rel.Split []
-      else
-        begin
-          match case_split_union_of_intervals env uf with
-          | [] -> Sig_rel.Split (model_from_unbounded_domains env uf)
-          | l -> Sig_rel.Split l
-        end
-    | _ -> Sig_rel.Split res
+        let r2 = alien_of (P.create [] optim  ty) in
+        Debug.case_split r1 r2;
+        let t2 = mk_const_term optim ty in
+        let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
+        let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
+        Some { opt_split with value = Value s; }
+    end
 
 (*** part dedicated to FPA reasoning ************************************)
 

@@ -44,8 +44,10 @@ type 'a optimized_split_value =
   | Pinfinity
   | Unknown
 
-type optimization =
-  { opt_ord : int; opt_val : Expr.t optimized_split_value }
+type optimization = {
+  opt_ord : int;
+  opt_val : Expr.t optimized_split_value
+}
 
 (** Indicates where asserted literals come from.
 
@@ -87,12 +89,12 @@ type lit_origin =
       described above. In particular, user assertions, SAT decisions, SAT
       propagations and theory propagations all have the {!Other} origin. *)
 
-type split_info = Shostak.Combine.r Xliteral.view * bool * lit_origin
+type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
-type optimized_split =
-  { r : Shostak.Combine.r;
-    e : Expr.t;
-    value : split_info optimized_split_value;
-    is_max : bool; (* for linear arithmetic: is_max <-> (opt = maximize) *)
-    order : int (* ordering assigned by the user for this variable *)
-  }
+type optimized_split = {
+  r : Shostak.Combine.r;
+  e : Expr.t;
+  value : case_split optimized_split_value;
+  is_max : bool;
+  order : int
+}

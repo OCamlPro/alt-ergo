@@ -44,8 +44,10 @@ type 'a optimized_split_value =
   | Pinfinity
   | Unknown
 
-type optimization =
-  { opt_ord : int; opt_val : Expr.t optimized_split_value }
+type optimization = {
+  opt_ord : int;
+  opt_val : Expr.t optimized_split_value
+}
 
 type lit_origin =
   | Subst
@@ -53,12 +55,16 @@ type lit_origin =
   | NCS of theory * Numbers.Q.t
   | Other
 
-type split_info = Shostak.Combine.r Xliteral.view * bool * lit_origin
+(* TODO: use a record to document this type. *)
+type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
-type optimized_split =
-  { r : Shostak.Combine.r;
-    e : Expr.t;
-    value : split_info optimized_split_value;
-    is_max : bool; (* for linear arithmetic: is_max <-> (opt = maximize) *)
-    order : int (* ordering assigned by the user for this variable *)
-  }
+type optimized_split = {
+  r : Shostak.Combine.r;
+  e : Expr.t;
+  value : case_split optimized_split_value;
+  is_max : bool;
+  (** For linear arithmetic: is_max <-> (opt = maximize). *)
+
+  order : int
+  (** Ordering assigned by the user for this variable. *)
+}
