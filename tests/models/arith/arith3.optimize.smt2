@@ -1,0 +1,11 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-const x Int)
+(declare-const y Int)
+(declare-const z Int)
+; This linear program is not bounded.
+(assert (= (+ (* 5 x) (* 2 y) (* (- 0 3) z)) 0))
+(assert (= (+ (* (- 0 2) x) (* 4 y)) 0))
+(maximize x)
+(check-sat)
+(get-model)

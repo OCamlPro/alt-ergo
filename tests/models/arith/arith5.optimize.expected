@@ -1,0 +1,7 @@
+
+unknown
+(
+  (define-fun x () Real (- (/ 1 18)))
+  (define-fun y () Real (- (/ 1 36)))
+  (define-fun z () Real (- (/ 7 9)))
+)
