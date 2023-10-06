@@ -1507,7 +1507,7 @@ let main =
            \   Hichem Rami Ait El Hara\n\
            \   Pierre Villemot";
       `Pre "PREVIOUS AUTHORS\n\
-           \   Albain Coquereau\n\
+           \   Albin Coquereau\n\
            \   Mattias Roux";
       `Pre "ORIGINAL AUTHORS\n\
            \   Sylvain Conchon\n\
