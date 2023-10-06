@@ -51,36 +51,3 @@ let apply_right f l =
       )([], true) l
   in
   (if same then l else List.rev res), same
-
-let rec find_opt pred l =
-  match l with
-  | [] -> None
-  | e :: r ->
-    if pred e then Some e
-    else find_opt pred r
-
-let to_seq l =
-  let rec aux l () = match l with
-    | [] -> Seq.Nil
-    | x :: tail -> Seq.Cons (x, aux tail)
-  in
-  aux l
-
-(* TODO: This function is supported by the Stdlib from OCaml 4.12. *)
-let rec compare cmp l1 l2 =
-  match l1, l2 with
-  | [], [] -> 0
-  | [], _ -> -1
-  | _, [] -> 1
-  | hd1::tl1, hd2::tl2 ->
-    let c = cmp hd1 hd2 in
-    if c <> 0 then c
-    else
-      compare cmp tl1 tl2
-
-(* List.equal in OCaml 4.12+ *)
-let rec equal eq l1 l2 =
-  match l1, l2 with
-  | [], [] -> true
-  | hd1 :: tl1, hd2 :: tl2 when eq hd1 hd2 -> equal eq tl1 tl2
-  | _ -> false
