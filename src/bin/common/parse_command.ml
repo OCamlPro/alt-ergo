@@ -1501,11 +1501,14 @@ let main =
       `Pre "Or you can write to: \n   alt-ergo@ocamlpro.com";
       `S Manpage.s_authors;
       `Pre "CURRENT AUTHORS\n\
-           \   Sylvain Conchon\n\
-           \   Albin Coquereau\n\
            \   Guillaume Bury\n\
+           \   Basile Clément\n\
+           \   Steven de Olivera\n\
+           \   Hichem Rami Ait El Hara\n\
+           \   Pierre Villemot";
+      `Pre "PREVIOUS AUTHORS\n\
+           \   Albin Coquereau\n\
            \   Mattias Roux";
-
       `Pre "ORIGINAL AUTHORS\n\
            \   Sylvain Conchon\n\
            \   Evelyne Contejean\n\
