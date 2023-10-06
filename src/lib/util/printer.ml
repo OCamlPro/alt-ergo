@@ -273,7 +273,6 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
       Format.fprintf fmt
         "[Debug]%s%s @[<v 0>" mname fname
   end;
-  pp_std_smt ();
   if flushed || Options.get_output_with_forced_flush ()
   then Format.kfprintf flush fmt s else Format.fprintf fmt s
 
