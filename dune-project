@@ -89,6 +89,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (camlzip (>= 1.07))
   (odoc :with-doc)
   ppx_deriving
+  stdcompat
  )
  (conflicts
   (ppxlib (< 0.30.0))

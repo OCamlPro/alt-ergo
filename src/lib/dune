@@ -24,6 +24,7 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    stdcompat
   )
   (preprocess (pps ppx_blob ppx_deriving.show ppx_deriving.enum ppx_deriving.fold))
   (preprocessor_deps (glob_files ../preludes/*.ae))
