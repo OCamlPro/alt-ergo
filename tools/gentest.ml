@@ -258,7 +258,24 @@ end = struct
                 }
               | "fpa" ->
                 {acc with filters = Some ["fpa"]}
-              | _ -> acc
+              | "optimize" ->
+                {acc with
+                 exclude = [];
+                 filters = Some ["optimize"]}
+              | _ ->
+                (* TODO: This ugly trick prevent running AE on
+                   tests with suffix `optimize` with inappropriate options.
+                   We can run these tests only with the legacy frontend as
+                   the maximize/minimize syntax isn't supported yet by the
+                   frontend dolmen and we cannot use the (get-model)
+                   statement with the legacy model. We have to remove this
+                   trick as soon as dolmen can parse properly our syntax
+                   of optimization constraints. *)
+                match acc.filters with
+                | Some ["optimize"] -> acc
+                | _ ->
+                  {acc with
+                   exclude = "optimize" :: acc.exclude}
           )
             Test.base_params
             (String.split_on_char '.' pb_file)
@@ -386,7 +403,12 @@ let () =
      [ "--output=smtlib2"
      ; "--frontend dolmen"
      ; "--sat-solver CDCL"
-     ; "--no-minimal-bj" ])]
+     ; "--no-minimal-bj" ])
+  ; ("runtest", "optimize",
+     [ "--output=smtlib2"
+     ; "--frontend legacy"
+     ; "--dump-models"
+     ; "--dump-models-on stdout"])]
   in
   let cmds = List.map (fun (group, name, args) ->
       let args = shared @ args in
