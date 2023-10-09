@@ -1,5 +1,5 @@
   $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | sed -E 's/\(\\".*\\"\)//'
-  alt-ergo: ; Fatal Error: [Dynlink] Loading the 'inequalities' reasoner (FM module) plugin in "does-not-exist" failed!
+  alt-ergo: Fatal Error: [Dynlink] Loading the 'inequalities' reasoner (FM module) plugin in "does-not-exist" failed!
             >> Failure message: error loading shared library: Dynlink.Error (Dynlink.Cannot_open_dll "Failure")
 
 Now we will have some tests for the models. Note that it is okay if the format
@@ -43,21 +43,21 @@ combinations of produce-models et al.
 First, if model generation is not enabled, we should error out when a
 `(get-model)` statement is issued:
 
-  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error
   (error "Model generation disabled (try --produce-models)")
 
 This should be the case Tableaux solver as well:
 
-  $ echo '(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error
   (error "Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
 
-  $ echo '(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2
+  $ echo '(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 --continue-on-error
   (error "No model produced.")
 
-  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2
+  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error
   (error "No model produced.")
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
@@ -78,3 +78,18 @@ And now some cases where it should work (using either `--produce-models` or `set
   unknown
   (
   )
+
+We now test the --continue-on-error strategy where alt-ergo fails (legitimately) on some commands but keeps running.
+  $ echo '(get-info :foo) (set-option :bar) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
+  unsupported
+  
+  (error "Invalid set-option")
+  
+  unknown
+
+Some errors are unescapable though. It its the case of syntax error in commands.
+  $ echo '(get-info :foo) (set-option :bar) (exil) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
+  unsupported
+  
+  (error "Invalid set-option")
+  (error "Error on parsing errors (code 3)")

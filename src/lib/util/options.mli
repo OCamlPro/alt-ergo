@@ -356,6 +356,9 @@ val set_enable_assertions : bool -> unit
 (** Set [warning_as_error] accessible with {!val:get_warning_as_error} *)
 val set_warning_as_error : bool -> unit
 
+(** Set [exit_on_error] accessible with {!val:get_exit_on_error} *)
+val set_exit_on_error : bool -> unit
+
 (** Set [timelimit_interpretation] accessible with
     {!val:get_timelimit_interpretation} *)
 val set_timelimit_interpretation : float -> unit
@@ -652,6 +655,10 @@ val get_enable_assertions : unit -> bool
 (** [true] if warning are set as error. *)
 val get_warning_as_error : unit -> bool
 (** Default to [false] *)
+
+(** [true] if alt-ergo exits on all errors. *)
+val get_exit_on_error : unit -> bool
+(** Default to [true] *)
 
 (** {4 Limit options} *)
 

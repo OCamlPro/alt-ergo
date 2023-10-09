@@ -50,8 +50,34 @@ let empty_solver_ctx = {
   global = [];
 }
 
-let unsupported_opt () =
-  Printer.print_std "unsupported"
+let recoverable_error ?(code = 1) =
+  Format.kasprintf (fun msg ->
+      let () =
+        if msg <> "" then
+          match Options.get_output_format () with
+          | Smtlib2 -> Printer.print_smtlib_err "%s" msg
+          | _ -> Printer.print_err "%s" msg
+      in
+      if Options.get_exit_on_error () then exit code)
+
+let fatal_error ?(code = 1) =
+  Format.kasprintf (fun msg -> recoverable_error ~code "%s" msg; exit code)
+
+let exit_as_timeout () = fatal_error ~code:142 "timeout"
+
+let warning (msg : ('a, Format.formatter, unit, unit, unit, 'b) format6) : 'a =
+  if Options.get_warning_as_error () then
+    recoverable_error msg
+  else
+    Printer.print_wrn msg
+
+let unsupported_opt opt =
+  let () =
+    match Options.get_output_format () with
+    | Options.Smtlib2 -> Printer.print_std "unsupported"
+    | _ -> ()
+  in
+  warning "unsupported option %s" opt
 
 let main () =
   let () = Dolmen_loop.Code.init [] in
@@ -103,9 +129,8 @@ let main () =
       | `Sat partial_model | `Unknown partial_model ->
         Some partial_model
       | `Unsat -> None
-    with
-    | Util.Timeout ->
-      if not (Options.get_timelimit_per_goal()) then exit 142;
+    with Util.Timeout ->
+      if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
       None
   in
 
@@ -186,14 +211,18 @@ let main () =
       with
       | Util.Timeout ->
         FE.print_status (FE.Timeout None) 0;
-        exit 142
+        exit_as_timeout ()
       | Parsing.Parse_error ->
-        Printer.print_err "%a" Errors.report
-          (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""));
-        exit 1
+        (* TODO(Steven): displaying a dummy value is a bad idea.
+           This should only be executed with the legacy frontend, which should
+           be deprecated in a near future, so this code will be removed (or at
+           least, its behavior unspecified). *)
+        fatal_error
+          "%a"
+          Errors.report
+          (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""))
       | Errors.Error e ->
-        Printer.print_err "%a" Errors.report e;
-        exit 1
+        fatal_error "%a" Errors.report e
     in
 
     let all_used_context = FE.init_all_used_context () in
@@ -207,9 +236,13 @@ let main () =
           List.fold_left (typed_loop all_used_context) { state with env; } l
         with
         | Errors.Error e ->
-          if e != Warning_as_error then
-            Printer.print_err "%a" Errors.report e;
-          exit 1
+          let () =
+            if e != Warning_as_error then
+              recoverable_error "%a" Errors.report e
+            else
+              recoverable_error ""
+          in
+          state
         | Exit -> exit 0
       end
     in
@@ -224,7 +257,7 @@ let main () =
       Options.Time.unset_timeout ();
     with Util.Timeout ->
       FE.print_status (FE.Timeout None) 0;
-      exit 142
+      exit_as_timeout ()
   in
 
   let solver_ctx_key: solver_ctx State.key =
@@ -255,22 +288,21 @@ let main () =
     else
       st, `Continue stmt
   in
-  let handle_exn _ bt = function
+  let handle_exn st bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
-      Printer.print_err "%t" msg;
-      exit 1
+      recoverable_error "%t" msg; st
     | Util.Timeout ->
       Printer.print_status_timeout None None None None;
-      exit 142
+      exit_as_timeout ()
     | Errors.Error e ->
-      Printer.print_err "%a" Errors.report e;
-      exit 1
+      recoverable_error "%a" Errors.report e;
+      st
     | Exit -> exit 0
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
     match e with
-    | Some (bt, exn) -> handle_exn st bt exn; st
+    | Some (bt, exn) -> handle_exn st bt exn
     | _ -> st
   in
   let set_output_format fmt =
@@ -279,8 +311,9 @@ let main () =
       | ".ae" -> Options.set_output_format Native
       | ".smt2" | ".psmt2" -> Options.set_output_format Smtlib2
       | s ->
-        Printer.print_wrn
-          "The output format %s is not supported by the Dolmen frontend." s
+        warning
+          "The output format %s is not supported by the Dolmen frontend."
+          s
   in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
   let read_all ch =
@@ -353,7 +386,8 @@ let main () =
   in
 
   let print_wrn_opt ~name loc ty value =
-    Printer.print_wrn "%a The option %s expects a %s, got %a"
+    warning
+      "%a The option %s expects a %s, got %a"
       Loc.report loc name ty DStd.Term.print value
   in
 
@@ -374,9 +408,11 @@ let main () =
          solver Tableaux. *)
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_unsat_core true
-      else Printer.print_wrn "%a The generation of unsat cores is not \
-                              supported for the current SAT solver. Please \
-                              choose the SAT solver Tableaux."
+      else
+        warning
+          "%a The generation of unsat cores is not \
+           supported for the current SAT solver. Please \
+           choose the SAT solver Tableaux."
           Loc.report st_loc
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
       Options.set_unsat_core false
@@ -408,11 +444,9 @@ let main () =
       | ":print-success"
       | ":random-seed"), _
       ->
-      unsupported_opt ();
-      Printer.print_wrn "unsupported option '%s'" name
+      unsupported_opt name
     | _ ->
-      unsupported_opt ();
-      Printer.print_err "unknown option '%s'" name
+      unsupported_opt name
   in
 
   let handle_get_info (st : State.t) (name: string) =
@@ -422,8 +456,7 @@ let main () =
     in
     let pp_reason_unknown st =
       let err () =
-        let msg = "Invalid (get-info :reason-unknown)" in
-        Printer.print_smtlib_err "%s" msg
+        recoverable_error "Invalid (get-info :reason-unknown)"
       in
       match State.get partial_model_key st with
       | None -> err ()
@@ -439,7 +472,13 @@ let main () =
     | ":authors" ->
       print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo developers"
     | ":error-behavior" ->
-      print_std Fmt.string "immediate-exit"
+      let behavior =
+        if Options.get_exit_on_error () then
+          "immediate-exit"
+        else
+          "continued-execution"
+      in
+      print_std Fmt.string behavior
     | ":name" ->
       print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo"
     | ":reason-unknown" ->
@@ -448,11 +487,9 @@ let main () =
       print_std Fmt.string Version._version
     | ":all-statistics"
     | ":assertion-stack-levels" ->
-      unsupported_opt ();
-      Printer.print_wrn "unsupported option '%s'" name
+      unsupported_opt name
     | _ ->
-      unsupported_opt ();
-      Printer.print_err "unknown option '%s'" name
+      unsupported_opt name
   in
 
   let handle_stmt :
@@ -530,6 +567,10 @@ let main () =
         handle_option loc name value;
         st
 
+      | {contents = `Set_option _; _} ->
+        recoverable_error "Invalid set-option";
+        st
+
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
           match State.get partial_model_key st with
@@ -546,12 +587,11 @@ let main () =
             end
           | None ->
             (* TODO: add the location of the statement. *)
-            Printer.print_smtlib_err "No model produced.";
-            st
+            recoverable_error "No model produced."; st
         else
           begin
             (* TODO: add the location of the statement. *)
-            Printer.print_smtlib_err
+            recoverable_error
               "Model generation disabled (try --produce-models)";
             st
           end
@@ -623,7 +663,7 @@ let main () =
       State.flush st () |> ignore
     with exn ->
       let bt = Printexc.get_raw_backtrace () in
-      handle_exn st bt exn
+      ignore (handle_exn st bt exn)
   in
 
   let filename = get_file () in
