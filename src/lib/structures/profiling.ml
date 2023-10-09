@@ -112,7 +112,7 @@ let state = lazy {
 
 (** Calls the continuation only when the profiling is on.
     This allows to only force the state when the profiling is on. *)
-let (let*) state f =
+let if_profiling f =
   if Options.get_profiling () then
     f (Lazy.force state)
 
@@ -130,20 +130,20 @@ let set_sigprof () =
 (* update functions of the internal state *)
 
 let assume nb =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.assumes <- nb + state.assumes;
   state.assumes_current_lvl <- nb + state.assumes_current_lvl
 
 let query () =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.queries <- state.queries + 1
 
 let instances l =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.instances <- state.instances + List.length l
 
 let instantiation ilvl =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.instantiation_rounds <- state.instantiation_rounds + 1;
   state.instantiation_lvl <- state.instantiation_lvl + 1;
   if not (state.instantiation_lvl = ilvl) then begin
@@ -154,15 +154,15 @@ let instantiation ilvl =
   end
 
 let bool_conflict () =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.b_conflicts <- state.b_conflicts + 1
 
 let theory_conflict () =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.th_conflicts <- state.th_conflicts + 1
 
 let bcp_conflict b1 b2 =
-  let* state = state in
+  if_profiling @@ fun state ->
   if b1 && b2 then
     state.bcp_b_conflicts <- state.bcp_b_conflicts + 1
   else if (not b1) && (not b2) then
@@ -171,24 +171,24 @@ let bcp_conflict b1 b2 =
     state.bcp_mix_conflicts <- state.bcp_mix_conflicts + 1
 
 let red b =
-  let* state = state in
+  if_profiling @@ fun state ->
   if b then
     state.b_red <- state.b_red + 1
   else
     state.t_red <- state.t_red + 1
 
 let elim b =
-  let* state = state in
+  if_profiling @@ fun state ->
   if b then
     state.b_elim <- state.b_elim + 1
   else
     state.t_elim <- state.t_elim + 1
 
 let reset_ilevel n =
-  let* state = state in state.instantiation_lvl <- n
+  if_profiling @@ fun state -> state.instantiation_lvl <- n
 
 let reset_dlevel n =
-  let* state = state in state.decision_lvl <- n
+  if_profiling @@ fun state -> state.decision_lvl <- n
 
 let empty_inst_info loc =
   {
@@ -205,7 +205,7 @@ let empty_inst_info loc =
   }
 
 let new_instance_of axiom inst loc kept =
-  let* state = state in
+  if_profiling @@ fun state ->
   let () = state.instances_map_printed <- false in
   let ii =
     try MS.find axiom state.instances_map
@@ -221,7 +221,7 @@ let new_instance_of axiom inst loc kept =
   state.instances_map <- MS.add axiom ii state.instances_map
 
 let conflicting_instance axiom loc =
-  let* state = state in
+  if_profiling @@ fun state ->
   let ii =
     try MS.find axiom state.instances_map
     with Not_found -> empty_inst_info loc
@@ -231,7 +231,7 @@ let conflicting_instance axiom loc =
   state.instances_map <- MS.add axiom ii state.instances_map
 
 let decision_on_instance axiom_name =
-  let* state = state in
+  if_profiling @@ fun state ->
   try
     let ii =
       MS.find axiom_name state.instances_map
@@ -243,7 +243,7 @@ let decision_on_instance axiom_name =
 
 
 let decision d origin =
-  let* state = state in
+  if_profiling @@ fun state ->
   state.decisions <- state.decisions + 1;
   state.decision_lvl <- state.decision_lvl + 1;
   if state.decision_lvl <> d then begin
@@ -260,7 +260,7 @@ let decision d origin =
 
 
 let register_produced_terms axiom loc consumed all produced _new =
-  let* state = state in
+  if_profiling @@ fun state ->
   let ii =
     try MS.find axiom state.instances_map
     with Not_found -> empty_inst_info loc
