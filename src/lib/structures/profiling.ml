@@ -250,9 +250,6 @@ let decision d origin =
     Printer.print_err
       "state.decision_lvl = %d et d = %d"
       state.decision_lvl d;
-    (* TODO(Steven): if nobody knows how to use the previous print to debug
-       anything, I suggest we either remove `d` or get rid the invariant:
-       #(calls to Profiling.decision) = d. *)
     assert false
   end;
   state.assumes_current_lvl <- 0;
