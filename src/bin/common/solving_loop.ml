@@ -591,7 +591,8 @@ let main () =
         else
           begin
             (* TODO: add the location of the statement. *)
-            recoverable_error "Model generation disabled (try --produce-models)";
+            recoverable_error
+              "Model generation disabled (try --produce-models)";
             st
           end
 
