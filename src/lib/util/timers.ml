@@ -28,6 +28,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* To get rid of warnings produced by ppx_deriving. *)
+[@@@warning "-32"]
+
+(* The type of modules, followed by the list of every element. *)
 type ty_module =
   | M_None
   | M_Typing
@@ -44,26 +48,31 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
+[@@deriving enum]
 
-let all_modules = [
-  M_None;
-  M_Typing;
-  M_Sat;
-  M_Match;
-  M_CC;
-  M_UF;
-  M_Arith;
-  M_Arrays;
-  M_Sum;
-  M_Records;
-  M_AC;
-  M_Expr;
-  M_Triggers;
-  M_Simplex;
-  M_Ite
-]
+let all_modules =
+  let l = [
+    M_None;
+    M_Typing;
+    M_Sat;
+    M_Match;
+    M_CC;
+    M_UF;
+    M_Arith;
+    M_Arrays;
+    M_Sum;
+    M_Records;
+    M_AC;
+    M_Expr;
+    M_Triggers;
+    M_Simplex;
+    M_Ite
+  ]
+  in
+  assert ((List.length l) = max_ty_module + 1);
+  l
 
-
+(* The type of functions, followed by the list of every element. *)
 type ty_function =
   | F_add
   | F_add_lemma
@@ -85,30 +94,34 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
+[@@deriving enum]
 
-let all_functions = [
-  F_add;
-  F_add_lemma;
-  F_add_predicate;
-  F_add_terms;
-  F_are_equal;
-  F_assume;
-  F_class_of;
-  F_leaves;
-  F_make;
-  F_m_lemmas;
-  F_m_predicates;
-  F_query;
-  F_solve;
-  F_subst;
-  F_union;
-  F_unsat;
-  F_none;
-  F_new_facts;
-  F_apply_subst;
-  F_instantiate;
-]
-
+let all_functions =
+  let l = [
+    F_add;
+    F_add_lemma;
+    F_add_predicate;
+    F_add_terms;
+    F_are_equal;
+    F_assume;
+    F_class_of;
+    F_leaves;
+    F_make;
+    F_m_lemmas;
+    F_m_predicates;
+    F_query;
+    F_solve;
+    F_subst;
+    F_union;
+    F_unsat;
+    F_none;
+    F_new_facts;
+    F_apply_subst;
+    F_instantiate;
+  ]
+  in
+  assert ((List.length l) = max_ty_function + 1);
+  l
 
 let string_of_ty_module k = match k with
   | M_None     -> "None"
@@ -149,94 +162,44 @@ let string_of_ty_function f = match f with
   | F_apply_subst   -> "apply_subst"
   | F_instantiate   -> "instantiate"
 
-module TimerTable = struct
-  module FTbl = Hashtbl.Make(
-    struct
-      type t = ty_function
+module TimerTable : sig
+  (** The table of timers (module -> function -> float). *)
+  type t
 
-      let hash = function
-        | F_add           -> 0
-        | F_add_lemma     -> 1
-        | F_assume        -> 2
-        | F_class_of      -> 3
-        | F_leaves        -> 4
-        | F_make          -> 5
-        | F_m_lemmas      -> 6
-        | F_m_predicates  -> 7
-        | F_query         -> 8
-        | F_solve         -> 9
-        | F_subst         -> 10
-        | F_union         -> 11
-        | F_unsat         -> 12
-        | F_add_predicate -> 13
-        | F_add_terms     -> 14
-        | F_are_equal     -> 15
-        | F_none          -> 16
-        | F_new_facts     -> 17
-        | F_apply_subst   -> 18
-        | F_instantiate   -> 19
+  (** Clears the table. *)
+  val clear : t -> unit
 
-      let equal t t' = hash t = hash t'
-    end)
+  (** Creates a new type of tables. *)
+  val create : unit -> t
 
-  module MTbl = Hashtbl.Make(
-    struct
-      type t = ty_module
+  (** Returns the time stored in the table. If it has never been
+      stored, returns 0.. *)
+  val get : t -> ty_module -> ty_function -> float
 
-      let hash =
-        function
-        | M_None     -> 0
-        | M_Typing   -> 1
-        | M_Sat      -> 2
-        | M_Match    -> 3
-        | M_CC       -> 4
-        | M_UF       -> 5
-        | M_Arith    -> 6
-        | M_Arrays   -> 7
-        | M_Sum      -> 8
-        | M_Records  -> 9
-        | M_AC       -> 10
-        | M_Expr     -> 11
-        | M_Triggers -> 12
-        | M_Simplex  -> 13
-        | M_Ite      -> 14
+  (** Sets the time spend to a given function in a given module.. *)
+  val set : t -> ty_module -> ty_function -> float -> unit
 
-      let equal t t' = hash t = hash t'
-    end)
+  (** Gets the total time spent in a given module. *)
+  val get_sum : t -> ty_module -> float
+end = struct
+  type t = float array array
 
-  type t = float FTbl.t MTbl.t
+  let create () =
+    Array.init
+      max_ty_module
+      (fun _ -> Array.init max_ty_function (fun _ -> 0.))
 
-  let create = MTbl.create
+  let clear =
+    Array.iter (fun a -> Array.iteri (fun j _ -> a.(j) <- 0.) a)
 
-  let clear = MTbl.clear
-
-  (** Returns the timer value associated to the module [m]
-      and the function [f]. *)
   let get t m f =
-    match MTbl.find_opt t m with
-    | None -> 0.
-    | Some t ->
-      match FTbl.find_opt t f with
-      | None -> 0.
-      | Some f -> f
+    t.(ty_module_to_enum m).(ty_function_to_enum f)
 
-  (** Sets the timer value associated to the module [m]
-      and the function [f]. *)
   let set t m f v =
-    let ftbl =
-      match MTbl.find_opt t m with
-      | None ->
-        let new_tbl = FTbl.create 1 in
-        MTbl.add t m new_tbl;
-        new_tbl
-      | Some tbl -> tbl
-    in
-    FTbl.add ftbl f v
+    t.(ty_module_to_enum m).(ty_function_to_enum f) <- v
 
   let get_sum t m =
-    match MTbl.find_opt t m with
-    | None -> 0.
-    | Some ft -> FTbl.fold (fun _ -> (+.)) ft 0.
+    Array.fold_left (+.) 0. t.(ty_module_to_enum m)
 end
 
 type t = {
@@ -262,7 +225,7 @@ let empty () =
   { cur_t = (M_None, F_none, 0);
     cur_u = 0.0;
     stack = [];
-    z = TimerTable.create 5
+    z = TimerTable.create ()
   }
 
 (** reset the references of the given env to empty **)
