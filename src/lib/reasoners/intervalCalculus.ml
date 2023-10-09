@@ -2086,7 +2086,9 @@ let optimizing_split env uf opt_split =
         Printer.print_dbg
           "%a is unbounded. Let other methods assign a value for it@."
           E.print e;
-        let value = if to_max then Th_util.Pinfinity else Th_util.Minfinity in
+        let value =
+          if to_max then Th_util.Pinfinity else Th_util.Minfinity
+        in
         Some { opt_split with value }
 
       | Sim.Core.Max(mx,_sol) ->
@@ -2101,8 +2103,12 @@ let optimizing_split env uf opt_split =
         let r2 = alien_of (P.create [] optim  ty) in
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
-        let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
-        let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
+        let o =
+          Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2}
+        in
+        let s =
+          LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+        in
         Some { opt_split with value = Value s; }
     end
 
