@@ -66,5 +66,5 @@ val switch : Format.formatter -> unit
 
 val get_timers : unit -> Timers.t
 
-(** Prints the statistics for the SMT instruction get-statistics *)
-val print_get_statistics : Format.formatter -> unit
+(** Prints the statistics for the SMT statement (get-info :all-statistics). *)
+val print_statistics : Format.formatter -> unit

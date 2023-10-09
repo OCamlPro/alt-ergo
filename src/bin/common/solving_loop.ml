@@ -392,6 +392,7 @@ let main () =
 
   let handle_option st_loc name (value : DStd.Term.t) =
     match name, value.term with
+    (* Smtlib2 regular options *)
     | ":regular-output-channel", Symbol { name = Simple name; _ } ->
       Options.Output.create_channel name
       |> Options.Output.set_regular
@@ -444,6 +445,13 @@ let main () =
       | ":random-seed"), _
       ->
       unsupported_opt name
+    (* Alt-Ergo custom options *)
+    | ":profiling", Symbol { name = Simple level; _ } ->
+      begin
+        match float_of_string_opt level with
+        | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
+        | Some i -> Options.set_profiling true i
+      end
     | _ ->
       unsupported_opt name
   in
@@ -486,9 +494,9 @@ let main () =
       print_std Fmt.string Version._version
     | ":all-statistics" ->
       if Options.get_profiling () then
-        Printer.print_std "%t" Profiling.print_get_statistics
+        Printer.print_std "%t" Profiling.print_statistics
       else
-        Printer.print_smtlib_err "Profiling disactivated (try --profiling)"
+        warning "Profiling disactivated (try --profiling)"
     | ":assertion-stack-levels" ->
       unsupported_opt name
     | _ ->

@@ -66,8 +66,7 @@ type t = {
   mutable b_elim : int;
   mutable instances_map : inst_info MS.t;
   mutable instances_map_printed : bool;
-
-  timers : Timers.t Lazy.t
+  timers : Timers.t
 }
 
 type mode =
@@ -85,7 +84,7 @@ let nb_prints = ref max_nb_prints
 
 let initial_info = ref true
 
-let state = {
+let state = lazy {
   decisions = 0;
   assumes = 0;
   assumes_current_lvl = 0;
@@ -108,10 +107,16 @@ let state = {
 
   instances_map = MS.empty;
   instances_map_printed = false;
-  timers = lazy (Timers.empty ())
+  timers = Timers.empty ()
 }
 
-let get_timers () = Lazy.force state.timers
+(** Calls the continuation only when the profiling is on.
+    This allows to only force the state when the profiling is on. *)
+let (let*) state f =
+  if Options.get_profiling () then
+    f (Lazy.force state)
+
+let get_timers () = (Lazy.force state).timers
 
 let set_sigprof () =
   let tm =
@@ -123,6 +128,7 @@ let set_sigprof () =
        { Unix.it_value = tm; Unix.it_interval = 0. })
 
 let init () =
+  let state = Lazy.force state in
   state.decisions <- 0;
   state.assumes <- 0;
   state.queries <- 0;
@@ -151,15 +157,20 @@ let init () =
 (* update functions of the internal state *)
 
 let assume nb =
+  let* state = state in
   state.assumes <- nb + state.assumes;
   state.assumes_current_lvl <- nb + state.assumes_current_lvl
 
-let query () = state.queries <- state.queries + 1
+let query () =
+  let* state = state in
+  state.queries <- state.queries + 1
 
 let instances l =
+  let* state = state in
   state.instances <- state.instances + List.length l
 
 let instantiation ilvl =
+  let* state = state in
   state.instantiation_rounds <- state.instantiation_rounds + 1;
   state.instantiation_lvl <- state.instantiation_lvl + 1;
   if not (state.instantiation_lvl = ilvl) then begin
@@ -170,12 +181,15 @@ let instantiation ilvl =
   end
 
 let bool_conflict () =
+  let* state = state in
   state.b_conflicts <- state.b_conflicts + 1
 
 let theory_conflict () =
+  let* state = state in
   state.th_conflicts <- state.th_conflicts + 1
 
 let bcp_conflict b1 b2 =
+  let* state = state in
   if b1 && b2 then
     state.bcp_b_conflicts <- state.bcp_b_conflicts + 1
   else if (not b1) && (not b2) then
@@ -184,20 +198,24 @@ let bcp_conflict b1 b2 =
     state.bcp_mix_conflicts <- state.bcp_mix_conflicts + 1
 
 let red b =
+  let* state = state in
   if b then
     state.b_red <- state.b_red + 1
   else
     state.t_red <- state.t_red + 1
 
 let elim b =
+  let* state = state in
   if b then
     state.b_elim <- state.b_elim + 1
   else
     state.t_elim <- state.t_elim + 1
 
-let reset_ilevel n = state.instantiation_lvl <- n
+let reset_ilevel n =
+  let* state = state in state.instantiation_lvl <- n
 
-let reset_dlevel n = state.decision_lvl <- n
+let reset_dlevel n =
+  let* state = state in state.decision_lvl <- n
 
 let empty_inst_info loc =
   {
@@ -214,6 +232,7 @@ let empty_inst_info loc =
   }
 
 let new_instance_of axiom inst loc kept =
+  let* state = state in
   let () = state.instances_map_printed <- false in
   let ii =
     try MS.find axiom state.instances_map
@@ -229,6 +248,7 @@ let new_instance_of axiom inst loc kept =
   state.instances_map <- MS.add axiom ii state.instances_map
 
 let conflicting_instance axiom loc =
+  let* state = state in
   let ii =
     try MS.find axiom state.instances_map
     with Not_found -> empty_inst_info loc
@@ -238,6 +258,7 @@ let conflicting_instance axiom loc =
   state.instances_map <- MS.add axiom ii state.instances_map
 
 let decision_on_instance axiom_name =
+  let* state = state in
   try
     let ii =
       MS.find axiom_name state.instances_map
@@ -249,6 +270,7 @@ let decision_on_instance axiom_name =
 
 
 let decision d origin =
+  let* state = state in
   state.decisions <- state.decisions + 1;
   state.decision_lvl <- state.decision_lvl + 1;
   if state.decision_lvl <> d then begin
@@ -265,6 +287,7 @@ let decision d origin =
 
 
 let register_produced_terms axiom loc consumed all produced _new =
+  let* state = state in
   let ii =
     try MS.find axiom state.instances_map
     with Not_found -> empty_inst_info loc
@@ -304,8 +327,7 @@ let current_timer () = Timers.current_timer (get_timers ())
    - Is the column linked to a statistic (Some true), a timer (Some false) or
      not (None)?
    - Data formatter
-   Todo(Steven): use Pierre's solution with Printbox and put these function where
-   they belong (the trash).
+     Todo(Steven): use Pierre's solution with Printbox
 *)
 let columns : (string * string * int * bool option * 'a) list =
   [
@@ -341,63 +363,97 @@ let columns : (string * string * int * bool option * 'a) list =
     (*-----------------------------------------------------------------*)
 
     "ilvl", "Current Instantiaton level", 6, Some true,
-    (fun _ _ sz -> int_resize state.instantiation_lvl sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.instantiation_lvl sz);
 
     "#i rnds", "Number of intantiation rounds", 8, Some true,
     (fun _ _ sz ->
+       let state = Lazy.force state in
        int_resize state.instantiation_rounds sz);
 
 
     "#insts", "Number of generated instances", 8, Some true,
-    (fun _ _ sz -> int_resize state.instances sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.instances sz);
 
     "i/r", "AVG number of generated instances per instantiation rounds",
     8, Some true,
     (fun _ _ sz ->
+       let state = Lazy.force state in
        int_resize
          (state.instances / (max 1 state.instantiation_rounds)) sz);
 
     "dlvl", "Current Decision level", 6, Some true,
-    (fun _ _ sz -> int_resize state.decision_lvl sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.decision_lvl sz);
 
     "#decs", "Number of decisions", 6, Some true,
-    (fun _ _ sz -> int_resize state.decisions sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.decisions sz);
 
     "T-asm", "Number of calls to Theory.assume", 6, Some true,
-    (fun _ _ sz -> int_resize state.assumes sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.assumes sz);
 
     "T/d", "Number of Theory.assume after last decision", 6, Some true,
-    (fun _ _ sz -> int_resize state.assumes_current_lvl sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.assumes_current_lvl sz);
 
     "T-qr", "Number of calls to Theory.query", 15, Some true,
-    (fun _ _ sz -> int_resize state.queries sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.queries sz);
 
     "B-R", "Number of reduced clauses by Boolean propagation", 6, Some true,
-    (fun _ _ sz -> int_resize state.b_red sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.b_red sz);
 
     "B-E", "Number of eliminated clauses by Boolean propagation", 6,
-    Some true, (fun _ _ sz -> int_resize state.b_elim sz);
+    Some true, (fun _ _ sz ->
+        let state = Lazy.force state in
+        int_resize state.b_elim sz);
 
     "T-R", "Number of reduced clauses by Theory propagation", 6, Some true,
-    (fun _ _ sz -> int_resize state.t_red sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.t_red sz);
 
     "T-E", "Number of eliminated clauses by Theory propagation", 6,
-    Some true, (fun _ _ sz -> int_resize state.t_elim sz);
+    Some true, (fun _ _ sz ->
+        let state = Lazy.force state in
+        int_resize state.t_elim sz);
 
     "B-!",  "Number of direct Boolean conflicts", 5, Some true,
-    (fun _ _ sz -> int_resize state.b_conflicts sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.b_conflicts sz);
 
     "T-!", "Number of direct Theory conflicts" , 5, Some true,
-    (fun _ _ sz -> int_resize state.th_conflicts sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.th_conflicts sz);
 
     "B>!", "Number of Boolean conflicts deduced by BCP", 5, Some true,
-    (fun _ _ sz -> int_resize state.bcp_b_conflicts sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.bcp_b_conflicts sz);
 
     "T>!", "Number of Theory conflicts deduced by BCP", 5, Some true,
-    (fun _ _ sz -> int_resize state.bcp_th_conflicts sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.bcp_th_conflicts sz);
 
     "M>!", "Number of Mix conflicts deduced by BCP", 5, Some true,
-    (fun _ _ sz -> int_resize state.bcp_mix_conflicts sz);
+    (fun _ _ sz ->
+       let state = Lazy.force state in
+       int_resize state.bcp_mix_conflicts sz);
 
     (*-----------------------------------------------------------------*)
     "SAT", "Time spent in SAT module(s)", 16, Some false,
@@ -714,14 +770,14 @@ let register_float_stat (key : string) (getter : unit -> float) =
     (fun () ->
        Format.sprintf "%.9f" (getter ()))
 
-let print_get_statistics fmt =
-  Format.fprintf fmt "(@[<v 0>@,";
+let print_statistics fmt =
+  Fmt.pf fmt "(@[<v 0>@,";
   Hashtbl.iter
-    (fun key getter -> Format.fprintf fmt ":%s %s@," key (getter ()))
+    (fun key getter -> Fmt.pf fmt ":%s %s@," key (getter ()))
     statistics_table;
-  Format.fprintf fmt "@])@,"
+  Fmt.pf fmt "@])@,"
 
-(* Now, registering the statistics we want in get-statistics. *)
+(* Now, registering the statistics we want in (get-info :all-statistics). *)
 let () =
   register_int_stat "steps" (fun () -> Steps.get_steps ());
   List.iter
