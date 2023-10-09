@@ -1063,7 +1063,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              | Value _ ->
                assert false
              | Unknown ->
-               assert false
+               seen_infinity := true; acc
         ) obj []
     in
     begin match acc with

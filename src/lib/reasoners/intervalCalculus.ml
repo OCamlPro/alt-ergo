@@ -2064,11 +2064,16 @@ let optimizing_split env uf opt_split =
       E.print e
       (if to_max then "maximum" else "minimum")
       Q.print optim;
+
     let r2 = alien_of (P.create [] optim  ty) in
-    let t2 = mk_const_term optim ty in
     Debug.case_split r1 r2;
-    let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
-    let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
+    let t2 = mk_const_term optim ty in
+    let o =
+      Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2}
+    in
+    let s =
+      LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+    in
     Some { opt_split with value = Value s }
 
   | None ->
@@ -2091,8 +2096,7 @@ let optimizing_split env uf opt_split =
         in
         Some { opt_split with value }
 
-      | Sim.Core.Max(mx,_sol) ->
-        let {Sim.Core.max_v; _} = Lazy.force mx in
+      | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le = true }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
         let optim = if to_max then max_p else Q.mult Q.m_one max_p in
         Printer.print_dbg "%a has a %s: %a@."
@@ -2110,6 +2114,10 @@ let optimizing_split env uf opt_split =
           LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
         in
         Some { opt_split with value = Value s; }
+
+      | Sim.Core.Max (lazy Sim.Core.{ is_le = false; _ }, _) ->
+        (* There is no upper bound as we try to optimize a strict bound. *)
+        None
     end
 
 (*** part dedicated to FPA reasoning ************************************)

@@ -1,0 +1,10 @@
+
+unknown
+(
+  (define-fun x () Real 0)
+)
+
+unknown
+(
+  (define-fun x () Real (- (/ 3 2)))
+)

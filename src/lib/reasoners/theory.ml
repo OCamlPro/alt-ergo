@@ -428,42 +428,58 @@ module Main_Default : S = struct
              | Th_util.Unknown -> acc (* not optimized yet *)
              | Value _ -> Util.MI.add ord {v with value = Unknown} acc
              | Pinfinity | Minfinity -> assert false (* may happen? *)
-        )objectives objectives
+        ) objectives objectives
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
-    let rec aux ch bad_last dl env li =
+    let rec aux ~optimize ch bad_last dl env li =
       Options.exec_thread_yield ();
       match li, bad_last with
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          match next_optimization ~for_model env with
-          | Some opt_split ->
-            begin
-              let opt_split =
-                match CC_X.optimizing_split env.gamma_finite opt_split with
-                | Some x -> x
-                | None ->
-                  (* At least one theory should be able to optimize the
-                     split. *)
-                  assert false
-              in
-              let to_opt = register_optimized_split env.objectives opt_split in
-              let env = {env with objectives = to_opt} in
+          if optimize then
+            match next_optimization ~for_model env with
+            | Some opt_split ->
               begin
-                match opt_split.value with
-                | Value v ->
-                  let splits = add_explanations_to_splits [v] in
-                  aux ch None dl env splits
-                | Pinfinity | Minfinity ->
+                match CC_X.optimizing_split env.gamma_finite opt_split with
+                | Some x ->
+                  let to_opt =
+                    register_optimized_split env.objectives x
+                  in
+                  let env = {env with objectives = to_opt} in
+                  begin
+                    match x.value with
+                    | Value v ->
+                      let splits = add_explanations_to_splits [v] in
+                      aux ~optimize ch None dl env splits
+                    | Pinfinity | Minfinity ->
+                      if for_model then
+                        aux ~optimize:false ch None dl env []
+                      else
+                        { env with choices = List.rev dl }, ch
+                    | Unknown -> assert false
+                  end
+                | None ->
                   if for_model then
-                    aux ch None dl env []
+                    aux ~optimize:false ch None dl env []
                   else
                     { env with choices = List.rev dl }, ch
-                | Unknown -> assert false
               end
-            end
-          | None ->
+            | None ->
+              begin
+                let l, base_env =
+                  CC_X.case_split env.gamma_finite ~for_model
+                in
+                let env = {env with gamma_finite = base_env} in
+                match l with
+                | [] ->
+                  { env with choices = List.rev dl }, ch
+
+                | _ ->
+                  let l = add_explanations_to_splits l in
+                  aux ~optimize ch None dl env l
+              end
+          else
             begin
               let l, base_env =
                 CC_X.case_split env.gamma_finite ~for_model
@@ -475,7 +491,7 @@ module Main_Default : S = struct
 
               | _ ->
                 let l = add_explanations_to_splits l in
-                aux ch None dl env l
+                aux ~optimize ch None dl env l
             end
         end
       | ((c, lit_orig, CNeg, ex_c) as a)::l, _ ->
@@ -483,7 +499,7 @@ module Main_Default : S = struct
         CC_X.add_fact facts (LSem c,ex_c,lit_orig);
         let base_env, ch = CC_X.assume_literals env.gamma_finite ch facts in
         let env = { env with gamma_finite = base_env} in
-        aux ch bad_last (a::dl) env l
+        aux ~optimize ch bad_last (a::dl) env l
 
       (* This optimisation is not correct with the current explanation *)
       (* | [(c, lit_orig, CPos exp, ex_c)], Yes (dep,_) -> *)
@@ -500,7 +516,7 @@ module Main_Default : S = struct
           let base_env, ch =  CC_X.assume_literals env.gamma_finite ch facts in
           let env = { env with gamma_finite = base_env} in
           Options.tool_req 3 "TR-CCX-CS-Normal-Run";
-          aux ch bad_last (a::dl) env l
+          aux ~optimize ch bad_last (a::dl) env l
         with Ex.Inconsistent (dep, classes) ->
         match Ex.remove_fresh exp dep with
         | None ->
@@ -524,9 +540,9 @@ module Main_Default : S = struct
           let env =
             { env with objectives =
                          partial_objectives_reset env.objectives is_opt } in
-          aux ch None dl env [neg_c, lit_orig, CNeg, dep]
+          aux ~optimize ch None dl env [neg_c, lit_orig, CNeg, dep]
     in
-    aux ch bad_last (List.rev env.choices) env l
+    aux ~optimize:true ch bad_last (List.rev env.choices) env l
 
   (* remove old choices involving fresh variables that are no longer in UF *)
   let filter_valid_choice uf (ra,_,_,_) =
