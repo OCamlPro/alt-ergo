@@ -493,9 +493,8 @@ let main () =
     | ":version" ->
       print_std Fmt.string Version._version
     | ":all-statistics" ->
-      if Options.get_profiling () then
-        Printer.print_std "%t" Profiling.print_statistics
-      else
+      Printer.print_std "%t" Profiling.print_statistics;
+      if not (Options.get_profiling ()) then
         warning "Profiling disactivated (try --profiling)"
     | ":assertion-stack-levels" ->
       unsupported_opt name

@@ -127,33 +127,6 @@ let set_sigprof () =
     (Unix.setitimer Unix.ITIMER_PROF
        { Unix.it_value = tm; Unix.it_interval = 0. })
 
-let init () =
-  let state = Lazy.force state in
-  state.decisions <- 0;
-  state.assumes <- 0;
-  state.queries <- 0;
-  state.instantiation_rounds <- 0;
-  state.instances <- 0;
-  state.decision_lvl <- 0;
-  state.instantiation_lvl <- 0;
-  state.assumes_current_lvl <- 0;
-  state.th_conflicts <- 0;
-  state.b_conflicts <- 0;
-  state.bcp_th_conflicts <- 0;
-  state.bcp_b_conflicts <- 0;
-  state.bcp_mix_conflicts <- 0;
-  state.t_red <- 0;
-  state.b_red <- 0;
-  state.t_elim <- 0;
-  state.b_elim <- 0;
-  state.instances_map <- MS.empty;
-  state.instances_map_printed <- false;
-  let timers = get_timers () in
-  Timers.set_timer_start (Timers.start timers);
-  Timers.set_timer_pause (Timers.pause timers);
-  Timers.reset timers;
-  set_sigprof ()
-
 (* update functions of the internal state *)
 
 let assume nb =
@@ -590,8 +563,8 @@ let print_timers header steps fmt =
     )columns;
   Format.fprintf fmt "|@."
 
-
 let print_instances_generation forced _steps fmt =
+  let state = Lazy.force state in
   let (@@) a b = if a <> 0 then a else b in
   if not forced && state.instances_map_printed then
     Format.fprintf fmt "[Instances profiling] No change since last print@."
@@ -771,19 +744,45 @@ let register_float_stat (key : string) (getter : unit -> float) =
        Format.sprintf "%.9f" (getter ()))
 
 let print_statistics fmt =
-  Fmt.pf fmt "(@[<v 0>@,";
+  Fmt.pf fmt "(@[<v 0>";
   Hashtbl.iter
-    (fun key getter -> Fmt.pf fmt ":%s %s@," key (getter ()))
+    (fun key getter -> Fmt.pf fmt "@,:%s %s" key (getter ()))
     statistics_table;
   Fmt.pf fmt "@])@,"
 
-(* Now, registering the statistics we want in (get-info :all-statistics). *)
-let () =
+let init () =
+  let state = Lazy.force state in
+  state.decisions <- 0;
+  state.assumes <- 0;
+  state.queries <- 0;
+  state.instantiation_rounds <- 0;
+  state.instances <- 0;
+  state.decision_lvl <- 0;
+  state.instantiation_lvl <- 0;
+  state.assumes_current_lvl <- 0;
+  state.th_conflicts <- 0;
+  state.b_conflicts <- 0;
+  state.bcp_th_conflicts <- 0;
+  state.bcp_b_conflicts <- 0;
+  state.bcp_mix_conflicts <- 0;
+  state.t_red <- 0;
+  state.b_red <- 0;
+  state.t_elim <- 0;
+  state.b_elim <- 0;
+  state.instances_map <- MS.empty;
+  state.instances_map_printed <- false;
+  let timers = get_timers () in
+  Timers.set_timer_start (Timers.start timers);
+  Timers.set_timer_pause (Timers.pause timers);
+  Timers.reset timers;
+  set_sigprof ();
+
+  (* Now, registering the statistics we want in (get-info :all-statistics). *)
   register_int_stat "steps" (fun () -> Steps.get_steps ());
   List.iter
     (fun (m : Timers.ty_module) ->
        let name = Format.sprintf "timer-%s" (Timers.string_of_ty_module m) in
        register_float_stat
          name
-         (fun () -> Timers.get_sum (Lazy.force state.timers) m))
+         (fun () -> Timers.get_sum state.timers m))
     Timers.all_modules
