@@ -120,7 +120,6 @@ let main () =
       if Options.get_profiling() then
         Profiling.print true
           (Steps.get_steps ())
-          (Signals_profiling.get_timers ())
           (Options.Output.get_fmt_diagnostic ());
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
@@ -393,6 +392,7 @@ let main () =
 
   let handle_option st_loc name (value : DStd.Term.t) =
     match name, value.term with
+    (* Smtlib2 regular options *)
     | ":regular-output-channel", Symbol { name = Simple name; _ } ->
       Options.Output.create_channel name
       |> Options.Output.set_regular
@@ -445,6 +445,13 @@ let main () =
       | ":random-seed"), _
       ->
       unsupported_opt name
+    (* Alt-Ergo custom options *)
+    | ":profiling", Symbol { name = Simple level; _ } ->
+      begin
+        match float_of_string_opt level with
+        | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
+        | Some i -> Options.set_profiling true i
+      end
     | _ ->
       unsupported_opt name
   in
@@ -485,7 +492,10 @@ let main () =
       pp_reason_unknown st
     | ":version" ->
       print_std Fmt.string Version._version
-    | ":all-statistics"
+    | ":all-statistics" ->
+      Printer.print_std "%t" Profiling.print_statistics;
+      if not (Options.get_profiling ()) then
+        warning "Profiling disactivated (try --profiling)"
     | ":assertion-stack-levels" ->
       unsupported_opt name
     | _ ->

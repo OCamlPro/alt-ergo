@@ -28,9 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Return a timer *)
-val get_timers : unit -> AltErgoLib.Timers.t
-
 (** Initialise signals handler for system signals *)
 val init_signals : unit -> unit
 

@@ -28,8 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t
-
 val init : unit -> unit
 val decision : int -> string -> unit
 val assume : int -> unit
@@ -63,5 +61,10 @@ val register_produced_terms :
   Expr.Set.t -> (* produced that are new *)
   unit
 
-val print : bool -> int -> Timers.t -> Format.formatter -> unit
+val print : bool -> int -> Format.formatter -> unit
 val switch : Format.formatter -> unit
+
+val get_timers : unit -> Timers.t
+
+(** Prints the statistics for the SMT statement (get-info :all-statistics). *)
+val print_statistics : Format.formatter -> unit

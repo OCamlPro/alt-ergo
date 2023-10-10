@@ -28,6 +28,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* To get rid of warnings produced by ppx_deriving. *)
+[@@@warning "-32"]
+
+(* The type of modules, followed by the list of every element. *)
 type ty_module =
   | M_None
   | M_Typing
@@ -44,26 +48,31 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
+[@@deriving enum]
 
-let mtag k = match k with
-  | M_None     -> 0
-  | M_Typing   -> 1
-  | M_Sat      -> 2
-  | M_Match    -> 3
-  | M_CC       -> 4
-  | M_UF       -> 5
-  | M_Arith    -> 6
-  | M_Arrays   -> 7
-  | M_Sum      -> 8
-  | M_Records  -> 9
-  | M_AC       -> 10
-  | M_Expr     -> 11
-  | M_Triggers -> 12
-  | M_Simplex  -> 13
-  | M_Ite      -> 14
+let all_modules =
+  let l = [
+    M_None;
+    M_Typing;
+    M_Sat;
+    M_Match;
+    M_CC;
+    M_UF;
+    M_Arith;
+    M_Arrays;
+    M_Sum;
+    M_Records;
+    M_AC;
+    M_Expr;
+    M_Triggers;
+    M_Simplex;
+    M_Ite
+  ]
+  in
+  assert ((List.length l) = max_ty_module + 1);
+  l
 
-let nb_mtag = 14
-
+(* The type of functions, followed by the list of every element. *)
 type ty_function =
   | F_add
   | F_add_lemma
@@ -85,30 +94,34 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
+[@@deriving enum]
 
-let ftag f = match f with
-  | F_add           -> 0
-  | F_add_lemma     -> 1
-  | F_assume        -> 2
-  | F_class_of      -> 3
-  | F_leaves        -> 4
-  | F_make          -> 5
-  | F_m_lemmas      -> 6
-  | F_m_predicates  -> 7
-  | F_query         -> 8
-  | F_solve         -> 9
-  | F_subst         -> 10
-  | F_union         -> 11
-  | F_unsat         -> 12
-  | F_add_predicate -> 13
-  | F_add_terms     -> 14
-  | F_are_equal     -> 15
-  | F_none          -> 16
-  | F_new_facts     -> 17
-  | F_apply_subst   -> 18
-  | F_instantiate   -> 19
-
-let nb_ftag = 20
+let all_functions =
+  let l = [
+    F_add;
+    F_add_lemma;
+    F_add_predicate;
+    F_add_terms;
+    F_are_equal;
+    F_assume;
+    F_class_of;
+    F_leaves;
+    F_make;
+    F_m_lemmas;
+    F_m_predicates;
+    F_query;
+    F_solve;
+    F_subst;
+    F_union;
+    F_unsat;
+    F_none;
+    F_new_facts;
+    F_apply_subst;
+    F_instantiate;
+  ]
+  in
+  assert ((List.length l) = max_ty_function + 1);
+  l
 
 let string_of_ty_module k = match k with
   | M_None     -> "None"
@@ -149,6 +162,46 @@ let string_of_ty_function f = match f with
   | F_apply_subst   -> "apply_subst"
   | F_instantiate   -> "instantiate"
 
+module TimerTable : sig
+  (** The table of timers (module -> function -> float). *)
+  type t
+
+  (** Clears the table. *)
+  val clear : t -> unit
+
+  (** Creates a new type of tables. *)
+  val create : unit -> t
+
+  (** Returns the time stored in the table. If it has never been
+      stored, returns 0.. *)
+  val get : t -> ty_module -> ty_function -> float
+
+  (** Sets the time spend to a given function in a given module.. *)
+  val set : t -> ty_module -> ty_function -> float -> unit
+
+  (** Gets the total time spent in a given module. *)
+  val get_sum : t -> ty_module -> float
+end = struct
+  type t = float array array
+
+  let create () =
+    Array.init
+      max_ty_module
+      (fun _ -> Array.init max_ty_function (fun _ -> 0.))
+
+  let clear =
+    Array.iter (fun a -> Array.iteri (fun j _ -> a.(j) <- 0.) a)
+
+  let get t m f =
+    t.(ty_module_to_enum m).(ty_function_to_enum f)
+
+  let set t m f v =
+    t.(ty_module_to_enum m).(ty_function_to_enum f) <- v
+
+  let get_sum t m =
+    Array.fold_left (+.) 0. t.(ty_module_to_enum m)
+end
+
 type t = {
   (* current time *)
   mutable cur_u : float;
@@ -160,7 +213,7 @@ type t = {
   mutable stack : (ty_module * ty_function * int) list;
 
   (* table of timers for each combination "" *)
-  z : (float array) array;
+  z : TimerTable.t ;
   (*h:(ty_module, float ref) Hashtbl.t;*)
 }
 
@@ -172,24 +225,19 @@ let empty () =
   { cur_t = (M_None, F_none, 0);
     cur_u = 0.0;
     stack = [];
-    z = Array.init nb_mtag (fun _ -> Array.make nb_ftag 0.);
+    z = TimerTable.create ()
   }
-
 
 (** reset the references of the given env to empty **)
 let reset env =
-  for i = 0 to nb_mtag - 1 do
-    let a = env.z.(i) in for j = 0 to nb_ftag - 1 do a.(j) <- 0. done
-  done;
+  TimerTable.clear env.z;
   env.cur_t <- (M_None, F_none, 0);
   env.cur_u <- 0.0;
   env.stack <- [];
   cpt_id := 0
 
 let accumulate env cur m f =
-  let mt = mtag m in
-  let ft = ftag f in
-  env.z.(mt).(ft) <- env.z.(mt).(ft) +. (cur -. env.cur_u)
+  TimerTable.set env.z m f (cur -. env.cur_u)
 
 let accumulate_cumulative_mode name env m f cur =
   if Options.get_cumulative_time_profiling() then
@@ -245,69 +293,15 @@ let update env =
   accumulate env cur m f;
   env.cur_u <- cur
 
-(** get the value of the timer "m x f" **)
-let get_value env m f = env.z.(mtag m).(ftag f)
+(** Returns the value of the timer associated to the module and function. *)
+let get_value env m f = TimerTable.get env.z m f
 
 (** get the sum of the "ty_function" timers for the given "ty_module" **)
-let get_sum env m =
-  let cpt = ref 0. in
-  Array.iter (fun v -> cpt := !cpt +. v) env.z.(mtag m);
-  !cpt
+let get_sum env m = TimerTable.get_sum env.z m
 
 let current_timer env = env.cur_t
 
 let get_stack env = env.stack
-
-let get_timers_array env = env.z
-
-let all_functions =
-  let l =
-    [ F_add;
-      F_add_lemma;
-      F_add_predicate;
-      F_add_terms;
-      F_are_equal;
-      F_assume;
-      F_class_of;
-      F_leaves;
-      F_make;
-      F_m_lemmas;
-      F_m_predicates;
-      F_query;
-      F_solve;
-      F_subst;
-      F_union;
-      F_unsat;
-      F_none;
-      F_new_facts;
-      F_apply_subst;
-      F_instantiate;
-    ]
-  in
-  assert (List.length l = nb_ftag);
-  l
-
-let all_modules =
-  let l =
-    [ M_None;
-      M_Typing;
-      M_Sat;
-      M_Match;
-      M_CC;
-      M_UF;
-      M_Arith;
-      M_Arrays;
-      M_Sum;
-      M_Records;
-      M_AC;
-      M_Expr;
-      M_Triggers;
-      M_Simplex;
-    ]
-  in
-  assert (List.length l = nb_mtag);
-  l
-
 
 let (timer_start : (ty_module -> ty_function -> unit) ref) =
   ref (fun _ _ -> ())
