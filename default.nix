@@ -23,6 +23,7 @@ let
       ppx_blob
       dolmen_loop
       camlzip
+      ppx_deriving
     ];
   };
 

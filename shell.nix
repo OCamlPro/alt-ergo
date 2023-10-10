@@ -36,5 +36,6 @@ pkgs.mkShell {
     cmdliner
     ppx_blob
     odoc
+    ppx_deriving
   ];
 }
