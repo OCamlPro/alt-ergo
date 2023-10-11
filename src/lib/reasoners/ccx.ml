@@ -451,7 +451,7 @@ module Main : S = struct
            LRE.add (LR.make ra, aopt) e mp
         ) LRE.empty sa
     in
-    LRE.fold (fun _ e acc -> e::acc)mp []
+    LRE.fold (fun _ e acc -> e::acc) mp []
 
   let replay_atom env sa =
     Options.exec_thread_yield ();

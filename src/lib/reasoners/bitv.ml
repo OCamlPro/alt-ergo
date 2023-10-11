@@ -102,6 +102,34 @@ let equal_simple_term eq = equal_alpha_term (equal_simple_term_aux eq)
 
 type 'a abstract =  'a simple_term list
 
+let rec to_Z_opt_aux acc = function
+  | [] -> Some acc
+  | { bv = Cte false; sz } :: sts ->
+    to_Z_opt_aux Z.(acc lsl sz) sts
+  | { bv = Cte true; sz } :: sts ->
+    to_Z_opt_aux Z.((acc lsl sz) + (~$1 lsl sz) - ~$1) sts
+  | _ -> None
+
+let to_Z_opt r = to_Z_opt_aux Z.zero r
+
+let int2bv_const n z =
+  (* If [z] is out of the [0 .. 2^n] range (including if [z] is negative),
+     considering only the first [n] bits is equivalent to computing [z mod 2^n],
+     so we just do that and don't bother computing the modulus. *)
+  let acc = ref [] in
+  for i = 0 to n - 1 do
+    match Z.testbit z i, !acc with
+    | false, { bv = Cte false; sz } :: rst ->
+      acc := { bv = Cte false; sz = sz + 1 } :: rst
+    | false, rst ->
+      acc := { bv = Cte false; sz = 1 } :: rst
+    | true, { bv = Cte true; sz } :: rst ->
+      acc := { bv = Cte true; sz = sz + 1 } :: rst
+    | true, rst ->
+      acc := { bv = Cte true; sz = 1 } :: rst
+  done;
+  !acc
+
 let equal_abstract eq = Lists.equal (equal_simple_term eq)
 
 (* for the solver *)
@@ -332,19 +360,8 @@ module Shostak(X : ALIEN) = struct
     and vmake ~neg tv ctx =
       match tv.descr with
       | Vcte z ->
-        let acc = ref [] in
-        for i = 0 to tv.size - 1 do
-          match Z.testbit z i, !acc with
-          | false, { bv = Cte b; sz } :: rst when Bool.equal b neg ->
-            acc := { bv = Cte b; sz = sz + 1 } :: rst
-          | false, rst ->
-            acc := { bv = Cte neg; sz = 1 } :: rst
-          | _, { bv = Cte b; sz } :: rst when Bool.equal b (not neg) ->
-            acc := { bv = Cte b; sz = sz + 1 } :: rst
-          | _, rst ->
-            acc := { bv = Cte (not neg); sz = 1 } :: rst
-        done;
-        !acc, ctx
+        let z = if neg then Z.lognot z else z in
+        int2bv_const tv.size z, ctx
       | Vother t -> other ~neg t tv.size ctx
       | Vextract (t', i, j) ->
         run ctx @@ vextract ~neg i j (view t')
@@ -1150,6 +1167,12 @@ module Shostak(X : ALIEN) = struct
          | Cte _  -> acc
          | Other t | Ext(t,_,_,_) -> (X.leaves t)@acc
       ) [] bitv
+
+  let is_constant bitv =
+    List.for_all (fun x ->
+        match x.bv with
+        | Cte _ -> true
+        | Other r | Ext (r, _, _, _) -> X.is_constant r) bitv
 
   let is_mine_opt = function [{ bv = Other r; _ }] -> Some r | _ -> None
 

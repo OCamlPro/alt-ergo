@@ -61,6 +61,14 @@ module type SHOSTAK = sig
 
   (** Give the leaves of a term of the theory *)
   val leaves : t -> r list
+
+  (** Determines whether the term is a constant. [is_constant t] is equivalent
+      to [leaves t == []], but is more efficient.
+
+      Note that for some theories (e.g. records, arrays) the constant may not be
+      pure: it may involve nested (constant) terms of other theories. *)
+  val is_constant : t -> bool
+
   val subst : r -> r -> t -> r
 
   val compare : r -> r -> int
@@ -115,6 +123,8 @@ module type X = sig
   val hash : r -> int
 
   val leaves : r -> r list
+
+  val is_constant : r -> bool
 
   val subst : r -> r -> r -> r
 

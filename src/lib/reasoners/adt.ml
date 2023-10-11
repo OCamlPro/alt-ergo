@@ -236,6 +236,15 @@ module Shostak (X : ALIEN) = struct
          List.fold_left (fun sx x -> SX.add x sx) sx (X.leaves r)
       )SX.empty l
 
+  let is_constant r =
+    let l = match r with
+      | Alien r -> [Hs.empty, r]
+      | Constr { c_args ; _ } ->  c_args
+      | Select { d_arg  ; _ } -> [Hs.empty, d_arg]
+      | Tester { t_arg  ; _ } -> [Hs.empty, t_arg]
+    in
+    List.for_all (fun (_, r) -> X.is_constant r) l
+
   [@@ocaml.ppwarning "TODO: not sure"]
   let fully_interpreted _ =
     false (* not sure *)

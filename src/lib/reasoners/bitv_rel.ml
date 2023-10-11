@@ -28,14 +28,50 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t = unit
+type t = { delayed : Rel_utils.Delayed.t }
 
-let empty _ = ()
-let assume _ _ _ =
-  (), { Sig_rel.assume = []; remove = []}
+(* Currently we only compute, but in the future we may want to perform the same
+   simplifications as in [Bitv.make]. We currently don't, because we don't
+   really have a way to share code that uses polynome between the theory and the
+   relations without touching the Shostak [module rec].
+
+   Note that if we *do* want to compute here, the check for [X.is_constant] in
+   [Rel_utils.update] needs to be removed, which may have (small) performance
+   implications. *)
+let bv2nat _op bv =
+  match Bitv.to_Z_opt bv with
+  | Some n -> Some (Shostak.Polynome.create [] (Q.of_bigint n) Tint)
+  | None -> None
+
+(* [int2bv] is in the bitvector theory rather than the arithmetic theory because
+   we treat the arithmetic as more "primitive" than bit-vectors. *)
+let int2bv op p =
+  match op, Shostak.Polynome.is_const p with
+  | Symbols.Int2BV n, Some q ->
+    assert (Z.equal (Q.den q) Z.one);
+    let m = Q.to_bigint q in
+    Some (Bitv.int2bv_const n m)
+  | Int2BV _, None -> None
+  | _ -> assert false
+
+let delay1 = Rel_utils.delay1
+
+let dispatch = function
+  | Symbols.BV2Nat ->
+    Some (delay1 Shostak.Bitv.embed Shostak.Arith.is_mine bv2nat)
+  | Int2BV _ ->
+    Some (delay1 Shostak.Arith.embed Shostak.Bitv.is_mine int2bv)
+  | _ -> None
+
+let empty _ = { delayed = Rel_utils.Delayed.create dispatch }
+let assume env uf la =
+  let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
+  { delayed }, result
 let query _ _ _ = None
 let case_split _ _ ~for_model:_ = []
-let add env _ _ _ = env, []
+let add env uf r t =
+  let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
+  { delayed }, eqs
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
