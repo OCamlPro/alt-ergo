@@ -43,7 +43,7 @@ module Id = DStd.Id
 module B = DStd.Builtin
 
 let unsupported msg =
-  Format.kasprintf
+  Fmt.kstr
     (fun str -> Errors.(run_error (Unsupported_feature str)))
     msg
 
