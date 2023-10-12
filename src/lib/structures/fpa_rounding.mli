@@ -29,25 +29,28 @@
 (**************************************************************************)
 
 type rounding_mode =
-  (* five standard/why3 fpa rounding modes *)
   | NearestTiesToEven
-  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
-  | ToZero (* zr in Gappa: toward zero *)
-  | Up (* up in Gappa: toward plus infinity *)
-  | Down (* dn in Gappa: toward minus infinity *)
-  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  | ToZero
+  | Up
+  | Down
+  | NearestTiesToAway
 
-  (* additional Gappa rounding modes *)
-  | Aw (* aw in Gappa: away from zero **)
-  | Od (* od in Gappa: to odd mantissas *)
-  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+module type S = sig
+  val fpa_rounding_mode_type_name : string
 
-val fpa_rounding_mode : Ty.t
+  val fpa_rounding_mode : Ty.t
 
-val rounding_mode_of_hs : Hstring.t -> rounding_mode
+  val rounding_mode_of_hs : Hstring.t -> rounding_mode
+
+  val string_of_rounding_mode : rounding_mode -> string
+end
+
+module AE : S
+module SMT2 : S
+
+(** Returns (module SMT2) if the input format is [None] or [Some Smtlib2], 
+    otherwise returns [AE]. *)
+val fpa_rounding_utils : unit -> (module S)
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int

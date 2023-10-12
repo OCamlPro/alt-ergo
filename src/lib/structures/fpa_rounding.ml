@@ -33,64 +33,101 @@ module Hs = Hstring
 module Q = Numbers.Q
 module Z = Numbers.Z
 
+(** The five standard rounding modes of the SMTLIB.
+    Note that the SMTLIB defines these rounding modes to be the only
+    possible modes. *)
 type rounding_mode =
-  (* five standard/why3 fpa rounding modes *)
   | NearestTiesToEven
-  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
-  | ToZero (* zr in Gappa: toward zero *)
-  | Up (* up in Gappa: toward plus infinity *)
-  | Down (* dn in Gappa: toward minus infinity *)
-  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  | ToZero
+  | Up
+  | Down
+  | NearestTiesToAway
 
-  (* additional Gappa rounding modes *)
-  | Aw (* aw in Gappa: away from zero **)
-  | Od (* od in Gappa: to odd mantissas *)
-  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+let cstrs =
+  [
+    NearestTiesToEven;
+    ToZero;
+    Up;
+    Down;
+    NearestTiesToAway;
+  ]
 
-let pp_rounding_mode ppf m =
-  Format.pp_print_string ppf @@
-  match m with
-  | NearestTiesToEven -> "NearestTiesToEven"
-  | ToZero -> "ToZero"
-  | Up -> "Up"
-  | Down -> "Down"
-  | NearestTiesToAway -> "NearestTiesToAway"
-  | Aw -> "Aw"
-  | Od -> "Od"
-  | No -> "No"
-  | Nz -> "Nz"
-  | Nd -> "Nd"
-  | Nu -> "Nu"
+module type S = sig
+  val fpa_rounding_mode_type_name : string
 
-let fpa_rounding_mode, rounding_mode_of_hs =
-  let cstrs =
-    [ (* standards *)
-      NearestTiesToEven;
-      ToZero;
-      Up;
-      Down;
-      NearestTiesToAway;
-      (* non standards *)
-      Aw;
-      Od;
-      No;
-      Nz;
-      Nd;
-      Nu ]
-  in
-  let h_cstrs =
-    List.map (fun c -> Hs.make (Format.asprintf "%a" pp_rounding_mode c)) cstrs
-  in
-  let ty = Ty.Tsum (Hs.make "fpa_rounding_mode", h_cstrs) in
-  let table =
-    let table = Hashtbl.create 17 in
-    List.iter2 (Hashtbl.add table) h_cstrs cstrs;
-    table
-  in
-  ty, Hashtbl.find table
+  val fpa_rounding_mode : Ty.t
+
+  val rounding_mode_of_hs : Hstring.t -> rounding_mode
+
+  val string_of_rounding_mode : rounding_mode -> string
+end
+
+module Make (I : sig
+    val name : string
+    val to_string : rounding_mode -> string
+  end) : S = struct
+
+  let fpa_rounding_mode_type_name = I.name
+
+  let string_of_rounding_mode = I.to_string
+
+  let fpa_rounding_mode, rounding_mode_of_hs =
+    let h_cstrs =
+      List.map (fun c -> Hs.make (I.to_string c)) cstrs
+    in
+    let ty = Ty.Tsum (Hs.make I.name, h_cstrs) in
+    let table =
+      let table = Hashtbl.create 5 in
+      List.iter2 (
+        fun key bnd ->
+          Hashtbl.add table key bnd
+      ) h_cstrs cstrs;
+      table
+    in
+    ty,
+    (fun key -> match Hashtbl.find_opt table key with
+       | None ->
+         Fmt.failwith
+           "%a"
+           (fun fmt k ->
+              Format.pp_print_string fmt I.name;
+              Hashtbl.iter (fun key _ -> Format.fprintf fmt "%a --" Hstring.print key) table;
+              Hstring.print fmt k
+           )
+           key
+       | Some res -> res)
+end
+
+module AE : S =
+  Make (struct
+    let name = "fpa_rounding_mode"
+    let to_string =
+      function
+      | NearestTiesToEven -> "NearestTiesToEven"
+      | ToZero -> "ToZero"
+      | Up -> "Up"
+      | Down -> "Down"
+      | NearestTiesToAway -> "NearestTiesToAway"
+  end
+  )
+
+module SMT2 : S =
+  Make (struct
+    let name = "RoundingMode"
+
+    let to_string =
+      function
+      | NearestTiesToEven -> "RNE"
+      | ToZero -> "RTZ"
+      | Up -> "RTP"
+      | Down -> "RTN"
+      | NearestTiesToAway -> "RNA"
+  end)
+
+let fpa_rounding_utils () =
+  match Options.get_input_format () with
+  | None | Some Smtlib2 -> (module SMT2 : S)
+  | _ -> (module AE : S)
 
 (** Helper functions **)
 
@@ -159,9 +196,6 @@ let round_big_int (mode : rounding_mode) y =
     let diff = Q.abs (Q.sub y (Q.from_z z)) in
     if Q.sign diff = 0 then z
     else if Q.compare diff half < 0 then z else Z.add z (signed_one y)
-
-  | Aw | Od | No | Nz | Nd | Nu -> assert false
-
 
 let to_mantissa_exp prec exp mode x =
   let sign_x = Q.sign x in

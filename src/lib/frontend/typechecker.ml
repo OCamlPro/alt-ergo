@@ -279,12 +279,14 @@ module Env = struct
     | _ -> assert false
 
   let add_fpa_builtins env =
+    let module FPAU : Fpa_rounding.S =
+      (val (Fpa_rounding.fpa_rounding_utils ())) in
     let (->.) args result = { args; result } in
     let int n = {
       c = { tt_desc = TTconst (Tint n); tt_ty = Ty.Tint} ;
       annot = new_id () ;
     } in
-    let rm = Fpa_rounding.fpa_rounding_mode in
+    let rm = FPAU.fpa_rounding_mode in
     let mode m =
       let h = find_builtin_cstr rm m in
       {
@@ -298,10 +300,12 @@ module Env = struct
     let float prec exp mode x =
       TTapp (Symbols.Op Float, [prec; exp; mode; x])
     in
+    let nte = FPAU.string_of_rounding_mode NearestTiesToEven in
+    let tname = FPAU.fpa_rounding_mode_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode "NearestTiesToEven") in
+    let float32d = float32 (mode nte) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode "NearestTiesToEven") in
+    let float64d = float64 (mode nte) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -312,8 +316,11 @@ module Env = struct
     let any = Ty.fresh_tvar in
     let env = {
       env with
-      types = Types.add_builtin env.types "fpa_rounding_mode" rm ;
-      builtins = add_builtin_enum Fpa_rounding.fpa_rounding_mode env.builtins;
+      types = Types.add_builtin env.types tname rm ;
+      builtins =
+        add_builtin_enum
+          FPAU.fpa_rounding_mode
+          env.builtins;
     } in
     let builtins =
       env.builtins

@@ -288,7 +288,8 @@ let fpa_builtins =
     | _ -> assert false
   in
   let fpa_rounding_mode, rounding_modes, add_rounding_modes =
-    builtin_enum Fpa_rounding.fpa_rounding_mode
+    let module FPAU : Fpa_rounding.S = (val (Fpa_rounding.fpa_rounding_utils ())) in
+    builtin_enum FPAU.fpa_rounding_mode
   in
   let float_cst =
     let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
@@ -422,11 +423,18 @@ let fpa_builtins =
       | Builtin _ -> `Not_found
     end
 
+(** Concatenation of builtins handlers. *)
+(* let (++) bt1 bt2 =
+ *   fun a b ->
+ *   match bt1 a b with
+ *   | `Not_found -> bt2 a b
+ *   | res -> res *)
+
 let builtins =
   fun _st (lang : Typer.lang) ->
   match lang with
   | `Logic Alt_ergo -> fpa_builtins
-  | `Logic (Smtlib2 _) -> bv_builtins
+  | `Logic (Smtlib2 _) -> (* fpa_builtins ++ *) bv_builtins
   | _ -> fun _ _ -> `Not_found
 
 (** Translates dolmen locs to Alt-Ergo's locs *)
