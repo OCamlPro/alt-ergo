@@ -231,7 +231,6 @@ module Sim_Wrap = struct
       assert (c <= 0); (* because simplex says sat *)
       if c = 0 then None else Some (Q.sub x.v a.v)
 
-  (* not used for the moment *)
   let case_split =
     let gen_cs x n s orig =
       if get_debug_fm () then
