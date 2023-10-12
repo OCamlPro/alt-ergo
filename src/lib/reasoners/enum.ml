@@ -34,7 +34,7 @@ module Hs = Hstring
 
 type 'a abstract =
   | Cons of Hs.t * Ty.t
-  (* [Cons(hs, ty)] reprensents a constructor of an enum type of type [ty]. *)
+  (* [Cons(hs, ty)] represents a constructor of an enum type of type [ty]. *)
 
   | Alien of 'a
   (* [Alien r] reprensents a uninterpreted enum semantic values. *)
