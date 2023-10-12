@@ -238,7 +238,7 @@ let count_splits env la =
   {env with size_splits = nb}
 
 (* Add the uninterpreted semantic value [r] to the environment [env] with the
-   total domain. *)
+   all the constructors of its type as domain. *)
 let add_aux env r =
   Debug.add r;
   match Sh.embed r, values_of r with
