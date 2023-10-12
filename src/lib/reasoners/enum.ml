@@ -37,7 +37,7 @@ type 'a abstract =
   (* [Cons(hs, ty)] represents a constructor of an enum type of type [ty]. *)
 
   | Alien of 'a
-  (* [Alien r] reprensents a uninterpreted enum semantic values. *)
+  (* [Alien r] represents a uninterpreted enum semantic value. *)
 
 module type ALIEN = sig
   include Sig.X
