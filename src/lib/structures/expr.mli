@@ -354,13 +354,13 @@ end
 (** Constructors from the smtlib theory of integers.
     https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
 module Ints : sig
-  (* Conversion from ZArith *)
-  val of_Z : Z.t -> t
-  val ( ~$ ) : Z.t -> t
-
   (* Conversion from int *)
   val of_int : int -> t
-  val ( ~$$ ) : int -> t
+  val ( ~$ ) : int -> t
+
+  (* Conversion from ZArith *)
+  val of_Z : Z.t -> t
+  val ( ~$$ ) : Z.t -> t
 
   (* Arithmetic operations *)
   val ( + ) : t -> t -> t
