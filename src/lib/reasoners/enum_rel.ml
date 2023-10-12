@@ -280,7 +280,7 @@ let case_split env uf ~for_model =
          let x, _ = Uf.find_r uf r in
          match Sh.embed x with
          | Cons _ ->
-           (* The equivalence class of [r] already contains a value and
+           (* The equivalence class of [r] already contains a value so
               we don't need to make another case-split for this semantic
               value. *)
            acc
