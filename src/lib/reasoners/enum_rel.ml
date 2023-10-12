@@ -32,7 +32,9 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
-type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+type 'a abstract = 'a Enum.abstract =
+  | Cons of Hs.t * Ty.t
+  | Alien of 'a
 
 module X = Shostak.Combine
 module Sh = Shostak.Enum
@@ -44,11 +46,26 @@ module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 
 module LR = Uf.LX
 
-type t = { mx : (HSS.t * Ex.t) MX.t; classes : Expr.Set.t list;
-           size_splits : Numbers.Q.t }
+type t = {
+  mx : (HSS.t * Ex.t) MX.t;
+  (* Map of uninterpreted enum semantic values to domains of their possible
+     values. The explanation justifies that the value of the semantic value
+     lies in the domain. *)
 
-let empty classes = { mx = MX.empty; classes = classes;
-                      size_splits = Numbers.Q.one }
+  classes : Expr.Set.t list;
+  (* State of the union-find represented by its equivalence classes.
+     The field is updated while assuming literals of the theory. *)
+
+  size_splits : Numbers.Q.t
+  (* Limit the number of case-splits do by this theory. The counter is
+     increased while assuming new literals of the theory. *)
+}
+
+let empty classes = {
+  mx = MX.empty;
+  classes = classes;
+  size_splits = Numbers.Q.one
+}
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
@@ -108,11 +125,18 @@ module Debug = struct
 end
 (*BISECT-IGNORE-END*)
 
-let values_of r = match X.type_info r with
+(* Return the list of all the constructors of the type of [r]. *)
+let values_of r =
+  match X.type_info r with
   | Ty.Tsum (_,l) ->
     Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty l)
-  | _ -> None
+  | _ ->
+    (* This case can happen since we don't dispatch the literals
+       processed in [assume] by their types in the Relation module. *)
+    None
 
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the disequality [sm1 <> sm2]. *)
 let add_diseq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r , Cons(h,ty)
@@ -156,6 +180,8 @@ let add_diseq hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the equation [sm1 = sm2]. *)
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r, Cons(h,_)
@@ -184,6 +210,7 @@ let add_eq hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
+(* Update the counter of case-split size in [env]. *)
 let count_splits env la =
   let nb =
     List.fold_left
@@ -195,6 +222,7 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
+(* Add the uninterpreted semantic value [r] to the environment. *)
 let add_aux env r =
   Debug.add r;
   match Sh.embed r, values_of r with
@@ -203,8 +231,8 @@ let add_aux env r =
       { env with mx = MX.add r (hss, Ex.empty) env.mx }
   | _ -> env
 
-(* needed for models generation because fresh terms are not
-   added with function add *)
+(* Needed for models generation because fresh terms are not added with function
+   add. *)
 let add_rec env r = List.fold_left add_aux env (X.leaves r)
 
 let assume env uf la =
@@ -244,13 +272,22 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r, []
 
+(* Do a case-split by choosing a value for a uninterpreted semantic value
+   whose the domain in [env] is of minimal size. *)
 let case_split env uf ~for_model =
   let acc = MX.fold
       (fun r (hss, _) acc ->
          let x, _ = Uf.find_r uf r in
          match Sh.embed x with
-         | Cons _ -> acc (* already bound to an Enum const *)
-         | _ -> (* cs even if sz below is equal to 1 *)
+         | Cons _ ->
+           (* The equivalence class of [r] already contains a value and
+              we don't need to make another case-split for this semantic
+              value. *)
+           acc
+         | _ ->
+           (* We have to do a case-split, even if the domain of [r] is
+              of cardinal 1 as we have to put this value in the
+              equivalence class of [r]. *)
            let sz = HSS.cardinal hss in
            match acc with
            | Some (n,_,_) when n <= sz -> acc
@@ -304,6 +341,7 @@ let query env uf la =
 let new_terms _ = Expr.Set.empty
 
 let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []
+
 let assume_th_elt t th_elt _ =
   match th_elt.Expr.extends with
   | Util.Sum ->
