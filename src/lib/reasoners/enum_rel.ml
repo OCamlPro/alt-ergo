@@ -53,8 +53,10 @@ type t = {
      value has to lie in the domain. *)
 
   classes : Expr.Set.t list;
-  (* State of the union-find represented by its equivalence classes.
-     The field is updated while assuming literals of the theory. *)
+  (* State of the union-find represented by all its equivalence classes.
+     This state is kept for debugging purposes only. It is updated after
+     assuming literals of the theory and returned by queries in case of
+     inconsistency. *)
 
   size_splits : Numbers.Q.t
   (* Estimate the number of case-splits performed by the theory. The
@@ -193,9 +195,6 @@ let add_diseq hss sm1 sm2 dep env eqs =
    the equation [sm1 = sm2]. More precisely, we replace their domains by
    the intersection of these domains.
 
-   In any case, we produce an equality if the domain of these semantic values
-   becomes a singleton.
-
    @raise Ex.Inconsistent if the domains of [sm1] and [sm2] are disjoint. *)
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
@@ -204,6 +203,8 @@ let add_eq hss sm1 sm2 dep env eqs =
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let ex = Ex.union ex dep in
     if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
+    (* We don't need to produce a new equality as we already know it
+       by transitivity of equality. *)
     {env with mx = MX.add r (HSS.singleton h, ex) env.mx} , eqs
 
   | Alien r1, Alien r2   ->
@@ -216,6 +217,9 @@ let add_eq hss sm1 sm2 dep env eqs =
     if HSS.is_empty diff then raise (Ex.Inconsistent (ex, env.classes));
     let mx = MX.add r1 (diff, ex) env.mx in
     let env = {env with mx = MX.add r2 (diff, ex) mx } in
+
+    (* We produce an equality if the domain of these semantic values becomes
+       a singleton. *)
     if HSS.cardinal diff = 1 then
       let h' = HSS.choose diff in
       let ty = X.type_info r1 in

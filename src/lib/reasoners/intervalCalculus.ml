@@ -109,6 +109,11 @@ type t = {
   improved_p : SP.t;
   improved_x : SX.t;
   classes : SE.t list;
+  (* State of the union-find represented by all its equivalence classes.
+     This state is kept for debugging purposes only. It is updated after
+     assuming literals of the theory and returned by queries in case of
+     inconsistency. *)
+
   size_splits : Q.t;
   int_sim : Sim.Core.t;
   rat_sim : Sim.Core.t;
