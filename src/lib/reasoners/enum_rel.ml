@@ -49,16 +49,18 @@ module LR = Uf.LX
 type t = {
   mx : (HSS.t * Ex.t) MX.t;
   (* Map of uninterpreted enum semantic values to domains of their possible
-     values. The explanation justifies that the value of the semantic value
-     lies in the domain. *)
+     values. The explanation justifies that any value assigns to the semantic
+     value has to lie in the domain. *)
 
   classes : Expr.Set.t list;
   (* State of the union-find represented by its equivalence classes.
      The field is updated while assuming literals of the theory. *)
 
   size_splits : Numbers.Q.t
-  (* Limit the number of case-splits performed by this theory. The counter is
-     increased while assuming new literals of the theory. *)
+  (* Estimate the number of case-splits performed by the theory. The
+     estimation is updated while assuming new literals of the theory.
+     We don't perfom new case-splits if this estimation exceeds
+     [Options.get_max_split ()]. *)
 }
 
 let empty classes = {
@@ -136,7 +138,14 @@ let values_of r =
     None
 
 (* Update the domains of the semantic values [sm1] and [sm2] according to
-   the disequality [sm1 <> sm2]. *)
+   the disequality [sm1 <> sm2]. More precisely, if one of these semantic
+   values is a constructor, we remove it from the domain of the other one.
+
+   In any case, we produce an equality if the domain of one of these semantic
+   values becomes a singleton.
+
+   @raise Ex.Inconsistent if the disequality is inconsistent with the
+   current environment [env]. *)
 let add_diseq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r , Cons(h,ty)
@@ -181,7 +190,13 @@ let add_diseq hss sm1 sm2 dep env eqs =
   |  _ -> env, eqs
 
 (* Update the domains of the semantic values [sm1] and [sm2] according to
-   the equation [sm1 = sm2]. *)
+   the equation [sm1 = sm2]. More precisely, we replace their domains by
+   the intersection of these domains.
+
+   In any case, we produce an equality if the domain of these semantic values
+   becomes a singleton.
+
+   @raise Ex.Inconsistent if the domains of [sm1] and [sm2] are disjoint. *)
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r, Cons(h,_)
@@ -222,7 +237,8 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
-(* Add the uninterpreted semantic value [r] to the environment. *)
+(* Add the uninterpreted semantic value [r] to the environment [env] with the
+   total domain. *)
 let add_aux env r =
   Debug.add r;
   match Sh.embed r, values_of r with
@@ -285,9 +301,9 @@ let case_split env uf ~for_model =
               value. *)
            acc
          | _ ->
-           (* We have to do a case-split, even if the domain of [r] is
-              of cardinal 1 as we have to put this value in the
-              equivalence class of [r]. *)
+           (* We have to perform a case-split, even if the domain of [r] is
+              of cardinal 1 as we have to let the union-find know this
+              equality. *)
            let sz = HSS.cardinal hss in
            match acc with
            | Some (n,_,_) when n <= sz -> acc
