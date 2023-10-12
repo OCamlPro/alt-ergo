@@ -134,39 +134,47 @@ module Shostak
     | Some p -> p
     | _ -> P.create [Q.one, r] Q.zero (X.type_info r)
 
-  (* t1 % t2 = md  <->
-     c1. 0 <= md ;
-     c2. md < t2 ;
-     c3. exists k. t1 = t2 * k + t ;
-     c4. t2 <> 0 (already checked) *)
-  let mk_modulo md t1 t2 p2 ctx =
-    let zero = E.int "0" in
-    let c1 = E.mk_builtin ~is_pos:true Symbols.LE [zero; md] in
-    let c2 =
-      match P.is_const p2 with
-      | Some n2 ->
-        let an2 = Q.abs n2 in
-        assert (Q.is_int an2);
-        let t2 = E.int (Q.to_string an2) in
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
-      | None ->
-        E.mk_builtin ~is_pos:true Symbols.LT [md; t2]
-    in
-    let k  = E.fresh_name Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Mult) [t2;k] Ty.Tint in
-    let t3 = E.mk_term (Sy.Op Sy.Plus) [t3;md] Ty.Tint in
-    let c3 = E.mk_eq ~iff:false t1 t3 in
-    c3 :: c2 :: c1 :: ctx
+  (* Compute [t1 % t2] as [t1 - |t2| * (t1 / |t2|)].
 
-  let mk_euc_division p p2 t1 t2 ctx =
-    match P.to_list p2 with
-    | [], coef_p2 ->
-      let md = E.mk_term (Sy.Op Sy.Modulo) [t1;t2] Ty.Tint in
-      let r, ctx' = X.make md in
-      let rp =
-        P.mult_const (Q.div Q.one coef_p2) (embed r) in
-      P.sub p rp, ctx' @ ctx
-    | _ -> assert false
+     Requires: [t1], [t2] have type [Tint]
+     Requires: [p1] is the representative for [t1]
+     Requires: [p2] is the representative for [t2]
+     Requires: [p2] is a non-zero constant *)
+  let mk_modulo t1 p1 p2 ctx =
+    match P.is_const p2 with
+    | Some n2 ->
+      let a2 = Q.to_z n2 |> Z.abs in
+      assert (Z.sign a2 > 0);
+
+      (* NB: [t1 % t2] = [t1 % |t2|] *)
+      let div, ctx' = X.make (E.Ints.(t1 / ~$$a2)) in
+      P.sub p1 (P.mult_const (Q.from_z a2) (embed div)), ctx' @ ctx
+    | None -> assert false
+
+  (* Add range information for [t = t1 / t2].
+
+     Requires: [t], [t1], [t2] have type [Tint]
+     Requires: [p2] is the term representative for [t2]
+     Requires: [p2] is a non-zero constant *)
+  let mk_euc_division t t1 p2 ctx =
+    assert (E.type_info t == Tint);
+
+    match P.is_const p2 with
+    | Some n2 ->
+      let a2 = Q.to_z n2 |> Z.abs in
+      assert (Z.sign a2 > 0);
+
+      if Q.sign n2 < 0 then
+        (* t1 / (-|t2|) = -(t1 / |t2|)*)
+        let r, ctx' = X.make E.Ints.(t1 / ~$$a2) in
+        P.mult_const Q.m_one (embed r), ctx' @ ctx
+      else
+        (* 0 <= t1 % t2 = t1 - t2 * (t1 / t2) < |t2| *)
+        let t1_mod_t2 = E.Ints.(t1 - ~$$a2 * t) in
+        let c1 = E.Ints.(~$0 <= t1_mod_t2) in
+        let c2 = E.Ints.(t1_mod_t2 < ~$$a2) in
+        P.create [Q.one, X.term_embed t] Q.zero Tint, c2 :: c1 :: ctx
+    | None -> assert false
 
 
   let exact_sqrt_or_Exit q =
@@ -258,11 +266,10 @@ module Shostak
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
         let p3, ctx =
-          try
-            let p, approx = P.div p1 p2 in
-            if approx then mk_euc_division p p2 t1 t2 ctx
-            else p, ctx
-          with Division_by_zero | Polynome.Maybe_zero ->
+          match P.div p1 p2 with
+          | p, approx ->
+            if approx then mk_euc_division t t1 p2 ctx else p, ctx
+          | exception Division_by_zero | exception Polynome.Maybe_zero ->
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
         in
         P.add p (P.mult_const coef p3), ctx
@@ -287,13 +294,10 @@ module Shostak
       else
         let p3, ctx =
           try P.modulo p1 p2, ctx
-          with e ->
-            let t = E.mk_term mod_symb [t1; t2] Ty.Tint in
-            let ctx = match e with
-              | Division_by_zero | Polynome.Maybe_zero -> ctx
-              | Polynome.Not_a_num -> mk_modulo t t1 t2 p2 ctx
-              | _ -> assert false
-            in
+          with
+          | Polynome.Not_a_num -> mk_modulo t1 p1 p2 ctx
+          | Division_by_zero | Polynome.Maybe_zero ->
+            let t = E.mk_term mod_symb [t1; t2] Tint in
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
         in
         P.add p (P.mult_const coef p3), ctx
