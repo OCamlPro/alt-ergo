@@ -383,6 +383,37 @@ module Ints : sig
   val ( > ) : t -> t -> t
 end
 
+(** Constructors from the smtlib theory of reals.
+    https://smtlib.cs.uiowa.edu/theories-Reals.shtml *)
+module Reals : sig
+  (* Conversion from int *)
+  val of_int : int -> t
+  val ( ~$ ) : int -> t
+
+  (* Conversion from ZArith *)
+  val of_Z : Z.t -> t
+  val ( ~$$ ) : Z.t -> t
+
+  val of_Q : Q.t -> t
+  val ( ~$$$ ) : Q.t -> t
+
+  (* Arithmetic operations *)
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val ( ~- ) : t -> t
+  val ( * ) : t -> t -> t
+  val ( / ) : t -> t -> t
+
+  (* Exponentiation *)
+  val ( ** ) : t -> t -> t
+
+  (* Comparisons *)
+  val ( <= ) : t -> t -> t
+  val ( >= ) : t -> t -> t
+  val ( < ) : t -> t -> t
+  val ( > ) : t -> t -> t
+end
+
 (** Constructors from the smtlib theory of fixed-size bit-vectors and the QF_BV
     logic.
 
