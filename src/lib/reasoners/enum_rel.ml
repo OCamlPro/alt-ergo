@@ -273,7 +273,7 @@ let assume env uf la =
 let add env _ r _ = add_aux env r, []
 
 (* Do a case-split by choosing a value for a uninterpreted semantic value
-   whose the domain in [env] is of minimal size. *)
+   whose domain in [env] is of minimal size. *)
 let case_split env uf ~for_model =
   let acc = MX.fold
       (fun r (hss, _) acc ->
