@@ -42,6 +42,11 @@ module DT = DE.Ty
 module Id = DStd.Id
 module B = DStd.Builtin
 
+let unsupported msg =
+  Fmt.kstr
+    (fun str -> Errors.(run_error (Unsupported_feature str)))
+    msg
+
 module Shared = struct
   (* Shared constants to avoid allocations*)
 
@@ -62,7 +67,7 @@ let get_basename = function
   | DStd.Path.Local { name; }
   | Absolute { name; path = []; } -> name
   | Absolute { name; path; } ->
-    Util.failwith
+    Fmt.failwith
       "Expected an empty path to the basename: \"%s\" but got: [%a]."
       name (fun fmt l ->
           match l with
@@ -91,7 +96,7 @@ module Cache = struct
     match find_sy ind with
     | Sy.Var v -> v
     | sym ->
-      Util.failwith
+      Fmt.failwith
         "Internal error: Expected to find a variable symbol,\
          instead found (%a)"
         Sy.print sym
@@ -477,7 +482,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     if update then
       Cache.store_tyvl ~is_var tyvl;
     aux ty
-  | _ -> Util.failwith "Unsupported Type %a" DE.Ty.print dty
+  | _ -> unsupported "Type %a" DE.Ty.print dty
 
 and handle_ty_app ?(update = false) ty_c l =
   (* Applies the substitutions in [tysubsts] to each encountered type
@@ -550,7 +555,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
             let pty = dty_to_ty id_ty in
             (pn, pty) :: acc
           | _ ->
-            Util.failwith
+            Fmt.failwith
               "Unexpected null label for some field of the record type %a"
               DE.Ty.Const.print ty_c
 
@@ -647,7 +652,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
               let pty = dty_to_ty id_ty in
               (pn, pty) :: acc
             | _ ->
-              Util.failwith
+              Fmt.failwith
                 "Unexpected null label for some field of the record type %a"
                 DE.Ty.Const.print ty_c
         ) [] dstrs
@@ -766,7 +771,7 @@ let handle_patt_var name (DE.{ term_descr; _ } as term)  =
     v, n, ty
 
   | _ ->
-    Util.failwith
+    Fmt.failwith
       "Expected a variable in a case match but got %a"
       DE.Term.print term
 
@@ -791,7 +796,7 @@ let mk_pattern DE.{ term_descr; _ } =
               | _ -> assert false
           ) [] dstrs
         | _ ->
-          Util.failwith
+          Fmt.failwith
             "Expected a constructor for an algebraic data type but got\
              something else for the definition of: %a"
             DE.Ty.Const.print adt
@@ -826,8 +831,7 @@ let mk_pattern DE.{ term_descr; _ } =
 let arith_ty = function
   | `Int -> Ty.Tint
   | `Real -> Ty.Treal
-  | `Rat ->
-    Util.failwith "rationals are not currently supported"
+  | `Rat -> unsupported "rationals"
 
 (* Parse a semantic bound [x `b` y] and returns a tuple [(sort, lb, ub)] where:
 
@@ -850,7 +854,7 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
     | B.Gt t -> `Gt, t
     | B.Geq t -> `Ge, t
     | _ ->
-      Util.failwith
+      Fmt.failwith
         "%aInternal error: invalid semantic bound"
         Loc.report loc
   in
@@ -861,7 +865,7 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
       Sy.ValBnd (Numbers.Q.from_string s)
     | Var v -> Sy.VarBnd (Cache.find_var v)
     | _ ->
-      Util.failwith
+      Fmt.failwith
         "%aInternal error: invalid semantic bound"
         Loc.report loc
   in
@@ -966,8 +970,7 @@ let rec mk_expr
             let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
             E.mk_term sy [] ty
 
-          | _ ->
-            Util.failwith "Unsupported constant term %a" DE.Term.print term
+          | _ -> unsupported "Constant term %a" DE.Term.print term
         end
 
       | Var ({ id_ty; _ } as ty_v) ->
@@ -1015,13 +1018,13 @@ let rec mk_expr
                     in
                     E.mk_term sy [e] ty
                   | _ ->
-                    Util.failwith
+                    Fmt.failwith
                       "Adt Destructor error: Can't find %dth field of %dth \
                        case of the type %a."
                       field case DE.Ty.Const.print adt
                 end
               | None | Some Abstract ->
-                Util.failwith
+                Fmt.failwith
                   "Can't find the adt %a to which the destructor %a belongs"
                   DE.Ty.Const.print adt DE.Term.print app_term
             end
@@ -1069,7 +1072,7 @@ let rec mk_expr
               | [] -> None
               | [ var, value ] -> Some (var, value)
               | _ ->
-                Util.failwith
+                Fmt.failwith
                   "%asemantic trigger should have at most one bound variable"
                   Loc.report loc
             in
@@ -1088,7 +1091,7 @@ let rec mk_expr
               match E.type_info t with
               | Tbitv m ->
                 if m <= i then
-                  Util.failwith
+                  Fmt.failwith
                     "%alength of bitvector extraction exceeds the length\
                      of its argument."
                     Loc.report loc
@@ -1347,7 +1350,7 @@ let rec mk_expr
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term (Sy.Op Sy.Record) l ty
               | _ ->
-                Util.failwith
+                Fmt.failwith
                   "Constructor error: %a does not belong to a record nor an\
                    algebraic data type"
                   DE.Term.print app_term
@@ -1356,9 +1359,7 @@ let rec mk_expr
           | B.Coercion, [ x ] ->
             begin match DT.view (DE.Term.ty x), DT.view term_ty with
               | `Int, `Real -> op Real_of_int
-              | _ ->
-                Util.failwith "Unsupported coercion: %a"
-                  DE.Term.print term
+              | _ -> unsupported "coercion: %a" DE.Term.print term
             end
           | Float, _ -> op Float
           | Integer_round, _ -> op Integer_round
@@ -1379,9 +1380,7 @@ let rec mk_expr
           | Not_theory_constant, _ -> op Not_theory_constant
           | Is_theory_constant, _ -> op Is_theory_constant
           | Linear_dependency, _ -> op Linear_dependency
-
-          | _, _ ->
-            Util.failwith "Unsupported Application Term %a" DE.Term.print term
+          | _, _ -> unsupported "Application Term %a" DE.Term.print term
         end
 
       | Match (t, pats) ->
@@ -1494,8 +1493,7 @@ let rec mk_expr
           end
           in
           mk name loc binders triggers qbody ~toplevel ~decl_kind
-
-      | _ -> Util.failwith "Unsupported Term %a" DE.Term.print term
+      | _ -> unsupported "Term %a" DE.Term.print term
     in
     match DStd.Tag.get root_tags DE.Tags.named with
     | Some s ->
@@ -1509,7 +1507,7 @@ let rec mk_expr
       match destruct_app t with
       | Some (cst, args) -> cst, args
       | None ->
-        Util.failwith
+        Fmt.failwith
           "invalid semantic trigger: %a"
           DE.Term.print t
     in
@@ -1526,7 +1524,7 @@ let rec mk_expr
           let e2 = aux_mk_expr y in
           E.mk_term sy [e2] Ty.Tbool
         | _ ->
-          Util.failwith
+          Fmt.failwith
             "%aMaps_to: expected a variable but got: %a"
             Loc.report loc DE.Term.print x
       end
@@ -1570,12 +1568,12 @@ let rec mk_expr
           in
           E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
         | _ ->
-          Util.failwith "%aInvalid semantic trigger: %a"
+          Fmt.failwith "%aInvalid semantic trigger: %a"
             Loc.report loc DE.Term.print t
       end
 
     | _ ->
-      Util.failwith "%aInvalid semantic trigger: %a"
+      Fmt.failwith "%aInvalid semantic trigger: %a"
         Loc.report loc DE.Term.print t
 
   in aux_mk_expr ~toplevel dt
@@ -1867,7 +1865,7 @@ let make dloc_file acc stmt =
             let name = match name.name with
               | Simple name -> name
               | _ ->
-                Util.failwith
+                Fmt.failwith
                   "Internal error: invalid theory extension: %a"
                   print name
             in
@@ -1879,7 +1877,7 @@ let make dloc_file acc stmt =
                     Errors.typing_error (ThExtError name) aloc
                 end
               | _ ->
-                Util.failwith
+                Fmt.failwith
                   "Internal error: invalid base theory name: %a"
                   print extends
             in
@@ -1890,7 +1888,7 @@ let make dloc_file acc stmt =
         | [] -> None
         | [name, extends] -> Some (name, extends)
         | _ ->
-          Util.failwith
+          Fmt.failwith
             "%a: Internal error: multiple theories."
             DStd.Loc.fmt dloc
       in

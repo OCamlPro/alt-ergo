@@ -704,12 +704,12 @@ let print_list fmt = print_list_sep "," fmt
 let lit_view t =
   let { f; xs; ty; _ } = t in
   if ty != Ty.Tbool then
-    Util.failwith "Calling lit_view on a non boolean expression %a"
+    Fmt.failwith "Calling lit_view on a non boolean expression %a"
       print t
   else
     match f with
     | Sy.Form _  ->
-      Util.failwith "Calling lit_view on a formula %a" print t
+      Fmt.failwith "Calling lit_view on a formula %a" print t
     | Sy.Lit lit ->
       begin match lit, xs with
         | (Sy.L_eq | Sy.L_neg_eq), ([] | [_]) -> assert false
@@ -726,7 +726,7 @@ let lit_view t =
 let form_view t =
   let { f; xs; bind; _ } = t in
   if t.ty != Ty.Tbool then
-    Util.failwith "Term %a is not a formula" print t
+    Fmt.failwith "Term %a is not a formula" print t
   else
     match f, xs, bind with
     | Sy.Form (Sy.F_Unit _), [a;b], _ -> Unit (a, b)

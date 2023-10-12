@@ -530,7 +530,7 @@ let main () =
           | Simple name -> name
           | _ ->
             let loc = DStd.Loc.loc file_loc loc in
-            Util.failwith "%a: internal error: goal name should be simple"
+            Fmt.failwith "%a: internal error: goal name should be simple"
               DStd.Loc.fmt loc
         in
         let contents =
@@ -539,7 +539,7 @@ let main () =
           | `Solve ([], [t]) -> `Goal t
           | _ ->
             let loc = DStd.Loc.loc file_loc loc in
-            Util.failwith "%a: internal error: unknown statement"
+            Fmt.failwith "%a: internal error: unknown statement"
               DStd.Loc.fmt loc
         in
         let stmt = { Typer_Pipe.id; contents; loc ; attrs } in
