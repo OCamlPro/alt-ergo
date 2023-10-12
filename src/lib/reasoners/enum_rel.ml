@@ -57,7 +57,7 @@ type t = {
      The field is updated while assuming literals of the theory. *)
 
   size_splits : Numbers.Q.t
-  (* Limit the number of case-splits do by this theory. The counter is
+  (* Limit the number of case-splits performed by this theory. The counter is
      increased while assuming new literals of the theory. *)
 }
 
