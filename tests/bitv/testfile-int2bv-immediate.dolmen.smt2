@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-const x Int)
+(assert (= x 5))
+(assert (distinct ((_ int2bv 4) x) #b0101))
+(check-sat)

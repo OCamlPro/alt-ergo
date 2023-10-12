@@ -30,6 +30,16 @@
 
 type 'a abstract
 
+(** [to_Z_opt r] evaluates [r] to an integer if possible. *)
+val to_Z_opt : 'a abstract -> Z.t option
+
+(** [int2bv_const n z] evaluates [z] as a constant [n]-bits bitvector.
+
+    If [z] is out of the [0 .. 2^n] range, only the first [n] bits of [z] in
+    binary representation are considered, i.e.  [int2bv_const n z] is always
+    equal to [int2bv_const n (erem z (1 lsl n))]. *)
+val int2bv_const : int -> Z.t -> 'a abstract
+
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r

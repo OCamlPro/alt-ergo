@@ -492,6 +492,8 @@ module Shostak
 
   let leaves p = P.leaves p
 
+  let is_constant p = Option.is_some (P.is_const p)
+
   let subst x t p =
     let p = P.subst x (embed t) p in
     let ty = P.type_info p in

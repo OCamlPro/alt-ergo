@@ -357,6 +357,17 @@ struct
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
+  let is_constant r =
+    match r.v with
+    | Arith t -> ARITH.is_constant t
+    | Records t -> RECORDS.is_constant t
+    | Bitv t -> BITV.is_constant t
+    | Arrays t -> ARRAYS.is_constant t
+    | Enum t -> ENUM.is_constant t
+    | Adt t -> ADT.is_constant t
+    | Ite t -> ITE.is_constant t
+    | Ac _ | Term _ -> false
+
   let subst p v r =
     if equal p v then r
     else match r.v with

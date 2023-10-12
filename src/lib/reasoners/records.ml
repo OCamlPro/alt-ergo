@@ -214,6 +214,15 @@ module Shostak (X : ALIEN) = struct
     in
     XS.elements (leaves t)
 
+  let is_constant =
+    let rec is_constant t =
+      match normalize t with
+      | Record (lbs, _) ->
+        List.for_all (fun (_, x) -> is_constant x) lbs
+      | Access (_, x, _) -> is_constant x
+      | Other (x, _) -> X.is_constant x
+    in is_constant
+
   let rec hash  = function
     | Record (lbs, ty) ->
       List.fold_left

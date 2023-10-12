@@ -117,6 +117,7 @@ val is_internal : t -> bool
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val compare_bounds : bound -> bound -> int
+val compare_operators : operator -> operator -> int
 val hash : t -> int
 
 val to_string : t -> string

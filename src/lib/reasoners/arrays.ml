@@ -53,6 +53,7 @@ module Shostak (X : ALIEN) = struct
   let equal _ _      = assert false
   let hash _         = assert false
   let leaves _       = assert false
+  let is_constant _  = assert false
   let subst _ _ _    = assert false
   let make _         = assert false
   let term_extract _ = None, false

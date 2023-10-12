@@ -127,6 +127,8 @@ module Shostak (X : ALIEN) = struct
 
   let leaves _ = []
 
+  let is_constant _ = true
+
   let subst p v c =
     let cr = is_mine c in
     if X.equal p cr then v
