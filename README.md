@@ -8,7 +8,7 @@ Also see the [Alt-Ergo Users' Club].
 ## Build status
 next | main
 ------------ | -------------
-[![Build Status (next)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=next)](https://travis-ci.org/OCamlPro/alt-ergo) | [![Build Status (main)](https://travis-ci.org/OCamlPro/alt-ergo.svg?branch=main)](https://travis-ci.org/OCamlPro/alt-ergo) 
+![Build Status (next)](https://github.com/OCamlPro/alt-ergo/actions/workflows/build.yml/badge.svg?branch=next) | ![Build Status (main)](https://github.com/OCamlPro/alt-ergo/actions/workflows/build.yml/badge.svg?branch=main)
 
 ## Website
 
