@@ -72,8 +72,8 @@ jobs:
       - name: Install dependencies
         run: opam exec -- make deps js-deps
 
-      - name: Run make
-        run: opam exec -- make
+      - name: Build the project
+        run: opam exec -- dune build --profile ci @check
 
       - name: Monitor changes
         uses: getsentry/action-git-diff-suggestions@main
