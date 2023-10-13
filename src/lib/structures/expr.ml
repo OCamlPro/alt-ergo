@@ -2853,19 +2853,19 @@ end
 (** Constructors from the smtlib theory of integers.
     https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
 module Ints = struct
-  let of_Z n = int (Z.to_string n)
-
-  let ( ~$ ) = of_Z
-
   let of_int n = int (string_of_int n)
 
-  let ( ~$$ ) = of_int
+  let ( ~$ ) = of_int
+
+  let of_Z n = int (Z.to_string n)
+
+  let ( ~$$ ) = of_Z
 
   let ( + ) x y = mk_term (Op Plus) [ x; y ] Tint
 
   let ( - ) x y = mk_term (Op Minus) [ x; y ] Tint
 
-  let ( ~- ) x = ~$$0 - x
+  let ( ~- ) x = ~$0 - x
 
   let ( * ) x y = mk_term (Op Mult) [ x; y ] Tint
 
@@ -2881,7 +2881,7 @@ module Ints = struct
 
   let ( >= ) x y = y <= x
 
-  let ( < ) x y = x <= y - ~$$1
+  let ( < ) x y = x <= y - ~$1
 
   let ( > ) x y = y < x
 end
@@ -2970,7 +2970,7 @@ module BV = struct
        are added here, bitv.ml must be updated as well. *)
     match term_view t with
     | { f = Op Int2BV n; xs = [ t ]; _ } ->
-      Ints.(t mod ~$Z.(~$1 lsl n))
+      Ints.(t mod ~$$Z.(~$1 lsl n))
     | _ -> mk_term (Op BV2Nat) [t] Tint
 
   (* Bit-wise operations *)
@@ -2996,18 +2996,18 @@ module BV = struct
   (* Arithmetic operations *)
   let bvneg s =
     let m = size s in
-    int2bv m Ints.(~$Z.(~$1 lsl m) - bv2nat s)
+    int2bv m Ints.(~$$Z.(~$1 lsl m) - bv2nat s)
   let bvadd s t = int2bv (size s) Ints.(bv2nat s + bv2nat t)
   let bvsub s t = bvadd s (bvneg t)
   let bvmul s t = int2bv (size s) Ints.(bv2nat s * bv2nat t)
   let bvudiv s t =
     let m = size2 s t in
-    ite (eq (bv2nat t) Ints.(~$$0))
+    ite (eq (bv2nat t) Ints.(~$0))
       (bvones m)
       (int2bv m Ints.(bv2nat s / bv2nat t))
   let bvurem s t =
     let m = size2 s t in
-    ite (eq (bv2nat t) Ints.(~$$0))
+    ite (eq (bv2nat t) Ints.(~$0))
       s
       (int2bv m Ints.(bv2nat s mod bv2nat t))
   let bvsdiv s t =
@@ -3039,7 +3039,7 @@ module BV = struct
     let abs_s = ite (is msb_s 0) s (bvneg s) in
     let abs_t = ite (is msb_t 0) t (bvneg t) in
     let u = bvurem abs_s abs_t in
-    ite (eq (bv2nat u) Ints.(~$$0))
+    ite (eq (bv2nat u) Ints.(~$0))
       u
     @@ ite (and_ (is msb_s 0) (is msb_t 0))
       u
@@ -3050,8 +3050,8 @@ module BV = struct
       (bvneg u)
 
   (* Shift operations *)
-  let bvshl s t = int2bv (size2 s t) Ints.(bv2nat s * (~$$2 ** bv2nat t))
-  let bvlshr s t = int2bv (size2 s t) Ints.(bv2nat s / (~$$2 ** bv2nat t))
+  let bvshl s t = int2bv (size2 s t) Ints.(bv2nat s * (~$2 ** bv2nat t))
+  let bvlshr s t = int2bv (size2 s t) Ints.(bv2nat s / (~$2 ** bv2nat t))
   let bvashr s t =
     let m = size2 s t in
     ite (is (extract (m - 1) (m - 1) s) 0)
