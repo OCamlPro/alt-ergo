@@ -48,7 +48,7 @@ end
 module AE : S
 module SMT2 : S
 
-(** Returns (module SMT2) if the input format is [None] or [Some Smtlib2], 
+(** Returns (module SMT2) if the input format is [None] or [Some Smtlib2],
     otherwise returns [AE]. *)
 val fpa_rounding_utils : unit -> (module S)
 
