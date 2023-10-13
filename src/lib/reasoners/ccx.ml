@@ -447,8 +447,16 @@ module Main : S = struct
   let make_unique sa =
     let mp =
       List.fold_left
-        (fun mp ((ra, aopt ,_ ,_) as e) ->
-           LRE.add (LR.make ra, aopt) e mp
+        (fun mp ((ra, aopt ,_ , _) as e) ->
+           (* Make sure to prefer equalities of [Subst] origin because they are
+              used for partial computations (see {!Rel_utils}). In general, we
+              want to make sure that the relations see all the equalities from
+              representative changes in the union-find. *)
+           LRE.update (LR.make ra, aopt) (function
+               | Some ((_, _, _, Th_util.Subst) as e') -> Some e'
+               | _ -> Some e
+             ) mp
+
         ) LRE.empty sa
     in
     LRE.fold (fun _ e acc -> e::acc) mp []
