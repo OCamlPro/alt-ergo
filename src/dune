@@ -3,9 +3,9 @@
   (flags
    (:standard -bin-annot -w -22 -warn-error -A))
   (ocamlopt_flags -g))
- (warnings ;; This profile can be used to simply enable all warnings.
+ (ci ;; This profile is used by the CI.
   (flags
-   (:standard -bin-annot -w +A -warn-error -A))
+   (:standard -bin-annot -w -22 -warn-error +A))
   (ocamlopt_flags -g))
  (release ;; The release profile has optimizations enabled.
   (flags
