@@ -2886,6 +2886,43 @@ module Ints = struct
   let ( > ) x y = y < x
 end
 
+
+(** Constructors from the smtlib theory of real numbers.
+    https://smtlib.cs.uiowa.edu/theories-Reals.shtml *)
+module Reals = struct
+  let of_int n = real (string_of_int n)
+
+  let ( ~$ ) = of_int
+
+  let of_Z n = real (Z.to_string n)
+
+  let ( ~$$ ) = of_Z
+
+  let of_Q q = real (Q.to_string q)
+
+  let ( ~$$$ ) = of_Q
+
+  let ( - ) x y = mk_term (Op Minus) [ x; y ] Treal
+
+  let ( ~- ) x = ~$0 - x
+
+  let ( + ) x y = mk_term (Op Plus) [ x; y ] Treal
+
+  let ( * ) x y = mk_term (Op Mult) [ x; y ] Treal
+
+  let ( / ) x y = mk_term (Op Div) [ x; y ] Treal
+
+  let ( ** ) x y = mk_term (Op Pow) [ x; y ] Treal
+
+  let ( <= ) x y = mk_builtin ~is_pos:true LE [ x; y ]
+
+  let ( >= ) x y = y <= x
+
+  let ( < ) x y = mk_builtin ~is_pos:true LT [x; y ]
+
+  let ( > ) x y = y < x
+end
+
 (** Constructors from the smtlib theory of fixed-size bit-vectors and the QF_BV
     logic.
 
