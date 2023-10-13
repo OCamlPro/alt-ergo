@@ -93,7 +93,8 @@ plugins:
 # Alias to build all the bytecode artefacts using dune
 # Hopefully more efficient than making "all" depend
 # on "lib" and "bin", since dune can parralelize more
-all: dune build @check
+all:
+	$(DUNE) build $(DUNE_FLAGS) @check
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
