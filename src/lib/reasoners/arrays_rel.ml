@@ -396,7 +396,7 @@ let case_split env _uf ~for_model:_ =
     Debug.case_split_none ();
     []
 
-let optimizing_split _env _uf _opt_split = None
+let optimizing_split _env _uf opt_split = opt_split
 
 let count_splits env la =
   let nb =

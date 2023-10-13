@@ -43,6 +43,7 @@ type 'a optimized_split_value =
   | Value of 'a
   | Pinfinity
   | Unknown
+  | StrictBound
 
 type optimization = {
   opt_ord : int;

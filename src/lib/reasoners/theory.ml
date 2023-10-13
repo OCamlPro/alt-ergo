@@ -438,31 +438,30 @@ module Main_Default : S = struct
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
           match next_optimization ~for_model env with
-          | Some opt_split when optimize ->
+          | Some to_opt_split when optimize ->
             begin
-              match CC_X.optimizing_split env.gamma_finite opt_split with
-              | Some x ->
-                let to_opt =
-                  register_optimized_split env.objectives x
-                in
-                let env = {env with objectives = to_opt} in
-                begin
-                  match x.value with
-                  | Value v ->
-                    let splits = add_explanations_to_splits [v] in
-                    aux ~optimize ch None dl env splits
-                  | Pinfinity | Minfinity ->
-                    if for_model then
-                      aux ~optimize:false ch None dl env []
-                    else
-                      { env with choices = List.rev dl }, ch
-                  | Unknown -> assert false
-                end
-              | None ->
+              let opt_split =
+                CC_X.optimizing_split env.gamma_finite to_opt_split
+              in
+              match opt_split.value with
+              | StrictBound ->
                 if for_model then
                   aux ~optimize:false ch None dl env []
                 else
                   { env with choices = List.rev dl }, ch
+              | Unknown -> assert false
+              | Pinfinity | Minfinity ->
+                if for_model then
+                  aux ~optimize:false ch None dl env []
+                else
+                  { env with choices = List.rev dl }, ch
+              | Value v ->
+                let to_opt =
+                  register_optimized_split env.objectives opt_split
+                in
+                let env = {env with objectives = to_opt} in
+                let splits = add_explanations_to_splits [v] in
+                aux ~optimize ch None dl env splits
             end
           | Some _ | None ->
             begin

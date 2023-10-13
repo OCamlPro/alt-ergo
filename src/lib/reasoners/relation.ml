@@ -157,7 +157,7 @@ let optimizing_split env uf ({ Th_util.r; _ } as opt_split) =
   | Ty.Tadt _ ->
     Rel5.optimizing_split env.r5 uf opt_split
   | _ ->
-    None
+    opt_split
 
 let add env uf r t =
   Options.exec_thread_yield ();

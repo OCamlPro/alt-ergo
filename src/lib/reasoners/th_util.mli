@@ -43,6 +43,8 @@ type 'a optimized_split_value =
   | Value of 'a
   | Pinfinity
   | Unknown
+  | StrictBound
+  (** We cannot optimize a strict bound for reals as there is no maximum. *)
 
 type optimization = {
   opt_ord : int;

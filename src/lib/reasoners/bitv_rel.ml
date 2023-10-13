@@ -72,7 +72,7 @@ let case_split _ _ ~for_model:_ = []
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   { delayed }, eqs
-let optimizing_split _env _uf _opt_split = None
+let optimizing_split _env _uf opt_split = opt_split
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
