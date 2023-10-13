@@ -2,6 +2,6 @@
 unknown
 (
   (define-fun f ((arg_0 Int)) Int (ite (= arg_0 0) 2 0))
-  (define-fun a () Int 0)
-  (define-fun b () Int (- 2))
+  (define-fun a () Int (- 2))
+  (define-fun b () Int 0)
 )
