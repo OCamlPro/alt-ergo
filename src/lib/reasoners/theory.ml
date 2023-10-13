@@ -437,49 +437,34 @@ module Main_Default : S = struct
       | [], _ ->
         begin
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          if optimize then
-            match next_optimization ~for_model env with
-            | Some opt_split ->
-              begin
-                match CC_X.optimizing_split env.gamma_finite opt_split with
-                | Some x ->
-                  let to_opt =
-                    register_optimized_split env.objectives x
-                  in
-                  let env = {env with objectives = to_opt} in
-                  begin
-                    match x.value with
-                    | Value v ->
-                      let splits = add_explanations_to_splits [v] in
-                      aux ~optimize ch None dl env splits
-                    | Pinfinity | Minfinity ->
-                      if for_model then
-                        aux ~optimize:false ch None dl env []
-                      else
-                        { env with choices = List.rev dl }, ch
-                    | Unknown -> assert false
-                  end
-                | None ->
-                  if for_model then
-                    aux ~optimize:false ch None dl env []
-                  else
-                    { env with choices = List.rev dl }, ch
-              end
-            | None ->
-              begin
-                let l, base_env =
-                  CC_X.case_split env.gamma_finite ~for_model
+          match next_optimization ~for_model env with
+          | Some opt_split when optimize ->
+            begin
+              match CC_X.optimizing_split env.gamma_finite opt_split with
+              | Some x ->
+                let to_opt =
+                  register_optimized_split env.objectives x
                 in
-                let env = {env with gamma_finite = base_env} in
-                match l with
-                | [] ->
+                let env = {env with objectives = to_opt} in
+                begin
+                  match x.value with
+                  | Value v ->
+                    let splits = add_explanations_to_splits [v] in
+                    aux ~optimize ch None dl env splits
+                  | Pinfinity | Minfinity ->
+                    if for_model then
+                      aux ~optimize:false ch None dl env []
+                    else
+                      { env with choices = List.rev dl }, ch
+                  | Unknown -> assert false
+                end
+              | None ->
+                if for_model then
+                  aux ~optimize:false ch None dl env []
+                else
                   { env with choices = List.rev dl }, ch
-
-                | _ ->
-                  let l = add_explanations_to_splits l in
-                  aux ~optimize ch None dl env l
-              end
-          else
+            end
+          | Some _ | None ->
             begin
               let l, base_env =
                 CC_X.case_split env.gamma_finite ~for_model
