@@ -147,17 +147,17 @@ let optimizing_split env uf ({ Th_util.r; _ } as opt_split) =
   Options.exec_thread_yield ();
   match X.type_info r with
   | Ty.Tint | Ty.Treal ->
-      Rel1.optimizing_split env.r1 uf opt_split
+    Rel1.optimizing_split env.r1 uf opt_split
   | Ty.Trecord _ ->
-      Rel2.optimizing_split env.r2 uf opt_split
+    Rel2.optimizing_split env.r2 uf opt_split
   | Ty.Tbitv _ ->
-      Rel3.optimizing_split env.r3 uf opt_split
+    Rel3.optimizing_split env.r3 uf opt_split
   | Ty.Tfarray _ ->
-      Rel4.optimizing_split env.r4 uf opt_split
+    Rel4.optimizing_split env.r4 uf opt_split
   | Ty.Tadt _ ->
-      Rel5.optimizing_split env.r5 uf opt_split
+    Rel5.optimizing_split env.r5 uf opt_split
   | _ ->
-      None
+    None
 
 let add env uf r t =
   Options.exec_thread_yield ();
