@@ -54,9 +54,9 @@ type t = {
 
   classes : Expr.Set.t list;
   (* State of the union-find represented by all its equivalence classes.
-     This state is kept for debugging purposes only. It is updated after
-     assuming literals of the theory and returned by queries in case of
-     inconsistency. *)
+     This state is kept for debugging purposes only. It is updated with
+     [Uf.cl_extract] after assuming literals of the theory and returned by
+     queries in case of inconsistency. *)
 
   size_splits : Numbers.Q.t
   (* Estimate the number of case-splits performed by the theory. The
