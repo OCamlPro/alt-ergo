@@ -88,13 +88,9 @@ module Make (I : sig
     (fun key -> match Hashtbl.find_opt table key with
        | None ->
          Fmt.failwith
-           "%a"
-           (fun fmt k ->
-              Format.pp_print_string fmt I.name;
-              Hashtbl.iter (fun key _ -> Format.fprintf fmt "%a --" Hstring.print key) table;
-              Hstring.print fmt k
-           )
-           key
+           "Error while searching for FPA value %a : %s"
+           Hstring.print key
+           I.name
        | Some res -> res)
 end
 
