@@ -204,11 +204,6 @@ val pred : t -> t
 
 val mk_eq : iff:bool -> t -> t -> t
 val mk_distinct : iff:bool -> t list -> t
-(** [mk_distinct [t_1; ...; t_n]] produces the expression:
-      t_1 <> t_2 /\ t_2 <> t_3 /\ ... /\ t_(n-1) <> t_n.
-    WARNING: this smart constructor doesn't build the SMT-LIB expression
-     distinct! *)
-
 val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)
