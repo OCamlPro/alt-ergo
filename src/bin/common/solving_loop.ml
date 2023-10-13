@@ -38,10 +38,19 @@ type solver_ctx = {
   global : Commands.sat_tdecl list;
 }
 
+let is_solver_ctx_empty = function
+    { ctx = []; local = []; global = [] } -> true
+  | _ -> false
+
+type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
+
+type any_sat_module = (module Sat_solver_sig.S)
+
 (* Internal state while iterating over input statements *)
 type 'a state = {
   env : 'a;
   solver_ctx: solver_ctx;
+  sat_solver : any_sat_module;
 }
 
 let empty_solver_ctx = {
@@ -79,28 +88,32 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
+(* We currently use the full state of the solver as model. *)
+type model = Model : 'a sat_module * 'a -> model
+
 let main () =
   let () = Dolmen_loop.Code.init [] in
 
-  let module SatCont =
-    (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer) in
+  let make_sat () =
+    let module SatCont =
+      (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer) in
 
-  let module TH =
-    (val
-      (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
-       else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
+    let module TH =
+      (val
+        (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
+         else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
 
-  let module SAT = SatCont.Make(TH) in
+    (module SatCont.Make(TH) : Sat_solver_sig.S)
+  in
 
-  let module FE = Frontend.Make (SAT) in
-
-  let solve all_context (cnf, goal_name) =
+  let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
+    let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands () then
       Printer.print_dbg "@[<v 2>goal %s:@ %a@]@."
         ~module_name:"Solving_loop" ~function_name:"solve"
         goal_name
         Fmt.(list ~sep:sp Commands.print) cnf;
-    let used_context = FE.choose_used_context all_context ~goal_name in
+    let used_context = Frontend.choose_used_context all_context ~goal_name in
     let consistent_dep_stack = Stack.create () in
     Signals_profiling.init_profiling ();
     try
@@ -112,7 +125,8 @@ let main () =
       SAT.reset_refs ();
       let _, consistent, _ =
         List.fold_left
-          (FE.process_decl FE.print_status used_context consistent_dep_stack)
+          (FE.process_decl
+             Frontend.print_status used_context consistent_dep_stack)
           (SAT.empty (), `Unknown (SAT.empty ()), Explanation.empty) cnf
       in
       if Options.get_timelimit_per_goal() then
@@ -126,7 +140,7 @@ let main () =
          printing wrong model. *)
       match consistent with
       | `Sat partial_model | `Unknown partial_model ->
-        Some partial_model
+        Some (Model ((module SAT), partial_model))
       | `Unsat -> None
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
@@ -143,7 +157,7 @@ let main () =
           state.solver_ctx.ctx
         in
         let cnf = List.rev @@ Cnf.make l td in
-        let _ = solve all_context (cnf, name) in
+        let _ = solve state.sat_solver all_context (cnf, name) in
         begin match kind with
           | Ty.Check
           | Ty.Cut ->
@@ -209,7 +223,7 @@ let main () =
         I.parse_files ~filename ~preludes
       with
       | Util.Timeout ->
-        FE.print_status (FE.Timeout None) 0;
+        Frontend.print_status (Timeout None) 0;
         exit_as_timeout ()
       | Parsing.Parse_error ->
         (* TODO(Steven): displaying a dummy value is a bad idea.
@@ -224,9 +238,9 @@ let main () =
         fatal_error "%a" Errors.report e
     in
 
-    let all_used_context = FE.init_all_used_context () in
+    let all_used_context = Frontend.init_all_used_context () in
     if Options.get_timelimit_per_goal() then
-      FE.print_status FE.Preprocess 0;
+      Frontend.print_status Preprocess 0;
     let assertion_stack = Stack.create () in
     let typing_loop state p =
       if get_parse_only () then state else begin
@@ -248,14 +262,15 @@ let main () =
 
     let state = {
       env = I.empty_env;
-      solver_ctx = empty_solver_ctx
+      solver_ctx = empty_solver_ctx;
+      sat_solver = make_sat ();
     } in
     try
       let parsed_seq = parsed () in
       let _ : _ state = Seq.fold_left typing_loop state parsed_seq in
       Options.Time.unset_timeout ();
     with Util.Timeout ->
-      FE.print_status (FE.Timeout None) 0;
+      Frontend.print_status (Timeout None) 0;
       exit_as_timeout ()
   in
 
@@ -263,7 +278,11 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let partial_model_key: SAT.t option State.key =
+  let sat_solver_key : (module Sat_solver_sig.S) State.key =
+    State.create_key ~pipe:"" "sat_solver"
+  in
+
+  let partial_model_key: model option State.key =
     State.create_key ~pipe:"" "sat_state"
   in
 
@@ -375,6 +394,7 @@ let main () =
     let response_file = State.mk_file dir (`Raw ("", "")) in
     logic_file,
     State.empty
+    |> State.set sat_solver_key (make_sat ())
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
@@ -390,19 +410,23 @@ let main () =
       Loc.report loc name ty DStd.Term.print value
   in
 
-  let handle_option st_loc name (value : DStd.Term.t) =
+  let handle_option st_loc name (value : DStd.Term.t) st =
     match name, value.term with
     (* Smtlib2 regular options *)
     | ":regular-output-channel", Symbol { name = Simple name; _ } ->
       Options.Output.create_channel name
-      |> Options.Output.set_regular
+      |> Options.Output.set_regular;
+      st
     | ":diagnostic-output-channel", Symbol { name = Simple name; _ } ->
       Options.Output.create_channel name
-      |> Options.Output.set_diagnostic
+      |> Options.Output.set_diagnostic;
+      st
     | ":produce-models", Symbol { name = Simple "true"; _ } ->
-      Options.set_interpretation ILast
+      Options.set_interpretation ILast;
+      st
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
-      Options.set_interpretation INone
+      Options.set_interpretation INone;
+      st
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
       (* The generation of unsat core is supported only with the SAT
          solver Tableaux. *)
@@ -413,11 +437,12 @@ let main () =
           "%a The generation of unsat cores is not \
            supported for the current SAT solver. Please \
            choose the SAT solver Tableaux."
-          Loc.report st_loc
+          Loc.report st_loc;
+      st
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
-      Options.set_unsat_core false
+      Options.set_unsat_core false; st
     | (":produce-models" | ":produce-unsat-cores" as name), _ ->
-      print_wrn_opt ~name st_loc "boolean" value
+      print_wrn_opt ~name st_loc "boolean" value; st
     | ":verbosity", Symbol { name = Simple level; _ } ->
       begin
         match int_of_string_opt level with
@@ -425,7 +450,8 @@ let main () =
         | Some 0 -> Options.set_verbose false
         | None | Some _ ->
           print_wrn_opt ~name:":verbosity" st_loc "integer" value
-      end
+      end;
+      st
     | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
       begin
         match int_of_string_opt level with
@@ -434,7 +460,38 @@ let main () =
         | None | Some _ ->
           print_wrn_opt ~name:":reproducible-resource-limit" st_loc
             "nonnegative integer" value
-      end
+      end;
+      st
+    | ":sat-solver", Symbol { name = Simple solver; _ } -> (
+        if not (is_solver_ctx_empty (State.get solver_ctx_key st)) then (
+          recoverable_error
+            "error setting ':sat-solver', option value cannot be modified \
+             after initialization";
+          st
+        ) else
+          try
+            let sat_solver =
+              match solver with
+              | "tableaux" -> Util.Tableaux
+              | "tableaux_cdcl" -> Util.Tableaux_CDCL
+              | "cdcl" | "satml" -> Util.CDCL
+              | "cdcl_tableaux" | "satml_tableaux" | "default" ->
+                Util.CDCL_Tableaux
+              | _ -> raise Exit
+            in
+            Options.set_sat_solver sat_solver;
+            let is_cdcl_tableaux =
+              match sat_solver with CDCL_Tableaux -> true | _ -> false
+            in
+            Options.set_cdcl_tableaux_inst is_cdcl_tableaux;
+            Options.set_cdcl_tableaux_th is_cdcl_tableaux;
+            State.set sat_solver_key (make_sat ()) st
+          with Exit ->
+            recoverable_error
+              "error setting ':sat-solver', invalid option value '%s'"
+              solver;
+            st
+      )
     | (":global-declarations"
       | ":interactive-mode"
       | ":produce-assertions"
@@ -444,16 +501,16 @@ let main () =
       | ":print-success"
       | ":random-seed"), _
       ->
-      unsupported_opt name
+      unsupported_opt name; st
     (* Alt-Ergo custom options *)
     | ":profiling", Symbol { name = Simple level; _ } ->
       begin
         match float_of_string_opt level with
         | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
         | Some i -> Options.set_profiling true i
-      end
+      end; st
     | _ ->
-      unsupported_opt name
+      unsupported_opt name; st
   in
 
   let handle_get_info (st : State.t) (name: string) =
@@ -467,7 +524,7 @@ let main () =
       in
       match State.get partial_model_key st with
       | None -> err ()
-      | Some sat ->
+      | Some Model ((module SAT), sat) ->
         match SAT.get_unknown_reason sat with
         | None -> err ()
         | Some s ->
@@ -503,7 +560,7 @@ let main () =
   in
 
   let handle_stmt :
-    FE.used_context -> State.t ->
+    Frontend.used_context -> State.t ->
     _ D_loop.Typer_Pipe.stmt -> State.t =
     let goal_cnt = ref 0 in
     fun all_context st td ->
@@ -552,7 +609,9 @@ let main () =
             List.rev (cnf :: hyps), is_thm
           | _ -> assert false
         in
-        let partial_model = solve all_context (cnf, name) in
+        let partial_model =
+          solve (State.get sat_solver_key st) all_context (cnf, name)
+        in
         if is_thm
         then
           State.set solver_ctx_key (
@@ -574,8 +633,7 @@ let main () =
              }; loc = l; _ } ->
         let dloc_file = (State.get State.logic_file st).loc in
         let loc = DStd.Loc.(lexing_positions (loc dloc_file l)) in
-        handle_option loc name value;
-        st
+        handle_option loc name value st
 
       | {contents = `Set_option _; _} ->
         recoverable_error "Invalid set-option";
@@ -584,7 +642,7 @@ let main () =
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
           match State.get partial_model_key st with
-          | Some partial_model ->
+          | Some Model ((module SAT), partial_model) ->
             begin
               match SAT.get_model partial_model with
               | Some (lazy model) ->
@@ -656,7 +714,7 @@ let main () =
         Parser.parse_logic ~preludes logic_file
       in
       let st = State.set Typer.additional_builtins D_cnf.builtins st in
-      let all_used_context = FE.init_all_used_context () in
+      let all_used_context = Frontend.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
         let open Pipeline in

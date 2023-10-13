@@ -469,7 +469,6 @@ let no_decisions_on = ref Util.SS.empty
 let no_sat_learning = ref false
 let sat_plugin = ref ""
 let sat_solver = ref Util.CDCL_Tableaux
-let tableaux_cdcl = ref false
 
 let set_arith_matching b = arith_matching := b
 let set_bottom_classes b = bottom_classes := b
@@ -486,7 +485,6 @@ let set_no_decisions_on s = no_decisions_on := s
 let set_no_sat_learning b = no_sat_learning := b
 let set_sat_plugin p = sat_plugin := p
 let set_sat_solver s = sat_solver := s
-let set_tableaux_cdcl b = tableaux_cdcl := b
 
 let get_arith_matching () = !arith_matching
 let get_bottom_classes () = !bottom_classes
@@ -509,7 +507,10 @@ let get_no_sat_learning () = !no_sat_learning
 let get_sat_learning () = not (!no_sat_learning)
 let get_sat_plugin () = !sat_plugin
 let get_sat_solver () = !sat_solver
-let get_tableaux_cdcl () = !tableaux_cdcl
+let get_tableaux_cdcl () =
+  match !sat_solver with
+  | Tableaux_CDCL -> true
+  | _ -> false
 
 (** Term options *)
 

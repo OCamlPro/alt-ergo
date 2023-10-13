@@ -28,10 +28,24 @@
 (*                                                                        *)
 (**************************************************************************)
 
+type used_context
+
+val init_all_used_context : unit -> used_context
+val choose_used_context : used_context -> goal_name:string -> used_context
+
+type 'a status =
+  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Inconsistent of Commands.sat_tdecl
+  | Sat of Commands.sat_tdecl * 'a
+  | Unknown of Commands.sat_tdecl * 'a
+  | Timeout of Commands.sat_tdecl option
+  | Preprocess
+
+val print_status : 'a status -> int -> unit
+
 module type S = sig
 
   type sat_env
-  type used_context
 
   type res = [
     | `Sat of sat_env
@@ -39,27 +53,13 @@ module type S = sig
     | `Unsat
   ]
 
-  type status =
-    | Unsat of Commands.sat_tdecl * Explanation.t
-    | Inconsistent of Commands.sat_tdecl
-    | Sat of Commands.sat_tdecl * sat_env
-    | Unknown of Commands.sat_tdecl * sat_env
-    | Timeout of Commands.sat_tdecl option
-    | Preprocess
-
   val process_decl:
-    (status -> int -> unit) ->
+    (sat_env status -> int -> unit) ->
     used_context ->
     (res * Explanation.t) Stack.t ->
     sat_env * res * Explanation.t ->
     Commands.sat_tdecl ->
     sat_env * res * Explanation.t
-
-  val print_status : status -> int -> unit
-
-  val init_all_used_context : unit -> used_context
-  val choose_used_context : used_context -> goal_name:string -> used_context
-
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t

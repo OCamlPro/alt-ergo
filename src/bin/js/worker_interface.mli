@@ -144,7 +144,6 @@ type options = {
   no_decisions_on : (string list) option;
   no_sat_learning : bool option;
   sat_solver : sat_solver option;
-  tableaux_cdcl : bool option;
 
   disable_ites : bool option;
   inline_lets : bool option;

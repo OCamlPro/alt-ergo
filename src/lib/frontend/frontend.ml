@@ -49,10 +49,94 @@ let unknown_reason_opt_to_string =
 
 module E = Expr
 module Ex = Explanation
+
+type used_context = Util.SS.t option
+
+type 'a status =
+  | Unsat of Commands.sat_tdecl * Ex.t
+  | Inconsistent of Commands.sat_tdecl
+  | Sat of Commands.sat_tdecl * 'a
+  | Unknown of Commands.sat_tdecl * 'a
+  | Timeout of Commands.sat_tdecl option
+  | Preprocess
+
+let print_status status steps =
+  let check_status_consistency s =
+    let known_status = get_status () in
+    match s with
+    | Unsat _ ->
+      if known_status == Status_Sat then begin
+        Printer.print_wrn
+          "This file is known to be Sat but Alt-Ergo return Unsat";
+        Errors.warning_as_error ()
+      end
+    | Sat _ ->
+      if known_status == Status_Unsat then begin
+        Printer.print_wrn
+          "This file is known to be Unsat but Alt-Ergo return Sat";
+        Errors.warning_as_error ()
+      end
+    | Inconsistent _ | Unknown _ | Timeout _ | Preprocess ->
+      assert false
+  in
+  let validity_mode =
+    match Options.get_output_format () with
+    | Smtlib2 -> false
+    | Native | Why3 | Unknown _ -> true
+  in
+  let get_goal_name d =
+    match d.st_decl with
+    | Query(g,_,_) -> Some g
+    | _ -> None
+  in
+
+  let time = Time.value() in
+  match status with
+  | Unsat (d, dep) ->
+    let loc = d.st_loc in
+    Printer.print_status_unsat ~validity_mode
+      (Some loc) (Some time) (Some steps) (get_goal_name d);
+    if get_unsat_core() &&
+       not (get_debug_unsat_core()) &&
+       not (get_save_used_context())
+    then
+      Printer.print_fmt (Options.Output.get_fmt_regular ())
+        "unsat-core:@,%a@."
+        (Ex.print_unsat_core ~tab:true) dep;
+    check_status_consistency status;
+
+  | Inconsistent d ->
+    let loc = d.st_loc in
+    Printer.print_status_inconsistent ~validity_mode
+      (Some loc) (Some time) (Some steps) (get_goal_name d);
+
+  | Sat (d, _) ->
+    let loc = d.st_loc in
+    Printer.print_status_sat ~validity_mode
+      (Some loc) (Some time) (Some steps) (get_goal_name d);
+    check_status_consistency status;
+
+  | Unknown (d, _) ->
+    let loc = d.st_loc in
+    Printer.print_status_unknown ~validity_mode
+      (Some loc) (Some time) (Some steps) (get_goal_name d);
+
+  | Timeout (Some d) ->
+    let loc = d.st_loc in
+    Printer.print_status_timeout ~validity_mode
+      (Some loc) (Some time) (Some steps) (get_goal_name d);
+
+  | Timeout None ->
+    Printer.print_status_timeout ~validity_mode
+      None (Some time) (Some steps) None;
+
+  | Preprocess ->
+    Printer.print_status_preprocess ~validity_mode
+      (Some time) (Some steps)
+
 module type S = sig
 
   type sat_env
-  type used_context
 
   type res = [
     | `Sat of sat_env
@@ -60,47 +144,65 @@ module type S = sig
     | `Unsat
   ]
 
-  type status =
-    | Unsat of Commands.sat_tdecl * Ex.t
-    | Inconsistent of Commands.sat_tdecl
-    | Sat of Commands.sat_tdecl * sat_env
-    | Unknown of Commands.sat_tdecl * sat_env
-    | Timeout of Commands.sat_tdecl option
-    | Preprocess
-
   val process_decl:
-    (status -> int -> unit) ->
+    (sat_env status -> int -> unit) ->
     used_context ->
     (res * Ex.t) Stack.t ->
     sat_env * res * Ex.t ->
     Commands.sat_tdecl ->
     sat_env * res * Ex.t
-
-  val print_status : status -> int -> unit
-
-  val init_all_used_context : unit -> used_context
-  val choose_used_context : used_context -> goal_name:string -> used_context
-
 end
+
+let init_with_replay_used acc f =
+  assert (Sys.file_exists f);
+  let cin = open_in f in
+  let acc = ref (match acc with None -> Util.SS.empty | Some ss -> ss) in
+  try
+    while true do acc := Util.SS.add (input_line cin) !acc done;
+    assert false
+  with End_of_file ->
+    Some !acc
+
+let init_used_context ~goal_name =
+  if Options.get_replay_used_context () then
+    let uc_f =
+      sprintf "%s.%s.used" (Options.get_used_context_file ()) goal_name
+    in
+    if Sys.file_exists uc_f then init_with_replay_used None uc_f
+    else
+      begin
+        Printer.print_wrn
+          "File %s not found! Option -replay-used will be ignored" uc_f;
+        None
+      end
+  else
+    None
+
+let init_all_used_context () =
+  if Options.get_replay_all_used_context () then
+    let dir = Filename.dirname (Options.get_used_context_file ()) in
+    Array.fold_left
+      (fun acc f ->
+         let f = sprintf "%s/%s" dir f in
+         if (Filename.check_suffix f ".used") then init_with_replay_used acc f
+         else acc
+      ) None (Sys.readdir dir)
+  else None
+
+let choose_used_context all_ctxt ~goal_name =
+  if Options.get_replay_all_used_context () then all_ctxt
+  else init_used_context ~goal_name
+
 
 module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   type sat_env = SAT.t
-  type used_context = Util.SS.t option
 
   type res = [
     | `Sat of sat_env
     | `Unknown of sat_env
     | `Unsat
   ]
-
-  type status =
-    | Unsat of Commands.sat_tdecl * Ex.t
-    | Inconsistent of Commands.sat_tdecl
-    | Sat of Commands.sat_tdecl * sat_env
-    | Unknown of Commands.sat_tdecl * sat_env
-    | Timeout of Commands.sat_tdecl option
-    | Preprocess
 
   let output_used_context g_name dep =
     if not (Options.get_js_mode ()) then begin
@@ -309,124 +411,4 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       print_status (Timeout (Some d)) (Steps.get_steps ());
       print_model env None;
       raise e
-
-  let print_status status steps =
-    let check_status_consistency s =
-      let known_status = get_status () in
-      match s with
-      | Unsat _ ->
-        if known_status == Status_Sat then begin
-          Printer.print_wrn
-            "This file is known to be Sat but Alt-Ergo return Unsat";
-          Errors.warning_as_error ()
-        end
-      | Sat _ ->
-        if known_status == Status_Unsat then begin
-          Printer.print_wrn
-            "This file is known to be Unsat but Alt-Ergo return Sat";
-          Errors.warning_as_error ()
-        end
-      | Inconsistent _ | Unknown _ | Timeout _ | Preprocess ->
-        assert false
-    in
-    let validity_mode =
-      match Options.get_output_format () with
-      | Smtlib2 -> false
-      | Native | Why3 | Unknown _ -> true
-    in
-    let get_goal_name d =
-      match d.st_decl with
-      | Query(g,_,_) -> Some g
-      | _ -> None
-    in
-
-    let time = Time.value() in
-    match status with
-    | Unsat (d, dep) ->
-      let loc = d.st_loc in
-      Printer.print_status_unsat ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
-      if get_unsat_core() &&
-         not (get_debug_unsat_core()) &&
-         not (get_save_used_context())
-      then
-        Printer.print_fmt (Options.Output.get_fmt_regular ())
-          "unsat-core:@,%a@."
-          (Ex.print_unsat_core ~tab:true) dep;
-      check_status_consistency status;
-
-    | Inconsistent d ->
-      let loc = d.st_loc in
-      Printer.print_status_inconsistent ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
-
-    | Sat (d, _) ->
-      let loc = d.st_loc in
-      Printer.print_status_sat ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
-      check_status_consistency status;
-
-    | Unknown (d, _) ->
-      let loc = d.st_loc in
-      Printer.print_status_unknown ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
-
-    | Timeout (Some d) ->
-      let loc = d.st_loc in
-      Printer.print_status_timeout ~validity_mode
-        (Some loc) (Some time) (Some steps) (get_goal_name d);
-
-    | Timeout None ->
-      Printer.print_status_timeout ~validity_mode
-        None (Some time) (Some steps) None;
-
-    | Preprocess ->
-      Printer.print_status_preprocess ~validity_mode
-        (Some time) (Some steps)
-
-
-
-
-
-
-  let init_with_replay_used acc f =
-    assert (Sys.file_exists f);
-    let cin = open_in f in
-    let acc = ref (match acc with None -> Util.SS.empty | Some ss -> ss) in
-    try
-      while true do acc := Util.SS.add (input_line cin) !acc done;
-      assert false
-    with End_of_file ->
-      Some !acc
-
-  let init_used_context ~goal_name =
-    if Options.get_replay_used_context () then
-      let uc_f =
-        sprintf "%s.%s.used" (Options.get_used_context_file ()) goal_name
-      in
-      if Sys.file_exists uc_f then init_with_replay_used None uc_f
-      else
-        begin
-          Printer.print_wrn
-            "File %s not found! Option -replay-used will be ignored" uc_f;
-          None
-        end
-    else
-      None
-
-  let init_all_used_context () =
-    if Options.get_replay_all_used_context () then
-      let dir = Filename.dirname (Options.get_used_context_file ()) in
-      Array.fold_left
-        (fun acc f ->
-           let f = sprintf "%s/%s" dir f in
-           if (Filename.check_suffix f ".used") then init_with_replay_used acc f
-           else acc
-        ) None (Sys.readdir dir)
-    else None
-
-  let choose_used_context all_ctxt ~goal_name =
-    if Options.get_replay_all_used_context () then all_ctxt
-    else init_used_context ~goal_name
-
 end

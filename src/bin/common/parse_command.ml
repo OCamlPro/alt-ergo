@@ -1008,9 +1008,6 @@ let parse_output_opt =
           set_cdcl_tableaux_inst false;
           set_cdcl_tableaux_th false
       end;
-      set_tableaux_cdcl (match sat_solver with
-          | Tableaux_CDCL -> true
-          | _ -> false);
       ()
     in
     Term.(

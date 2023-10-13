@@ -90,7 +90,7 @@ module FE = Frontend.Make(SAT)
 let () =
   List.iter
     (fun (pb, _goal_name) ->
-       let ctxt = FE.init_all_used_context () in
+       let ctxt = Frontend.init_all_used_context () in
        let acc0 = SAT.empty (), `Unknown (SAT.empty ()), Explanation.empty in
        let s = Stack.create () in
        let _env, consistent, _ex =
