@@ -1420,7 +1420,23 @@ let rec mk_expr
             end
 
           | B.Distinct, _ ->
-            E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
+            (* The current implementation of the distinct expression in
+               Expr clashes with the SMT-LIB specification when used with
+               at least 3 arguments. To prevent a soundness bug, we
+               translate the expected expression into a conjonction
+               of disequations of size 2. *)
+            let args = Array.of_list args in
+            let acc = ref E.vrai in
+            for i = 0 to Array.length args - 1 do
+              for j = i + 1 to Array.length args - 1 do
+                acc :=
+                  E.(mk_and
+                       (mk_distinct ~iff:true
+                          [aux_mk_expr args.(i); aux_mk_expr args.(j)])
+                       !acc false)
+              done;
+            done;
+            !acc
 
           | B.Constructor _, _ ->
             let name = get_basename path in

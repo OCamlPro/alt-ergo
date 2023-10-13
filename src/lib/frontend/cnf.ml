@@ -239,9 +239,29 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
           let res = make_term up_qv name_base t in
           if negated then E.neg res else res
 
-        | TAneq lt | TAdistinct lt ->
+        | TAneq lt ->
           let lt = List.map (make_term up_qv name_base) lt in
           E.mk_distinct ~iff:true lt
+
+        | TAdistinct lt ->
+          (* The current implementation of the distinct expression in
+             Expr clashes with the SMT-LIB specification when used with
+             at least 3 arguments. To prevent a soundness bug, we
+             translate the expected expression into a conjonction
+             of disequations of size 2. *)
+          let args = Array.of_list lt in
+          let acc = ref E.vrai in
+          for i = 0 to Array.length args - 1 do
+            for j = i + 1 to Array.length args - 1 do
+              acc :=
+                E.(mk_and
+                     (mk_distinct ~iff:true
+                        [make_term up_qv name_base args.(i);
+                         make_term up_qv name_base args.(j)]) !acc false)
+            done;
+          done;
+          !acc
+
         | TAle [t1;t2] ->
           E.mk_builtin ~is_pos:true Sy.LE
             [make_term up_qv name_base t1;
