@@ -1,0 +1,14 @@
+
+unknown
+(
+  (define-fun x () Int 1)
+  (define-fun z () Int 0)
+  (define-fun y () Real 0)
+)
+
+unknown
+(
+  (define-fun x () Int 1)
+  (define-fun z () Int (- 4))
+  (define-fun y () Real (/ 1 2))
+)

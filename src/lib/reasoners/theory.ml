@@ -390,7 +390,7 @@ module Main_Default : S = struct
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
-          | Value _ ->
+          | Value _ | StrictBound ->
             ()
           | Pinfinity | Minfinity ->
             (* We should block case-split at infinite values.
@@ -427,7 +427,7 @@ module Main_Default : S = struct
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
              | Value _ -> Util.MI.add ord {v with value = Unknown} acc
-             | Pinfinity | Minfinity -> assert false (* may happen? *)
+             | Pinfinity | Minfinity | StrictBound -> assert false (* may happen? *)
         ) objectives objectives
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
@@ -445,6 +445,8 @@ module Main_Default : S = struct
               in
               match opt_split.value with
               | StrictBound ->
+                (* The optimization is impossible for strict bounds. We give
+                   up the optimization phase. *)
                 if for_model then
                   aux ~optimize:false ch None dl env []
                 else
@@ -594,7 +596,7 @@ module Main_Default : S = struct
       (fun _ {Th_util.value; _} ->
          match value with
          | Pinfinity | Minfinity -> false
-         | Value _ | Unknown -> true
+         | Value _ | Unknown | StrictBound -> true
       )objectives
 
   let try_it t facts ~for_model =

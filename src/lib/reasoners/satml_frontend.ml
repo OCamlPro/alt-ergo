@@ -1053,9 +1053,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            if !seen_infinity then acc
            else
              match value with
-             | Pinfinity ->
-               seen_infinity := true; acc
-             | Minfinity ->
+             | Pinfinity | Minfinity | StrictBound ->
                seen_infinity := true; acc
              | Value (_,_, Th_util.CS (Some {opt_val = Value v; _},_,_)) ->
                (* hack-ish to get the value of type expr *)

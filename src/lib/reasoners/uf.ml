@@ -1120,6 +1120,11 @@ let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
          | Pinfinity  -> bounded, SetX.add r pinfty, minfty
          | Minfinity -> bounded, pinfty, SetX.add r minfty
          | Unknown -> acc
+         | StrictBound ->
+           (* Unreachable as after trying to optimize a strict bound, we stop
+              optimization and we produce a value without objectives for the
+              incriminate bound. *)
+           assert false
       ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
   in
   let not_unbounded = pinfty == SetX.empty && minfty == SetX.empty in
@@ -1156,6 +1161,7 @@ let compute_objectives ~optimized_splits env mrepr =
           match value with
           | Pinfinity -> seen_infinity := true; Obj_pinfty
           | Minfinity -> seen_infinity := true; Obj_minfty
+          | StrictBound -> seen_infinity := true; Obj_unk
           | Value _ ->
             let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
             Obj_val r_s
