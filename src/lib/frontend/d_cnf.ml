@@ -238,7 +238,7 @@ let builtin_enum = function
 let ae_fpa_rounding_mode, ae_rounding_modes, ae_add_rounding_modes =
   builtin_enum Fpa_rounding.AE.fpa_rounding_mode
 
-let smt_fpa_rounding_mode, _smt_rounding_modes, smt_add_rounding_modes =
+let _smt_fpa_rounding_mode, _smt_rounding_modes, smt_add_rounding_modes =
   builtin_enum Fpa_rounding.SMT2.fpa_rounding_mode
 
 module Const = struct
