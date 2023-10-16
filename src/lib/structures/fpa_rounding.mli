@@ -28,6 +28,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** The rounding modes for the Floating Point Arithmetic theory.
+    In the legacy frontend, the rounding mode type was `fpa_rounding_mode`
+    and defined 5 rounding modes (see the [rounding_mode] type below).
+    The SMT2 standard defines the exact same rounding modes, but with different
+    identifiers. *)
+
 type rounding_mode =
   | NearestTiesToEven
   | ToZero
@@ -35,16 +41,23 @@ type rounding_mode =
   | Down
   | NearestTiesToAway
 
+(** Equal to ["RoundingMode"], the SMT2 type of rounding modes. *)
 val fpa_rounding_mode_type_name : string
 
+(** Equal to ["fpa_rounding_mode"], the Alt-Ergo native rounding mode type. *)
 val fpa_rounding_mode_ae_type_name : string
 
+(** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t
 
+(** Transforms the Hstring corresponding to a RoundingMode element into
+    the [rounding_mode] equivalent. *)
 val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
 
+(** Same, but for legacy's [rounding_mode] equivalent. *)
 val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
 
+(** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
 val string_of_rounding_mode : rounding_mode -> string
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
