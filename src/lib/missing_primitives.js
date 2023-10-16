@@ -39,3 +39,11 @@ function unix_getpid() {
 function unix_kill() {
   return 0;
 }
+
+// Fast path in ZArith 1.13, not in zarith_stubs_js
+// https://github.com/janestreet/zarith_stubs_js/issues/10
+// Provides: ml_z_extract_small
+// Requires: ml_z_extract
+function ml_z_extract_small(z1, pos, len) {
+  return ml_z_extract(z1, pos, len);
+}
