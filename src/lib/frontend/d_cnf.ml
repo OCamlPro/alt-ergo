@@ -193,24 +193,17 @@ type _ DStd.Builtin.t +=
   (* Internal use for semantic triggers -- do not expose outside of theories *)
   | Not_theory_constant | Is_theory_constant | Linear_dependency
 
-let with_cache ~cache f x =
-  try Hashtbl.find cache x
-  with Not_found ->
-    let res = f x in
-    Hashtbl.add cache x res;
-    res
-
 module Const = struct
   open DE
 
   let bv2nat =
-    with_cache ~cache:(Hashtbl.create 13) (fun n ->
+    with_cache (fun n ->
         let name = "bv2nat" in
         Id.mk ~name ~builtin:(BV2Nat n)
           (DStd.Path.global name) Ty.(arrow [bitv n] int))
 
   let int2bv =
-    with_cache ~cache:(Hashtbl.create 13) (fun n ->
+    with_cache (fun n ->
         let name = "int2bv" in
         Id.mk ~name ~builtin:(Int2BV n)
           (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
