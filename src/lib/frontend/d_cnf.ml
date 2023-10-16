@@ -299,9 +299,9 @@ let bv_builtins env s =
   | _ -> `Not_found
 
 (** Takes a dolmen identifier [id] and injects it in Alt-Ergo's registered
-    identifier. For example, transforms "fpa_rounding_mode", the Alt-Ergo builtin
-    type into the SMT rounding type "RoundingMode". Also does it for the enums
-    of this type. *)
+    identifiers.
+    It transforms "fpa_rounding_mode", the Alt-Ergo builtin type into the SMT
+    rounding type "RoundingMode". Also does it for the enums of this type. *)
 let inject_identifier id =
   match id with
   | Id.{name = Simple n; _} ->
