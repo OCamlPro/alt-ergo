@@ -178,7 +178,7 @@ end
 (** Builtins *)
 type _ DStd.Builtin.t +=
   | Float
-  | AERound of int * int * Fpa_rounding.rounding_mode
+  | AERound of int * int
   (** Equivalent of Float for the SMT2 format. *)
   | Integer_round
   | Abs_real
@@ -238,7 +238,7 @@ let builtin_enum = function
 let ae_fpa_rounding_mode, ae_rounding_modes, ae_add_rounding_modes =
   builtin_enum Fpa_rounding.AE.fpa_rounding_mode
 
-let _smt_fpa_rounding_mode, _smt_rounding_modes, smt_add_rounding_modes =
+let smt_fpa_rounding_mode, _smt_rounding_modes, smt_add_rounding_modes =
   builtin_enum Fpa_rounding.SMT2.fpa_rounding_mode
 
 module Const = struct
@@ -257,13 +257,13 @@ module Const = struct
           (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
 
   let smt_round =
-    with_cache ~cache:(Hashtbl.create 13) (fun (n, m, rm) ->
+    with_cache ~cache:(Hashtbl.create 13) (fun (n, m) ->
         let name = "ae.round" in
         Id.mk
           ~name
-          ~builtin:(AERound (n, m, rm))
+          ~builtin:(AERound (n, m))
           (DStd.Path.global name)
-          Ty.(arrow [real] real))
+          Ty.(arrow [smt_fpa_rounding_mode; real] real))
 end
 
 let bv2nat t =
@@ -278,7 +278,7 @@ let int2bv n t =
   DE.Term.apply_cst (Const.int2bv n) [] [t]
 
 let smt_round n m rm t =
-  DE.Term.apply_cst (Const.smt_round (n, m, rm)) [] [t]
+  DE.Term.apply_cst (Const.smt_round (n, m)) [] [rm; t]
 
 let bv_builtins env s =
   let term_app1 f =
@@ -444,9 +444,9 @@ let ae_fpa_builtins =
     | Builtin _ -> `Not_found
 
 let smt_fpa_builtins =
-  let term_app1 env s f =
+  let term_app env s f =
     Dl.Typer.T.builtin_term @@
-    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
+    Dolmen_type.Base.term_app2 (module Dl.Typer.T) env s f
   in
   let other_builtins =
     Id.Map.empty
@@ -458,13 +458,12 @@ let smt_fpa_builtins =
         ns = Term ;
         name = Indexed {
             basename = "ae.round" ;
-            indexes = [ i; j; rm ] } } ->
+            indexes = [ i; j ] } } ->
       begin match
           int_of_string i,
-          int_of_string j,
-          Fpa_rounding.SMT2.rounding_mode_of_hs (Hstring.make rm)
+          int_of_string j
         with
-        | n, m, rm -> term_app1 env s (smt_round n m rm)
+        | n, m -> term_app env s (smt_round n m)
         | exception Failure _ -> `Not_found
       end
     | Dl.Typer.T.Id id -> begin
@@ -1421,12 +1420,11 @@ let rec mk_expr
               | _ -> unsupported "coercion: %a" DE.Term.print term
             end
           | Float, _ -> op Float
-          | AERound(i, j, rm), _ ->
+          | AERound(i, j), _ ->
             let args =
               let i = E.Ints.of_int i in
               let j = E.Ints.of_int j in
-              let rm = mk_rounding rm in
-              i :: j :: rm :: List.map (fun a -> aux_mk_expr a) args in
+              i :: j :: List.map (fun a -> aux_mk_expr a) args in
             E.mk_term
               (Sy.Op Float)
               args
