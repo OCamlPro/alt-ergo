@@ -1207,10 +1207,11 @@ let mk_nary_eq l =
     vrai
 
 let mk_distinct ~iff args =
-  (* This fix makes sure that the smart constructor agrees with
-     the SMT-LIB specification when used with at least 3 arguments.
+  (* This hot fix makes sure that the smart constructor agrees with
+     the usual semantic of distinct when used with at least 3 arguments.
      To prevent a soundness bug, we translate the expected expression into a
-     conjonction of binary disequations. *)
+     conjonction of binary disequations.
+     See issue: https://github.com/OCamlPro/alt-ergo/issues/889 *)
   let args = Array.of_list args in
   let acc = ref vrai in
   for i = 0 to Array.length args - 1 do

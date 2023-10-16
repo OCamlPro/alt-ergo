@@ -1420,7 +1420,7 @@ let rec mk_expr
             end
 
           | B.Distinct, _ ->
-            E.mk_distinct ~iff:true (List.map aux_mk_expr args)
+            E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
 
           | B.Constructor _, _ ->
             let name = get_basename path in

@@ -239,13 +239,9 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
           let res = make_term up_qv name_base t in
           if negated then E.neg res else res
 
-        | TAneq lt ->
+        | TAneq lt | TAdistinct lt ->
           let lt = List.map (make_term up_qv name_base) lt in
           E.mk_distinct ~iff:true lt
-
-        | TAdistinct lt ->
-          E.mk_distinct ~iff:true (List.map (make_term up_qv name_base) lt)
-
         | TAle [t1;t2] ->
           E.mk_builtin ~is_pos:true Sy.LE
             [make_term up_qv name_base t1;
