@@ -52,73 +52,74 @@ let cstrs =
     NearestTiesToAway;
   ]
 
-module type S = sig
-  val fpa_rounding_mode_type_name : string
+let to_smt_string =
+  function
+  | NearestTiesToEven -> "RNE"
+  | ToZero -> "RTZ"
+  | Up -> "RTP"
+  | Down -> "RTN"
+  | NearestTiesToAway -> "RNA"
 
-  val fpa_rounding_mode : Ty.t
+let to_ae_string = function
+  | NearestTiesToEven -> "NearestTiesToEven"
+  | ToZero -> "ToZero"
+  | Up -> "Up"
+  | Down -> "Down"
+  | NearestTiesToAway -> "NearestTiesToAway"
 
-  val rounding_mode_of_hs : Hstring.t -> rounding_mode
 
-  val string_of_rounding_mode : rounding_mode -> string
-end
+let fpa_rounding_mode_ae_type_name = "fpa_rounding_mode"
 
-module Make (I : sig
-    val name : string
-    val to_string : rounding_mode -> string
-  end) : S = struct
+let fpa_rounding_mode_type_name = "RoundingMode"
 
-  let fpa_rounding_mode_type_name = I.name
+(* The exported 'to string' function is the SMT one. *)
+let string_of_rounding_mode = to_smt_string
 
-  let string_of_rounding_mode = I.to_string
+let hstring_smt_reprs =
+  List.map
+    (fun c -> Hs.make (to_smt_string c))
+    cstrs
 
-  let fpa_rounding_mode, rounding_mode_of_hs =
-    let h_cstrs =
-      List.map (fun c -> Hs.make (I.to_string c)) cstrs
-    in
-    let ty = Ty.Tsum (Hs.make I.name, h_cstrs) in
-    let table =
-      let table = Hashtbl.create 5 in
-      List.iter2 (
-        fun key bnd ->
-          Hashtbl.add table key bnd
-      ) h_cstrs cstrs;
-      table
-    in
-    ty,
-    (fun key -> match Hashtbl.find_opt table key with
-       | None ->
-         Fmt.failwith
-           "Error while searching for FPA value %a : %s"
-           Hstring.print key
-           I.name
-       | Some res -> res)
-end
+let hstring_ae_reprs =
+  List.map
+    (fun c -> Hs.make (to_ae_string c))
+    cstrs
 
-module AE : S =
-  Make (struct
-    let name = "fpa_rounding_mode"
-    let to_string =
-      function
-      | NearestTiesToEven -> "NearestTiesToEven"
-      | ToZero -> "ToZero"
-      | Up -> "Up"
-      | Down -> "Down"
-      | NearestTiesToAway -> "NearestTiesToAway"
-  end
-  )
+(* The rounding mode is the enum with the SMT values.
+   The Alt-Ergo values are injected in this type. *)
+let fpa_rounding_mode =
+  Ty.Tsum (Hs.make "RoundingMode", hstring_smt_reprs)
 
-module SMT2 : S =
-  Make (struct
-    let name = "RoundingMode"
+let rounding_mode_of_smt_hs_opt =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) hstring_smt_reprs cstrs;
+  fun key -> Hashtbl.find_opt table key
 
-    let to_string =
-      function
-      | NearestTiesToEven -> "RNE"
-      | ToZero -> "RTZ"
-      | Up -> "RTP"
-      | Down -> "RTN"
-      | NearestTiesToAway -> "RNA"
-  end)
+let rounding_mode_of_smt_hs hs =
+  match rounding_mode_of_smt_hs_opt hs with
+  | None ->
+    Fmt.failwith
+      "Error while searching for FPA value %a."
+      Hstring.print hs
+      fpa_rounding_mode_type_name
+  | Some res -> res
+
+let rounding_mode_of_ae_hs =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) hstring_ae_reprs cstrs;
+  fun key ->
+    match Hashtbl.find_opt table key with
+    | None ->
+      (* Alt-Ergo's legacy language also accepts the SMT representation
+         of rounding modes. *)
+      rounding_mode_of_smt_hs key
+    | Some res -> res
 
 (** Helper functions **)
 

@@ -35,18 +35,17 @@ type rounding_mode =
   | Down
   | NearestTiesToAway
 
-module type S = sig
-  val fpa_rounding_mode_type_name : string
+val fpa_rounding_mode_type_name : string
 
-  val fpa_rounding_mode : Ty.t
+val fpa_rounding_mode_ae_type_name : string
 
-  val rounding_mode_of_hs : Hstring.t -> rounding_mode
+val fpa_rounding_mode : Ty.t
 
-  val string_of_rounding_mode : rounding_mode -> string
-end
+val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
 
-module AE : S
-module SMT2 : S
+val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
+
+val string_of_rounding_mode : rounding_mode -> string
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int

@@ -2819,11 +2819,8 @@ let const_view t =
         Fmt.failwith "error when trying to convert %a to an int" Z.pp_print n
     end
   | { f = Op (Constr c); ty; _ }
-    when Ty.equal ty Fpa_rounding.SMT2.fpa_rounding_mode ->
-    RoundingMode (Fpa_rounding.SMT2.rounding_mode_of_hs c)
-  | { f = Op (Constr c); ty; _ }
-    when Ty.equal ty Fpa_rounding.AE.fpa_rounding_mode ->
-    RoundingMode (Fpa_rounding.AE.rounding_mode_of_hs c)
+    when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
+    RoundingMode (Fpa_rounding.rounding_mode_of_smt_hs c)
   | _ -> Fmt.failwith "unsupported constant: %a" print t
 
 let int_view t =

@@ -235,11 +235,8 @@ let builtin_enum = function
       |> add_cstrs
   | _ -> assert false
 
-let ae_fpa_rounding_mode, ae_rounding_modes, ae_add_rounding_modes =
-  builtin_enum Fpa_rounding.AE.fpa_rounding_mode
-
-let smt_fpa_rounding_mode, _smt_rounding_modes, smt_add_rounding_modes =
-  builtin_enum Fpa_rounding.SMT2.fpa_rounding_mode
+let fpa_rounding_mode, rounding_modes, add_rounding_modes =
+  builtin_enum Fpa_rounding.fpa_rounding_mode
 
 module Const = struct
   open DE
@@ -263,7 +260,7 @@ module Const = struct
           ~name
           ~builtin:(AERound (n, m))
           (DStd.Path.global name)
-          Ty.(arrow [smt_fpa_rounding_mode; real] real))
+          Ty.(arrow [fpa_rounding_mode; real] real))
 end
 
 let bv2nat t =
@@ -301,6 +298,32 @@ let bv_builtins env s =
     end
   | _ -> `Not_found
 
+(** Takes a dolmen identifier [id] and injects it in Alt-Ergo's registered
+    identifier. For example, transforms "fpa_rounding_mode", the Alt-Ergo builtin
+    type into the SMT rounding type 'RoundingMode'. Also does it for the enums
+    of this type. *)
+let inject_identifier id =
+  match id with
+  | Id.{name = Simple n; _} ->
+    begin
+      if String.equal n Fpa_rounding.fpa_rounding_mode_ae_type_name then
+        (* Injecting the type name as the SMT2 Type name. *)
+        let name =
+          Dolmen_std.Name.simple Fpa_rounding.fpa_rounding_mode_type_name
+        in
+        {id with name}
+      else
+        match Fpa_rounding.rounding_mode_of_ae_hs (Hstring.make n) with
+        | rm ->
+          let name =
+            Dolmen_std.Name.simple (Fpa_rounding.string_of_rounding_mode rm)
+          in
+          {id with name}
+        | exception (Failure _) ->
+          id
+    end
+  | id -> id
+
 let ae_fpa_builtins =
   let (->.) args ret = (args, ret) in
   let dterm name f =
@@ -319,7 +342,7 @@ let ae_fpa_builtins =
       (module Dl.Typer.T) env cst
   in
   let float_cst =
-    let ty = DT.(arrow [int; int; ae_fpa_rounding_mode; real] real) in
+    let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
     DE.Id.mk ~name:"float" ~builtin:Float (DStd.Path.global "float") ty
   in
   let float prec exp mode x =
@@ -331,7 +354,7 @@ let ae_fpa_builtins =
           match cst.DE.path with
           | Absolute { name; _ } -> String.equal name m
           | Local _ -> false)
-        ae_rounding_modes
+        rounding_modes
     in
     DE.Term.apply_cst cst [] []
   in
@@ -364,13 +387,13 @@ let ae_fpa_builtins =
     let open DT in
     Id.Map.empty
 
-    |> ae_add_rounding_modes
+    |> add_rounding_modes
 
     (* the first argument is mantissas' size (including the implicit bit),
        the second one is the exp of the min representable normalized number,
        the third one is the rounding mode, and the last one is the real to
        be rounded *)
-    |> op "float" Float ([int; int; ae_fpa_rounding_mode; real] ->. real)
+    |> op "float" Float ([int; int; fpa_rounding_mode; real] ->. real)
 
     |> partial2 "float32" float32
     |> partial1 "float32d" float32d
@@ -379,7 +402,7 @@ let ae_fpa_builtins =
     |> partial1 "float64d" float64d
 
     (* rounds to nearest integer *)
-    |> op "integer_round" Integer_round ([ae_fpa_rounding_mode; real] ->. int)
+    |> op "integer_round" Integer_round ([fpa_rounding_mode; real] ->. int)
 
     (* type cast: from int to real *)
     |> dterm "real_of_int" DE.Term.Int.to_real
@@ -434,13 +457,15 @@ let ae_fpa_builtins =
     |> op "linear_dependency" Linear_dependency ([real; real] ->. prop)
   in
   fun env s ->
+    let search_id id =
+      try
+        Id.Map.find_exn id fpa_builtins env s
+      with Not_found -> `Not_found
+    in
     match s with
     | Dl.Typer.T.Id id ->
-      begin
-        try
-          Id.Map.find_exn id fpa_builtins env s
-        with Not_found -> `Not_found
-      end
+      let new_id = inject_identifier id in
+      search_id new_id
     | Builtin _ -> `Not_found
 
 let smt_fpa_builtins =
@@ -450,7 +475,7 @@ let smt_fpa_builtins =
   in
   let other_builtins =
     Id.Map.empty
-    |> smt_add_rounding_modes
+    |> add_rounding_modes
   in
   fun env s ->
     match s with
@@ -988,8 +1013,8 @@ let mk_add translate sy ty l =
   E.mk_term sy args ty
 
 let mk_rounding fpar =
-  let name = Fpa_rounding.SMT2.string_of_rounding_mode fpar in
-  let ty = Fpa_rounding.SMT2.fpa_rounding_mode in
+  let name = Fpa_rounding.string_of_rounding_mode fpar in
+  let ty = Fpa_rounding.fpa_rounding_mode in
   let sy =
     Sy.Op (Sy.Constr (Hstring.make name)) in
   E.mk_term sy [] ty
