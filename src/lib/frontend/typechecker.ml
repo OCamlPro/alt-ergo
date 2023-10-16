@@ -259,18 +259,29 @@ module Env = struct
     | [ x; y ] -> f x y
     | _ -> assert false
 
-  let add_builtin_enum = function
-    | Ty.Tsum (_, cstrs) as ty ->
-      let enum m h =
-        let s = Hstring.view h in
-        MString.add s (`Term (
-            Symbols.Op (Constr h),
-            { args = []; result = ty },
-            Other
-          )) m
-      in
-      fun m -> List.fold_left enum m cstrs
-    | _ -> assert false
+  let add_fpa_enum map =
+    let ty = Fpa_rounding.fpa_rounding_mode in
+    match ty with
+    | Ty.Tsum (_, cstrs) ->
+      List.fold_left
+        (fun m c ->
+           match Fpa_rounding.translate_smt_rounding_mode c with
+           | None ->
+             (* The constructors of the type are expected to be AE rounding
+                modes. *)
+             assert false
+           | Some hs ->
+             MString.add (Hstring.view hs) (`Term (
+                 Symbols.Op (Constr c),
+                 { args = []; result = ty },
+                 Other
+               ))
+               m
+        )
+        map
+        cstrs
+    | _ -> (* Fpa_rounding.fpa_rounding_mode is a sum type. *)
+      assert false
 
   let find_builtin_cstr ty n =
     match ty with
@@ -315,10 +326,7 @@ module Env = struct
     let env = {
       env with
       types = Types.add_builtin env.types tname rm ;
-      builtins =
-        add_builtin_enum
-          Fpa_rounding.fpa_rounding_mode
-          env.builtins;
+      builtins = add_fpa_enum env.builtins;
     } in
     let builtins =
       env.builtins
@@ -602,6 +610,21 @@ let check_pattern_matching missing dead loc =
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in
   match logic_kind, te_args, ty with
+  (* | _, _, _ when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
+   *   begin
+   *     match s with
+   *     | Symbols.Op (Symbols.Constr cstr ) ->
+   *       begin
+   *         match Fpa_rounding.translate_ae_rounding cstr with
+   *         | None -> TTapp (s, te_args)
+   *         | Some new_c ->
+   *           let new_s = Symbols.Op (Symbols.Constr new_c) in
+   *           TTapp (new_s, te_args)
+   *       end
+   *     | _ ->
+   *       (\* Values of type fpa_rounding_mode should only by constructors *\)
+   *       assert false
+   *   end *)
   | (Env.AdtConstr | Env.EnumConstr | Env.Other), _, _ ->
     (* symbol 's' alreadt contains the information *)
     TTapp(s, te_args)

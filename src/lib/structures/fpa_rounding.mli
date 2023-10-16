@@ -51,11 +51,20 @@ val fpa_rounding_mode_ae_type_name : string
 val fpa_rounding_mode : Ty.t
 
 (** Transforms the Hstring corresponding to a RoundingMode element into
-    the [rounding_mode] equivalent. *)
+    the [rounding_mode] equivalent. Raises 'Failure' if the string does not
+    correspond to a valid rounding mode. *)
 val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
 
 (** Same, but for legacy's [rounding_mode] equivalent. *)
 val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
+
+(** Returns the SMT rounding mode representation of the legacy rounding mode
+    in argument. Returns [None] if the string does not correspond to a valid
+    AE rounding mode. *)
+val translate_ae_rounding_mode : Hstring.t -> Hstring.t option
+
+(** Same, but from AE modes to SMT2 modes. *)
+val translate_smt_rounding_mode : Hstring.t -> Hstring.t option
 
 (** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
 val string_of_rounding_mode : rounding_mode -> string

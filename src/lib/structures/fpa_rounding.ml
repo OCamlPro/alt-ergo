@@ -121,6 +121,16 @@ let rounding_mode_of_ae_hs =
       rounding_mode_of_smt_hs key
     | Some res -> res
 
+let translate_ae_rounding_mode hs =
+  match rounding_mode_of_ae_hs hs with
+  | res -> Some (Hstring.make (to_smt_string res))
+  | exception (Failure _) -> None
+
+let translate_smt_rounding_mode hs =
+  match rounding_mode_of_smt_hs hs with
+  | res -> Some (Hstring.make (to_ae_string res))
+  | exception (Failure _) -> None
+
 (** Helper functions **)
 
 let mult_x_by_2_pow_n x n =
