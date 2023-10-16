@@ -178,7 +178,8 @@ end
 (** Builtins *)
 type _ DStd.Builtin.t +=
   | Float
-  | SMTFloat of int * int * Fpa_rounding.rounding_mode
+  | AERound of int * int * Fpa_rounding.rounding_mode
+  (** Equivalent of Float for the SMT2 format. *)
   | Integer_round
   | Abs_real
   | Sqrt_real
@@ -256,14 +257,13 @@ module Const = struct
           (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
 
   let smt_round =
-    with_cache ~cache:(Hashtbl.create 13) (fun n ->
-        with_cache ~cache:(Hashtbl.create 13) (fun m rm ->
-            let name = "ae.round" in
-            Id.mk
-              ~name
-              ~builtin:(SMTFloat (n, m, rm))
-              (DStd.Path.global name)
-              Ty.(arrow [real] real)))
+    with_cache ~cache:(Hashtbl.create 13) (fun (n, m, rm) ->
+        let name = "ae.round" in
+        Id.mk
+          ~name
+          ~builtin:(AERound (n, m, rm))
+          (DStd.Path.global name)
+          Ty.(arrow [real] real))
 end
 
 let bv2nat t =
@@ -278,7 +278,7 @@ let int2bv n t =
   DE.Term.apply_cst (Const.int2bv n) [] [t]
 
 let smt_round n m rm t =
-  DE.Term.apply_cst (Const.smt_round n m rm) [] [t]
+  DE.Term.apply_cst (Const.smt_round (n, m, rm)) [] [t]
 
 let bv_builtins env s =
   let term_app1 f =
@@ -318,7 +318,6 @@ let ae_fpa_builtins =
     Dolmen_type.Base.term_app_cst
       (module Dl.Typer.T) env cst
   in
-  let open DT in
   let float_cst =
     let ty = DT.(arrow [int; int; ae_fpa_rounding_mode; real] real) in
     DE.Id.mk ~name:"float" ~builtin:Float (DStd.Path.global "float") ty
@@ -362,6 +361,7 @@ let ae_fpa_builtins =
       ([of_var a] ->. prop)
   in
   let fpa_builtins =
+    let open DT in
     Id.Map.empty
 
     |> ae_add_rounding_modes
@@ -1421,7 +1421,7 @@ let rec mk_expr
               | _ -> unsupported "coercion: %a" DE.Term.print term
             end
           | Float, _ -> op Float
-          | SMTFloat(i, j, rm), _ ->
+          | AERound(i, j, rm), _ ->
             let args =
               let i = E.Ints.of_int i in
               let j = E.Ints.of_int j in
