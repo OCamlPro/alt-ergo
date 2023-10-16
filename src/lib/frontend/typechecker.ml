@@ -279,8 +279,7 @@ module Env = struct
     | _ -> assert false
 
   let add_fpa_builtins env =
-    let module FPAU : Fpa_rounding.S =
-      (val (Fpa_rounding.fpa_rounding_utils ())) in
+    let module FPAU = Fpa_rounding.AE in
     let (->.) args result = { args; result } in
     let int n = {
       c = { tt_desc = TTconst (Tint n); tt_ty = Ty.Tint} ;

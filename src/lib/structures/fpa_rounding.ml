@@ -120,11 +120,6 @@ module SMT2 : S =
       | NearestTiesToAway -> "RNA"
   end)
 
-let fpa_rounding_utils () =
-  match Options.get_input_format () with
-  | None | Some Smtlib2 -> (module SMT2 : S)
-  | _ -> (module AE : S)
-
 (** Helper functions **)
 
 let mult_x_by_2_pow_n x n =

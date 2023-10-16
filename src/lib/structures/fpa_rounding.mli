@@ -48,10 +48,6 @@ end
 module AE : S
 module SMT2 : S
 
-(** Returns (module SMT2) if the input format is [None] or [Some Smtlib2],
-    otherwise returns [AE]. *)
-val fpa_rounding_utils : unit -> (module S)
-
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int
 

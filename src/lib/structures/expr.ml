@@ -2811,8 +2811,6 @@ type const =
   | RoundingMode of Fpa_rounding.rounding_mode
 
 let const_view t =
-  let module FPAU : Fpa_rounding.S =
-    (val (Fpa_rounding.fpa_rounding_utils ())) in
   match term_view t with
   | { f = Int n; _ } ->
     begin match Z.to_int n with
@@ -2821,8 +2819,11 @@ let const_view t =
         Fmt.failwith "error when trying to convert %a to an int" Z.pp_print n
     end
   | { f = Op (Constr c); ty; _ }
-    when Ty.equal ty FPAU.fpa_rounding_mode ->
-    RoundingMode (FPAU.rounding_mode_of_hs c)
+    when Ty.equal ty Fpa_rounding.SMT2.fpa_rounding_mode ->
+    RoundingMode (Fpa_rounding.SMT2.rounding_mode_of_hs c)
+  | { f = Op (Constr c); ty; _ }
+    when Ty.equal ty Fpa_rounding.AE.fpa_rounding_mode ->
+    RoundingMode (Fpa_rounding.AE.rounding_mode_of_hs c)
   | _ -> Fmt.failwith "unsupported constant: %a" print t
 
 let int_view t =
