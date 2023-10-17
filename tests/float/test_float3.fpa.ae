@@ -1,0 +1,5 @@
+logic x : real
+
+axiom ax : 1.0 <= x
+
+goal g : float(4, 4, NearestTiesToEven, 1.0) <= float(4, 4, NearestTiesToEven, x)
