@@ -295,7 +295,9 @@ let string_of_form f = match f with
   | F_Xor -> "xor"
 
 let name_to_string =
-  let no_need_to_quote =
+  let no_need_to_quote s =
+    String.length s > 0 &&
+    (match s.[0] with | '0'..'9' -> false | _ -> true) &&
     String.for_all
       (function
         | 'a' .. 'z'
@@ -305,7 +307,7 @@ let name_to_string =
         | '*' | '_' | '-' | '+' | '=' | '<' | '>'
         | '.' | '?' | '/' -> true
         | _ -> false
-      )
+      ) s
   in
   fun s -> if no_need_to_quote s then s else Format.sprintf "|%s|" s
 
