@@ -1,5 +1,11 @@
 ## unreleased
 
+## v2.5.2
+
+### Bug fixes
+* Hot fix for a soundness bug related with the `distinct` statement (#890)
+* Treat missing values in models as abstract (#860)
+
 ## v2.5.1
 
 ### Bug fixes
