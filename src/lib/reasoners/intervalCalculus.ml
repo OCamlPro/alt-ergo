@@ -2110,7 +2110,8 @@ let optimizing_split env uf opt_split =
         { opt_split with value = Value s; }
 
       | Sim.Core.Max (lazy Sim.Core.{ is_le = false; _ }, _) ->
-        (* There is no maximal value as we try to optimize a strict bound. *)
+        (* There is no maximal value as we try to optimize a strict upper
+           bound. *)
         { opt_split with value = StrictBound }
     end
 

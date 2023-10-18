@@ -1110,24 +1110,20 @@ module MED = Map.Make
 let terms env = ME.fold MED.add env.make MED.empty
 
 let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
-  let bounded, pinfty, minfty =
+  let bounded, pinfty, minfty, stricts =
     Util.MI.fold
-      (fun _ord v ((bounded, pinfty, minfty) as acc) ->
+      (fun _ord v ((bounded, pinfty, minfty, stricts) as acc) ->
          let {Th_util.value; r; order = _; is_max = _; e=_} = v in
          match value with
          | Value _ ->
-           SetX.add v.Th_util.r bounded, pinfty, minfty
-         | Pinfinity  -> bounded, SetX.add r pinfty, minfty
-         | Minfinity -> bounded, pinfty, SetX.add r minfty
+           SetX.add v.Th_util.r bounded, pinfty, minfty, stricts
+         | Pinfinity  -> bounded, SetX.add r pinfty, minfty, stricts
+         | Minfinity -> bounded, pinfty, SetX.add r minfty, stricts
+         | StrictBound -> bounded, pinfty, minfty, SetX.add r stricts
          | Unknown -> acc
-         | StrictBound ->
-           (* Unreachable as after trying to optimize a strict bound, we stop
-              optimization and we produce a value without objectives for the
-              incriminate bound. *)
-           assert false
-      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
+      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty, SetX.empty)
   in
-  let not_unbounded = pinfty == SetX.empty && minfty == SetX.empty in
+  let is_bounded = pinfty == SetX.empty && minfty == SetX.empty in
   (* Here, we fold on each term that appears in the 'make' map,
      starting from those with smaller depth, and we compute a concrete
      model for it. For the objectives (if any), we check if it should
@@ -1142,7 +1138,7 @@ let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
          (* mk's optimum is -infinity *)
          compute_concrete_model_of_val env t acc (Some "-oo")
        else
-       if not_unbounded || SetX.mem mk bounded then
+       if is_bounded || SetX.mem mk bounded then
          (* either the pb is bounded (or it isn't an optimization pb)
             or we have an optimum for mk *)
          compute_concrete_model_of_val env t acc None
@@ -1161,7 +1157,7 @@ let compute_objectives ~optimized_splits env mrepr =
           match value with
           | Pinfinity -> seen_infinity := true; Obj_pinfty
           | Minfinity -> seen_infinity := true; Obj_minfty
-          | StrictBound -> seen_infinity := true; Obj_unk
+          | StrictBound -> seen_infinity := true; Obj_strictbound
           | Value _ ->
             let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
             Obj_val r_s

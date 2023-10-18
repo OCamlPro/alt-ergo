@@ -1042,32 +1042,34 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let [@inline always] gt a b = E.mk_builtin ~is_pos:false Symbols.LE [a;b]
   let [@inline always] lt a b = E.mk_builtin ~is_pos:true  Symbols.LT [a;b]
 
+  exception Give_up of (E.t * E.t * bool) list
+
   let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
     let obj = Th.get_objectives (SAT.current_tbox env.satml) in
     if Util.MI.is_empty obj then raise unknown_exn;
     env.objectives := Some obj;
-    let seen_infinity = ref false in
     let acc =
-      Util.MI.fold
-        (fun _ {Th_util.e; value; r=_; is_max; order=_} acc ->
-           if !seen_infinity then acc
-           else
+      try
+        (* Invariant: we have to scan objectives in priority order as we
+           give up optimization when we fail to fulfill an objective. *)
+        Util.MI.fold
+          (fun _ {Th_util.e; value; r=_; is_max; order=_} acc ->
              match value with
              | Pinfinity | Minfinity | StrictBound ->
-               seen_infinity := true; acc
+               raise (Give_up acc)
              | Value (_,_, Th_util.CS (Some {opt_val = Value v; _},_,_)) ->
                (* hack-ish to get the value of type expr *)
                (e, v, is_max) :: acc
              | Value _ ->
                assert false
              | Unknown ->
-               seen_infinity := true; acc
-        ) obj []
+               assert false
+          ) obj []
+      with Give_up acc -> acc
     in
     begin match acc with
       | [] ->
-        (* first objective is infinity *)
-        assert (!seen_infinity);
+        (* The first objective cannot be fulfill and we gave up immediately. *)
         raise unknown_exn;
 
       | (e,tv, is_max)::l ->

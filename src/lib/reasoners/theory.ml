@@ -390,23 +390,24 @@ module Main_Default : S = struct
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
-          | Value _ | StrictBound ->
+          | Value _ ->
             ()
-          | Pinfinity | Minfinity ->
+          | Pinfinity | Minfinity | StrictBound ->
             (* We should block case-split at infinite values.
-               Otherwise, we may have soundness issues. We
-               may think an objective is unbounded, but some late
-               constraints may make it bounded.
+                  Otherwise, we may have soundness issues. We
+                  may think an objective is unbounded, but some late
+                  constraints may make it bounded.
 
-               An alternative is to only allow further splits when we
-               know that no extra assumptions will be propagated to
-               the env. Hence the test 'if for_model' *)
+                  An alternative is to only allow further splits when we
+                  know that no extra assumptions will be propagated to
+                  the env. Hence the test 'if for_model' *)
             if for_model then ()
             else
               raise (Found { x with Th_util.value = Unknown })
 
           | Unknown ->
             raise (Found { x with Th_util.value = Unknown })
+
         ) env.objectives;
       None
     with Found x ->
@@ -427,10 +428,12 @@ module Main_Default : S = struct
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
              | Value _ -> Util.MI.add ord {v with value = Unknown} acc
-             | Pinfinity | Minfinity | StrictBound -> assert false (* may happen? *)
+             | Pinfinity | Minfinity | StrictBound ->
+               assert false (* may happen? *)
         ) objectives objectives
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
+    Fmt.pr "===== OBJS %i ======@." (Util.MI.cardinal env.objectives);
     let rec aux ~optimize ch bad_last dl env li =
       Options.exec_thread_yield ();
       match li, bad_last with
@@ -439,29 +442,25 @@ module Main_Default : S = struct
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
           match next_optimization ~for_model env with
           | Some to_opt_split when optimize ->
+            Fmt.pr "EXPR: %a, order: %i@." E.print to_opt_split.e to_opt_split.order;
             begin
               let opt_split =
                 CC_X.optimizing_split env.gamma_finite to_opt_split
               in
+              let env = {
+                env with objectives =
+                           register_optimized_split env.objectives opt_split
+              } in
               match opt_split.value with
-              | StrictBound ->
-                (* The optimization is impossible for strict bounds. We give
-                   up the optimization phase. *)
-                if for_model then
-                  aux ~optimize:false ch None dl env []
-                else
-                  { env with choices = List.rev dl }, ch
-              | Unknown -> assert false
-              | Pinfinity | Minfinity ->
+              | Unknown ->
+                (*  *)
+                assert false
+              | Pinfinity | Minfinity | StrictBound ->
                 if for_model then
                   aux ~optimize:false ch None dl env []
                 else
                   { env with choices = List.rev dl }, ch
               | Value v ->
-                let to_opt =
-                  register_optimized_split env.objectives opt_split
-                in
-                let env = {env with objectives = to_opt} in
                 let splits = add_explanations_to_splits [v] in
                 aux ~optimize ch None dl env splits
             end
@@ -595,9 +594,9 @@ module Main_Default : S = struct
     Util.MI.for_all
       (fun _ {Th_util.value; _} ->
          match value with
-         | Pinfinity | Minfinity -> false
-         | Value _ | Unknown | StrictBound -> true
-      )objectives
+         | Pinfinity | Minfinity | StrictBound -> false
+         | Value _ | Unknown -> true
+      ) objectives
 
   let try_it t facts ~for_model =
     Options.exec_thread_yield ();

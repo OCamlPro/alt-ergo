@@ -5,7 +5,7 @@
 (declare-const z Int)
 (push 1)
 (assert (<= x 1))
-; This objective cannot be fullfilled and the optimization should stop here.
+; This objective cannot be fulfilled and the optimization should stop here.
 (assert (< y 0.5))
 (assert (< (- 0 5) z))
 (maximize x)
