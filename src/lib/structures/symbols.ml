@@ -298,16 +298,19 @@ let name_to_string =
   let no_need_to_quote s =
     String.length s > 0 &&
     (match s.[0] with | '0'..'9' -> false | _ -> true) &&
-    String.for_all
-      (function
-        | 'a' .. 'z'
-        | 'A' .. 'Z'
-        | '0' .. '9'
-        | '~' | '!' | '@' | '$' | '%' | '^' | '&'
-        | '*' | '_' | '-' | '+' | '=' | '<' | '>'
-        | '.' | '?' | '/' -> true
-        | _ -> false
-      ) s
+    try
+      String.iter
+        (function
+          | 'a' .. 'z'
+          | 'A' .. 'Z'
+          | '0' .. '9'
+          | '~' | '!' | '@' | '$' | '%' | '^' | '&'
+          | '*' | '_' | '-' | '+' | '=' | '<' | '>'
+          | '.' | '?' | '/' -> ()
+          | _ -> raise Exit
+        ) s;
+      true
+    with Exit -> false
   in
   fun s -> if no_need_to_quote s then s else Format.sprintf "|%s|" s
 
