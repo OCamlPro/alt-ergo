@@ -2152,7 +2152,7 @@ let axioms_of_rules loc name lf acc env =
   let acc =
     List.fold_left
       (fun acc f ->
-         let name = (Hstring.fresh_string ()) ^ "_" ^ name in
+         let name = (Symbols.InternalNameId.fresh ()) ^ "_" ^ name in
          let td = {c = TAxiom(loc,name,Util.Default, f); annot = new_id () } in
          (td, env)::acc
       ) acc lf

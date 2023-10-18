@@ -1029,7 +1029,7 @@ let compute_concrete_model ({ make; _ } as env) =
        (* Keep record constructors because models.ml expects them to be there *)
        if (X.is_solvable_theory_symbol f ty
            && not (Shostak.Records.is_mine_symb f ty))
-       || E.is_fresh t || E.is_fresh_skolem t
+       || E.is_internal_name t || E.is_internal_skolem t
        || E.equal t E.vrai || E.equal t E.faux
        || Sy.is_internal f
        then

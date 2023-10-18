@@ -46,12 +46,6 @@ val empty : t
 
 val list_assoc : t -> (t * 'a) list -> 'a
 
-val fresh_string : unit -> string
-
-val is_fresh_string : string -> bool
-
-val is_fresh_skolem : string -> bool
-
 val save_cache : unit -> unit
 (** Saves the module's cache *)
 

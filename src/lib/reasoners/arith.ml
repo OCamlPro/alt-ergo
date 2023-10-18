@@ -458,7 +458,7 @@ module Shostak
     List.exists
       (fun x ->
          match X.term_extract x with
-         | Some t, _ -> E.is_fresh t
+         | Some t, _ -> E.is_internal_name t
          | _ -> false
       ) (X.leaves xp)
 

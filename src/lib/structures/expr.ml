@@ -811,17 +811,6 @@ let neg t =
 let is_int t = t.ty == Ty.Tint
 let is_real t = t.ty == Ty.Treal
 
-let is_fresh t =
-  match t with
-  | { f = Sy.Name (hs, _, _); xs = []; _ } ->
-    Hstring.is_fresh_string (Hstring.view hs)
-  | _ -> false
-
-let is_fresh_skolem t =
-  match t with
-  | { f = Sy.Name (hs, _, _); _ } -> Hstring.is_fresh_skolem (Hstring.view hs)
-  | _ -> false
-
 let name_of_lemma f =
   match form_view f with
   | Lemma { name; _ } -> name
@@ -938,7 +927,14 @@ let vrai =
 let faux = neg (vrai)
 let void = mk_term (Sy.Void) [] Ty.Tunit
 
-let fresh_name ty = mk_term (Sy.name (Hstring.fresh_string())) [] ty
+let fresh_name ty = mk_term (Sy.fresh_name ()) [] ty
+
+let is_internal_name t =
+  match t with
+  | { f; xs = []; _ } -> Sy.is_internal_name f
+  | _ -> false
+
+let is_internal_skolem t = Sy.is_skolem t.f
 
 let positive_int i = mk_term (Sy.int i) [] Ty.Tint
 
@@ -1230,7 +1226,7 @@ let is_skolem_cst v =
 
 let get_skolem =
   let hsko = Hsko.create 17 in
-  let gen_sko ty = mk_term (Sy.fresh "@sko") [] ty in
+  let gen_sko ty = mk_term (Sy.fresh_skolem "@sko") [] ty in
   fun v ty ->
     try Hsko.find hsko v
     with Not_found ->
@@ -1701,7 +1697,7 @@ let mk_let let_v let_e in_e =
   let free_v_as_terms =
     SMap.fold (fun sy (ty ,_) acc -> (mk_term sy [] ty)::acc) free_vars []
   in
-  let let_sko = mk_term (Sy.fresh "_let") free_v_as_terms let_e_ty in
+  let let_sko = mk_term (Sy.fresh_skolem "_let") free_v_as_terms let_e_ty in
   let is_bool = type_info in_e == Ty.Tbool in
   mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
@@ -1717,7 +1713,12 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     (* garder le suffixe "__" car cela influence l'ordre *)
-    Sy.name (Format.sprintf "!?__%s%s!%d" s tyvars cpt)
+    Fmt.kstr
+      (fun str -> Sy.make_as_fresh_skolem str)
+      "__%s%s!%d"
+      s
+      tyvars
+      cpt
   in
   let grounding_sbt =
     List.fold_left
@@ -2577,13 +2578,13 @@ module Purification = struct
         in_e, add_let let_v let_e lets
 
       | (Sy.Lit _ | Sy.Form _), _ ->
-        let fresh_sy = Sy.fresh ~is_var:true "Pur-F" in
+        let fresh_sy = Sy.fresh_skolem ~is_var:true "Pur-F" in
         mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
       | _ -> (* detect ITEs *)
         match t.xs with
         | [_;_;_] when is_ite t.f ->
-          let fresh_sy = Sy.fresh ~is_var:true "Pur-Ite" in
+          let fresh_sy = Sy.fresh_skolem ~is_var:true "Pur-Ite" in
           mk_term fresh_sy [] t.ty , add_let fresh_sy t lets
 
         | _ ->

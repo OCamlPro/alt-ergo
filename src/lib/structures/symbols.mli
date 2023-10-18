@@ -128,9 +128,23 @@ val print_clean : Format.formatter -> t -> unit
 
 (*val dummy : t*)
 
-val fresh : ?is_var:bool -> string -> t
+module type Id = sig
+  val fresh : ?base:string -> unit -> string
+  val reset_fresh_cpt : unit -> unit
+  val is_id : string -> bool
+  val make_as_fresh : string -> string
+end
 
-val reinit_fresh_sy_cpt : unit -> unit
+module InternalNameId : Id
+module SkolemId : Id
+
+val fresh_name : unit -> t
+val is_internal_name : t -> bool
+
+val fresh_skolem : ?is_var:bool -> string -> t
+val make_as_fresh_skolem : string -> t
+val is_skolem : t -> bool
+
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool

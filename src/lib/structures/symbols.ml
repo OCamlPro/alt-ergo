@@ -387,18 +387,61 @@ let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
 
-let fresh, reinit_fresh_sy_cpt =
-  let cpt = ref 0 in
-  let fresh ?(is_var=false) s =
-    incr cpt;
-    (* garder le suffixe "__" car cela influence l'ordre *)
-    let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
-    if is_var then var @@ Var.of_string s else name s
-  in
-  let reinit_fresh_sy_cpt () =
-    cpt := 0
-  in
-  fresh, reinit_fresh_sy_cpt
+module type Id = sig
+  val fresh : ?base:string -> unit -> string
+  val reset_fresh_cpt : unit -> unit
+  val is_id : string -> bool
+  val make_as_fresh : string -> string
+end
+
+module MakeId(S : sig val prefix : string end) : Id = struct
+
+  let make_as_fresh = (^) S.prefix
+
+  let fresh, reset_fresh_cpt =
+    let cpt = ref 0 in
+    let fresh_string ?(base = "") () =
+      incr cpt;
+      make_as_fresh (base ^ (string_of_int !cpt))
+    in
+    let reset_fresh_string_cpt () =
+      cpt := 0
+    in
+    fresh_string, reset_fresh_string_cpt
+
+  let len_pre = String.length S.prefix
+
+  let is_id s =
+    let len_s = String.length s in
+    let rec aux i =
+      if i = len_pre then true
+      else
+        Char.equal (String.unsafe_get s i) (String.unsafe_get S.prefix i)
+        && aux (i + 1)
+    in len_s >= len_pre && aux 0
+end
+
+module InternalNameId = MakeId(struct let prefix = "!k" end)
+module SkolemId = MakeId(struct let prefix = "!?" end)
+
+let fresh_name () = name (InternalNameId.fresh ())
+
+let fresh_skolem ?(is_var=false) base =
+  let fresh = SkolemId.fresh ~base () in
+  if is_var then
+    var @@ Var.of_string fresh
+  else
+    name fresh
+
+let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
+
+let is_internal_name = function
+  | Name (hd, _, _) -> InternalNameId.is_id (Hstring.view hd)
+  | _ -> false
+
+let is_skolem = function
+  | Name (hd, _, _) -> SkolemId.is_id (Hstring.view hd)
+  | _ -> false
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
