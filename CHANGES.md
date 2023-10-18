@@ -7,6 +7,12 @@
 ### Build
 * use OCaml 4.08.1 as the minimal supported version (PR #803)
 
+## v2.5.2
+
+### Bug fixes
+* Hot fix for a soundness bug related with the `distinct` statement (#890)
+* Treat missing values in models as abstract (#860)
+
 ## v2.5.1
 
 ### Bug fixes
