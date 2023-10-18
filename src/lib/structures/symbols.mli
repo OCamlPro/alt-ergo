@@ -135,15 +135,15 @@ module type Id = sig
   val make_as_fresh : string -> string
 end
 
-module InternalNameId : Id
+module InternalId : Id
 module SkolemId : Id
 
-val fresh_name : unit -> t
-val is_internal_name : t -> bool
+val fresh_internal_name : unit -> t
+val is_fresh_internal_name : t -> bool
 
 val fresh_skolem : ?is_var:bool -> string -> t
 val make_as_fresh_skolem : string -> t
-val is_skolem : t -> bool
+val is_fresh_skolem : t -> bool
 
 (** Resets to 0 the fresh symbol counter *)
 

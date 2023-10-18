@@ -421,10 +421,10 @@ module MakeId(S : sig val prefix : string end) : Id = struct
     in len_s >= len_pre && aux 0
 end
 
-module InternalNameId = MakeId(struct let prefix = "!k" end)
+module InternalId = MakeId(struct let prefix = "!k" end)
 module SkolemId = MakeId(struct let prefix = "!?" end)
 
-let fresh_name () = name (InternalNameId.fresh ())
+let fresh_internal_name () = name (InternalId.fresh ())
 
 let fresh_skolem ?(is_var=false) base =
   let fresh = SkolemId.fresh ~base () in
@@ -435,11 +435,11 @@ let fresh_skolem ?(is_var=false) base =
 
 let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
 
-let is_internal_name = function
-  | Name (hd, _, _) -> InternalNameId.is_id (Hstring.view hd)
+let is_fresh_internal_name = function
+  | Name (hd, _, _) -> InternalId.is_id (Hstring.view hd)
   | _ -> false
 
-let is_skolem = function
+let is_fresh_skolem = function
   | Name (hd, _, _) -> SkolemId.is_id (Hstring.view hd)
   | _ -> false
 

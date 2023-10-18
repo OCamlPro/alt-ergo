@@ -927,14 +927,14 @@ let vrai =
 let faux = neg (vrai)
 let void = mk_term (Sy.Void) [] Ty.Tunit
 
-let fresh_name ty = mk_term (Sy.fresh_name ()) [] ty
+let fresh_name ty = mk_term (Sy.fresh_internal_name ()) [] ty
 
 let is_internal_name t =
   match t with
-  | { f; xs = []; _ } -> Sy.is_internal_name f
+  | { f; xs = []; _ } -> Sy.is_fresh_internal_name f
   | _ -> false
 
-let is_internal_skolem t = Sy.is_skolem t.f
+let is_internal_skolem t = Sy.is_fresh_skolem t.f
 
 let positive_int i = mk_term (Sy.int i) [] Ty.Tint
 
