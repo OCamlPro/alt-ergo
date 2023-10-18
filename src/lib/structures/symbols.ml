@@ -294,8 +294,21 @@ let string_of_form f = match f with
   | F_Iff -> "<->"
   | F_Xor -> "xor"
 
+let name_to_string =
+  let no_need_to_quote =
+    String.for_all
+      (function
+        | 'a' .. 'z'
+        | 'A' .. 'Z'
+        | '0' .. '9'
+        | '-' | '_' -> true
+        | _ -> false
+      )
+  in
+  fun s -> if no_need_to_quote s then s else Format.sprintf "|%s|" s
+
 let to_string ?(show_vars=true) x = match x with
-  | Name (n, _, _) -> Hstring.view n
+  | Name (n, _, _) -> name_to_string @@ Hstring.view n
   | Var v when show_vars -> Format.sprintf "'%s'" (Var.to_string v)
   | Var v -> Var.to_string v
   | Int n -> Z.to_string n
