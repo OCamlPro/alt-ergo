@@ -363,7 +363,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation use_underscore unsat_core output_format model_type
+    interpretation optim use_underscore unsat_core output_format model_type
     () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
@@ -376,6 +376,7 @@ let mk_output_opt
     | Some v -> v
   in
   set_interpretation interpretation;
+  set_optimize optim;
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -876,7 +877,6 @@ let parse_output_opt =
       Arg.(value & opt interpretation INone &
            info ["interpretation"] ~docv ~docs:s_models ~doc)
     in
-
     let produce_models =
       let doc =
         "Enable model generation (equivalent to --interpretation last)."
@@ -997,14 +997,38 @@ let parse_output_opt =
     Term.(const not $ no_tableaux_cdcl_in_theories)
   in
 
+  let optim =
+    let doc =
+      "Enable model optimization (experimental)."
+    in
+    Arg.(value & flag & info ["optimize"] ~doc ~docs:s_models)
+  in
+
   let set_sat_options =
-    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th =
-      set_sat_solver sat_solver;
+    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th optim =
+      set_optimize optim;
       begin match sat_solver with
-        | CDCL_Tableaux ->
+        | Util.CDCL_Tableaux ->
+          set_sat_solver sat_solver;
+          set_cdcl_tableaux_inst cdcl_tableaux_inst;
+          set_cdcl_tableaux_th cdcl_tableaux_th
+        | Util.CDCL ->
+          set_sat_solver sat_solver;
+          set_cdcl_tableaux_inst false;
+          set_cdcl_tableaux_th false
+        | s when optim ->
+          (* Optimization is so far only sound for CDCL & CDCL_Tableaux. We set
+             CDCL_Tableaux by default. *)
+          Fmt.pf
+            Format.err_formatter
+            ";Warning: --optimize is not compatible with %a: forcing it to %a@."
+            Util.pp_sat_solver s
+            Util.pp_sat_solver Util.CDCL_Tableaux;
+          set_sat_solver Util.CDCL_Tableaux;
           set_cdcl_tableaux_inst cdcl_tableaux_inst;
           set_cdcl_tableaux_th cdcl_tableaux_th
         | _ ->
+          set_sat_solver sat_solver;
           set_cdcl_tableaux_inst false;
           set_cdcl_tableaux_th false
       end;
@@ -1012,7 +1036,7 @@ let parse_output_opt =
     in
     Term.(
       const set_sat_options $ sat_solver $ cdcl_tableaux_inst
-      $ cdcl_tableaux_th
+      $ cdcl_tableaux_th $ optim
     )
   in
 
@@ -1075,7 +1099,8 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ unsat_core $
+             interpretation $ optim $
+             use_underscore $ unsat_core $
              output_format $ model_type $
              set_dump_models $ set_dump_models_on $
              set_sat_options $ set_frontend

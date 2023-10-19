@@ -88,6 +88,26 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
+let set_sat_solver_option s =
+  match s with
+  | Util.CDCL_Tableaux | CDCL -> Options.set_sat_solver s
+  | _ when Options.get_optimize () ->
+    warning
+      "Sat-solver %a is incompatible with optimization: ignoring command."
+      Util.pp_sat_solver
+      s
+  | _ -> Options.set_sat_solver s
+
+let set_optimize b =
+  match Options.get_sat_solver () with
+  | Util.CDCL_Tableaux | CDCL -> Options.set_optimize b
+  | s when b ->
+    warning
+      "Sat-solver %a is incompatible with optimization: ignoring command."
+      Util.pp_sat_solver
+      s
+  | _ -> Options.set_optimize b
+
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
@@ -479,7 +499,7 @@ let main () =
                 Util.CDCL_Tableaux
               | _ -> raise Exit
             in
-            Options.set_sat_solver sat_solver;
+            set_sat_solver sat_solver;
             let is_cdcl_tableaux =
               match sat_solver with CDCL_Tableaux -> true | _ -> false
             in
@@ -508,6 +528,12 @@ let main () =
         match float_of_string_opt level with
         | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
         | Some i -> Options.set_profiling true i
+      end; st
+    | ":optimization", Symbol { name = Simple b; _} ->
+      begin
+        match bool_of_string_opt b with
+        | None -> print_wrn_opt ~name st_loc "bool" value
+        | Some b -> set_optimize b
       end; st
     | _ ->
       unsupported_opt name; st
