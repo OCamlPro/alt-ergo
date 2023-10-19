@@ -134,24 +134,7 @@ module Shostak
     | Some p -> p
     | _ -> P.create [Q.one, r] Q.zero (X.type_info r)
 
-  (* Compute [t1 % t2] as [t1 - |t2| * (t1 / |t2|)].
-
-     Requires: [t1], [t2] have type [Tint]
-     Requires: [p1] is the representative for [t1]
-     Requires: [p2] is the representative for [t2]
-     Requires: [p2] is a non-zero constant *)
-  let mk_modulo t1 p1 p2 ctx =
-    match P.is_const p2 with
-    | Some n2 ->
-      let a2 = Q.to_z n2 |> Z.abs in
-      assert (Z.sign a2 > 0);
-
-      (* NB: [t1 % t2] = [t1 % |t2|] *)
-      let div, ctx' = X.make (E.Ints.(t1 / ~$$a2)) in
-      P.sub p1 (P.mult_const (Q.from_z a2) (embed div)), ctx' @ ctx
-    | None -> assert false
-
-  (* Add range information for [t = t1 / t2].
+  (* Add range information for [t = t1 / t2], where `/` is euclidean division.
 
      Requires: [t], [t1], [t2] have type [Tint]
      Requires: [p2] is the term representative for [t2]
@@ -161,19 +144,31 @@ module Shostak
 
     match P.is_const p2 with
     | Some n2 ->
-      let a2 = Q.to_z n2 |> Z.abs in
-      assert (Z.sign a2 > 0);
+      let n2 = Q.to_z n2 in
+      assert (Z.sign n2 <> 0);
+      let a2 = Z.abs n2 in
 
-      if Q.sign n2 < 0 then
-        (* t1 / (-|t2|) = -(t1 / |t2|)*)
-        let r, ctx' = X.make E.Ints.(t1 / ~$$a2) in
-        P.mult_const Q.m_one (embed r), ctx' @ ctx
-      else
-        (* 0 <= t1 % t2 = t1 - t2 * (t1 / t2) < |t2| *)
-        let t1_mod_t2 = E.Ints.(t1 - ~$$a2 * t) in
-        let c1 = E.Ints.(~$0 <= t1_mod_t2) in
-        let c2 = E.Ints.(t1_mod_t2 < ~$$a2) in
-        P.create [Q.one, X.term_embed t] Q.zero Tint, c2 :: c1 :: ctx
+      (* 0 <= t1 % t2 = t1 - t2 * (t1 / t2) < |t2| *)
+      let t1_mod_t2 = E.Ints.(t1 - ~$$n2 * t) in
+      let c1 = E.Ints.(~$0 <= t1_mod_t2) in
+      let c2 = E.Ints.(t1_mod_t2 < ~$$a2) in
+      P.create [Q.one, X.term_embed t] Q.zero Tint, c2 :: c1 :: ctx
+    | None -> assert false
+
+
+  (* Compute the remainder of euclidean division [t1 % t2] as
+     [t1 - t2 * (t1 / t2)], where `a / b` is euclidean division.
+
+     Requires: [t1], [t2] have type [Tint]
+     Requires: [p1] is the representative for [t1]
+     Requires: [p2] is the representative for [t2]
+     Requires: [p2] is a non-zero constant *)
+  let mk_euc_modulo t1 t2 p1 p2 ctx =
+    match P.is_const p2 with
+    | Some n2 ->
+      assert (Q.sign n2 <> 0);
+      let div, ctx = mk_euc_division E.Ints.(t1 / t2) t1 p2 ctx in
+      P.sub p1 (P.mult_const n2 div), ctx
     | None -> assert false
 
 
@@ -295,7 +290,7 @@ module Shostak
         let p3, ctx =
           try P.modulo p1 p2, ctx
           with
-          | Polynome.Not_a_num -> mk_modulo t1 p1 p2 ctx
+          | Polynome.Not_a_num -> mk_euc_modulo t1 t2 p1 p2 ctx
           | Division_by_zero | Polynome.Maybe_zero ->
             let t = E.mk_term mod_symb [t1; t2] Tint in
             P.create [Q.one, X.term_embed t] Q.zero ty, ctx
