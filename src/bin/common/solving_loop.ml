@@ -672,10 +672,11 @@ let main () =
       | {contents = `Exit; _} -> raise Exit
 
       | {contents = `Echo str; _} ->
+        let new_str = String.concat "\"\"" (String.split_on_char '"' str) in
         Fmt.pf
           (Options.Output.get_fmt_regular ())
           "\"%s\"@."
-          str;
+          new_str;
         st
 
       | {contents = `Get_info kind; _ } ->
