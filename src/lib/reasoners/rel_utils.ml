@@ -173,33 +173,12 @@ end = struct
               | None -> eqs) se eqs) sm eqs
 
   let update env uf r1 r2 orig eqs =
-    (* The `Subst` origin is used when `r1 -> r2` is added in the
-        union-find. The `CS _` and `NCS _` origins are used for case splits. In
-        both cases, we want to be propagating the constant.
+    (* The `Subst` origin is used when `r1 -> r2` is added in the union-find, so
+       we want to be propagating the constant on the RHS.
 
-        Note that equalities of `Subst` origins are oriented: for `Subst`, `r2`
-        is the (new) normal form for `r1.
-
-        Usually, this would be true of case-split equalities as well (of the
-        form `r = v` where `v` is the chosen value), but this is not true for
-        the case splits that come from the arrays theory (in fact, the array
-        theory produces *dis*equality case splits, and the equality ends up in
-        the `NCS` instead), so we don't try to be smart and pay the (small)
-        performance cost.
-
-        `Other` cases should (I believe...) be subsumed by `Subst`. The original
-        code in the arithmetic theory that this is lifted from from was only
-        considering `Subst`, and was allowing possibly incorrect models.
-
-        Note that we need to handle `CS` and `NCS` here to produce correct
-        models, but also this can cause eager enumeration, so by excess of
-        caution we only use it when model generation has been requested. It is
-        unknown whether eager enumeration would be an actual problem in
-        practice. *)
+       The other origins are subsumed. *)
     match orig with
     | Th_util.Subst when X.is_constant r2 -> update env uf r1 eqs
-    | CS _ | NCS _ when Options.get_interpretation () ->
-      update env uf r2 (update env uf r1 eqs)
     | _ -> eqs
 
 
