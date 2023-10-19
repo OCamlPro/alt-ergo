@@ -671,6 +671,13 @@ let main () =
 
       | {contents = `Exit; _} -> raise Exit
 
+      | {contents = `Echo str; _} ->
+        Fmt.pf
+          (Options.Output.get_fmt_regular ())
+          "\"%s\"@."
+          str;
+        st
+
       | {contents = `Get_info kind; _ } ->
         handle_get_info st kind;
         st
