@@ -94,7 +94,8 @@ plugins:
 # Hopefully more efficient than making "all" depend
 # on "lib" and "bin", since dune can parralelize more
 all:
-	$(DUNE) build $(DUNE_FLAGS) @check
+	$(DUNE) build $(DUNE_FLAGS) @$(SRC_DIR)/all @examples/all
+	ln -sf src/bin/text/Main_text.exe alt-ergo
 
 # declare these targets as phony to avoid name clashes with existing directories,
 # particularly the "plugins" target
