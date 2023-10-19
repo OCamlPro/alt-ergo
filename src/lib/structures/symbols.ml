@@ -386,7 +386,6 @@ let to_string s = to_string ~show_vars:true s
 let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
-
 module type Id = sig
   val fresh : ?base:string -> unit -> string
   val reset_fresh_cpt : unit -> unit
@@ -411,14 +410,7 @@ module MakeId(S : sig val prefix : string end) : Id = struct
 
   let len_pre = String.length S.prefix
 
-  let is_id s =
-    let len_s = String.length s in
-    let rec aux i =
-      if i = len_pre then true
-      else
-        Char.equal (String.unsafe_get s i) (String.unsafe_get S.prefix i)
-        && aux (i + 1)
-    in len_s >= len_pre && aux 0
+  let is_id = Compat.String.starts_with ~prefix:S.prefix
 end
 
 module InternalId = MakeId(struct let prefix = "!k" end)
@@ -467,6 +459,10 @@ let add_label lbl t = Labels.replace labels t lbl
 let label t = try Labels.find labels t with Not_found -> Hstring.empty
 
 let clear_labels () = Labels.clear labels
+
+let reset_id_builders () =
+  InternalId.reset_fresh_cpt ();
+  SkolemId.reset_fresh_cpt ()
 
 module Set : Set.S with type elt = t =
   Set.Make (struct type t=s let compare=compare end)
