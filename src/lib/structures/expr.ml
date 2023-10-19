@@ -1712,10 +1712,9 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let tyvars = Format.asprintf "[%a]" pp_list sko_vty in
 
   let mk_sym cpt s =
-    (* garder le suffixe "__" car cela influence l'ordre *)
     Fmt.kstr
       (fun str -> Sy.make_as_fresh_skolem str)
-      "__%s%s!%d"
+      "%s%s!%d"
       s
       tyvars
       cpt

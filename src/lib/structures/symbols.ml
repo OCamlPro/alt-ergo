@@ -412,7 +412,8 @@ module MakeId(S : sig val prefix : string end) : Id = struct
 end
 
 module InternalId = MakeId(struct let prefix = "!k" end)
-module SkolemId = MakeId(struct let prefix = "!?" end)
+module SkolemId = MakeId(struct let prefix = "!?__" end)
+(* garder le suffixe "__" car cela influence l'ordre *)
 
 let fresh_internal_string () = InternalId.fresh ()
 let fresh_internal_name () = name (fresh_internal_string ())
