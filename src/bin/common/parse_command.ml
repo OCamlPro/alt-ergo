@@ -1011,33 +1011,31 @@ let parse_output_opt =
         | Util.CDCL_Tableaux ->
           set_sat_solver sat_solver;
           set_cdcl_tableaux_inst cdcl_tableaux_inst;
-          set_cdcl_tableaux_th cdcl_tableaux_th
+          set_cdcl_tableaux_th cdcl_tableaux_th;
+          Ok ()
         | Util.CDCL ->
           set_sat_solver sat_solver;
           set_cdcl_tableaux_inst false;
-          set_cdcl_tableaux_th false
+          set_cdcl_tableaux_th false;
+          Ok ()
         | s when optim ->
-          (* Optimization is so far only sound for CDCL & CDCL_Tableaux. We set
-             CDCL_Tableaux by default. *)
-          Fmt.pf
-            Format.err_formatter
-            ";Warning: --optimize is not compatible with %a: forcing it to %a@."
-            Util.pp_sat_solver s
-            Util.pp_sat_solver Util.CDCL_Tableaux;
-          set_sat_solver Util.CDCL_Tableaux;
-          set_cdcl_tableaux_inst cdcl_tableaux_inst;
-          set_cdcl_tableaux_th cdcl_tableaux_th
+          Fmt.error
+            "--optimize is not compatible with Sat solver %a@."
+            Util.pp_sat_solver s;
         | _ ->
           set_sat_solver sat_solver;
           set_cdcl_tableaux_inst false;
-          set_cdcl_tableaux_th false
-      end;
-      ()
+          set_cdcl_tableaux_th false;
+          Ok ()
+      end
     in
-    Term.(
-      const set_sat_options $ sat_solver $ cdcl_tableaux_inst
-      $ cdcl_tableaux_th $ optim
-    )
+    let term =
+      Term.(
+        const set_sat_options $ sat_solver $ cdcl_tableaux_inst
+        $ cdcl_tableaux_th $ optim
+      )
+    in
+    Term.term_result' term
   in
 
   let use_underscore =
