@@ -540,14 +540,20 @@ let main () =
       unsupported_opt name; st
   in
 
-  let minimize_term _term st =
+  let handle_minimize_term (_term : DStd.Term.t) st =
     warning "Unsupported minimize.";
     st
   in
   (* TODO: implement when optimae is merged *)
 
-  let maximize_term _term st =
+  let handle_maximize_term (_term : DStd.Term.t) st =
     warning "Unsupported maximize.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let handle_get_objectives (_args : DStd.Term.t list) st =
+    warning "Unsupported get-objectives.";
     st
   in
   (* TODO: implement when optimae is merged *)
@@ -555,9 +561,11 @@ let main () =
   let handle_custom_statement id args st =
     match id, args with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
-      minimize_term term st
+      handle_minimize_term term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
-      maximize_term term st
+      handle_maximize_term term st
+    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
+      handle_get_objectives args st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
         "Statement %s only expects 1 argument (%i given)"
