@@ -29,8 +29,9 @@
 (**************************************************************************)
 
 open AltErgoLib
-open Options
 open D_loop
+
+module O = Options
 
 type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
@@ -88,15 +89,15 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
-let set_sat_solver_option s =
+let set_sat_solver s =
   match s with
-  | Util.CDCL_Tableaux | CDCL -> Options.set_sat_solver s
-  | _ when Options.get_optimize () ->
+  | Util.CDCL_Tableaux | CDCL -> O.set_sat_solver s
+  | _ when O.get_optimize () ->
     warning
       "Sat-solver %a is incompatible with optimization: ignoring command."
       Util.pp_sat_solver
       s
-  | _ -> Options.set_sat_solver s
+  | _ -> O.set_sat_solver s
 
 let set_optimize b =
   match Options.get_sat_solver () with
@@ -168,7 +169,7 @@ let main () =
   in
 
   let typed_loop all_context state td =
-    if get_type_only () then state else begin
+    if O.get_type_only () then state else begin
       match td.Typed.c with
       | Typed.TGoal (_, kind, name, _) ->
         let l =
@@ -263,7 +264,7 @@ let main () =
       Frontend.print_status Preprocess 0;
     let assertion_stack = Stack.create () in
     let typing_loop state p =
-      if get_parse_only () then state else begin
+      if O.get_parse_only () then state else begin
         try
           let l, env = I.type_parsed state.env assertion_stack p in
           List.fold_left (typed_loop all_used_context) { state with env; } l
@@ -311,7 +312,7 @@ let main () =
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
         Dolmen.Std.Loc.print_compact c.Dolmen.Std.Statement.loc
         Dolmen.Std.Statement.print c;
-    if get_parse_only () then
+    if O.get_parse_only () then
       st, `Done ()
     else
       st, `Continue c
@@ -321,7 +322,7 @@ let main () =
       Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
         Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
         Typer_Pipe.print stmt;
-    if get_type_only () then
+    if O.get_type_only () then
       st, `Done ()
     else
       st, `Continue stmt
@@ -539,6 +540,39 @@ let main () =
       unsupported_opt name; st
   in
 
+  let minimize_term _term st =
+    warning "Unsupported minimize.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let maximize_term _term st =
+    warning "Unsupported maximize.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let handle_custom_statement id args st =
+    match id, args with
+    | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
+      minimize_term term st
+    | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
+      maximize_term term st
+    | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
+      recoverable_error
+        "Statement %s only expects 1 argument (%i given)"
+        ext
+        (List.length args);
+      st
+    | Dolmen.Std.Id.{name = Simple n; _}, _
+    | Dolmen.Std.Id.{name = Indexed {basename = n; _}; _}, _
+    | Dolmen.Std.Id.{name = Qualified {basename = n; _}; _}, _ ->
+      recoverable_error
+        "Unknown statement %s."
+        n;
+      st
+  in
+
   let handle_get_info (st : State.t) (name: string) =
     let print_std =
       fun (type a) (pp :a Fmt.t) (a : a) ->
@@ -709,6 +743,9 @@ let main () =
         handle_get_info st kind;
         st
 
+      | {contents = `Other (custom, args); _} ->
+        handle_custom_statement custom args st
+
       | _ ->
         (* TODO:
            - Separate statements that should be ignored from unsupported
@@ -768,7 +805,7 @@ let main () =
       ignore (handle_exn st bt exn)
   in
 
-  let filename = get_file () in
-  match get_frontend () with
+  let filename = O.get_file () in
+  match O.get_frontend () with
   | "dolmen" -> d_fe filename
   | frontend -> ae_fe filename frontend
