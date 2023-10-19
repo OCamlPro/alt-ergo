@@ -408,15 +408,14 @@ module MakeId(S : sig val prefix : string end) : Id = struct
     in
     fresh_string, reset_fresh_string_cpt
 
-  let len_pre = String.length S.prefix
-
   let is_id = Compat.String.starts_with ~prefix:S.prefix
 end
 
 module InternalId = MakeId(struct let prefix = "!k" end)
 module SkolemId = MakeId(struct let prefix = "!?" end)
 
-let fresh_internal_name () = name (InternalId.fresh ())
+let fresh_internal_string () = InternalId.fresh ()
+let fresh_internal_name () = name (fresh_internal_string ())
 
 let fresh_skolem ?(is_var=false) base =
   let fresh = SkolemId.fresh ~base () in
