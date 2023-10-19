@@ -89,26 +89,6 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
-let set_sat_solver s =
-  match s with
-  | Util.CDCL_Tableaux | CDCL -> O.set_sat_solver s
-  | _ when O.get_optimize () ->
-    warning
-      "Sat-solver %a is incompatible with optimization: ignoring command."
-      Util.pp_sat_solver
-      s
-  | _ -> O.set_sat_solver s
-
-let set_optimize b =
-  match Options.get_sat_solver () with
-  | Util.CDCL_Tableaux | CDCL -> Options.set_optimize b
-  | s when b ->
-    warning
-      "Sat-solver %a is incompatible with optimization: ignoring command."
-      Util.pp_sat_solver
-      s
-  | _ -> Options.set_optimize b
-
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
@@ -123,7 +103,7 @@ let main () =
       (val
         (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
          else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
-
+    Options.get_sat_solver (),
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
 
@@ -284,7 +264,7 @@ let main () =
     let state = {
       env = I.empty_env;
       solver_ctx = empty_solver_ctx;
-      sat_solver = make_sat ();
+      sat_solver = snd @@ make_sat ();
     } in
     try
       let parsed_seq = parsed () in
@@ -299,12 +279,16 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let sat_solver_key : (module Sat_solver_sig.S) State.key =
+  let sat_solver_key : (Util.sat_solver * (module Sat_solver_sig.S)) State.key =
     State.create_key ~pipe:"" "sat_solver"
   in
 
   let partial_model_key: model option State.key =
     State.create_key ~pipe:"" "sat_state"
+  in
+
+  let optimize_key: bool State.key =
+    State.create_key ~pipe:"" "optimize"
   in
 
   let debug_parsed_pipe st c =
@@ -431,6 +415,36 @@ let main () =
       Loc.report loc name ty DStd.Term.print value
   in
 
+  let set_sat_solver sat st =
+    let optim = State.get optimize_key st in
+    match sat with
+    | Util.Tableaux | Tableaux_CDCL when optim ->
+      warning
+        "Sat-solver %a is incompatible with optimization: ignoring command."
+        Util.pp_sat_solver
+        sat;
+      st
+    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      O.set_sat_solver sat;
+      State.set
+        sat_solver_key
+        (make_sat ())
+        st
+  in
+
+  let set_optimize optim st =
+    let sat, _ = State.get sat_solver_key st in
+    match sat with
+    | Util.Tableaux | Tableaux_CDCL when optim ->
+      warning
+        "Sat-solver %a is incompatible with optimization: ignoring command."
+        Util.pp_sat_solver
+        sat;
+      st
+    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      State.set optimize_key optim st
+  in
+
   let handle_option st_loc name (value : DStd.Term.t) st =
     match name, value.term with
     (* Smtlib2 regular options *)
@@ -500,13 +514,12 @@ let main () =
                 Util.CDCL_Tableaux
               | _ -> raise Exit
             in
-            set_sat_solver sat_solver;
             let is_cdcl_tableaux =
               match sat_solver with CDCL_Tableaux -> true | _ -> false
             in
             Options.set_cdcl_tableaux_inst is_cdcl_tableaux;
             Options.set_cdcl_tableaux_th is_cdcl_tableaux;
-            State.set sat_solver_key (make_sat ()) st
+            set_sat_solver sat_solver st
           with Exit ->
             recoverable_error
               "error setting ':sat-solver', invalid option value '%s'"
@@ -533,9 +546,9 @@ let main () =
     | ":optimization", Symbol { name = Simple b; _} ->
       begin
         match bool_of_string_opt b with
-        | None -> print_wrn_opt ~name st_loc "bool" value
-        | Some b -> set_optimize b
-      end; st
+        | None -> print_wrn_opt ~name st_loc "bool" value; st
+        | Some b -> set_optimize b st
+      end
     | _ ->
       unsupported_opt name; st
   in
@@ -677,7 +690,10 @@ let main () =
           | _ -> assert false
         in
         let partial_model =
-          solve (State.get sat_solver_key st) all_context (cnf, name)
+          solve
+            (snd @@ State.get sat_solver_key st)
+            all_context
+            (cnf, name)
         in
         if is_thm
         then
@@ -735,6 +751,7 @@ let main () =
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
+        |> State.set optimize_key (O.get_optimize ())
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -792,6 +809,7 @@ let main () =
         Parser.parse_logic ~preludes logic_file
       in
       let st = State.set Typer.additional_builtins D_cnf.builtins st in
+      let st = State.set optimize_key (O.get_optimize ()) st in
       let all_used_context = Frontend.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
