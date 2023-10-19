@@ -1,16 +1,16 @@
 {
     "dolmen": {
-        "branch": "v0.9",
+        "branch": "master",
         "description": "Dolmen provides a library and a binary to parse, typecheck, and evaluate languages used in automated deduction",
         "homepage": "",
         "owner": "Gbury",
         "repo": "dolmen",
-        "rev": "d9f5abbaffe6e5daa4b06758db66134fe85c8c6a",
-        "sha256": "1lbygac7pmq8d5pps4idc36ga69vx2fwz9pdpv7j2xiqxgava46y",
+        "rev": "baaf1f92ccd473294679dd9025c3ae9a441a82fa",
+        "sha256": "0qpkp1av2jk96zx5lgk9h29ak9klp32g8m7hddyzj251jrkxcbmk",
         "type": "tarball",
-        "url": "https://github.com/Gbury/dolmen/archive/d9f5abbaffe6e5daa4b06758db66134fe85c8c6a.tar.gz",
+        "url": "https://github.com/Gbury/dolmen/archive/baaf1f92ccd473294679dd9025c3ae9a441a82fa.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "version": "0.9"
+        "version": "dev"
     },
     "nixpkgs": {
         "branch": "release-23.05",
@@ -18,10 +18,10 @@
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b4ddd645e94706759d443755dbec35901553f35d",
-        "sha256": "1bbg07zmjv5b60v3ar18jpx2fhla2575kcrami53gn2xzm7g9py6",
+        "rev": "4ee5b576ac2861a818950aea99f609d7a6fc02a3",
+        "sha256": "0jpnc718q3xgwx6l17qwkxgc5ya5zvbsy45p4rygk7riwn0y0qlx",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/b4ddd645e94706759d443755dbec35901553f35d.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/4ee5b576ac2861a818950aea99f609d7a6fc02a3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "ocplib-simplex": {
