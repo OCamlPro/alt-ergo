@@ -572,11 +572,10 @@ let main () =
         ext
         (List.length args);
       st
-    | Dolmen.Std.Id.{name = Simple n; _}, _
-    | Dolmen.Std.Id.{name = Indexed {basename = n; _}; _}, _
-    | Dolmen.Std.Id.{name = Qualified {basename = n; _}; _}, _ ->
+    | n, _ ->
       recoverable_error
-        "Unknown statement %s."
+        "Unknown statement %a."
+        Dolmen.Std.Id.print
         n;
       st
   in
