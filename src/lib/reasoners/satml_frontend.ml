@@ -1038,11 +1038,50 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
+  exception Give_up of (E.t * E.t * Th_util.case_split option * bool) list
 
-  let [@inline always] gt a b = E.mk_builtin ~is_pos:false Symbols.LE [a;b]
-  let [@inline always] lt a b = E.mk_builtin ~is_pos:true  Symbols.LT [a;b]
+  (* Getting [unknown] after a query means two things:
+     - The problem is [unsat] but we didn't manage to find a contradiction;
+     - We produce a model of the formulas.
 
-  exception Give_up of (E.t * E.t * bool) list
+     In the latter case, we optimized our objective functions during the
+     exploration of this branch of the SAT solver. It doesn't mean there is no
+     other branch of the SAT solver in which all the formulas are satisfiable
+     and the objective functions have bigger values in some models of this
+     branch.
+
+     For instance, consider the SMT-LIB problem:
+       (declare-const x Int)
+       (assert (or (<= x 2) (<= x 4)))
+       (assert (or (<= y 3))
+       (maximize x)
+       (maximize y)
+       (check-sat)
+       (get-model)
+
+     Assume that the solver explores the branch (<= x 2) first of the formula:
+       (or (<= x 2) (<= x 4)).
+
+     Let's imagine it discovers that [0] is a model of the first formula. After
+     optimization, it find that [2] is the best model for [x] and [3] is the
+     best model for [y] it can got in this branch. Still we have to explore
+     the second branch [(<= x 4)] to realize that [4] is actually the best
+     model for [x].
+
+     The following function ensures to explore adequate branches of the SAT
+     solver in order to get the best model, if the problem is SAT.
+
+     In our running example, after getting the model [2], the below function
+     run again the SAT solver with the extra assert:
+       (assert (or (> x 2) (and (= x 2) (> y 3)))
+
+     If this run produces the answer [unsat], we know that [2] was the best
+     model value for [x]. Otherwise, we got a better value for [x]. *)
+
+  let op _is_strict is_max =
+    match is_max with
+    | true -> Expr.Reals.(<=)
+    | false -> Expr.Reals.(>=)
 
   let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
     let obj = Th.get_objectives (SAT.current_tbox env.satml) in
@@ -1050,17 +1089,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env.objectives := Some obj;
     let acc =
       try
-        (* Invariant: we have to scan objectives in priority order as we
-           give up optimization when we fail to fulfill an objective. *)
         Util.MI.fold
           (fun _ {Th_util.e; value; r=_; is_max; order=_} acc ->
              match value with
-             | Pinfinity | Minfinity | StrictBound ->
+             | Pinfinity | Minfinity ->
                raise (Give_up acc)
-             | Value (_,_, Th_util.CS (Some {opt_val = Value v; _},_,_)) ->
-               (* hack-ish to get the value of type expr *)
-               (e, v, is_max) :: acc
-             | Value _ ->
+             | Value (_ ,_ , Th_util.CS (Some {opt_val = Value v; _}, _ , _)) ->
+               (e, v, None, is_max) :: acc
+             | StrictBound (o, (_, _, Th_util.CS (Some {opt_val = StrictBound (_, v); _}, _, _))) ->
+               raise (Give_up ((e, v, Some o, is_max) :: acc))
+             | Value _ | StrictBound _ ->
                assert false
              | Unknown ->
                assert false
@@ -1069,17 +1107,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     begin match acc with
       | [] ->
-        (* The first objective cannot be fulfill and we gave up immediately. *)
+        (* The answer for the first objective is infinity. We stop here as
+           we cannot go beyond infinity and the next objectives with lower
+           priority cannot be optimized in presence of infinity values. *)
         raise unknown_exn;
 
-      | (e,tv, is_max)::l ->
+      | (e, tv, is_strict, is_max) :: l ->
+        (* ((x > 2) /\ (y = 3)) \/ (y > 3) *)
         let neg =
           List.fold_left
-            (fun acc (e, tv, is_max) ->
+            (fun acc (e, tv, is_strict, is_max) ->
                let eq = E.mk_eq e tv ~iff: false in
-               let and_ = E.mk_and acc eq false in
-               E.mk_or and_ ((if is_max then gt else lt) e tv) false
-            )((if is_max then gt else lt) e tv) l
+               let acc = E.Core.and_ acc eq in
+               E.Core.(or_ acc (not ((op is_strict is_max) e tv)))
+            ) (E.Core.not ((op is_strict is_max) e tv)) l
         in
         Printer.print_dbg
           "Obj %a has an optimum. Should continue beyond SAT to try to \
@@ -1288,11 +1329,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
     | (Util.Timeout | I_dont_know _ | Assert_failure _ ) as e -> raise e
-    | e ->
-      Printer.print_dbg
-        ~module_name:"Satml_frontend" ~function_name:"unsat"
-        "%s" (Printexc.to_string e);
-      assert false
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)

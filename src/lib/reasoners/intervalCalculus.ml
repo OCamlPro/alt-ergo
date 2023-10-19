@@ -2068,7 +2068,7 @@ let optimizing_split env uf opt_split =
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
+    let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2 } in
     let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
     { opt_split with value = Value s }
 
@@ -2080,39 +2080,58 @@ let optimizing_split env uf opt_split =
       let l = List.rev_map (fun (x, y) -> y, x) (List.rev l) in
       let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
       match Sim.Result.get mx_res sim with
-      | Sim.Core.Unknown -> assert false
-      | Sim.Core.Sat _   -> assert false (* because we maximized *)
-      | Sim.Core.Unsat _ -> assert false (* we know sim is SAT *)
+      | Sim.Core.Unknown ->
+        (* The decision proceduce is complete. *)
+        assert false
+
+      | Sim.Core.Sat _   ->
+        (* This answer is only returned by OcplibSimplex if we only want to
+           check the satisfability of the linear program. *)
+        assert false
+
+      | Sim.Core.Unsat _ ->
+        (* We know that the linear program is satisfisable as we check it
+           before. *)
+        assert false
+
       | Sim.Core.Unbounded _ ->
-        Printer.print_dbg
-          "%a is unbounded. Let other methods assign a value for it@."
-          E.print e;
         let value =
           if to_max then Th_util.Pinfinity else Th_util.Minfinity
         in
         { opt_split with value }
 
-      | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le = true }, _sol) ->
+      | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
         let optim = if to_max then max_p else Q.mult Q.m_one max_p in
-        Printer.print_dbg "%a has a %s: %a@."
-          E.print e
-          (if to_max then "maximum" else "minimum")
-          Q.print optim;
-
+        let () =
+          if is_le then
+            Printer.print_dbg "%a has a %s: %a@."
+              E.print e
+              (if to_max then "maximum" else "minimum")
+              Q.print optim
+        in
         let r2 = alien_of (P.create [] optim  ty) in
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
-        let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2} in
+        let o =
+          let opt_val =
+            if is_le then
+              Th_util.Value t2
+            else
+              Th_util.StrictBound (r1, t2)
+          in
+          Some {Th_util.opt_ord = order; opt_val}
+        in
         let s =
           LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
         in
-        { opt_split with value = Value s; }
-
-      | Sim.Core.Max (lazy Sim.Core.{ is_le = false; _ }, _) ->
-        (* There is no maximal value as we try to optimize a strict upper
-           bound. *)
-        { opt_split with value = StrictBound }
+        if is_le then
+          { opt_split with value = Value s; }
+        else
+          let u =
+            LR.mkv_eq r1 r1, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+          in
+          { opt_split with value = StrictBound (u, s); }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

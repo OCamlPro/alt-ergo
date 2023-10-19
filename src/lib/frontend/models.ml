@@ -48,8 +48,8 @@ let constraints = ref MS.empty
 type objective_value =
   | Obj_pinfty
   | Obj_minfty
-  | Obj_strictbound
   | Obj_val of string
+  | Obj_strictbound of string
   | Obj_unk
 
 type t = {

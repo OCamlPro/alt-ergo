@@ -37,7 +37,6 @@ module SE = Expr.Set
 
 module Sy = Symbols
 
-
 module CC_X = Ccx.Main
 
 module type S = sig
@@ -376,11 +375,11 @@ module Main_Default : S = struct
   let register_optimized_split objectives u =
     try
       let x = Util.MI.find u.Th_util.order objectives in
-      assert (E.equal x.Th_util.e u.Th_util.e); (* and its Value ... *)
+      assert (E.equal x.Th_util.e u.Th_util.e);
+      (* and its Value ... *)
       Util.MI.add u.Th_util.order u objectives
     with Not_found ->
       assert false
-
 
   exception Found of Th_util.optimized_split
 
@@ -391,8 +390,9 @@ module Main_Default : S = struct
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
           | Value _ ->
+            (* This split is already optimized. *)
             ()
-          | Pinfinity | Minfinity | StrictBound ->
+          | Pinfinity | Minfinity | StrictBound _ ->
             (* We should block case-split at infinite values.
                   Otherwise, we may have soundness issues. We
                   may think an objective is unbounded, but some late
@@ -410,8 +410,8 @@ module Main_Default : S = struct
 
         ) env.objectives;
       None
-    with Found x ->
-      Some x
+    with
+    | Found x -> Some x
 
   (* TODO: this function could be optimized if "objectives" structure
      is coded differently *)
@@ -427,13 +427,13 @@ module Main_Default : S = struct
            else
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
-             | Value _ -> Util.MI.add ord {v with value = Unknown} acc
-             | Pinfinity | Minfinity | StrictBound ->
+             | Value _ | StrictBound _ ->
+               Util.MI.add ord {v with value = Unknown} acc
+             | Pinfinity | Minfinity ->
                assert false (* may happen? *)
         ) objectives objectives
 
   let look_for_sat ?(bad_last=None) ch env l ~for_model =
-    Fmt.pr "===== OBJS %i ======@." (Util.MI.cardinal env.objectives);
     let rec aux ~optimize ch bad_last dl env li =
       Options.exec_thread_yield ();
       match li, bad_last with
@@ -442,11 +442,11 @@ module Main_Default : S = struct
           Options.tool_req 3 "TR-CCX-CS-Case-Split";
           match next_optimization ~for_model env with
           | Some to_opt_split when optimize ->
-            Fmt.pr "EXPR: %a, order: %i@." E.print to_opt_split.e to_opt_split.order;
             begin
               let opt_split =
                 CC_X.optimizing_split env.gamma_finite to_opt_split
               in
+              assert (opt_split != to_opt_split);
               let env = {
                 env with objectives =
                            register_optimized_split env.objectives opt_split
@@ -455,7 +455,7 @@ module Main_Default : S = struct
               | Unknown ->
                 (*  *)
                 assert false
-              | Pinfinity | Minfinity | StrictBound ->
+              | Pinfinity | Minfinity | StrictBound _ ->
                 if for_model then
                   aux ~optimize:false ch None dl env []
                 else
@@ -463,6 +463,7 @@ module Main_Default : S = struct
               | Value v ->
                 let splits = add_explanations_to_splits [v] in
                 aux ~optimize ch None dl env splits
+
             end
           | Some _ | None ->
             begin
@@ -594,8 +595,8 @@ module Main_Default : S = struct
     Util.MI.for_all
       (fun _ {Th_util.value; _} ->
          match value with
-         | Pinfinity | Minfinity | StrictBound -> false
-         | Value _ | Unknown -> true
+         | Pinfinity | Minfinity -> false
+         | Value _ | StrictBound _ | Unknown -> true
       ) objectives
 
   let try_it t facts ~for_model =

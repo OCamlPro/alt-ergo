@@ -30,7 +30,6 @@
 
 type answer = (Explanation.t * Expr.Set.t list) option
 
-
 type theory =
   | Th_arith
   | Th_sum
@@ -38,16 +37,16 @@ type theory =
   | Th_arrays
   | Th_UF
 
-type 'a optimized_split_value =
+type ('a, 'b) optimized_split_value =
   | Minfinity
-  | Value of 'a
+  | Value of 'b
+  | StrictBound of 'a * 'b
   | Pinfinity
   | Unknown
-  | StrictBound
 
 type optimization = {
   opt_ord : int;
-  opt_val : Expr.t optimized_split_value
+  opt_val : (Shostak.Combine.r, Expr.t) optimized_split_value
 }
 
 type lit_origin =
@@ -62,7 +61,7 @@ type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 type optimized_split = {
   r : Shostak.Combine.r;
   e : Expr.t;
-  value : case_split optimized_split_value;
+  value : (case_split, case_split) optimized_split_value;
   is_max : bool;
   (** For linear arithmetic: is_max <-> (opt = maximize). *)
 
