@@ -1807,6 +1807,14 @@ let make_form name_base f loc ~decl_kind =
 let make dloc_file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
     match stmt with
+    (* Optimize terms *)
+    | { contents = `Optimize (t, to_max); loc; _ } ->
+      let st_loc = dl_to_ael dloc_file loc in
+      let e =
+        mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
+      in
+      let st_decl = C.Optimize (e, to_max) in
+      C. { st_decl; st_loc } :: acc
 
     (* Push and Pop commands *)
     | { contents = `Pop n; loc; _ } ->

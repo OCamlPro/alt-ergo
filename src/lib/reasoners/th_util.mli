@@ -39,23 +39,6 @@ type theory =
   | Th_UF
 [@@deriving show]
 
-type limit_kind =
-  | Above
-  | Below
-  (** Type used to discriminate between limits from above or below. *)
-
-type 'a optimized_split_value =
-  | Minfinity
-  | Pinfinity
-  | Value of 'a
-  | Limit of limit_kind * 'a
-  (** This case occurs when we try to optimize a strict bound. For instance,
-      we have a constraint of the form [x < 2], there is no maximum for [x] but
-      [2] is an upper bound. So [2] is a limit from below of the possible model
-      values. *)
-
-  | Unknown
-
 (** Indicates where asserted literals come from.
 
     Note that literals are deduplicated before being propagated to the
@@ -117,10 +100,10 @@ type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
     TL;DR: When in doubt, just set [is_cs] to [true]. *)
 
 type optimized_split = {
-  r : Shostak.Combine.r;
-  e : Expr.t;
-  value : Expr.t optimized_split_value;
-  case_split : case_split option;
-  is_max : bool;
-  order : int
+  value : Objective.Value.t;
+  case_split : case_split;
+  (** The underlying case-split. Notice that the value propagate by this
+      case-split doesn't always agree with the objective value [value].
+      Indeed, [value] isn't always a proper model value when the problem
+      is unbounded or some objective functions involved strict inequalities. *)
 }

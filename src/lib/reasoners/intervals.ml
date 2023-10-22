@@ -1159,11 +1159,41 @@ let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
     let c = Q.compare v vl in
     if c < 0 || c = 0 && is_open then raise Exit;
     imatch
-
 let match_interval lb ub i accu =
   try Some (match_interval_upper ub i (match_interval_lower lb i accu))
   with Exit -> None
 
+(* Assumes: the input set of intervals is normalized. *)
+let pick ~to_max { ints; is_int; _ } =
+  let ints = if to_max then List.rev ints else ints in
+  match ints with
+  | [] -> None
+  | (Minfty, Pinfty) :: _ -> Some Q.zero
+  | (_, Large (q, _)) :: _ when to_max -> Some q
+  | (_, Strict(q, _)) :: _ when to_max && is_int ->
+    (* By normalization, an integer interval of the form |p, q) has to
+       contain at least one integer and thus [q-1] is an element of this
+       interval. *)
+    Some Q.(q - ~$1)
+
+  | (Large (q, _), _) :: _ when not to_max -> Some q
+  | (Strict (q, _), _) :: _ when not to_max && is_int ->
+    (* By normalization, an integer interval of the form (q, p| has to
+       contain at least one integer and thus [q+1] is an element of this
+       interval. *)
+    Some Q.(q + ~$1)
+
+  | (Minfty, (Strict (q, _) | Large (q, _))) :: _ -> Some Q.(q - ~$1)
+  | ((Strict (q, _) | Large (q, _)), Pinfty) :: _ -> Some Q.(q + ~$1)
+  | ((Strict (q1, _) | Large (q1, _)), (Strict (q2, _) | Large (q2, _))) :: _ ->
+    begin
+      assert (not is_int);
+      Some Q.((q1 + q2) / ~$2)
+    end
+  | (_, Minfty) :: _ | (Pinfty, _) :: _ ->
+    (* As the set of intervals is normalized, it cannot contain
+       empty intervals. *)
+    assert false
 
 (*****************)
 

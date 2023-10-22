@@ -28,6 +28,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module X = Shostak.Combine
+
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
@@ -60,12 +62,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
+    mutable model_gen_phase : bool;
     mutable last_saved_model : Models.t Lazy.t option;
+    mutable last_saved_objectives : Objective.Model.t option;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
-
-    mutable objectives : Th_util.optimized_split Util.MI.t option
   }
 
   let empty_guards () = {
@@ -93,9 +95,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       skolems = ME.empty;
       guards = init_guards ();
       add_inst = (fun _ -> true);
+      model_gen_phase = false;
       last_saved_model = None;
+      last_saved_objectives = None;
       unknown_reason = None;
-      objectives = None
     }
 
   let empty_with_inst add_inst =
@@ -987,8 +990,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let model = Th.compute_concrete_model (SAT.current_tbox env.satml) in
-        env.last_saved_model <- model;
+        match Th.compute_concrete_model (SAT.current_tbox env.satml) with
+        | Some (model, objectives) ->
+          env.last_saved_model <- Some model;
+          env.last_saved_objectives <- Some objectives;
+        | None -> ()
       with Ex.Inconsistent (_expl, _classes) as e ->
         raise e
     end
@@ -1051,23 +1057,24 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   (* This function is called after receiving an `I_dont_know` exception from
      unsat_rec. It may re-raise this exception. *)
   let analyze_unknown_for_objectives env unsat_rec_prem : unit =
-    let obj = Th.get_objectives (SAT.current_tbox env.satml) in
-    if Util.MI.is_empty obj then raise I_dont_know;
-    env.objectives <- Some obj;
+    let objs =
+      match env.last_saved_objectives with
+      | Some objs -> objs
+      | None -> raise I_dont_know
+    in
     let acc =
       try
-        Util.MI.fold
-          (fun _ {Th_util.e; value; r=_; is_max; _} acc ->
-             match value with
-             | Pinfinity | Minfinity ->
-               raise (Give_up acc)
-             | Value v ->
-               (e, v, is_max, true) :: acc
-             | Limit (_, v) ->
-               raise (Give_up ((e, v, is_max, false) :: acc))
-             | Unknown ->
-               assert false
-          ) obj []
+        Objective.Model.fold (fun { e; to_max } value acc ->
+            match (value : Objective.Value.t) with
+            | Pinfinity | Minfinity ->
+              raise (Give_up acc)
+            | Value v ->
+              (e, v, to_max, true) :: acc
+            | Limit (_, v) ->
+              raise (Give_up ((e, v, to_max, false) :: acc))
+            | Unknown ->
+              assert false
+          ) objs []
       with Give_up acc -> acc
     in
     begin match acc with
@@ -1174,13 +1181,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         try analyze_unknown_for_objectives env unsat_rec_prem
         with
         | IUnsat (env, _) ->
-          assert (env.objectives != None);
+          assert (Option.is_some env.last_saved_objectives);
           (* objectives is a ref, it's necessiraly updated as a
              side-effect to best value *)
           raise I_dont_know
       end
     | IUnsat (env, _) as e ->
-      if env.objectives == None then raise e;
+      if Option.is_none env.last_saved_objectives then raise e;
       (* TODO: put the correct objectives *)
       raise I_dont_know
 
@@ -1250,6 +1257,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           let b = Stack.top env.guards.stack_guard in
           Steps.pop_steps ();
           env.last_saved_model <- None;
+          env.last_saved_objectives <- None;
           env.inst <- inst;
           env.guards.current_guard <- b
         )
@@ -1336,7 +1344,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep
 
-  let get_model env = env.last_saved_model
+  let optimize env ~to_max obj = SAT.optimize env.satml ~to_max obj
+
+  let get_model env =
+    Option.bind env.last_saved_model @@
+    fun (lazy mdl) -> Some mdl
 
   let get_unknown_reason env = env.unknown_reason
 
@@ -1357,6 +1369,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           bmodel
       end
     | _ -> None
+
+  let get_objectives env = env.last_saved_objectives
 
   let reinit_ctx () =
     Steps.reinit_steps ();

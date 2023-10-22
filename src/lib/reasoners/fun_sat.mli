@@ -56,7 +56,7 @@ module Make (Th : Theory.S) : sig
 
   val reinit_ctx : unit -> unit
 
-  val get_model: t -> Models.t Lazy.t option
+  val get_model: t -> Models.t option
 
   val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
 

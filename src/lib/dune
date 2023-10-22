@@ -26,7 +26,16 @@
     fmt
     stdcompat
   )
-  (preprocess (pps ppx_blob ppx_deriving.show ppx_deriving.enum ppx_deriving.fold))
+  (preprocess
+    (pps
+      ppx_blob
+      ppx_deriving.ord
+      ppx_deriving.show
+      ppx_deriving.enum
+      ppx_deriving.fold
+    )
+  )
+
   (preprocessor_deps (glob_files ../preludes/*.ae))
 
   ; .mli only modules *also* need to be in this field
@@ -46,7 +55,7 @@
     ; structures
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
-    Expr Var Ty Typed Xliteral ModelMap
+    Expr Var Ty Typed Xliteral ModelMap Objective
     ; util
     Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyUnix Numbers

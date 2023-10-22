@@ -100,6 +100,10 @@ val mk_push : Loc.t -> int -> decl
 
 val mk_pop : Loc.t -> int -> decl
 
+(** Declaration of optimization of objective functions. *)
+
+val mk_optimize : Loc.t -> lexpr -> bool -> decl
+
 (** Making pure and logic types *)
 
 val int_type : ppure_type
@@ -255,7 +259,3 @@ val mk_match : Loc.t -> lexpr -> (pattern * lexpr) list -> lexpr
 val mk_algebraic_test : Loc.t -> lexpr -> string -> lexpr
 
 val mk_algebraic_project : Loc.t -> guarded:bool -> lexpr -> string -> lexpr
-
-val mk_maximize: Loc.t -> lexpr -> string -> lexpr
-
-val mk_minimize: Loc.t -> lexpr -> string -> lexpr

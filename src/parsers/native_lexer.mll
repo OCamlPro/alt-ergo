@@ -100,8 +100,8 @@
   let decimal_number s =
     let r = ref n_zero in
     for i=0 to String.length s - 1 do
-      r := Numbers.Q.(add (mult n_ten !r)
-          (from_int (Char.code s.[i] - Char.code '0')))
+      let c = Char.(code s.[i] - code '0') in
+      r := Numbers.Q.(add (mult n_ten !r) (from_int c))
     done;
     !r
 

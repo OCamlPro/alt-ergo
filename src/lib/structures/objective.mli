@@ -28,71 +28,73 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Satml_types
+module Function : sig
+  type t = private {
+    e : Expr.t;
+    (** Term that represents the objective function. *)
 
-exception Sat
-exception Unsat of Satml_types.Atom.clause list option
-exception Last_UIP_reason of Atom.Set.t
+    to_max : bool;
+    (** Determine if we want to maximize or minimize this objective function. *)
+  }
+  (** Type of an objective function. *)
 
-type conflict_origin =
-  | C_none
-  | C_bool of Atom.clause
-  | C_theory of Explanation.t
+  val mk : to_max:bool -> Expr.t -> t
 
-module type SAT_ML = sig
-
-  (*module Make (Dummy : sig end) : sig*)
-  type th
-  type t
-
-  val solve : t -> unit
-
-  val set_new_proxies :
-    t ->
-    (Satml_types.Atom.atom * Satml_types.Atom.atom list * bool) Util.MI.t ->
-    unit
-
-  val new_vars :
-    t ->
-    nbv : int -> (* nb made vars *)
-    Satml_types.Atom.var list ->
-    Satml_types.Atom.atom list list -> Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list * Satml_types.Atom.atom list list
-
-  val assume :
-    t ->
-    Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list ->
-    Expr.t ->
-    cnumber : int ->
-    Flat_Formula.Set.t -> dec_lvl:int ->
-    unit
-
-  val boolean_model : t -> Satml_types.Atom.atom list
-  val instantiation_context :
-    t -> Satml_types.Flat_Formula.hcons_env -> Satml_types.Atom.Set.t
-  val current_tbox : t -> th
-  val set_current_tbox : t -> th -> unit
-  val empty : unit -> t
-
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
-  val decision_level : t -> int
-  val cancel_until : t -> int -> unit
-
-  val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
-  val known_lazy_formulas : t -> int Flat_Formula.Map.t
-
-  val reason_of_deduction: Atom.atom -> Atom.Set.t
-  val assume_simple : t -> Atom.atom list list -> unit
-  val do_case_split : t -> Util.case_split_policy -> conflict_origin
-
-  val decide : t -> Atom.atom -> unit
-  val conflict_analyze_and_fix : t -> conflict_origin -> unit
-
-  val push : t -> Satml_types.Atom.atom -> unit
-  val pop : t -> unit
-
-  val optimize : t -> to_max:bool -> Expr.t -> unit
+  val pp : t Fmt.t
+  (** [pp ppf o] prints the objective function [o] on the formatter [ppf]
+      using the SMT-LIB format. *)
 end
 
-module Make (Th : Theory.S) : SAT_ML with type th = Th.t
+module Value : sig
+  type limit_kind =
+    | Above
+    | Below
+    (** Type used to discriminate between limits from above or below. *)
+
+  type t =
+    | Minfinity
+    | Pinfinity
+    | Value of Expr.t
+    | Limit of limit_kind * Expr.t
+    (** This case occurs when we try to optimize a strict bound. For instance,
+        we have a constraint of the form [x < 2], there is no maximum for [x]
+        but [2] is an upper bound. So [2] is a limit from below of the possible
+        model values. *)
+
+    | Unknown
+    (** The value of the objective function has not yet be determined. *)
+
+  val pp : t Fmt.t
+end
+
+module Model : sig
+  type t
+
+  val empty : t
+  (** [empty] *)
+
+  val is_empty : t -> bool
+  (** [is_empty mdl] checks if the model doesn't contain any objective
+      function. *)
+
+  val fold : (Function.t -> Value.t -> 'b -> 'b) -> t -> 'b -> 'b
+  (** Iterator on the objective functions. *)
+
+  val add : Function.t -> Value.t -> t -> t
+  (** [add o v] adds or updates the value of the objective function [o]. *)
+
+  val pp : t Fmt.t
+  (** [pp ppf mdl] prints the model [mdl] using the MaxSMT format. *)
+
+  val functions : t -> Function.t list
+  (** [functions mdl] returns the list of objective functions of the model
+      [mdl] in decreasing order of the priority. *)
+
+  val has_no_limit : t -> bool
+  (** [has_no_limit mdl] checks if all the objective functions in the model
+      [mdl] have a finite value or unknown value. *)
+
+  val reset_until : t -> int -> t
+  (** [reset_until mdl i] sets to [Unknown] the values of the objective
+      functions with priority greater than [i]. *)
+end

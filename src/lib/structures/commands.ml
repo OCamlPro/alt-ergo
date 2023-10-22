@@ -34,6 +34,7 @@ type sat_decl_aux =
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t Typed.rwt_rule) list
+  | Optimize of Expr.t * bool
   | Query of string *  Expr.t * Ty.goal_sort
   | ThAssume of Expr.th_elt
   | Push of int
@@ -62,6 +63,9 @@ let print_aux fmt = function
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
   | Push n -> Format.fprintf fmt "Push %d" n
   | Pop n ->  Format.fprintf fmt "Pop %d" n
+  | Optimize (obj, is_max) ->
+    let s = if is_max then "maximize" else "minimize" in
+    Format.fprintf fmt "%s %a" s Expr.print obj
 
 let print fmt decl = print_aux fmt decl.st_decl
 

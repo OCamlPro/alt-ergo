@@ -140,6 +140,10 @@ val add_explanation : t -> Explanation.t -> t
 
 val equal : t -> t -> bool
 
+val pick : to_max:bool -> t -> Numbers.Q.t option
+(** [pick ~to_max t] returns an elements of the set of intervals [t]. If
+    [to_max] is [true], we pick the largest element of [t], if it exists.
+    We look for the smallest element if [to_max] is [false]. *)
 
 type interval_matching =
   ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)

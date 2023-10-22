@@ -7,5 +7,8 @@
 (assert (= (+ (* 5 x) (* 2 y) (* (- 0 3) z)) 0))
 (assert (= (+ (* (- 0 2) x) (* 4 y)) 0))
 (maximize x)
+(maximize y)
+(maximize z)
 (check-sat)
 (get-model)
+(get-objectives)

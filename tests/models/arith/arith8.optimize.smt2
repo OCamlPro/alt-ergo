@@ -15,3 +15,4 @@
 (maximize y)
 (check-sat)
 (get-model)
+(get-objectives)

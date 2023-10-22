@@ -1123,9 +1123,11 @@ module Make (Th : Theory.S) = struct
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let model = Th.compute_concrete_model env.tbox in
-        env.last_saved_model := model;
-        env
+        match Th.compute_concrete_model env.tbox with
+        | Some (model, _) ->
+          env.last_saved_model := Some model;
+          env
+        | None -> env
       with Ex.Inconsistent (expl, classes) ->
         Debug.inconsistent expl env;
         Options.tool_req 2 "TR-Sat-Conflict-2";
@@ -1849,7 +1851,9 @@ module Make (Th : Theory.S) = struct
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 
   (** returns the latest model stored in the env if any *)
-  let get_model env = !(env.last_saved_model)
+  let get_model env =
+    Option.bind !(env.last_saved_model) @@
+    fun (lazy mdl) -> Some mdl
 
   let get_unknown_reason env = env.unknown_reason
 

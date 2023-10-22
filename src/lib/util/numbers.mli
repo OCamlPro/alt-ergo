@@ -155,4 +155,11 @@ module Q : sig
   val root_excess  : t -> int -> t option
   val sqrt_default : t -> t option
   val sqrt_excess  : t -> t option
+
+  val (~$$) : Z.t -> t
+  val (~$) : int -> t
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val ( * ) : t -> t -> t
+  val ( / ) : t -> t -> t
 end

@@ -343,6 +343,9 @@ let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
   Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
+let mk_optimize acc obj is_max loc =
+  let obj = make_term "" obj in
+  Commands.{st_decl=Optimize (obj, is_max); st_loc=loc } :: acc
 
 (* extract defining term of the function or predicate. From the
    transformation of the parsed AST above, the typed AST is either of the
@@ -421,5 +424,6 @@ let make acc (d : (_ Typed.tdecl, _) Typed.annoted) =
        Solving_loop. *)
     Printer.print_wrn "Ignoring instruction %a" Typed.print_atdecl d;
     acc
+  | TOptimize (loc, obj, is_max) -> mk_optimize acc obj is_max loc
 
 let make_list l = List.fold_left make [] (List.rev l)

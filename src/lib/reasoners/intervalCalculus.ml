@@ -2045,17 +2045,35 @@ let case_split env uf ~for_model =
       end
   | _ -> res
 
-let optimizing_split env uf opt_split =
+(* Helper function used in [optimizing_objective] to pick a value
+   for the polynomial [p] in its interval. We used this function in the case
+   the value produced by the optimization procedure doesn't satisfy some
+   constraints that involve strict inequalities or the problem is unbounded. *)
+let middle_value env ~to_max ty p bound =
+  let interval =
+    match MP0.find_opt p env.polynomes, bound with
+    | Some i, Some bound ->
+      begin
+        try
+          if to_max then
+            Intervals.new_borne_sup Ex.empty bound ~is_le:false i
+          else
+            Intervals.new_borne_inf Ex.empty bound ~is_le:false i
+        with Intervals.NotConsistent _ -> assert false
+      end
+    | Some i, None -> i
+    | None, _ -> Intervals.point Q.zero ty Ex.empty
+  in
+  let q = Option.get (Intervals.pick ~to_max interval) in
+  alien_of (P.create [] q ty)
+
+let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  let {Th_util.r = r; is_max = to_max; e; value; _ } = opt_split in
-  assert (match value with
-      | Unknown -> true
-      | _ -> false
-    );
+  let uf, _ = Uf.add uf e in
   let repr, _ = Uf.find uf e in
   let ty = E.type_info e in
-  let r1 = r in (* instead of repr, which may be a constant *)
+  let r1, _ = X.make e in (* instead of repr, which may be a constant *)
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
@@ -2067,11 +2085,11 @@ let optimizing_split env uf opt_split =
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let value = Th_util.Value t2 in
+    let value = Objective.Value.Value t2 in
     let case_split =
-      Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
+      LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
     in
-    Some { opt_split with value; case_split }
+    Some Th_util.{ value; case_split }
 
   | None ->
     begin
@@ -2097,9 +2115,19 @@ let optimizing_split env uf opt_split =
 
       | Sim.Core.Unbounded _ ->
         let value =
-          if to_max then Th_util.Pinfinity else Th_util.Minfinity
+          if to_max then
+            Objective.Value.Pinfinity
+          else
+            Objective.Value.Minfinity
         in
-        Some { opt_split with value }
+        (* As the problem is unbounded, we need to produce a value for the
+           objective function. In this case, we pick a value in the domain
+           of the polynomial [p]. *)
+        let case_split =
+          LR.mkv_eq r1 (middle_value env ~to_max ty p None), true, Th_util.CS
+            (Th_util.Th_arith, Q.one)
+        in
+        Some Th_util.{ value; case_split }
 
       | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
@@ -2113,32 +2141,33 @@ let optimizing_split env uf opt_split =
               Printer.print_dbg "%a is a %s bound of %a" Q.print optim
                 (if to_max then "upper" else "lower") Expr.print e
           end;
-        let r2 = alien_of (P.create [] optim  ty) in
+        let r2 = alien_of (P.create [] optim ty) in
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
         let value =
           if is_le then
-            Th_util.Value t2
+            Objective.Value.Value t2
           else
             begin
-              if to_max then Th_util.Limit (Below, t2)
-              else Th_util.Limit (Above, t2)
+              if to_max then Objective.Value.Limit (Below, t2)
+              else Objective.Value.Limit (Above, t2)
             end
         in
-        let case_split =
+        let r2 =
           if is_le then
-            Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
+            r2
           else
             (* As some bounds are strict, the value [r2] doesn't satisfy the
-               constraints of the problem. We don't produce a case-split
-               in this case because we don't want to propagate the equality
-               [r1 = r2] in the CC(X) environment [gamma_finite]. But
-               we propagate the new value [value] for this objective. Indeed,
-               we want to be able to print it while using the statement
-               [get-objective]. *)
-            None
+               constraints of the problem. In this case, we pick a value
+               in the domain of the polynomial [p]. But we propagate the new
+               value [value] for this objective. Indeed, we want to be able
+               to print it while using the statement [get-objective]. *)
+            middle_value env ~to_max ty p None
         in
-        Some { opt_split with value; case_split }
+        let case_split =
+          LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
+        in
+        Some { value; case_split }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

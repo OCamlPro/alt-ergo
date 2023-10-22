@@ -677,35 +677,53 @@ let main () =
       unsupported_opt name; st
   in
 
-  let handle_minimize_term (_term : DStd.Term.t) st =
-    warning "Unsupported minimize.";
+  let handle_optimize_stmt ~to_max loc id (term : DStd.Expr.Term.t) st =
+    let contents = `Optimize (term, to_max) in
+    let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
+    let cnf =
+      D_cnf.make (State.get State.logic_file st).loc
+        (State.get solver_ctx_key st).ctx stmt
+    in
+    State.set solver_ctx_key (
+      let solver_ctx = State.get solver_ctx_key st in
+      { solver_ctx with ctx = cnf }
+    ) st
+  in
+
+  let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
+    let () =
+      if Options.get_interpretation () then
+        match State.get partial_model_key st with
+        | Some Model ((module SAT), partial_model) ->
+          let objectives = SAT.get_objectives partial_model in
+          begin
+            match objectives with
+            | Some o ->
+              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+            | None ->
+              recoverable_error "No objective generated"
+          end
+        | None ->
+          recoverable_error
+            "Model generation is disabled (try --produce-models)"
+    in
     st
   in
-  (* TODO: implement when optimae is merged *)
 
-  let handle_maximize_term (_term : DStd.Term.t) st =
-    warning "Unsupported maximize.";
-    st
-  in
-  (* TODO: implement when optimae is merged *)
-
-  let handle_get_objectives (_args : DStd.Term.t list) st =
-    warning "Unsupported get-objectives.";
-    st
-  in
-  (* TODO: implement when optimae is merged *)
-
-  let handle_custom_statement id args st =
-    match id, args with
+  let handle_custom_statement loc id args st =
+    let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
+    let logic_file = State.get State.logic_file st in
+    let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
+    match id, terms.ret with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
-      handle_minimize_term term st
+      handle_optimize_stmt ~to_max:false loc id term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
-      handle_maximize_term term st
-    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
+      handle_optimize_stmt ~to_max:true loc id term st
+    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
-      handle_get_objectives args st
+      handle_get_objectives terms st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
         "Statement %s only expects 1 argument (%i given)"
@@ -955,8 +973,8 @@ let main () =
             st
         end
 
-      | {contents = `Other (custom, args); _} ->
-        handle_custom_statement custom args st
+      | {contents = `Other (custom, args); loc; _} ->
+        handle_custom_statement loc custom args st
 
       | _ ->
         (* TODO:

@@ -28,71 +28,91 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Satml_types
+module Function = struct
+  type t = {
+    e : Expr.t;
+    to_max : bool;
+  }
 
-exception Sat
-exception Unsat of Satml_types.Atom.clause list option
-exception Last_UIP_reason of Atom.Set.t
+  let equal { e = e1; _ } { e = e2; _ } = Expr.equal e1 e2
 
-type conflict_origin =
-  | C_none
-  | C_bool of Atom.clause
-  | C_theory of Explanation.t
+  let mk ~to_max e = { e; to_max }
 
-module type SAT_ML = sig
-
-  (*module Make (Dummy : sig end) : sig*)
-  type th
-  type t
-
-  val solve : t -> unit
-
-  val set_new_proxies :
-    t ->
-    (Satml_types.Atom.atom * Satml_types.Atom.atom list * bool) Util.MI.t ->
-    unit
-
-  val new_vars :
-    t ->
-    nbv : int -> (* nb made vars *)
-    Satml_types.Atom.var list ->
-    Satml_types.Atom.atom list list -> Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list * Satml_types.Atom.atom list list
-
-  val assume :
-    t ->
-    Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list ->
-    Expr.t ->
-    cnumber : int ->
-    Flat_Formula.Set.t -> dec_lvl:int ->
-    unit
-
-  val boolean_model : t -> Satml_types.Atom.atom list
-  val instantiation_context :
-    t -> Satml_types.Flat_Formula.hcons_env -> Satml_types.Atom.Set.t
-  val current_tbox : t -> th
-  val set_current_tbox : t -> th -> unit
-  val empty : unit -> t
-
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
-  val decision_level : t -> int
-  val cancel_until : t -> int -> unit
-
-  val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
-  val known_lazy_formulas : t -> int Flat_Formula.Map.t
-
-  val reason_of_deduction: Atom.atom -> Atom.Set.t
-  val assume_simple : t -> Atom.atom list list -> unit
-  val do_case_split : t -> Util.case_split_policy -> conflict_origin
-
-  val decide : t -> Atom.atom -> unit
-  val conflict_analyze_and_fix : t -> conflict_origin -> unit
-
-  val push : t -> Satml_types.Atom.atom -> unit
-  val pop : t -> unit
-
-  val optimize : t -> to_max:bool -> Expr.t -> unit
+  let pp ppf { e; _ } = Expr.print ppf e
 end
 
-module Make (Th : Theory.S) : SAT_ML with type th = Th.t
+module Value = struct
+  type limit_kind =
+    | Above
+    | Below
+
+  type t =
+    | Minfinity
+    | Pinfinity
+    | Value of Expr.t
+    | Limit of limit_kind * Expr.t
+    | Unknown
+
+  let pp ppf v =
+    match v with
+    | Minfinity -> Fmt.pf ppf "-oo"
+    | Pinfinity -> Fmt.pf ppf "+oo"
+    | Value w -> Expr.print ppf w
+    | Limit (Above, w) -> Fmt.pf ppf "(+ %a epsilon)" Expr.print w
+    | Limit (Below, w) -> Fmt.pf ppf "(- %a epsilon)" Expr.print w
+    | Unknown -> Fmt.pf ppf "(interval (- oo) (+ oo))"
+end
+
+module Model = struct
+  type s = { f: Function.t; order: int }
+
+  module M =  Map.Make (struct
+      type t = s
+
+      let compare { order = o1; _ } { order = o2; _ } = o1 - o2
+    end)
+
+  type t = Value.t M.t
+
+  let empty = M.empty
+  let is_empty = M.is_empty
+  let fold g = M.fold (fun { f; _ } acc -> g f acc)
+
+  let add o v mdl =
+    let order =
+      match M.find_first (fun { f; _ } -> Function.equal f o) mdl with
+      | ({ order; _ }, _) -> order
+      | exception Not_found -> M.cardinal mdl
+    in
+    M.add { f = o; order } v mdl
+
+  let pp_binding ppf ({ f; _ }, v) =
+    Fmt.pf ppf "(%a %a)" Function.pp f Value.pp v
+
+  let pp ppf mdl =
+    if M.is_empty mdl then
+      Fmt.pf ppf "@[<v 2>(objectives @]@,)"
+    else
+      Fmt.pf ppf "@[<v 2>(objectives @,%a@]@,)"
+        (Fmt.iter_bindings ~sep:Fmt.cut M.iter pp_binding) mdl
+
+  let functions mdl =
+    M.bindings mdl
+    |> List.map (fun ({ f; _ }, _) -> f)
+
+  let has_no_limit mdl =
+    M.for_all
+      (fun _ v ->
+         match (v : Value.t) with
+         | Pinfinity | Minfinity | Limit _ -> false
+         | Value _ | Unknown -> true
+      ) mdl
+
+  let reset_until mdl o =
+    M.fold
+      (fun { f; order } v acc ->
+         if order < o then M.add { f; order } v acc
+         else M.add { f; order } Value.Unknown acc
+      )
+      mdl M.empty
+end

@@ -3,8 +3,12 @@ unknown
 (
   (define-fun x () Real 0.0)
 )
-
+(objectives 
+  (x (- (/ 1 2) epsilon)))
 unknown
 (
   (define-fun x () Real (/ (- 3) 2))
+)
+(objectives 
+  (x (- (- 0.0 (/ 1 2)) epsilon))
 )

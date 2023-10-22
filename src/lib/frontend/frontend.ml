@@ -158,6 +158,8 @@ module type S = sig
 
   val th_assume : E.th_elt process
 
+  val optimize : (Expr.t * bool) process
+
   val process_decl:
     ?hook_on_status: (sat_env status -> int -> unit) ->
     env ->
@@ -395,6 +397,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
+ let internal_optimize ?(loc = Loc.dummy) (f, to_max) env =
+    ignore loc;
+    match env.res with
+    | `Sat | `Unknown ->
+      SAT.optimize env.sat_env ~to_max f
+    | `Unsat -> ()
+
   (** Checks whether the env can be used before actually calling the
       function. *)
   let check_if_over f env =
@@ -410,7 +419,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env.expl <- Ex.union expl env.expl
     | SAT.I_dont_know ->
       env.res <- `Unknown
-  (* The SAT.Timeout exception is not catched. *)
 
   (* Wraps the function f to check if the step limit is reached (in which case,
      don't do anything), and then calls the function & catches the
@@ -429,6 +437,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let query = wrap_f internal_query
 
   let th_assume = wrap_f internal_th_assume
+
+  let optimize = handle_sat_exn internal_optimize
 
   let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
     try
@@ -460,6 +470,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         end
       | ThAssume th_elt ->
         check_if_over (internal_th_assume ~loc:d.st_loc th_elt) env
+      | Optimize (f, to_max) ->
+        check_if_over (internal_optimize ~loc:d.st_loc (f, to_max)) env
     with
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,
@@ -507,6 +519,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          Returned unknown reason = %a@]"
         Sat_solver_sig.pp_ae_unknown_reason_opt ur;
 
-    | Some (lazy model) ->
+    | Some model ->
       Models.output_concrete_model ppf model
 end

@@ -62,6 +62,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat t g =
     exn_handler (fun env -> FS.unsat env g) t
 
+  let optimize _env ~to_max:_ _fun_ =
+    raise (Util.Not_implemented "optimization is not supported by FunSAT.")
+
   let reset_refs = FS.reset_refs
 
   let reinit_ctx = FS.reinit_ctx
@@ -71,4 +74,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let get_unknown_reason t = FS.get_unknown_reason !t
 
   let get_value t expr = FS.get_value !t expr
+
+  let get_objectives _env =
+    raise (Util.Not_implemented "optimization is not supported by FunSAT.")
 end

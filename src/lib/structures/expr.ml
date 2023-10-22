@@ -56,6 +56,7 @@ and decl_kind =
   | Dgoal
   | Dpredicate of t
   | Dfunction of t
+  | Dobjective
 
 and bind_kind =
   | B_none
@@ -1629,7 +1630,7 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
             t_depth = t.depth;
             from_user = false;
           } ]
-    | Dtheory -> []
+    | Dtheory | Dobjective -> []
     | Daxiom
     | Dgoal ->
       let free_vty = f.vty in
@@ -2669,9 +2670,6 @@ module Purification = struct
             else mk_lifted (mk_term e.f [fa'; i'] e.ty) lets
           | _ -> failwith "unexpected expression in purify_form"
         end
-
-      | Sy.Op Sy.Optimize _ ->
-        purify_literal e
 
       | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"

@@ -30,18 +30,11 @@
 
 (** {1 Models module} *)
 
-type objective_value =
-  | Obj_pinfty
-  | Obj_minfty
-  | Obj_val of string
-  | Obj_unk
-
 type t = {
   propositional : Expr.Set.t;
   constants : ModelMap.t;
   functions : ModelMap.t;
   arrays : ModelMap.t;
-  objectives: (Expr.t * objective_value) Util.MI.t;
   terms_values : (Shostak.Combine.r * string) Expr.Map.t
   (** A map from terms to their values in the model (as a
       representative of type X.r and as a string. *)

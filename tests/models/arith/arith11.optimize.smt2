@@ -1,7 +1,7 @@
 (set-logic ALL)
+(set-option :produce-models true)
 (declare-const p1 Bool)
 (declare-const p2 Bool)
-
 (declare-const x Real)
 (declare-const y Real)
 (assert (or p1 p2))
@@ -9,3 +9,5 @@
 (assert (=> p2 (<= x 2.0)))
 (maximize x)
 (check-sat)
+(get-model)
+(get-objectives)
