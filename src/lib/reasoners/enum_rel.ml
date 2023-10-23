@@ -32,7 +32,9 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
-type 'a abstract = 'a Enum.abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+type 'a abstract = 'a Enum.abstract =
+  | Cons of Hs.t * Ty.t
+  | Alien of 'a
 
 module X = Shostak.Combine
 module Sh = Shostak.Enum
@@ -44,11 +46,30 @@ module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 
 module LR = Uf.LX
 
-type t = { mx : (HSS.t * Ex.t) MX.t; classes : Expr.Set.t list;
-           size_splits : Numbers.Q.t }
+type t = {
+  mx : (HSS.t * Ex.t) MX.t;
+  (* Map of uninterpreted enum semantic values to domains of their possible
+     values. The explanation justifies that any value assigns to the semantic
+     value has to lie in the domain. *)
 
-let empty classes = { mx = MX.empty; classes = classes;
-                      size_splits = Numbers.Q.one }
+  classes : Expr.Set.t list;
+  (* State of the union-find represented by all its equivalence classes.
+     This state is kept for debugging purposes only. It is updated with
+     [Uf.cl_extract] after assuming literals of the theory and returned by
+     queries in case of inconsistency. *)
+
+  size_splits : Numbers.Q.t
+  (* Estimate the number of case-splits performed by the theory. The
+     estimation is updated while assuming new literals of the theory.
+     We don't perfom new case-splits if this estimation exceeds
+     [Options.get_max_split ()]. *)
+}
+
+let empty classes = {
+  mx = MX.empty;
+  classes = classes;
+  size_splits = Numbers.Q.one
+}
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
@@ -108,11 +129,25 @@ module Debug = struct
 end
 (*BISECT-IGNORE-END*)
 
-let values_of r = match X.type_info r with
+(* Return the list of all the constructors of the type of [r]. *)
+let values_of r =
+  match X.type_info r with
   | Ty.Tsum (_,l) ->
     Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty l)
-  | _ -> None
+  | _ ->
+    (* This case can happen since we don't dispatch the literals
+       processed in [assume] by their types in the Relation module. *)
+    None
 
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the disequality [sm1 <> sm2]. More precisely, if one of these semantic
+   values is a constructor, we remove it from the domain of the other one.
+
+   In any case, we produce an equality if the domain of one of these semantic
+   values becomes a singleton.
+
+   @raise Ex.Inconsistent if the disequality is inconsistent with the
+   current environment [env]. *)
 let add_diseq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r , Cons(h,ty)
@@ -156,6 +191,11 @@ let add_diseq hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the equation [sm1 = sm2]. More precisely, we replace their domains by
+   the intersection of these domains.
+
+   @raise Ex.Inconsistent if the domains of [sm1] and [sm2] are disjoint. *)
 let add_eq hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Alien r, Cons(h,_)
@@ -163,6 +203,8 @@ let add_eq hss sm1 sm2 dep env eqs =
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let ex = Ex.union ex dep in
     if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
+    (* We don't need to produce a new equality as we are already processing
+       it. *)
     {env with mx = MX.add r (HSS.singleton h, ex) env.mx} , eqs
 
   | Alien r1, Alien r2   ->
@@ -175,6 +217,9 @@ let add_eq hss sm1 sm2 dep env eqs =
     if HSS.is_empty diff then raise (Ex.Inconsistent (ex, env.classes));
     let mx = MX.add r1 (diff, ex) env.mx in
     let env = {env with mx = MX.add r2 (diff, ex) mx } in
+
+    (* We produce an equality if the domain of these semantic values becomes
+       a singleton. *)
     if HSS.cardinal diff = 1 then
       let h' = HSS.choose diff in
       let ty = X.type_info r1 in
@@ -184,6 +229,7 @@ let add_eq hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
+(* Update the counter of case-split size in [env]. *)
 let count_splits env la =
   let nb =
     List.fold_left
@@ -195,6 +241,8 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
+(* Add the uninterpreted semantic value [r] to the environment [env] with
+   all the constructors of its type as domain. *)
 let add_aux env r =
   Debug.add r;
   match Sh.embed r, values_of r with
@@ -203,8 +251,8 @@ let add_aux env r =
       { env with mx = MX.add r (hss, Ex.empty) env.mx }
   | _ -> env
 
-(* needed for models generation because fresh terms are not
-   added with function add *)
+(* Needed for models generation because fresh terms are not added with function
+   add. *)
 let add_rec env r = List.fold_left add_aux env (X.leaves r)
 
 let assume env uf la =
@@ -244,13 +292,22 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r, []
 
+(* Do a case-split by choosing a value for an uninterpreted semantic value
+   whose domain in [env] is of minimal size. *)
 let case_split env uf ~for_model =
   let acc = MX.fold
       (fun r (hss, _) acc ->
          let x, _ = Uf.find_r uf r in
          match Sh.embed x with
-         | Cons _ -> acc (* already bound to an Enum const *)
-         | _ -> (* cs even if sz below is equal to 1 *)
+         | Cons _ ->
+           (* The equivalence class of [r] already contains a value so
+              we don't need to make another case-split for this semantic
+              value. *)
+           acc
+         | _ ->
+           (* We have to perform a case-split, even if the domain of [r] is
+              of cardinal 1 as we have to let the union-find know this
+              equality. *)
            let sz = HSS.cardinal hss in
            match acc with
            | Some (n,_,_) when n <= sz -> acc
@@ -304,6 +361,7 @@ let query env uf la =
 let new_terms _ = Expr.Set.empty
 
 let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []
+
 let assume_th_elt t th_elt _ =
   match th_elt.Expr.extends with
   | Util.Sum ->

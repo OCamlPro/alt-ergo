@@ -32,7 +32,12 @@ module Sy = Symbols
 module E  = Expr
 module Hs = Hstring
 
-type 'a abstract = Cons of Hs.t * Ty.t |  Alien of 'a
+type 'a abstract =
+  | Cons of Hs.t * Ty.t
+  (* [Cons(hs, ty)] represents a constructor of an enum type of type [ty]. *)
+
+  | Alien of 'a
+  (* [Alien r] represents a uninterpreted enum semantic value. *)
 
 module type ALIEN = sig
   include Sig.X
@@ -185,7 +190,9 @@ module Shostak (X : ALIEN) = struct
     else solve r1 r2 pb
 
   let assign_value _ _ _ =
-    (* values of theory sum should be assigned by case_split *)
+    (* As the models of this theory are finite, the case-split
+       mechanism can and does exhaust all the possible values.
+       Thus we don't need to guess new values here. *)
     None
 
   let choose_adequate_model _ r l =

@@ -49,6 +49,11 @@ module MHs = Hs.Map
 type t =
   {
     classes : E.Set.t list;
+    (* State of the union-find represented by all its equivalence classes.
+       This state is kept for debugging purposes only. It is updated after
+       assuming literals of the theory and returned by queries in case of
+       inconsistency. *)
+
     domains : (HSS.t * Explanation.t) MX.t;
     seen_destr : SE.t;
     seen_access : SE.t;
