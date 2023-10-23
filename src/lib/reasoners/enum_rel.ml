@@ -292,7 +292,7 @@ let assume env uf la =
 
 let add env _ r _ = add_aux env r, []
 
-(* Do a case-split by choosing a value for a uninterpreted semantic value
+(* Do a case-split by choosing a value for an uninterpreted semantic value
    whose domain in [env] is of minimal size. *)
 let case_split env uf ~for_model =
   let acc = MX.fold
