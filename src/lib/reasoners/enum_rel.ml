@@ -203,8 +203,8 @@ let add_eq hss sm1 sm2 dep env eqs =
     let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
     let ex = Ex.union ex dep in
     if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
-    (* We don't need to produce a new equality as we already know it
-       by transitivity of equality. *)
+    (* We don't need to produce a new equality as we are already processing
+       it. *)
     {env with mx = MX.add r (HSS.singleton h, ex) env.mx} , eqs
 
   | Alien r1, Alien r2   ->
