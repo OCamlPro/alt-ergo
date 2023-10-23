@@ -876,7 +876,6 @@ let parse_output_opt =
       Arg.(value & opt interpretation INone &
            info ["interpretation"] ~docv ~docs:s_models ~doc)
     in
-
     let produce_models =
       let doc =
         "Enable model generation (equivalent to --interpretation last)."
@@ -997,23 +996,45 @@ let parse_output_opt =
     Term.(const not $ no_tableaux_cdcl_in_theories)
   in
 
-  let set_sat_options =
-    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th =
-      set_sat_solver sat_solver;
-      begin match sat_solver with
-        | CDCL_Tableaux ->
-          set_cdcl_tableaux_inst cdcl_tableaux_inst;
-          set_cdcl_tableaux_th cdcl_tableaux_th
-        | _ ->
-          set_cdcl_tableaux_inst false;
-          set_cdcl_tableaux_th false
-      end;
-      ()
+  let optim =
+    let doc =
+      "Enable model optimization (experimental)."
     in
-    Term.(
-      const set_sat_options $ sat_solver $ cdcl_tableaux_inst
-      $ cdcl_tableaux_th
-    )
+    Arg.(value & flag & info ["optimize"] ~doc ~docs:s_models)
+  in
+
+  let set_sat_options =
+    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th optim =
+      set_optimize optim;
+      begin match sat_solver with
+        | Util.CDCL_Tableaux ->
+          set_sat_solver sat_solver;
+          set_cdcl_tableaux_inst cdcl_tableaux_inst;
+          set_cdcl_tableaux_th cdcl_tableaux_th;
+          Ok ()
+        | Util.CDCL ->
+          set_sat_solver sat_solver;
+          set_cdcl_tableaux_inst false;
+          set_cdcl_tableaux_th false;
+          Ok ()
+        | s when optim ->
+          Fmt.error
+            "--optimize is not compatible with Sat solver %a@."
+            Util.pp_sat_solver s;
+        | _ ->
+          set_sat_solver sat_solver;
+          set_cdcl_tableaux_inst false;
+          set_cdcl_tableaux_th false;
+          Ok ()
+      end
+    in
+    let term =
+      Term.(
+        const set_sat_options $ sat_solver $ cdcl_tableaux_inst
+        $ cdcl_tableaux_th $ optim
+      )
+    in
+    Term.term_result' term
   in
 
   let use_underscore =
@@ -1075,7 +1096,8 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $ unsat_core $
+             interpretation $
+             use_underscore $ unsat_core $
              output_format $ model_type $
              set_dump_models $ set_dump_models_on $
              set_sat_options $ set_frontend

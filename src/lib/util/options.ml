@@ -338,6 +338,7 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 (** Output options *)
 
 let interpretation = ref INone
+let optimize = ref false
 let dump_models = ref false
 let interpretation_use_underscore = ref false
 let output_format = ref Native
@@ -346,6 +347,7 @@ let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
+let set_optimize b = optimize := b
 let set_dump_models b = dump_models := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
 let set_output_format b = output_format := b
@@ -380,6 +382,7 @@ let equal_mode_type a b =
   | Value, Value -> true
 
 let get_interpretation () = not @@ equal_mode !interpretation INone
+let get_optimize () = !optimize
 let get_dump_models () = !dump_models
 let get_first_interpretation () = equal_mode !interpretation IFirst
 let get_every_interpretation () = equal_mode !interpretation IEvery

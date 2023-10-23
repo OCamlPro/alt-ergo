@@ -28,7 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 val get_current : unit -> (module Sat_solver_sig.SatContainer)
 (** returns the current activated SAT-solver depending on the value of
     `Options.sat_solver ()`. See command-line option `-sat-solver` for

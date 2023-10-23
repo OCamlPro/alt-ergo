@@ -215,6 +215,9 @@ val set_input_format : input_format option -> unit
 *)
 val set_interpretation : interpretation -> unit
 
+(** Set [optimize] accessible with {!val:get_optimize}. *)
+val set_optimize : bool -> unit
+
 (** [dump_models] accessible with {!val:get_dump_models}. *)
 val set_dump_models : bool -> unit
 
@@ -708,6 +711,9 @@ val get_timelimit_per_goal : unit -> bool
     generation phase. *)
 val get_interpretation : unit -> bool
 (** Default to [false] *)
+
+(** [true] if optimization is activated. *)
+val get_optimize : unit -> bool
 
 (** [true] if the interpretation for each goal or check-sat is
     printed. *)

@@ -29,8 +29,9 @@
 (**************************************************************************)
 
 open AltErgoLib
-open Options
 open D_loop
+
+module O = Options
 
 type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
@@ -88,6 +89,12 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
+let enable_maxsmt b =
+  if b then
+    DStd.Extensions.Smtlib2.(enable maxsmt)
+  else
+    DStd.Extensions.Smtlib2.(disable maxsmt)
+
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
@@ -102,7 +109,7 @@ let main () =
       (val
         (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
          else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
-
+    O.get_sat_solver (),
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
 
@@ -148,7 +155,7 @@ let main () =
   in
 
   let typed_loop all_context state td =
-    if get_type_only () then state else begin
+    if O.get_type_only () then state else begin
       match td.Typed.c with
       | Typed.TGoal (_, kind, name, _) ->
         let l =
@@ -243,7 +250,7 @@ let main () =
       Frontend.print_status Preprocess 0;
     let assertion_stack = Stack.create () in
     let typing_loop state p =
-      if get_parse_only () then state else begin
+      if O.get_parse_only () then state else begin
         try
           let l, env = I.type_parsed state.env assertion_stack p in
           List.fold_left (typed_loop all_used_context) { state with env; } l
@@ -263,7 +270,7 @@ let main () =
     let state = {
       env = I.empty_env;
       solver_ctx = empty_solver_ctx;
-      sat_solver = make_sat ();
+      sat_solver = snd @@ make_sat ();
     } in
     try
       let parsed_seq = parsed () in
@@ -278,7 +285,7 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let sat_solver_key : (module Sat_solver_sig.S) State.key =
+  let sat_solver_key : (Util.sat_solver * (module Sat_solver_sig.S)) State.key =
     State.create_key ~pipe:"" "sat_solver"
   in
 
@@ -286,12 +293,16 @@ let main () =
     State.create_key ~pipe:"" "sat_state"
   in
 
+  let optimize_key: bool State.key =
+    State.create_key ~pipe:"" "optimize"
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
         Dolmen.Std.Loc.print_compact c.Dolmen.Std.Statement.loc
         Dolmen.Std.Statement.print c;
-    if get_parse_only () then
+    if O.get_parse_only () then
       st, `Done ()
     else
       st, `Continue c
@@ -301,7 +312,7 @@ let main () =
       Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
         Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
         Typer_Pipe.print stmt;
-    if get_type_only () then
+    if O.get_type_only () then
       st, `Done ()
     else
       st, `Continue stmt
@@ -397,6 +408,7 @@ let main () =
     |> State.set sat_solver_key (make_sat ())
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
+    |> State.set optimize_key (O.get_optimize ())
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
@@ -408,6 +420,39 @@ let main () =
     warning
       "%a The option %s expects a %s, got %a"
       Loc.report loc name ty DStd.Term.print value
+  in
+
+  let set_sat_solver sat st =
+    let optim = State.get optimize_key st in
+    match sat with
+    | Util.Tableaux | Tableaux_CDCL when optim ->
+      warning
+        "Sat-solver %a is incompatible with optimization: ignoring command."
+        Util.pp_sat_solver
+        sat;
+      st
+    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      O.set_sat_solver sat;
+      (* `make_sat` returns the sat solver corresponding to the new sat_solver
+         option. *)
+      State.set
+        sat_solver_key
+        (make_sat ())
+        st
+  in
+
+  let set_optimize optim st =
+    let sat, _ = State.get sat_solver_key st in
+    match sat with
+    | Util.Tableaux | Tableaux_CDCL when optim ->
+      warning
+        "Sat-solver %a is incompatible with optimization: ignoring command."
+        Util.pp_sat_solver
+        sat;
+      st
+    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      enable_maxsmt optim;
+      State.set optimize_key optim st
   in
 
   let handle_option st_loc name (value : DStd.Term.t) st =
@@ -479,13 +524,12 @@ let main () =
                 Util.CDCL_Tableaux
               | _ -> raise Exit
             in
-            Options.set_sat_solver sat_solver;
             let is_cdcl_tableaux =
               match sat_solver with CDCL_Tableaux -> true | _ -> false
             in
             Options.set_cdcl_tableaux_inst is_cdcl_tableaux;
             Options.set_cdcl_tableaux_th is_cdcl_tableaux;
-            State.set sat_solver_key (make_sat ()) st
+            set_sat_solver sat_solver st
           with Exit ->
             recoverable_error
               "error setting ':sat-solver', invalid option value '%s'"
@@ -509,8 +553,55 @@ let main () =
         | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
         | Some i -> Options.set_profiling true i
       end; st
+    | ":optimization", Symbol { name = Simple b; _} ->
+      begin
+        match bool_of_string_opt b with
+        | None -> print_wrn_opt ~name st_loc "bool" value; st
+        | Some b ->
+          set_optimize b st
+      end
     | _ ->
       unsupported_opt name; st
+  in
+
+  let handle_minimize_term (_term : DStd.Term.t) st =
+    warning "Unsupported minimize.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let handle_maximize_term (_term : DStd.Term.t) st =
+    warning "Unsupported maximize.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let handle_get_objectives (_args : DStd.Term.t list) st =
+    warning "Unsupported get-objectives.";
+    st
+  in
+  (* TODO: implement when optimae is merged *)
+
+  let handle_custom_statement id args st =
+    match id, args with
+    | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
+      handle_minimize_term term st
+    | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
+      handle_maximize_term term st
+    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
+      handle_get_objectives args st
+    | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
+      recoverable_error
+        "Statement %s only expects 1 argument (%i given)"
+        ext
+        (List.length args);
+      st
+    | n, _ ->
+      recoverable_error
+        "Unknown statement %a."
+        Dolmen.Std.Id.print
+        n;
+      st
   in
 
   let handle_get_info (st : State.t) (name: string) =
@@ -610,7 +701,10 @@ let main () =
           | _ -> assert false
         in
         let partial_model =
-          solve (State.get sat_solver_key st) all_context (cnf, name)
+          solve
+            (snd @@ State.get sat_solver_key st)
+            all_context
+            (cnf, name)
         in
         if is_thm
         then
@@ -668,6 +762,7 @@ let main () =
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
+        |> State.set optimize_key (O.get_optimize ())
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -682,6 +777,9 @@ let main () =
       | {contents = `Get_info kind; _ } ->
         handle_get_info st kind;
         st
+
+      | {contents = `Other (custom, args); _} ->
+        handle_custom_statement custom args st
 
       | _ ->
         (* TODO:
@@ -700,6 +798,10 @@ let main () =
   in
   let d_fe filename =
     let logic_file, st = mk_state filename in
+    let () =
+      (* Activating maxsmt if the optimize option is ON. *)
+      enable_maxsmt (O.get_optimize ())
+    in
     try
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
@@ -742,7 +844,7 @@ let main () =
       ignore (handle_exn st bt exn)
   in
 
-  let filename = get_file () in
-  match get_frontend () with
+  let filename = O.get_file () in
+  match O.get_frontend () with
   | "dolmen" -> d_fe filename
   | frontend -> ae_fe filename frontend
