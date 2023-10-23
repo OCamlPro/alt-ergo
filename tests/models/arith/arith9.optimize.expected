@@ -1,6 +1,6 @@
 
 unknown
 (
-  (define-fun x () Int 4)
-  (define-fun y () Int 4)
+  (define-fun x () Real 4)
+  (define-fun y () Real 4)
 )
