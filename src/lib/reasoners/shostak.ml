@@ -34,6 +34,9 @@
 module rec CX : sig
   include Sig.X
 
+  val top : unit -> r
+  val bot : unit -> r
+
   val extract1 : r -> ARITH.t option
   val embed1 : ARITH.t -> r
 
@@ -825,6 +828,8 @@ module Combine = struct
     in
     make, save_cache_aux, reinit_cache_aux
 
+  let top = top ()
+  let bot = bot ()
 end
 
 module Arith = ARITH

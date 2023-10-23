@@ -712,7 +712,7 @@ module Main_Default : S = struct
     else {env with gamma=gm; gamma_finite=add_term_in_gm env.gamma_finite t}
 
   let empty () =
-    let env = CC_X.empty () in
+    let env = CC_X.empty in
     let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.vrai Ex.empty in
     let env, _ = CC_X.add_term env (CC_X.empty_facts()) E.faux Ex.empty in
     let t =
@@ -798,9 +798,8 @@ module Main_Empty : S = struct
   let cl_extract _ = []
   let extract_ground_terms _ = Expr.Set.empty
 
-  let empty_ccx = CC_X.empty ()
-  let get_real_env _ = empty_ccx
-  let get_case_split_env _ = empty_ccx
+  let get_real_env _ = CC_X.empty
+  let get_case_split_env _ = CC_X.empty
   let do_case_split env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model _env = None

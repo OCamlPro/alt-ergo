@@ -148,9 +148,6 @@ module type X = sig
 
   val abstract_selectors : r -> (r * r) list -> r * (r * r) list
 
-  val top : unit -> r
-  val bot : unit -> r
-
   val is_solvable_theory_symbol : Symbols.t -> Ty.t -> bool
 
   (* the returned bool is true when the returned term in a constant of the

@@ -900,7 +900,7 @@ let term_repr uf t =
   try SE.min_elt st
   with Not_found -> t
 
-let empty () =
+let empty =
   let env = {
     make  = ME.empty;
     repr = MapX.empty;
@@ -912,7 +912,7 @@ let empty () =
   in
   let env, _ = add env E.vrai in
   let env, _ = add env E.faux in
-  distinct env [X.top (); X.bot ()] Ex.empty
+  distinct env [X.top; X.bot] Ex.empty
 
 let make uf t = ME.find t uf.make
 

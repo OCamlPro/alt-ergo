@@ -49,8 +49,8 @@ module type OrderedType = sig
   val compare : t -> t -> int
   val hash :  t -> int
   val print : Format.formatter -> t -> unit
-  val top : unit -> t
-  val bot : unit -> t
+  val top : t
+  val bot : t
   val type_info : t -> Ty.t
 end
 
@@ -231,16 +231,16 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   module HC = Hconsing.Make(V)
 
   let normalize_eq_bool t1 t2 is_neg =
-    if X.compare t1 (X.bot()) = 0 then Pred(t2, not is_neg)
-    else if X.compare t2 (X.bot()) = 0 then Pred(t1, not is_neg)
-    else if X.compare t1 (X.top()) = 0 then Pred(t2, is_neg)
-    else if X.compare t2 (X.top()) = 0 then Pred(t1, is_neg)
+    if X.compare t1 X.bot = 0 then Pred(t2, not is_neg)
+    else if X.compare t2 X.bot = 0 then Pred(t1, not is_neg)
+    else if X.compare t1 X.top = 0 then Pred(t2, is_neg)
+    else if X.compare t2 X.top = 0 then Pred(t1, is_neg)
     else if is_neg then Distinct (false, [t1;t2]) (* XXX assert ? *)
     else Eq(t1,t2) (* should be translated into iff *)
 
   let normalize_eq t1 t2 is_neg =
     let c = X.compare t1 t2 in
-    if c = 0 then Pred(X.top(), is_neg)
+    if c = 0 then Pred(X.top, is_neg)
     else
       let t1, t2 = if c < 0 then t1, t2 else t2, t1 in
       if X.type_info t1 == Ty.Tbool then normalize_eq_bool t1 t2 is_neg

@@ -41,7 +41,7 @@ module type S = sig
   type t
   type r = Shostak.Combine.r
 
-  val empty : unit -> t
+  val empty : t
 
   val empty_facts : unit -> r Sig_rel.facts
 
@@ -107,9 +107,9 @@ module Main : S = struct
 
   type r = Shostak.Combine.r
 
-  let empty () = {
+  let empty = {
     use = Use.empty ;
-    uf = Uf.empty () ;
+    uf = Uf.empty;
     relation = Rel.empty [];
   }
 
@@ -377,9 +377,9 @@ module Main : S = struct
 
   let contra_congruence env facts r =
     Options.exec_thread_yield ();
-    if X.equal (fst (Uf.find_r env.uf r)) (X.top()) then
+    if X.equal (fst (Uf.find_r env.uf r)) X.top then
       new_facts_by_contra_congruence env facts r E.faux
-    else if X.equal (fst (Uf.find_r env.uf r)) (X.bot()) then
+    else if X.equal (fst (Uf.find_r env.uf r)) X.bot then
       new_facts_by_contra_congruence env facts r E.vrai
 
   let congruence_closure env (facts: r Sig_rel.facts) r1 r2 ex =
@@ -576,7 +576,7 @@ module Main : S = struct
       Debug.assume_literal sa;
       let env = match sa with
         | A.Pred (r1,neg) ->
-          let r2, r3 =  if neg then X.bot(), X.top() else X.top(), X.bot() in
+          let r2, r3 =  if neg then X.bot, X.top else X.top, X.bot in
           if X.hash_cmp r1 r2 = 0 then env
           else
             let env = assume_eq env facts r1 r2 ex in
