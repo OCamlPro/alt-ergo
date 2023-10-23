@@ -402,6 +402,8 @@ let main () =
     |> State.set sat_solver_key (make_sat ())
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
+    |> State.set Typer.additional_builtins D_cnf.builtins
+    |> State.set optimize_key (O.get_optimize ())
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
@@ -426,6 +428,7 @@ let main () =
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
       O.set_sat_solver sat;
+      (* `make_sat` returns the sat solver corresponding to the new sat_solver option. *)
       State.set
         sat_solver_key
         (make_sat ())
@@ -433,6 +436,12 @@ let main () =
   in
 
   let set_optimize optim st =
+    let () =
+      if optim then
+        DStd.Extensions.Smtlib2.(enable maxsmt)
+      else
+        DStd.Extensions.Smtlib2.(disable maxsmt)
+    in
     let sat, _ = State.get sat_solver_key st in
     match sat with
     | Util.Tableaux | Tableaux_CDCL when optim ->
@@ -442,6 +451,7 @@ let main () =
         sat;
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      O.set_optimize optim;
       State.set optimize_key optim st
   in
 
@@ -547,7 +557,8 @@ let main () =
       begin
         match bool_of_string_opt b with
         | None -> print_wrn_opt ~name st_loc "bool" value; st
-        | Some b -> set_optimize b st
+        | Some b ->
+          set_optimize b st
       end
     | _ ->
       unsupported_opt name; st
@@ -787,6 +798,13 @@ let main () =
   in
   let d_fe filename =
     let logic_file, st = mk_state filename in
+    let () =
+      (* Activating maxsmt if the optimize option is ON. *)
+      if O.get_optimize () then
+        DStd.Extensions.Smtlib2.(enable maxsmt)
+      else
+        DStd.Extensions.Smtlib2.(disable maxsmt)
+    in
     try
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
@@ -808,8 +826,6 @@ let main () =
       let g =
         Parser.parse_logic ~preludes logic_file
       in
-      let st = State.set Typer.additional_builtins D_cnf.builtins st in
-      let st = State.set optimize_key (O.get_optimize ()) st in
       let all_used_context = Frontend.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =
