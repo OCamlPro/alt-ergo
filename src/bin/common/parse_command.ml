@@ -363,7 +363,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation optim use_underscore unsat_core output_format model_type
+    interpretation use_underscore unsat_core output_format model_type
     () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
@@ -376,7 +376,6 @@ let mk_output_opt
     | Some v -> v
   in
   set_interpretation interpretation;
-  set_optimize optim;
   set_interpretation_use_underscore use_underscore;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -1097,7 +1096,7 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ optim $
+             interpretation $
              use_underscore $ unsat_core $
              output_format $ model_type $
              set_dump_models $ set_dump_models_on $
