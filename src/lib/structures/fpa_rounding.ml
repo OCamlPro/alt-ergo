@@ -90,22 +90,19 @@ let hstring_ae_reprs =
 let fpa_rounding_mode =
   Ty.Tsum (Hs.make "RoundingMode", hstring_smt_reprs)
 
-let rounding_mode_of_smt_hs_opt =
+let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in
   List.iter2 (
     fun key bnd ->
       Hashtbl.add table key bnd
   ) hstring_smt_reprs cstrs;
-  fun key -> Hashtbl.find_opt table key
-
-let rounding_mode_of_smt_hs hs =
-  match rounding_mode_of_smt_hs_opt hs with
-  | None ->
-    Fmt.failwith
-      "Error while searching for FPA value %a."
-      Hstring.print hs
-      fpa_rounding_mode_type_name
-  | Some res -> res
+  fun key ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for SMT2 FPA value %a."
+        Hstring.print key
+        fpa_rounding_mode_type_name
 
 let rounding_mode_of_ae_hs =
   let table = Hashtbl.create 5 in
@@ -114,17 +111,12 @@ let rounding_mode_of_ae_hs =
       Hashtbl.add table key bnd
   ) hstring_ae_reprs cstrs;
   fun key ->
-    match Hashtbl.find_opt table key with
-    | None ->
-      (* Alt-Ergo's legacy language also accepts the SMT representation
-         of rounding modes. *)
-      rounding_mode_of_smt_hs key
-    | Some res -> res
-
-let translate_ae_rounding_mode hs =
-  match rounding_mode_of_ae_hs hs with
-  | res -> Some (Hstring.make (to_smt_string res))
-  | exception (Failure _) -> None
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for Legacy FPA value %a."
+        Hstring.print key
+        fpa_rounding_mode_type_name
 
 let translate_smt_rounding_mode hs =
   match rounding_mode_of_smt_hs hs with

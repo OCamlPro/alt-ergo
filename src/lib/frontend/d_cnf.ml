@@ -303,7 +303,7 @@ let bv_builtins env s =
     It transforms "fpa_rounding_mode", the Alt-Ergo builtin type into the SMT2
     rounding type "RoundingMode". Also injects each constructor into their SMT2
     equivalent *)
-let inject_identifier id =
+let inject_ae_to_smt2 id =
   match id with
   | Id.{name = Simple n; _} ->
     begin
@@ -465,7 +465,7 @@ let ae_fpa_builtins =
     in
     match s with
     | Dl.Typer.T.Id id ->
-      let new_id = inject_identifier id in
+      let new_id = inject_ae_to_smt2 id in
       search_id new_id
     | Builtin _ -> `Not_found
 
@@ -1473,20 +1473,11 @@ let rec mk_expr
           | Not_theory_constant, _ -> op Not_theory_constant
           | Is_theory_constant, _ -> op Is_theory_constant
           | Linear_dependency, _ -> op Linear_dependency
-          | (B.RoundNearestTiesToEven
-            | B.RoundNearestTiesToAway
-            | B.RoundTowardPositive
-            | B.RoundTowardNegative
-            | B.RoundTowardZero as b), _ ->
-            let fpa_rounding = match b with
-                B.RoundNearestTiesToEven -> Fpa_rounding.NearestTiesToEven
-              | B.RoundNearestTiesToAway -> NearestTiesToAway
-              | B.RoundTowardPositive -> Up
-              | B.RoundTowardNegative -> Down
-              | B.RoundTowardZero -> ToZero
-              | _ -> assert false
-            in
-            mk_rounding fpa_rounding
+          | B.RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
+          | B.RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
+          | B.RoundTowardPositive, _ -> mk_rounding Up
+          | B.RoundTowardNegative, _ -> mk_rounding Down
+          | B.RoundTowardZero, _ -> mk_rounding ToZero
           | _, _ -> unsupported "Application Term %a" DE.Term.print term
         end
 

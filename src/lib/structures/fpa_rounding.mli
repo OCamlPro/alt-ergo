@@ -58,11 +58,6 @@ val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
 (** Same, but for legacy's [rounding_mode] equivalent. *)
 val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
 
-(** Returns the SMT rounding mode representation of the legacy rounding mode
-    in argument. Returns [None] if the string does not correspond to a valid
-    AE rounding mode. *)
-val translate_ae_rounding_mode : Hstring.t -> Hstring.t option
-
 (** Same, but from AE modes to SMT2 modes. *)
 val translate_smt_rounding_mode : Hstring.t -> Hstring.t option
 

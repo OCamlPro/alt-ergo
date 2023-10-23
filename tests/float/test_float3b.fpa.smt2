@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-const x Real)
+(assert (<= 1.0 x))
+(assert (> ((_ ae.round 4 4) RNE 1.0) ((_ ae.round 4 4) RNE x)))
+(check-sat)

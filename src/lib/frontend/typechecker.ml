@@ -610,21 +610,6 @@ let check_pattern_matching missing dead loc =
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in
   match logic_kind, te_args, ty with
-  (* | _, _, _ when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
-   *   begin
-   *     match s with
-   *     | Symbols.Op (Symbols.Constr cstr ) ->
-   *       begin
-   *         match Fpa_rounding.translate_ae_rounding cstr with
-   *         | None -> TTapp (s, te_args)
-   *         | Some new_c ->
-   *           let new_s = Symbols.Op (Symbols.Constr new_c) in
-   *           TTapp (new_s, te_args)
-   *       end
-   *     | _ ->
-   *       (\* Values of type fpa_rounding_mode should only by constructors *\)
-   *       assert false
-   *   end *)
   | (Env.AdtConstr | Env.EnumConstr | Env.Other), _, _ ->
     (* symbol 's' alreadt contains the information *)
     TTapp(s, te_args)
