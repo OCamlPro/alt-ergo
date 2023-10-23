@@ -254,7 +254,7 @@ module Const = struct
           (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
 
   let smt_round =
-    with_cache ~cache:(Hashtbl.create 13) (fun (n, m) ->
+    with_cache (fun (n, m) ->
         let name = "ae.round" in
         Id.mk
           ~name
