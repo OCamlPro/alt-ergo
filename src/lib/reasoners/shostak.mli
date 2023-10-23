@@ -28,7 +28,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Combine : Sig.X
+module Combine : sig
+  include Sig.X
+
+  val top : r
+  val bot : r
+end
 
 module Polynome : Polynome.T
   with type r = Combine.r

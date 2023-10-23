@@ -52,8 +52,8 @@ module type OrderedType = sig
   val compare : t -> t -> int
   val hash :  t -> int
   val print : Format.formatter -> t -> unit
-  val top : unit -> t
-  val bot : unit -> t
+  val top : t
+  val bot : t
   val type_info : t -> Ty.t
 end
 

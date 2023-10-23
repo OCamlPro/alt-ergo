@@ -695,7 +695,7 @@ let empty classes = {
   improved_x = SX.empty ;
   classes = classes;
   size_splits = Q.one;
-  new_uf = Uf.empty ();
+  new_uf = Uf.empty;
 
   rat_sim =
     Sim.Solve.solve
