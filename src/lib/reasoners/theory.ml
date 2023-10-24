@@ -361,16 +361,14 @@ module Main_Default : S = struct
     objectives : Th_util.optimized_split Util.MI.t;
   }
 
-  let add_explanations_to_splits l =
-    List.map
-      (fun (c, is_cs, size) ->
-         Steps.incr_cs_steps();
-         let exp = Ex.fresh_exp () in
-         let ex_c_exp =
-           if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
-         in
-         (* A new explanation in order to track the choice *)
-         (c, size, CPos exp, ex_c_exp)) l
+  let add_explanations_to_split (c, is_cs, size) =
+    Steps.incr_cs_steps();
+    let exp = Ex.fresh_exp () in
+    let ex_c_exp =
+      if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
+    in
+    (* A new explanation in order to track the choice *)
+    (c, size, CPos exp, ex_c_exp)
 
   let register_optimized_split objectives u =
     try
@@ -460,8 +458,8 @@ module Main_Default : S = struct
                 else
                   { env with choices = List.rev acc_choices }, sem_facts
               | Value v ->
-                let new_choices = add_explanations_to_splits [v] in
-                aux ~bad_last:None ~optimize env sem_facts acc_choices new_choices
+                let new_choice = add_explanations_to_split v in
+                aux ~bad_last:None ~optimize env sem_facts acc_choices [new_choice]
 
             end
           | Some _ | None ->
@@ -475,7 +473,9 @@ module Main_Default : S = struct
                 { env with choices = List.rev acc_choices }, sem_facts
 
               | _ ->
-                let new_choices = add_explanations_to_splits new_splits in
+                let new_choices =
+                  List.map add_explanations_to_split new_splits
+                in
                 aux ~bad_last:None ~optimize env sem_facts acc_choices new_choices
             end
         end
