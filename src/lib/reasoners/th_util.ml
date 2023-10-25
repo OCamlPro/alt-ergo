@@ -37,14 +37,14 @@ type theory =
   | Th_arrays
   | Th_UF
 
-type epsilon =
+type limit_kind =
   | Plus
   | Minus
   | None
 
 type 'a optimized_split_value =
   | Minfinity
-  | Value of 'a * epsilon
+  | Value of 'a * limit_kind
   | Pinfinity
   | Unknown
 

@@ -2046,11 +2046,12 @@ let case_split env uf ~for_model =
       end
   | _ -> res
 
-let epsilon to_max is_le : Th_util.epsilon =
+(* Helper function used in [optimizing_split]. *)
+let limit_kind to_max is_le : Th_util.limit_kind =
   match to_max, is_le with
-  | true, true -> Plus
-  | false, true -> Minus
-  | _, false -> None
+  | true, false -> Plus
+  | false, false -> Minus
+  | _,  true-> None
 
 let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
@@ -2122,7 +2123,7 @@ let optimizing_split env uf opt_split =
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
         let o =
-          let opt_val = Th_util.Value (t2, epsilon to_max is_le) in
+          let opt_val = Th_util.Value (t2, limit_kind to_max is_le) in
           Some {Th_util.opt_ord = order; opt_val}
         in
         let s =
@@ -2131,7 +2132,7 @@ let optimizing_split env uf opt_split =
           else
             LR.mkv_eq r1 r1, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
         in
-        { opt_split with value = Value (s, epsilon to_max is_le); }
+        { opt_split with value = Value (s, limit_kind to_max is_le); }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

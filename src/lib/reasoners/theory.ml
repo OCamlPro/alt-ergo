@@ -466,19 +466,20 @@ module Main_Default : S = struct
            optimization clauses on expressions of type [Real] or [Int].
 
            For the [Real] or [Int] expressions, we have two cases:
-           - If the objective function is linear, the decision procedure
-             implemented in Ocplib-simplex cannot fail to optimize the split.
-             For instance, if we try to maximize the expression:
-             5 * x + 2 * y + 3 where x and y are real variables,
+           - If the objective function is a linear functions of variables, the
+             decision procedure implemented in Ocplib-simplex cannot fail to
+             optimize the split. For instance, if we try to maximize the
+             expression:
+               5 * x + 2 * y + 3 where x and y are real variables,
              the procedure will success to produce the upper bound of [x] and
              [y] modulo the other constraints on it.
 
            - If the objective function isn't linear, the nonlinear part of the
              expression have seen as uninterpreted term of the arithemic theory.
              Let's imagine we try to maximize the expression:
-             5 * x * x + 2 * y + 3,
+               5 * x * x + 2 * y + 3,
              The objective function given to Ocplib-simplex looks like:
-             5 * U + 2 * y + 3 where U = x * x
+               5 * U + 2 * y + 3 where U = x * x
              and the procedure will optimize the problem in terms of U and y. *)
         assert false
       | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
