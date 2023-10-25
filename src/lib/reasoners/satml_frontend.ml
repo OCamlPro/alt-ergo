@@ -1094,11 +1094,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              match value with
              | Pinfinity | Minfinity ->
                raise (Give_up acc)
-             | Value (_ ,_ , Th_util.CS (Some {opt_val = Value v; _}, _ , _)) ->
-               (e, v, is_max) :: acc
-             | StrictBound (_, _, Th_util.CS (Some {opt_val = StrictBound v; _}, _, _)) ->
-               raise (Give_up ((e, v, is_max) :: acc))
-             | Value _ | StrictBound _ ->
+             | Value ((_ ,_ ,
+                       Th_util.CS (Some {opt_val = Value (v, epsilon); _}, _ , _)), _) ->
+               begin
+                 match epsilon with
+                 | Plus | Minus -> raise (Give_up ((e, v, is_max) :: acc))
+                 | None -> (e, v, is_max) :: acc
+               end
+             | Value _ ->
                assert false
              | Unknown ->
                assert false
@@ -1113,7 +1116,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         raise unknown_exn;
 
       | (e, tv, is_max) :: l ->
-        (* ((x > 2) /\ (y = 3)) \/ (y > 3) *)
         let neg =
           List.fold_left
             (fun acc (e, tv, is_max) ->

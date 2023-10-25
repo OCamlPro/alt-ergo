@@ -2046,6 +2046,12 @@ let case_split env uf ~for_model =
       end
   | _ -> res
 
+let epsilon to_max is_le : Th_util.epsilon =
+  match to_max, is_le with
+  | true, true -> Plus
+  | false, true -> Minus
+  | _, false -> None
+
 let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
@@ -2068,9 +2074,11 @@ let optimizing_split env uf opt_split =
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let o = Some {Th_util.opt_ord = order; opt_val = Th_util.Value t2 } in
+    let o =
+      Some {Th_util.opt_ord = order; opt_val = Th_util.Value (t2, None) }
+    in
     let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
-    { opt_split with value = Value s }
+    { opt_split with value = Value (s, None) }
 
   | None ->
     begin
@@ -2114,24 +2122,16 @@ let optimizing_split env uf opt_split =
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
         let o =
-          let opt_val =
-            if is_le then
-              Th_util.Value t2
-            else
-              Th_util.StrictBound t2
-          in
+          let opt_val = Th_util.Value (t2, epsilon to_max is_le) in
           Some {Th_util.opt_ord = order; opt_val}
         in
         let s =
-          LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
-        in
-        if is_le then
-          { opt_split with value = Value s; }
-        else
-          let u =
+          if is_le then
+            LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+          else
             LR.mkv_eq r1 r1, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
-          in
-          { opt_split with value = StrictBound u; }
+        in
+        { opt_split with value = Value (s, epsilon to_max is_le); }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

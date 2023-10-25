@@ -1110,18 +1110,17 @@ module MED = Map.Make
 let terms env = ME.fold MED.add env.make MED.empty
 
 let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
-  let bounded, pinfty, minfty, strictbound =
+  let bounded, pinfty, minfty =
     Util.MI.fold
-      (fun _ord v ((bounded, pinfty, minfty, strictbound) as acc) ->
+      (fun _ord v ((bounded, pinfty, minfty) as acc) ->
          let {Th_util.value; r; order = _; is_max = _; e=_} = v in
          match value with
          | Value _ ->
-           SetX.add v.Th_util.r bounded, pinfty, minfty, strictbound
-         | Pinfinity  -> bounded, SetX.add r pinfty, minfty, strictbound
-         | Minfinity -> bounded, pinfty, SetX.add r minfty, strictbound
-         | StrictBound _ -> bounded, pinfty, minfty, SetX.add r strictbound
+           SetX.add v.Th_util.r bounded, pinfty, minfty
+         | Pinfinity  -> bounded, SetX.add r pinfty, minfty
+         | Minfinity -> bounded, pinfty, SetX.add r minfty
          | Unknown -> acc
-      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty, SetX.empty)
+      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
   in
   let is_bounded = pinfty == SetX.empty && minfty == SetX.empty in
   (* Here, we fold on each term that appears in the 'make' map,
@@ -1160,9 +1159,6 @@ let compute_objectives ~optimized_splits env mrepr =
           | Value _ ->
             let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
             Obj_val r_s
-          | StrictBound _ ->
-            let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
-            Obj_strictbound r_s
           | Unknown ->
             (* in this case, we should have !seen_infinity == true.
                Which is handled in the if branch. Moreover, we

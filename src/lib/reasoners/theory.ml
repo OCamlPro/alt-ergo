@@ -387,10 +387,10 @@ module Main_Default : S = struct
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
-          | Value _ ->
+          | Value (_, None) ->
             (* This split is already optimized. *)
             ()
-          | Pinfinity | Minfinity | StrictBound _ ->
+          | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
             (* We should block case-split at infinite values.
                   Otherwise, we may have soundness issues. We
                   may think an objective is unbounded, but some late
@@ -425,7 +425,7 @@ module Main_Default : S = struct
            else
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
-             | Value _ | StrictBound _ ->
+             | Value _ ->
                Util.MI.add ord {v with value = Unknown} acc
              | Pinfinity | Minfinity ->
                assert false (* may happen? *)
@@ -481,14 +481,14 @@ module Main_Default : S = struct
              5 * U + 2 * y + 3 where U = x * x
              and the procedure will optimize the problem in terms of U and y. *)
         assert false
-      | Pinfinity | Minfinity | StrictBound _ ->
+      | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
         (* We stop optimizing the split [opt_split] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
           propagate_choices env sem_facts acc_choices []
         else
           { env with choices = List.rev acc_choices }, sem_facts
-      | Value v ->
+      | Value (v, None) ->
         let new_choice = add_explanations_to_split v in
         aux env sem_facts acc_choices [new_choice]
 
@@ -644,7 +644,7 @@ module Main_Default : S = struct
       (fun _ {Th_util.value; _} ->
          match value with
          | Pinfinity | Minfinity -> false
-         | Value _ | StrictBound _ | Unknown -> true
+         | Value _ | Unknown -> true
       ) objectives
 
   (* This function attempts to produce a first-order model by case-splitting.
