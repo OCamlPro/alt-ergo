@@ -38,16 +38,16 @@ type theory =
   | Th_arrays
   | Th_UF
 
-type ('a, 'b) optimized_split_value =
+type 'a optimized_split_value =
   | Minfinity
-  | Value of 'b
-  | StrictBound of 'a * 'b
+  | Value of 'a
+  | StrictBound of 'a
   | Pinfinity
   | Unknown
 
 type optimization = {
   opt_ord : int;
-  opt_val : (Shostak.Combine.r, Expr.t) optimized_split_value
+  opt_val : Expr.t optimized_split_value
 }
 
 (** Indicates where asserted literals come from.
@@ -95,7 +95,7 @@ type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 type optimized_split = {
   r : Shostak.Combine.r;
   e : Expr.t;
-  value : (case_split, case_split) optimized_split_value;
+  value : case_split optimized_split_value;
   is_max : bool;
   order : int
 }

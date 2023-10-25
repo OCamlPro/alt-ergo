@@ -1038,7 +1038,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
-  exception Give_up of (E.t * E.t * Th_util.case_split option * bool) list
+  exception Give_up of (E.t * E.t * bool) list
 
   (* Getting [unknown] after a query can mean two things:
      - The problem is [unsat] but we didn't manage to find a contradiction;
@@ -1078,7 +1078,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      If this run produces the answer [unsat], we know that [2] was the best
      model value for [x]. Otherwise, we got a better value for [x]. *)
 
-  let op _is_strict is_max =
+  let op is_max =
     match is_max with
     | true -> Expr.Reals.(<=)
     | false -> Expr.Reals.(>=)
@@ -1095,9 +1095,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              | Pinfinity | Minfinity ->
                raise (Give_up acc)
              | Value (_ ,_ , Th_util.CS (Some {opt_val = Value v; _}, _ , _)) ->
-               (e, v, None, is_max) :: acc
-             | StrictBound (o, (_, _, Th_util.CS (Some {opt_val = StrictBound (_, v); _}, _, _))) ->
-               raise (Give_up ((e, v, Some o, is_max) :: acc))
+               (e, v, is_max) :: acc
+             | StrictBound (_, _, Th_util.CS (Some {opt_val = StrictBound v; _}, _, _)) ->
+               raise (Give_up ((e, v, is_max) :: acc))
              | Value _ | StrictBound _ ->
                assert false
              | Unknown ->
@@ -1112,15 +1112,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            priority cannot be optimized in presence of infinity values. *)
         raise unknown_exn;
 
-      | (e, tv, is_strict, is_max) :: l ->
+      | (e, tv, is_max) :: l ->
         (* ((x > 2) /\ (y = 3)) \/ (y > 3) *)
         let neg =
           List.fold_left
-            (fun acc (e, tv, is_strict, is_max) ->
+            (fun acc (e, tv, is_max) ->
                let eq = E.mk_eq e tv ~iff: false in
                let acc = E.Core.and_ acc eq in
-               E.Core.(or_ acc (not ((op is_strict is_max) e tv)))
-            ) (E.Core.not ((op is_strict is_max) e tv)) l
+               E.Core.(or_ acc (not ((op is_max) e tv)))
+            ) (E.Core.not ((op is_max) e tv)) l
         in
         Printer.print_dbg
           "Obj %a has an optimum. Should continue beyond SAT to try to \

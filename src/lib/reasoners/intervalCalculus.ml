@@ -2118,7 +2118,7 @@ let optimizing_split env uf opt_split =
             if is_le then
               Th_util.Value t2
             else
-              Th_util.StrictBound (r1, t2)
+              Th_util.StrictBound t2
           in
           Some {Th_util.opt_ord = order; opt_val}
         in
@@ -2131,7 +2131,7 @@ let optimizing_split env uf opt_split =
           let u =
             LR.mkv_eq r1 r1, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
           in
-          { opt_split with value = StrictBound (u, s); }
+          { opt_split with value = StrictBound u; }
     end
 
 (*** part dedicated to FPA reasoning ************************************)
