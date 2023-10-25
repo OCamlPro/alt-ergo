@@ -1040,7 +1040,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   exception Give_up of (E.t * E.t * Th_util.case_split option * bool) list
 
-  (* Getting [unknown] after a query means two things:
+  (* Getting [unknown] after a query can mean two things:
      - The problem is [unsat] but we didn't manage to find a contradiction;
      - We produce a model of the formulas.
 
@@ -1059,7 +1059,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        (check-sat)
        (get-model)
 
-     Assume that the solver explores the branch (<= x 2) first of the formula:
+     Assume that the solver explores the first branch (<= x 2) of the or gate:
        (or (<= x 2) (<= x 4)).
 
      Let's imagine it discovers that [0] is a model of the first formula. After
