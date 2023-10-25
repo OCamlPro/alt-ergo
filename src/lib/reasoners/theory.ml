@@ -439,6 +439,9 @@ module Main_Default : S = struct
       let env = { env with gamma_finite = base_env } in
       match new_splits with
       | [] ->
+        (* We cannot make any progress as theories don't produce new
+           case-splits and we don't find any inconsistencies. We may
+           obtain a complete model of our problem. *)
         { env with choices = List.rev acc_choices }, sem_facts
 
       | _ ->
@@ -457,9 +460,30 @@ module Main_Default : S = struct
       let env = { env with objectives } in
       match opt_split.value with
       | Unknown ->
-        (*  *)
+        (* In the current implementation of optimization, the function
+           [CC_X.optimizing_split] cannot fail to optimize the split
+           [opt_split]. First of all, the legacy parser only accepts
+           optimization clauses on expressions of type [Real] or [Int].
+
+           For the [Real] or [Int] expressions, we have two cases:
+           - If the objective function is linear, the decision procedure
+             implemented in Ocplib-simplex cannot fail to optimize the split.
+             For instance, if we try to maximize the expression:
+             5 * x + 2 * y + 3 where x and y are real variables,
+             the procedure will success to produce the upper bound of [x] and
+             [y] modulo the other constraints on it.
+
+           - If the objective function isn't linear, the nonlinear part of the
+             expression have seen as uninterpreted term of the arithemic theory.
+             Let's imagine we try to maximize the expression:
+             5 * x * x + 2 * y + 3,
+             The objective function given to Ocplib-simplex looks like:
+             5 * U + 2 * y + 3 where U = x * x
+             and the procedure will optimize the problem in terms of U and y. *)
         assert false
       | Pinfinity | Minfinity | StrictBound _ ->
+        (* We stop optimizing the split [opt_split] in this case, but
+           we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
           propagate_choices env sem_facts acc_choices []
         else
@@ -468,6 +492,13 @@ module Main_Default : S = struct
         let new_choice = add_explanations_to_split v in
         aux env sem_facts acc_choices [new_choice]
 
+    (* Propagates the choice made by case-splitting to the environment
+       [gamma_finite] of the CC(X) algorithm. If there is no more choices
+       to propagate, we call the dispatcher [aux] to leave the function.
+
+       @raise [Inconsistent] if we detect an inconsistent with the choice
+              on the top of [new_choices] but this choice doesn't
+              participate to the inconsistency. *)
     and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
       match new_choices, bad_last with
@@ -503,19 +534,27 @@ module Main_Default : S = struct
           propagate_choices env sem_facts (a :: acc_choices) new_choices
 
         with Ex.Inconsistent (dep, classes) ->
+        (* As we generate fresh explanation for each choice in
+           [add_explanations_to_split], we know that the inconsistency involves
+           the current choice if and only if the explanation [dep] contains
+           the explanation exp. *)
         match Ex.remove_fresh exp dep with
         | None ->
-          (* The choice doesn't participate to the inconsistency *)
+          (* The choice doesn't participate to the inconsistency. *)
           Debug.split_backjump c dep;
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Conflict";
           raise (Ex.Inconsistent (dep, classes))
         | Some dep ->
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Progress";
-          (* The choice participates to the inconsistency *)
+          (* The choice participates to the inconsistency. *)
           let neg_c = LR.view (LR.neg (LR.make c)) in
           let lit_orig, is_opt = match lit_orig with
             | Th_util.CS(is_opt, k, sz) -> Th_util.NCS(k, sz), is_opt
-            | _ -> assert false
+            | _ ->
+              (* Unreacheable as the exception [Inconsistent] is only
+                 raised by [propagate_choices] on facts of origin
+                 [Th_util.CS]. *)
+              assert false
           in
           Debug.split_backtrack neg_c dep;
           if Options.get_bottom_classes () then
@@ -608,24 +647,37 @@ module Main_Default : S = struct
          | Value _ | StrictBound _ | Unknown -> true
       ) objectives
 
+  (* This function attempts to produce a first-order model by case-splitting.
+     To do so, the function tries two successive strategies:
+     - First, we replay in [gamma_finite] all the new facts learnt by the
+         SAT solver since the last case-splitting phase in the environment.
+     - If the first strategy fails, we synchronize [gamma] and [gamma_finite]
+         and we try to propagate a subset of the choices. *)
   let try_it t facts ~for_model =
     Options.exec_thread_yield ();
     Debug.begin_case_split t.choices;
     let r =
       try
         if t.choices == [] then
-          (* no splits yet: init gamma_finite with gamma *)
+          (* We haven't make choice yet. Initialize the environment
+             [gamma_finite] with [gamma]. *)
           let t = reset_case_split_env t in
           look_for_sat ~bad_last:None ~for_model t [] []
         else
           try
+            (* We attempt to replay all the facts learnt by the SAT solver
+               since the last call to [do_case_split]. *)
             let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
             let t = { t with gamma_finite = base_env } in
             look_for_sat ~bad_last:None ~for_model t ch []
           with Ex.Inconsistent (dep, classes) ->
+            (* The inconsistency here doesn't mean there is no first-order model
+               of the problem in the current branch of the SAT solver. For sake
+               of soundness, we have to try to produce a model from the current
+               state of the SAT solver (using the environment [gamma]). *)
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
-            (* we replay the conflict in look_for_sat, so we can
-               safely ignore the explanation which is not useful *)
+            (* We replay the conflict in look_for_sat, so we can
+               safely ignore the explanation which is not useful. *)
             let uf =  CC_X.get_union_find t.gamma in
             let filt_choices = filter_choices uf t.choices in
             let filt_choices =
@@ -637,7 +689,6 @@ module Main_Default : S = struct
               else []
             in
             Debug.split_sat_contradicts_cs filt_choices;
-            (* re-init gamma_finite with gamma *)
             let t = reset_case_split_env t in
             look_for_sat ~bad_last:(Some (dep, classes)) ~for_model
               { t with choices = [] } [] filt_choices
