@@ -383,7 +383,7 @@ module Main_Default : S = struct
 
   (* TODO: this function could be optimized if "objectives" structure
      is coded differently *)
-  let next_optimization env ~for_model =
+  let next_optimization ~for_model env =
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
@@ -431,54 +431,48 @@ module Main_Default : S = struct
                assert false (* may happen? *)
         ) objectives objectives
 
-  let look_for_sat ?(bad_last=None) ~for_model env sem_facts new_choices =
-    let rec aux ~bad_last ~optimize env sem_facts acc_choices new_choices =
+  let look_for_sat ~bad_last ~for_model env sem_facts new_choices =
+    let rec generate_choices env sem_facts acc_choices =
+      let new_splits, base_env =
+        CC_X.case_split env.gamma_finite ~for_model
+      in
+      let env = { env with gamma_finite = base_env } in
+      match new_splits with
+      | [] ->
+        { env with choices = List.rev acc_choices }, sem_facts
+
+      | _ ->
+        let new_choices =
+          List.map add_explanations_to_split new_splits
+        in
+        aux env sem_facts acc_choices new_choices
+
+    and optimizing_split env sem_facts acc_choices opt_split =
+      let opt_split =
+        CC_X.optimizing_split env.gamma_finite opt_split
+      in
+      let objectives =
+        register_optimized_split env.objectives opt_split
+      in
+      let env = { env with objectives } in
+      match opt_split.value with
+      | Unknown ->
+        (*  *)
+        assert false
+      | Pinfinity | Minfinity | StrictBound _ ->
+        if for_model then
+          propagate_choices env sem_facts acc_choices []
+        else
+          { env with choices = List.rev acc_choices }, sem_facts
+      | Value v ->
+        let new_choice = add_explanations_to_split v in
+        aux env sem_facts acc_choices [new_choice]
+
+    and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
       match new_choices, bad_last with
-      | [], _ ->
-        begin
-          Options.tool_req 3 "TR-CCX-CS-Case-Split";
-          match next_optimization ~for_model env with
-          | Some opt_split when optimize ->
-            begin
-              let opt_split =
-                CC_X.optimizing_split env.gamma_finite opt_split
-              in
-              let objectives =
-                register_optimized_split env.objectives opt_split
-              in
-              let env = { env with objectives } in
-              match opt_split.value with
-              | Unknown ->
-                (*  *)
-                assert false
-              | Pinfinity | Minfinity | StrictBound _ ->
-                if for_model then
-                  aux ~bad_last:None ~optimize:false env sem_facts acc_choices []
-                else
-                  { env with choices = List.rev acc_choices }, sem_facts
-              | Value v ->
-                let new_choice = add_explanations_to_split v in
-                aux ~bad_last:None ~optimize env sem_facts acc_choices [new_choice]
+      | [], _ -> aux env sem_facts acc_choices new_choices
 
-            end
-          | Some _ | None ->
-            begin
-              let new_splits, base_env =
-                CC_X.case_split env.gamma_finite ~for_model
-              in
-              let env = { env with gamma_finite = base_env } in
-              match new_splits with
-              | [] ->
-                { env with choices = List.rev acc_choices }, sem_facts
-
-              | _ ->
-                let new_choices =
-                  List.map add_explanations_to_split new_splits
-                in
-                aux ~bad_last:None ~optimize env sem_facts acc_choices new_choices
-            end
-        end
       | ((c, lit_orig, CNeg, ex_c) as a) :: new_choices, _ ->
         let facts = CC_X.empty_facts () in
         CC_X.add_fact facts (LSem c,ex_c,lit_orig);
@@ -486,14 +480,15 @@ module Main_Default : S = struct
           CC_X.assume_literals env.gamma_finite sem_facts facts
         in
         let env = { env with gamma_finite = base_env } in
-        aux ~bad_last ~optimize env sem_facts (a :: acc_choices) new_choices
+        propagate_choices env sem_facts (a :: acc_choices) new_choices
 
       (* This optimisation is not correct with the current explanation *)
       (* | [(c, lit_orig, CPos exp, ex_c)], Yes (dep,_) -> *)
       (*     let neg_c = CC_X.Rel.choice_mk_not c in *)
       (*     let ex_c = Ex.union ex_c dep in *)
       (*     Debug.split_backtrack neg_c ex_c; *)
-      (*     aux ch No dl base_env [neg_c, Numbers.Q.Int 1, CNeg, ex_c] *)
+      (*     look_for_sat_aux ch No dl base_env
+              [neg_c, Numbers.Q.Int 1, CNeg, ex_c] *)
 
       | ((c, lit_orig, CPos exp, ex_c_exp) as a) :: new_choices, _ ->
         try
@@ -505,7 +500,8 @@ module Main_Default : S = struct
           in
           let env = { env with gamma_finite = base_env } in
           Options.tool_req 3 "TR-CCX-CS-Normal-Run";
-          aux ~bad_last ~optimize env sem_facts (a :: acc_choices) new_choices
+          propagate_choices env sem_facts (a :: acc_choices) new_choices
+
         with Ex.Inconsistent (dep, classes) ->
         match Ex.remove_fresh exp dep with
         | None ->
@@ -526,12 +522,22 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
-          let env =
-            { env with objectives =
-                         partial_objectives_reset env.objectives is_opt } in
-          aux ~bad_last:None ~optimize env sem_facts acc_choices [neg_c, lit_orig, CNeg, dep]
+          let objectives = partial_objectives_reset env.objectives is_opt in
+          let env = { env with objectives } in
+          propagate_choices env sem_facts acc_choices
+            [neg_c, lit_orig, CNeg, dep]
+
+    and aux env sem_facts acc_choices new_choices =
+      Options.tool_req 3 "TR-CCX-CS-Case-Split";
+      match new_choices, next_optimization ~for_model env with
+      | [], None ->
+        generate_choices env sem_facts acc_choices
+      | [], Some opt_split ->
+        optimizing_split env sem_facts acc_choices opt_split
+      | _ ->
+        propagate_choices env sem_facts acc_choices new_choices
     in
-    aux ~bad_last ~optimize:true env sem_facts (List.rev env.choices) new_choices
+    aux env sem_facts (List.rev env.choices) new_choices
 
   (* remove old choices involving fresh variables that are no longer in UF *)
   let filter_valid_choice uf (ra,_,_,_) =
@@ -610,12 +616,12 @@ module Main_Default : S = struct
         if t.choices == [] then
           (* no splits yet: init gamma_finite with gamma *)
           let t = reset_case_split_env t in
-          look_for_sat ~for_model t [] []
+          look_for_sat ~bad_last:None ~for_model t [] []
         else
           try
             let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
             let t = { t with gamma_finite = base_env } in
-            look_for_sat ~for_model t ch []
+            look_for_sat ~bad_last:None ~for_model t ch []
           with Ex.Inconsistent (dep, classes) ->
             Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
             (* we replay the conflict in look_for_sat, so we can
