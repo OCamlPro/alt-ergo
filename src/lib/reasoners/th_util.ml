@@ -36,6 +36,7 @@ type theory =
   | Th_adt
   | Th_arrays
   | Th_UF
+[@@deriving show]
 
 type limit_kind =
   | Plus
@@ -48,14 +49,9 @@ type 'a optimized_split_value =
   | Pinfinity
   | Unknown
 
-type optimization = {
-  opt_ord : int;
-  opt_val : Expr.t optimized_split_value
-}
-
 type lit_origin =
   | Subst
-  | CS of optimization option * theory * Numbers.Q.t
+  | CS of theory * Numbers.Q.t
   | NCS of theory * Numbers.Q.t
   | Other
 
@@ -65,7 +61,8 @@ type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 type optimized_split = {
   r : Shostak.Combine.r;
   e : Expr.t;
-  value : case_split optimized_split_value;
+  value : Expr.t optimized_split_value;
+  case_split : case_split option;
   is_max : bool;
   (** For linear arithmetic: is_max <-> (opt = maximize). *)
 

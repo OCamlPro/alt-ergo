@@ -1090,19 +1090,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let acc =
       try
         Util.MI.fold
-          (fun _ {Th_util.e; value; r=_; is_max; order=_} acc ->
+          (fun _ {Th_util.e; value; r=_; is_max; _} acc ->
              match value with
              | Pinfinity | Minfinity ->
                raise (Give_up acc)
-             | Value ((_ ,_ ,
-                       Th_util.CS (Some {opt_val = Value (v, epsilon); _}, _ , _)), _) ->
+             | Value (v, epsilon) ->
                begin
                  match epsilon with
                  | Plus | Minus -> raise (Give_up ((e, v, is_max) :: acc))
                  | None -> (e, v, is_max) :: acc
                end
-             | Value _ ->
-               assert false
              | Unknown ->
                assert false
           ) obj []

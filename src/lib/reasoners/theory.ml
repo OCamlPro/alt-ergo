@@ -77,6 +77,32 @@ end
 
 module Main_Default : S = struct
 
+  type choice_sign =
+    | CPos of Ex.exp (* The explication of this choice *)
+    | CNeg (* The choice has been already negated *)
+
+
+  type choice =
+    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t * int option
+  (** the choice, the size, choice_sign,  the explication set,
+        the explication for this choice. *)
+
+  let pp_choice ppf (sem_lit, lit_orig, _, ex, ord) =
+    let pp_ord ppf ord =
+      match ord with
+      | Some o -> Fmt.pf ppf "Optim-cs(ord=%d)" o
+      | None -> ()
+    in
+    let sem_lit = LR.make sem_lit in
+    match (lit_orig : Th_util.lit_origin) with
+    | CS (k, _) ->
+      Fmt.pf ppf "%a %a cs: %a (because %a)"
+        Th_util.pp_theory k pp_ord ord LR.print sem_lit Ex.print ex
+    | NCS (k, _) ->
+      Fmt.pf ppf "%a ncs: %a (because %a)"
+        Th_util.pp_theory k LR.print sem_lit Ex.print ex
+    | _ -> assert false
+
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
     open Printer
@@ -251,34 +277,8 @@ module Main_Default : S = struct
       in
       assumed, reinit_cpt
 
-    let theory_of k = match k with
-      | Th_util.Th_arith  -> "Th_arith "
-      | Th_util.Th_sum    -> "Th_sum   "
-      | Th_util.Th_adt    -> "Th_adt   "
-      | Th_util.Th_arrays -> "Th_arrays"
-      | Th_util.Th_UF -> "Th_UF"
-
-    let made_choices fmt choices =
-      match choices with
-      | [] -> ()
-      | _ ->
-        Format.fprintf fmt "@[<v 2>Stack of choices:@ ";
-        List.iter
-          (fun (rx, lit_orig, _, ex) ->
-             match lit_orig with
-             | Th_util.CS(None, k, _) ->
-               Format.fprintf fmt "  > %s  cs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
-             | Th_util.CS(Some o, k, _) ->
-               Format.fprintf fmt "  > %s  Optim-cs(ord=%d): %a (because %a)@ "
-                 (theory_of k) o.Th_util.opt_ord
-                 LR.print (LR.make rx) Ex.print ex
-             | Th_util.NCS(k, _) ->
-               Format.fprintf fmt "  > %s ncs: %a (because %a)@ "
-                 (theory_of k) LR.print (LR.make rx) Ex.print ex
-             | _ -> assert false
-          )choices;
-        Format.fprintf fmt "==============================================@."
+    let made_choices ppf choices =
+      Fmt.pf ppf "@[<v 2>Stack of choices:@ %a@]" (Fmt.list pp_choice) choices
 
     let begin_case_split choices =
       if Options.get_debug_split () then
@@ -340,16 +340,6 @@ module Main_Default : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  type choice_sign =
-    | CPos of Ex.exp (* The explication of this choice *)
-    | CNeg (* The choice has been already negated *)
-
-
-  type choice =
-    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t
-  (** the choice, the size, choice_sign,  the explication set,
-        the explication for this choice. *)
-
   type t = {
     assumed_set : E.Set.t;
     assumed : (E.t * int * int) list list;
@@ -362,13 +352,13 @@ module Main_Default : S = struct
   }
 
   let add_explanations_to_split (c, is_cs, size) =
-    Steps.incr_cs_steps();
+    Steps.incr_cs_steps ();
     let exp = Ex.fresh_exp () in
     let ex_c_exp =
       if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
     in
     (* A new explanation in order to track the choice *)
-    (c, size, CPos exp, ex_c_exp)
+    (c, size, CPos exp, ex_c_exp, None)
 
   let register_optimized_split objectives u =
     try
@@ -413,10 +403,10 @@ module Main_Default : S = struct
 
   (* TODO: this function could be optimized if "objectives" structure
      is coded differently *)
-  let partial_objectives_reset objectives to_flip =
-    match to_flip with
+  let partial_objectives_reset objectives order =
+    match order with
     | None -> objectives
-    | Some {Th_util.opt_ord; _} ->
+    | Some opt_ord ->
       Util.MI.fold
         (fun ord v acc ->
            if ord < opt_ord then
@@ -482,6 +472,7 @@ module Main_Default : S = struct
                5 * U + 2 * y + 3 where U = x * x
              and the procedure will optimize the problem in terms of U and y. *)
         assert false
+
       | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
         (* We stop optimizing the split [opt_split] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
@@ -489,9 +480,15 @@ module Main_Default : S = struct
           propagate_choices env sem_facts acc_choices []
         else
           { env with choices = List.rev acc_choices }, sem_facts
-      | Value (v, None) ->
-        let new_choice = add_explanations_to_split v in
-        aux env sem_facts acc_choices [new_choice]
+
+      | Value (_, None) ->
+        begin
+          match opt_split.case_split with
+          | Some cs ->
+            let new_choice = add_explanations_to_split cs in
+            aux env sem_facts acc_choices [new_choice]
+          | None -> assert false
+        end
 
     (* Propagates the choice made by case-splitting to the environment
        [gamma_finite] of the CC(X) algorithm. If there is no more choices
@@ -505,9 +502,9 @@ module Main_Default : S = struct
       match new_choices, bad_last with
       | [], _ -> aux env sem_facts acc_choices new_choices
 
-      | ((c, lit_orig, CNeg, ex_c) as a) :: new_choices, _ ->
+      | ((c, lit_orig, CNeg, ex_c, _order) as a) :: new_choices, _ ->
         let facts = CC_X.empty_facts () in
-        CC_X.add_fact facts (LSem c,ex_c,lit_orig);
+        CC_X.add_fact facts (LSem c, ex_c, lit_orig);
         let base_env, sem_facts =
           CC_X.assume_literals env.gamma_finite sem_facts facts
         in
@@ -522,7 +519,7 @@ module Main_Default : S = struct
       (*     look_for_sat_aux ch No dl base_env
               [neg_c, Numbers.Q.Int 1, CNeg, ex_c] *)
 
-      | ((c, lit_orig, CPos exp, ex_c_exp) as a) :: new_choices, _ ->
+      | ((c, lit_orig, CPos exp, ex_c_exp, order) as a) :: new_choices, _ ->
         try
           Debug.split_assume c ex_c_exp;
           let facts = CC_X.empty_facts () in
@@ -549,8 +546,9 @@ module Main_Default : S = struct
           Options.tool_req 3 "TR-CCX-CS-Case-Split-Progress";
           (* The choice participates to the inconsistency. *)
           let neg_c = LR.view (LR.neg (LR.make c)) in
-          let lit_orig, is_opt = match lit_orig with
-            | Th_util.CS(is_opt, k, sz) -> Th_util.NCS(k, sz), is_opt
+          let lit_orig =
+            match lit_orig with
+            | Th_util.CS (k, sz) -> Th_util.NCS (k, sz)
             | _ ->
               (* Unreacheable as the exception [Inconsistent] is only
                  raised by [propagate_choices] on facts of origin
@@ -562,10 +560,10 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
-          let objectives = partial_objectives_reset env.objectives is_opt in
+          let objectives = partial_objectives_reset env.objectives order in
           let env = { env with objectives } in
           propagate_choices env sem_facts acc_choices
-            [neg_c, lit_orig, CNeg, dep]
+            [neg_c, lit_orig, CNeg, dep, order]
 
     and aux env sem_facts acc_choices new_choices =
       Options.tool_req 3 "TR-CCX-CS-Case-Split";
@@ -580,12 +578,12 @@ module Main_Default : S = struct
     aux env sem_facts (List.rev env.choices) new_choices
 
   (* remove old choices involving fresh variables that are no longer in UF *)
-  let filter_valid_choice uf (ra,_,_,_) =
+  let filter_valid_choice uf (ra, _, _, _, _) =
     let l = match ra with
-      | A.Eq(r1, r2) -> [r1; r2]
+      | A.Eq (r1, r2) -> [r1; r2]
       | A.Distinct (_, l) -> l
       | A.Builtin (_,_, l) -> l
-      | A.Pred(p, _) -> [p]
+      | A.Pred (p, _) -> [p]
     in
     List.for_all
       (fun r ->
@@ -606,15 +604,15 @@ module Main_Default : S = struct
       List.partition (filter_valid_choice uf) choices in
     let ignored_decisions =
       List.fold_left
-        (fun ex (_, _, ch, _) ->
+        (fun ex (_, _, ch, _, _) ->
            match ch with
            | CPos (Ex.Fresh _ as e) -> Ex.add_fresh e ex
            | CPos _ -> assert false
            | CNeg -> ex
-        )Ex.empty to_ignore
+        ) Ex.empty to_ignore
     in
     List.filter
-      (fun (_,_,_,ex) ->
+      (fun (_ ,_ ,_ ,ex , _) ->
          try
            Ex.iter_atoms
              (function
@@ -624,7 +622,7 @@ module Main_Default : S = struct
            true
          with Exit -> (* ignore implicated related to ignored decisions *)
            false
-      )candidates_to_keep
+      ) candidates_to_keep
 
 
   let reset_objectives objectives =
@@ -709,7 +707,7 @@ module Main_Default : S = struct
 
   let extract_terms_from_choices =
     List.fold_left
-      (fun acc (a, _, _, _) ->
+      (fun acc (a, _, _, _, _) ->
          match a with
          | A.Eq(r1, r2) -> extract_from_semvalues acc [r1; r2]
          | A.Distinct (_, l) -> extract_from_semvalues acc l
@@ -778,7 +776,15 @@ module Main_Default : S = struct
                  (* gamma is already initialized with fresh terms *)
                  assert false
              in
-             let x = Th_util.{ r; e; value = Unknown; is_max; order } in
+             let x =
+               Th_util.{
+                 r;
+                 e;
+                 value = Unknown;
+                 is_max;
+                 order;
+                 case_split = None
+               } in
              begin
                try
                  let y = Util.MI.find order objectives in

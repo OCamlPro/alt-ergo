@@ -235,7 +235,7 @@ module Sim_Wrap = struct
       let ty = X.type_info x in
       let r1 = x in
       let r2 = alien_of (P.create [] n  ty) in
-      [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)]
+      [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)]
     in
     let aux_1 uf x (info,_) acc =
       assert (X.type_info x == Ty.Tint);
@@ -1521,7 +1521,7 @@ let count_splits env la =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
-         | Th_util.CS (_, Th_util.Th_arith, n) -> Numbers.Q.mult nb n
+         | Th_util.CS (Th_util.Th_arith, n) -> Numbers.Q.mult nb n
          | _ -> nb
       )env.size_splits la
   in
@@ -1761,7 +1761,7 @@ let case_split_polynomes env =
     let r1 = alien_of p in
     let r2 = alien_of (P.create [] n  (P.type_info p)) in
     Debug.case_split r1 r2;
-    [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)], s
+    [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)], s
   | None ->
     Debug.no_case_split "polynomes";
     [], Q.zero
@@ -1787,7 +1787,7 @@ let case_split_monomes env =
     let r1 = x in
     let r2 = alien_of (P.create [] n  ty) in
     Debug.case_split r1 r2;
-    [LR.mkv_eq r1 r2, true, Th_util.CS (None, Th_util.Th_arith, s)], s
+    [LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, s)], s
   | None ->
     Debug.no_case_split "monomes";
     [], Q.zero
@@ -1797,7 +1797,7 @@ let check_size for_model env res =
   else
     match res with
     | [] -> res
-    | [_, _, Th_util.CS (_, Th_util.Th_arith, s)] ->
+    | [_, _, Th_util.CS (Th_util.Th_arith, s)] ->
       if Numbers.Q.compare (Q.mult s env.size_splits) (get_max_split ()) <= 0 ||
          Numbers.Q.sign  (get_max_split ()) < 0 then res
       else []
@@ -1874,7 +1874,7 @@ let case_split_union_of_intervals =
         if Q.is_zero eps then L.LE else (assert (Q.is_m_one eps); L.LT)
       in
       [LR.mkv_builtin true pred [r1; r2], true,
-       Th_util.CS (None, Th_util.Th_arith, Q.one)]
+       Th_util.CS (Th_util.Th_arith, Q.one)]
 
 
 (*****)
@@ -2012,7 +2012,7 @@ let model_from_simplex sim is_int env uf =
 let model_from_unbounded_domains =
   let mk_cs acc (x, v, _ex) =
     ((LR.view (LR.mk_eq x v)), true,
-     Th_util.CS (None, Th_util.Th_arith, Q.from_int 2)) :: acc
+     Th_util.CS (Th_util.Th_arith, Q.from_int 2)) :: acc
   in
   fun env uf ->
     assert (env.int_sim.Sim.Core.status == Sim.Core.SAT);
@@ -2056,7 +2056,7 @@ let limit_kind to_max is_le : Th_util.limit_kind =
 let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  let {Th_util.order; r = r; is_max = to_max; e; value } = opt_split in
+  let {Th_util.r = r; is_max = to_max; e; value; _ } = opt_split in
   assert (match value with
       | Unknown -> true
       | _ -> false
@@ -2075,11 +2075,11 @@ let optimizing_split env uf opt_split =
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let o =
-      Some {Th_util.opt_ord = order; opt_val = Th_util.Value (t2, None) }
+    let value = Th_util.Value (t2, None) in
+    let case_split =
+      Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
     in
-    let s = LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one) in
-    { opt_split with value = Value (s, None) }
+    { opt_split with value; case_split }
 
   | None ->
     begin
@@ -2090,7 +2090,7 @@ let optimizing_split env uf opt_split =
       let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
       match Sim.Result.get mx_res sim with
       | Sim.Core.Unknown ->
-        (* The decision proceduce is complete. *)
+        (* The decision procedure is complete. *)
         assert false
 
       | Sim.Core.Sat _   ->
@@ -2122,17 +2122,23 @@ let optimizing_split env uf opt_split =
         let r2 = alien_of (P.create [] optim  ty) in
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
-        let o =
-          let opt_val = Th_util.Value (t2, limit_kind to_max is_le) in
-          Some {Th_util.opt_ord = order; opt_val}
+        let value =
+          Th_util.Value (t2, limit_kind to_max is_le)
         in
-        let s =
+        let case_split =
           if is_le then
-            LR.mkv_eq r1 r2, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+            Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
           else
-            LR.mkv_eq r1 r1, true, Th_util.CS (o, Th_util.Th_arith, Q.one)
+            (* As some bounds are strict, the value [r2] doesn't satisfy the
+               constraints of the problem. We don't produce a case-split
+               in this case because we don't want to propagate the equality
+               [r1 = r2] in the CC(X) environment [gamma_finite]. But
+               we propagate the new value [value] for this objective. Indeed,
+               we want to be able to print it while using the statement
+               [get-objective]. *)
+            None
         in
-        { opt_split with value = Value (s, limit_kind to_max is_le); }
+        { opt_split with value; case_split }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

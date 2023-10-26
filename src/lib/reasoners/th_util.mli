@@ -30,13 +30,13 @@
 
 type answer = (Explanation.t * Expr.Set.t list) option
 
-
 type theory =
   | Th_arith
   | Th_sum
   | Th_adt
   | Th_arrays
   | Th_UF
+[@@deriving show]
 
 type limit_kind =
   | Plus
@@ -50,11 +50,6 @@ type 'a optimized_split_value =
 
   | Pinfinity
   | Unknown
-
-type optimization = {
-  opt_ord : int;
-  opt_val : Expr.t optimized_split_value
-}
 
 (** Indicates where asserted literals come from.
 
@@ -71,7 +66,7 @@ type lit_origin =
       In practice, a {!Subst} equality [r = rr] is generated when the
       corresponding substitution is performed by CC(X), i.e. when [rr] becomes
       the class representative for [r]. *)
-  | CS of optimization option * theory * Numbers.Q.t
+  | CS of theory * Numbers.Q.t
   (** Literals of {!CS} origin come from the case splits performed by a
       specific theory. Usually, they are equalities of the shape [x = v] where
       [x] is an uninterpreted term and [v] a value; however, this is not
@@ -101,7 +96,8 @@ type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 type optimized_split = {
   r : Shostak.Combine.r;
   e : Expr.t;
-  value : case_split optimized_split_value;
+  value : Expr.t optimized_split_value;
+  case_split : case_split option;
   is_max : bool;
   order : int
 }

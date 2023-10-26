@@ -994,7 +994,7 @@ let assign_next env =
         *)
       let env, _ =  add env s in (* important for termination *)
       let eq = LX.view (LX.mk_eq rep (make env s)) in
-      [eq, is_cs, Th_util.CS (None, Th_util.Th_UF, Numbers.Q.one)], env
+      [eq, is_cs, Th_util.CS (Th_util.Th_UF, Numbers.Q.one)], env
   in
   Debug.check_invariants "assign_next" env;
   res, env
@@ -1113,7 +1113,7 @@ let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
   let bounded, pinfty, minfty =
     Util.MI.fold
       (fun _ord v ((bounded, pinfty, minfty) as acc) ->
-         let {Th_util.value; r; order = _; is_max = _; e=_} = v in
+         let {Th_util.value; r; _} = v in
          match value with
          | Value _ ->
            SetX.add v.Th_util.r bounded, pinfty, minfty
@@ -1149,7 +1149,7 @@ let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
 let compute_objectives ~optimized_splits env mrepr =
   let seen_infinity = ref false in
   Util.MI.map
-    (fun {Th_util.e; value; r=_; is_max=_; order=_} ->
+    (fun {Th_util.e; value; r=_; _} ->
        e,
        (if !seen_infinity then Models.Obj_unk
         else
