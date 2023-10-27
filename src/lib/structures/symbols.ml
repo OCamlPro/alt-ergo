@@ -386,19 +386,54 @@ let to_string s = to_string ~show_vars:true s
 let print_clean fmt s = Format.fprintf fmt "%s" (to_string_clean s)
 let print fmt s = Format.fprintf fmt "%s" (to_string s)
 
+module type Id = sig
+  val fresh : ?base:string -> unit -> string
+  val reset_fresh_cpt : unit -> unit
+  val is_id : string -> bool
+  val make_as_fresh : string -> string
+end
 
-let fresh, reinit_fresh_sy_cpt =
-  let cpt = ref 0 in
-  let fresh ?(is_var=false) s =
-    incr cpt;
-    (* garder le suffixe "__" car cela influence l'ordre *)
-    let s = (Format.sprintf "!?__%s%i" s (!cpt)) in
-    if is_var then var @@ Var.of_string s else name s
-  in
-  let reinit_fresh_sy_cpt () =
-    cpt := 0
-  in
-  fresh, reinit_fresh_sy_cpt
+module MakeId(S : sig val prefix : string end) : Id = struct
+
+  let make_as_fresh = (^) S.prefix
+
+  let fresh, reset_fresh_cpt =
+    let cpt = ref 0 in
+    let fresh_string ?(base = "") () =
+      incr cpt;
+      make_as_fresh (base ^ (string_of_int !cpt))
+    in
+    let reset_fresh_string_cpt () =
+      cpt := 0
+    in
+    fresh_string, reset_fresh_string_cpt
+
+  let is_id = Compat.String.starts_with ~prefix:S.prefix
+end
+
+module InternalId = MakeId(struct let prefix = "!k" end)
+module SkolemId = MakeId(struct let prefix = "!?__" end)
+(* garder le suffixe "__" car cela influence l'ordre *)
+
+let fresh_internal_string () = InternalId.fresh ()
+let fresh_internal_name () = name (fresh_internal_string ())
+
+let fresh_skolem ?(is_var=false) base =
+  let fresh = SkolemId.fresh ~base () in
+  if is_var then
+    var @@ Var.of_string fresh
+  else
+    name fresh
+
+let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
+
+let is_fresh_internal_name = function
+  | Name (hd, _, _) -> InternalId.is_id (Hstring.view hd)
+  | _ -> false
+
+let is_fresh_skolem = function
+  | Name (hd, _, _) -> SkolemId.is_id (Hstring.view hd)
+  | _ -> false
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
@@ -424,6 +459,10 @@ let add_label lbl t = Labels.replace labels t lbl
 let label t = try Labels.find labels t with Not_found -> Hstring.empty
 
 let clear_labels () = Labels.clear labels
+
+let reset_id_builders () =
+  InternalId.reset_fresh_cpt ();
+  SkolemId.reset_fresh_cpt ()
 
 module Set : Set.S with type elt = t =
   Set.Make (struct type t=s let compare=compare end)

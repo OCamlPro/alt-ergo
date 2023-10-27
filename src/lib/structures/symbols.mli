@@ -128,9 +128,13 @@ val print_clean : Format.formatter -> t -> unit
 
 (*val dummy : t*)
 
-val fresh : ?is_var:bool -> string -> t
+val fresh_internal_string : unit -> string
+val fresh_internal_name : unit -> t
+val is_fresh_internal_name : t -> bool
 
-val reinit_fresh_sy_cpt : unit -> unit
+val fresh_skolem : ?is_var:bool -> string -> t
+val make_as_fresh_skolem : string -> t
+val is_fresh_skolem : t -> bool
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool
@@ -150,6 +154,9 @@ val string_of_bound : bound -> string
 
 val clear_labels : unit -> unit
 (** Empties the labels Hashtable *)
+
+val reset_id_builders : unit -> unit
+(** Resets the `fresh_internal_name` and `fresh_skolem` counters. *)
 
 module Set : Set.S with type elt = t
 

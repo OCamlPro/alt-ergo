@@ -1854,8 +1854,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Steps.reinit_steps ();
     clear_instances_cache ();
     Th.reinit_cpt ();
-    Symbols.reinit_fresh_sy_cpt ();
     Symbols.clear_labels ();
+    Symbols.reset_id_builders ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();

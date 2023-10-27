@@ -172,8 +172,8 @@ val size : t -> int
 val depth : t -> int
 val is_positive : t -> bool
 val neg : t -> t
-val is_fresh : t -> bool
-val is_fresh_skolem : t -> bool
+val is_internal_name : t -> bool
+val is_internal_skolem : t -> bool
 val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
