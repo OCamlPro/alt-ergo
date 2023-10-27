@@ -411,8 +411,8 @@ module MakeId(S : sig val prefix : string end) : Id = struct
   let is_id = Compat.String.starts_with ~prefix:S.prefix
 end
 
-module InternalId = MakeId(struct let prefix = "!k" end)
-module SkolemId = MakeId(struct let prefix = "!?__" end)
+module InternalId = MakeId(struct let prefix = ".k" end)
+module SkolemId = MakeId(struct let prefix = ".?__" end)
 (* garder le suffixe "__" car cela influence l'ordre *)
 
 let fresh_internal_string () = InternalId.fresh ()
