@@ -259,18 +259,29 @@ module Env = struct
     | [ x; y ] -> f x y
     | _ -> assert false
 
-  let add_builtin_enum = function
-    | Ty.Tsum (_, cstrs) as ty ->
-      let enum m h =
-        let s = Hstring.view h in
-        MString.add s (`Term (
-            Symbols.Op (Constr h),
-            { args = []; result = ty },
-            Other
-          )) m
-      in
-      fun m -> List.fold_left enum m cstrs
-    | _ -> assert false
+  let add_fpa_enum map =
+    let ty = Fpa_rounding.fpa_rounding_mode in
+    match ty with
+    | Ty.Tsum (_, cstrs) ->
+      List.fold_left
+        (fun m c ->
+           match Fpa_rounding.translate_smt_rounding_mode c with
+           | None ->
+             (* The constructors of the type are expected to be AE rounding
+                modes. *)
+             assert false
+           | Some hs ->
+             MString.add (Hstring.view hs) (`Term (
+                 Symbols.Op (Constr c),
+                 { args = []; result = ty },
+                 Other
+               ))
+               m
+        )
+        map
+        cstrs
+    | _ -> (* Fpa_rounding.fpa_rounding_mode is a sum type. *)
+      assert false
 
   let find_builtin_cstr ty n =
     match ty with
@@ -298,10 +309,12 @@ module Env = struct
     let float prec exp mode x =
       TTapp (Symbols.Op Float, [prec; exp; mode; x])
     in
+    let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
+    let tname = Fpa_rounding.fpa_rounding_mode_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode "NearestTiesToEven") in
+    let float32d = float32 (mode nte) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode "NearestTiesToEven") in
+    let float64d = float64 (mode nte) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -312,8 +325,8 @@ module Env = struct
     let any = Ty.fresh_tvar in
     let env = {
       env with
-      types = Types.add_builtin env.types "fpa_rounding_mode" rm ;
-      builtins = add_builtin_enum Fpa_rounding.fpa_rounding_mode env.builtins;
+      types = Types.add_builtin env.types tname rm ;
+      builtins = add_fpa_enum env.builtins;
     } in
     let builtins =
       env.builtins

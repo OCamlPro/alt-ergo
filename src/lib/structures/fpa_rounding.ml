@@ -33,64 +33,95 @@ module Hs = Hstring
 module Q = Numbers.Q
 module Z = Numbers.Z
 
+(** The five standard rounding modes of the SMTLIB.
+    Note that the SMTLIB defines these rounding modes to be the only
+    possible modes. *)
 type rounding_mode =
-  (* five standard/why3 fpa rounding modes *)
   | NearestTiesToEven
-  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
-  | ToZero (* zr in Gappa: toward zero *)
-  | Up (* up in Gappa: toward plus infinity *)
-  | Down (* dn in Gappa: toward minus infinity *)
-  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  | ToZero
+  | Up
+  | Down
+  | NearestTiesToAway
 
-  (* additional Gappa rounding modes *)
-  | Aw (* aw in Gappa: away from zero **)
-  | Od (* od in Gappa: to odd mantissas *)
-  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+let cstrs =
+  [
+    NearestTiesToEven;
+    ToZero;
+    Up;
+    Down;
+    NearestTiesToAway;
+  ]
 
-let pp_rounding_mode ppf m =
-  Format.pp_print_string ppf @@
-  match m with
+let to_smt_string =
+  function
+  | NearestTiesToEven -> "RNE"
+  | ToZero -> "RTZ"
+  | Up -> "RTP"
+  | Down -> "RTN"
+  | NearestTiesToAway -> "RNA"
+
+let to_ae_string = function
   | NearestTiesToEven -> "NearestTiesToEven"
   | ToZero -> "ToZero"
   | Up -> "Up"
   | Down -> "Down"
   | NearestTiesToAway -> "NearestTiesToAway"
-  | Aw -> "Aw"
-  | Od -> "Od"
-  | No -> "No"
-  | Nz -> "Nz"
-  | Nd -> "Nd"
-  | Nu -> "Nu"
 
-let fpa_rounding_mode, rounding_mode_of_hs =
-  let cstrs =
-    [ (* standards *)
-      NearestTiesToEven;
-      ToZero;
-      Up;
-      Down;
-      NearestTiesToAway;
-      (* non standards *)
-      Aw;
-      Od;
-      No;
-      Nz;
-      Nd;
-      Nu ]
-  in
-  let h_cstrs =
-    List.map (fun c -> Hs.make (Format.asprintf "%a" pp_rounding_mode c)) cstrs
-  in
-  let ty = Ty.Tsum (Hs.make "fpa_rounding_mode", h_cstrs) in
-  let table =
-    let table = Hashtbl.create 17 in
-    List.iter2 (Hashtbl.add table) h_cstrs cstrs;
-    table
-  in
-  ty, Hashtbl.find table
+
+let fpa_rounding_mode_ae_type_name = "fpa_rounding_mode"
+
+let fpa_rounding_mode_type_name = "RoundingMode"
+
+(* The exported 'to string' function is the SMT one. *)
+let string_of_rounding_mode = to_smt_string
+
+let hstring_smt_reprs =
+  List.map
+    (fun c -> Hs.make (to_smt_string c))
+    cstrs
+
+let hstring_ae_reprs =
+  List.map
+    (fun c -> Hs.make (to_ae_string c))
+    cstrs
+
+(* The rounding mode is the enum with the SMT values.
+   The Alt-Ergo values are injected in this type. *)
+let fpa_rounding_mode =
+  Ty.Tsum (Hs.make "RoundingMode", hstring_smt_reprs)
+
+let rounding_mode_of_smt_hs =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) hstring_smt_reprs cstrs;
+  fun key ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for SMT2 FPA value %a."
+        Hstring.print key
+        fpa_rounding_mode_type_name
+
+let rounding_mode_of_ae_hs =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) hstring_ae_reprs cstrs;
+  fun key ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for Legacy FPA value %a."
+        Hstring.print key
+        fpa_rounding_mode_type_name
+
+let translate_smt_rounding_mode hs =
+  match rounding_mode_of_smt_hs hs with
+  | res -> Some (Hstring.make (to_ae_string res))
+  | exception (Failure _) -> None
 
 (** Helper functions **)
 
@@ -159,9 +190,6 @@ let round_big_int (mode : rounding_mode) y =
     let diff = Q.abs (Q.sub y (Q.from_z z)) in
     if Q.sign diff = 0 then z
     else if Q.compare diff half < 0 then z else Z.add z (signed_one y)
-
-  | Aw | Od | No | Nz | Nd | Nu -> assert false
-
 
 let to_mantissa_exp prec exp mode x =
   let sign_x = Q.sign x in

@@ -28,26 +28,41 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** The rounding modes for the Floating Point Arithmetic theory.
+    In the legacy frontend, the rounding mode type was `fpa_rounding_mode`
+    and defined 5 rounding modes (see the [rounding_mode] type below).
+    The SMT2 standard defines the exact same rounding modes, but with different
+    identifiers. *)
+
 type rounding_mode =
-  (* five standard/why3 fpa rounding modes *)
   | NearestTiesToEven
-  (*ne in Gappa: to nearest, tie breaking to even mantissas*)
-  | ToZero (* zr in Gappa: toward zero *)
-  | Up (* up in Gappa: toward plus infinity *)
-  | Down (* dn in Gappa: toward minus infinity *)
-  | NearestTiesToAway (* na : to nearest, tie breaking away from zero *)
+  | ToZero
+  | Up
+  | Down
+  | NearestTiesToAway
 
-  (* additional Gappa rounding modes *)
-  | Aw (* aw in Gappa: away from zero **)
-  | Od (* od in Gappa: to odd mantissas *)
-  | No (* no in Gappa: to nearest, tie breaking to odd mantissas *)
-  | Nz (* nz in Gappa: to nearest, tie breaking toward zero *)
-  | Nd (* nd in Gappa: to nearest, tie breaking toward minus infinity *)
-  | Nu (* nu in Gappa: to nearest, tie breaking toward plus infinity *)
+(** Equal to ["RoundingMode"], the SMT2 type of rounding modes. *)
+val fpa_rounding_mode_type_name : string
 
+(** Equal to ["fpa_rounding_mode"], the Alt-Ergo native rounding mode type. *)
+val fpa_rounding_mode_ae_type_name : string
+
+(** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t
 
-val rounding_mode_of_hs : Hstring.t -> rounding_mode
+(** Transforms the Hstring corresponding to a RoundingMode element into
+    the [rounding_mode] equivalent. Raises 'Failure' if the string does not
+    correspond to a valid rounding mode. *)
+val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
+
+(** Same, but for legacy's [rounding_mode] equivalent. *)
+val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
+
+(** Same, but from AE modes to SMT2 modes. *)
+val translate_smt_rounding_mode : Hstring.t -> Hstring.t option
+
+(** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
+val string_of_rounding_mode : rounding_mode -> string
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int
