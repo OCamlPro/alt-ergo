@@ -2,4 +2,4 @@
 configure eol=lf
 
 # Hide the file in statistics and pull request diffs.
-tests/dune.inc linguist-generated
+tests/dune.inc linguist-generated=true
