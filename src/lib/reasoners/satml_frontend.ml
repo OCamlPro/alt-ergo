@@ -1249,6 +1249,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let get_unknown_reason env = env.unknown_reason
 
+  let get_value _env _t = None
+
   let reinit_ctx () =
     Steps.reinit_steps ();
     Th.reinit_cpt ();

@@ -89,6 +89,10 @@ module type S = sig
   (** [get_unknown_reason t] returns the reason Alt-Ergo raised
       [I_dont_know] if it did. If it did not, returns None. *)
   val get_unknown_reason : t -> unknown_reason option
+
+  (** [get_value t e] returns the value of [e] as a constant expression
+      in the current model generated. Returns [None] if can't decide. *)
+  val get_value : t -> Expr.t -> Expr.t option
 end
 
 

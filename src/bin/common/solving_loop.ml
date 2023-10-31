@@ -714,20 +714,45 @@ let main () =
       unsupported_opt name
   in
 
-  let evaluate_term _term = "unknown" in
-
-  let handle_term name (term : DStd.Expr.term) fmt =
-    Fmt.pf fmt "@,(%s %s)" name (evaluate_term term)
+  (* Fetches the term value in the current model. *)
+  let evaluate_term get_value name term =
+    let ae_form =
+      D_cnf.make_form
+        name
+        term
+        Loc.dummy
+        ~decl_kind:Expr.Dgoal
+    in
+    match get_value ae_form with
+    | None -> "unknown" (* TODO: just don't print anything *)
+    | Some v ->
+      if Expr.equal v Expr.vrai then "true"
+      else if Expr.equal v Expr.faux then "false"
+      else "dunno"
   in
 
-  let handle_terms fmt map =
+  let print_term_assignment
+      get_value
+      name
+      (term : DStd.Expr.term)
+      fmt =
+    if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
+      Fmt.pf fmt "@,(%s %s)" name (evaluate_term get_value name term)
+  in
+
+  let print_terms_assignments get_value fmt map =
     Util.MS.iter
-      (fun name term -> Fmt.pf fmt "%t" (handle_term name term))
+      (fun name term ->
+         Fmt.pf fmt "%t" (print_term_assignment get_value name term)
+      )
       map
   in
 
-  let handle_get_assignment st =
-    Printer.print_std "(@[<v 0>%a@])@," handle_terms (State.get named_terms st)
+  let handle_get_assignment ~get_value st =
+    Printer.print_std
+      "(@[<v 0>%a@])@,"
+      (print_terms_assignments get_value)
+      (State.get named_terms st)
   in
 
   let handle_stmt :
@@ -867,15 +892,31 @@ let main () =
         st
 
       | {contents = `Get_assignment; _} ->
-        if State.get get_assignment st then
-          let () = handle_get_assignment st in st
-        else
-          begin
-            Printer.print_smtlib_err
-              "Produce assignments disabled; \
-               add (set-option :produce-assignments true)";
-            st
-          end
+        begin
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            begin
+              match SAT.get_model partial_model with
+              | Some (lazy _) ->
+                if State.get get_assignment st then
+                  handle_get_assignment
+                    ~get_value:(SAT.get_value partial_model)
+                    st
+                else
+                  recoverable_error
+                    "Produce assignments disabled; \
+                     add (set-option :produce-assignments true)";
+                st
+              | _ ->
+                recoverable_error
+                  "Model generation disactivated, cannot execute \
+                   get-assignment.";
+                st
+            end
+          | None ->
+            (* TODO: add the location of the statement. *)
+            recoverable_error "No model produced."; st
+        end
 
       | {contents = `Other (custom, args); _} ->
         handle_custom_statement custom args st

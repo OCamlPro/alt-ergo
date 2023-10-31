@@ -31,6 +31,13 @@
 val clear_cache : unit -> unit
 (** Empties the internal cache of the module. *)
 
+val make_form :
+  string ->
+  D_loop.DStd.Expr.term ->
+  Loc.t ->
+  decl_kind:Expr.decl_kind ->
+  Expr.t
+
 val make :
   D_loop.DStd.Loc.file ->
   Commands.sat_tdecl list ->
