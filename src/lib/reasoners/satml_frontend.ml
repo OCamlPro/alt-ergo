@@ -1121,14 +1121,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                E.Core.(or_ acc (not ((op is_max) e tv)))
             ) (E.Core.not ((op is_max) e tv)) l
         in
-        Printer.print_dbg
-          "Obj %a has an optimum. Should continue beyond SAT to try to \
-           find a better opt than v = %a"
-          Expr.print e Expr.print tv;
-        Printer.print_dbg "neg is %a@." E.print neg;
+        if Options.get_debug_optimize () then
+          Printer.print_dbg
+            "The objective function %a has an optimum. We should continue \
+             to explore other branches to try to find a better optimum than \
+             %a." Expr.print e Expr.print tv;
         let l = [mk_gf neg] in
         (* TODO: Can we add the clause without 'cancel_until 0' ? *)
         SAT.cancel_until env.satml 0;
+        if Options.get_debug_optimize () then
+          Printer.print_dbg
+            "We assert the formula %a to explore another branch."
+            E.print neg;
         let env, updated = assume_aux ~dec_lvl:0 env l in
         if not updated then begin
           Printer.print_dbg

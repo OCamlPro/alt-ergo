@@ -2111,13 +2111,15 @@ let optimizing_split env uf opt_split =
       | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
         let optim = if to_max then max_p else Q.mult Q.m_one max_p in
-        let () =
-          if is_le then
-            Printer.print_dbg "%a has a %s: %a@."
-              E.print e
-              (if to_max then "maximum" else "minimum")
-              Q.print optim
-        in
+        if Options.get_debug_optimize () then
+          begin
+            if is_le then
+              Printer.print_dbg "%a has a %s: %a@." Expr.print e
+                (if to_max then "maximum" else "minimum") Q.print optim
+            else
+              Printer.print_dbg "%a is a %s bound of %a" Q.print optim
+                (if to_max then "upper" else "lower") Expr.print e
+          end;
         let r2 = alien_of (P.create [] optim  ty) in
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
