@@ -52,6 +52,8 @@ module MI = Map.Make(struct type t = int
 module SI = Set.Make(struct type t = int
     let compare (x: int) y = Stdlib.compare x y end)
 
+module MS = Map.Make(String)
+
 module SS = Set.Make(String)
 
 

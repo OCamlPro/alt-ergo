@@ -294,9 +294,6 @@ val set_type_smt2 : bool -> unit
 (** Set [unsat_core] accessible with {!val:get_unsat_core} *)
 val set_unsat_core : bool -> unit
 
-(** Set [produce_assignments] accessible with {!val:get_produce_assignments} *)
-val set_produce_assignments : bool -> unit
-
 (** Set [verbose] accessible with {!val:get_verbose} *)
 val set_verbose : bool -> unit
 
@@ -771,10 +768,6 @@ val get_infer_output_format : unit -> bool
 (** [true] if experimental support for unsat-cores is on. *)
 val get_unsat_core : unit -> bool
 (** Default to [false] *)
-
-(** [true] if Alt-Ergo allow to display the truth assignment for the labeled
-    formulas. *)
-val get_produce_assignments : unit -> bool
 
 (** {4 Profiling options} *)
 

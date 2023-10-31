@@ -95,6 +95,52 @@ let enable_maxsmt b =
   else
     DStd.Extensions.Smtlib2.(disable maxsmt)
 
+(* Dolmen util *)
+
+(** Returns the list of terms inside a dolmen binder. *)
+let terms_of_dolmen_binder = function
+  | DStd.Expr.Let_seq l | Let_par l ->
+    List.map snd l
+  | Lambda _ | Exists _ | Forall _ -> []
+
+(** Adds the named terms of the term [term] to the map accumulator [acc] *)
+let get_named_of_term
+    (acc : DStd.Expr.term Util.MS.t)
+    (term : DStd.Expr.term) =
+  let rec loop acc terms_to_check =
+    match terms_to_check with
+    | [] -> acc
+    | [] :: rest -> loop acc rest
+    | (term :: tl) :: rest ->
+      let terms_to_check = tl :: rest in
+      let terms_to_check =
+        match term.DStd.Expr.term_descr with
+        | DStd.Expr.Var _ | Cst _ -> terms_to_check
+        | App (t, _, tl) -> (t :: tl) :: terms_to_check
+        | Binder (b, t) ->
+          (t :: terms_of_dolmen_binder b) :: terms_to_check
+        | Match (t, plt) -> (t :: (List.map snd plt)) :: terms_to_check
+      in
+      match DStd.Expr.Term.get_tag term DStd.Expr.Tags.named with
+      | None -> loop acc terms_to_check
+      | Some name -> loop (Util.MS.add name term acc) terms_to_check
+  in
+  loop acc [[term]]
+
+(** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
+let get_named_of_stmt
+    ~(acc : DStd.Expr.term Util.MS.t)
+    (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
+  match stmt.contents with
+  | `Hyp f | `Goal f -> get_named_of_term acc f
+  | `Clause l -> List.fold_left get_named_of_term acc l
+  | `Solve (l1, l2) ->
+    List.fold_left
+      get_named_of_term
+      (List.fold_left get_named_of_term acc l1)
+      l2
+  | _ -> acc
+
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
@@ -297,6 +343,14 @@ let main () =
     State.create_key ~pipe:"" "optimize"
   in
 
+  let get_assignment: bool State.key =
+    State.create_key ~pipe:"" "get_assignment"
+  in
+
+  let named_terms: DStd.Expr.term Util.MS.t State.key =
+    State.create_key ~pipe:"" "named_terms"
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
@@ -409,6 +463,8 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
     |> State.set optimize_key (O.get_optimize ())
+    |> State.set get_assignment false
+    |> State.set named_terms Util.MS.empty
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
@@ -537,13 +593,14 @@ let main () =
             st
       )
     | ":produce-assignments",  Symbol { name = Simple b; _ } ->
-       let () =
-         match bool_of_string_opt b with
-         | None ->
-            print_wrn_opt ~name:":verbosity" st_loc "integer" value
-         | Some b ->
-            Options.set_produce_assignments b
-       in st
+      begin
+        match bool_of_string_opt b with
+        | None ->
+          print_wrn_opt ~name:":verbosity" st_loc "integer" value;
+          st
+        | Some b ->
+          State.set get_assignment b st
+      end
     | (":global-declarations"
       | ":interactive-mode"
       | ":produce-assertions"
@@ -657,8 +714,20 @@ let main () =
       unsupported_opt name
   in
 
-  let handle_get_assignment _ =
-    failwith "TODO: handle_get_assignment"
+  let evaluate_term _term = "unknown" in
+
+  let handle_term name (term : DStd.Expr.term) fmt =
+    Fmt.pf fmt "@,(%s %s)" name (evaluate_term term)
+  in
+
+  let handle_terms fmt map =
+    Util.MS.iter
+      (fun name term -> Fmt.pf fmt "%t" (handle_term name term))
+      map
+  in
+
+  let handle_get_assignment st =
+    Printer.print_std "(@[<v 0>%a@])@," handle_terms (State.get named_terms st)
   in
 
   let handle_stmt :
@@ -668,6 +737,12 @@ let main () =
     fun all_context st td ->
       let file_loc = (State.get State.logic_file st).loc in
       let solver_ctx = State.get solver_ctx_key st in
+      let st =
+        let named_terms_map =
+          get_named_of_stmt ~acc:(State.get named_terms st) td
+        in
+        State.set named_terms named_terms_map st
+      in
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
@@ -774,6 +849,8 @@ let main () =
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
         |> State.set optimize_key (O.get_optimize ())
+        |> State.set get_assignment false
+        |> State.set named_terms Util.MS.empty
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -790,12 +867,13 @@ let main () =
         st
 
       | {contents = `Get_assignment; _} ->
-        if Options.get_produce_assignments () then
-          handle_get_assignment ()
+        if State.get get_assignment st then
+          let () = handle_get_assignment st in st
         else
           begin
             Printer.print_smtlib_err
-              "Produce assignments disabled; add (set-option :produce-assignment)";
+              "Produce assignments disabled; \
+               add (set-option :produce-assignments true)";
             st
           end
 
