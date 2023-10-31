@@ -486,7 +486,7 @@ module Main_Default : S = struct
           match opt_split.case_split with
           | Some cs ->
             let new_choice = add_explanations_to_split cs in
-            aux env sem_facts acc_choices [new_choice]
+            propagate_choices env sem_facts acc_choices [new_choice]
           | None -> assert false
         end
 
