@@ -442,7 +442,7 @@ module Main_Default : S = struct
 
     and optimizing_split env sem_facts acc_choices opt_split =
       let opt_split =
-        CC_X.optimizing_split env.gamma_finite opt_split
+        Option.get (CC_X.optimizing_split env.gamma_finite opt_split)
       in
       let objectives =
         register_optimized_split env.objectives opt_split

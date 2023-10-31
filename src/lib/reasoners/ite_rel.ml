@@ -223,7 +223,7 @@ let assume env uf la =
 
 let case_split _env _uf ~for_model:_ = []
 
-let optimizing_split _env _uf _opt_split = assert false
+let optimizing_split _env _uf opt_split = Some opt_split
 
 let query _ _ _ = None
 

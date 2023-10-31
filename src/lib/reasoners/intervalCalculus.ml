@@ -2078,7 +2078,7 @@ let optimizing_split env uf opt_split =
     let case_split =
       Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
     in
-    { opt_split with value; case_split }
+    Some { opt_split with value; case_split }
 
   | None ->
     begin
@@ -2106,7 +2106,7 @@ let optimizing_split env uf opt_split =
         let value =
           if to_max then Th_util.Pinfinity else Th_util.Minfinity
         in
-        { opt_split with value }
+        Some { opt_split with value }
 
       | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
@@ -2139,7 +2139,7 @@ let optimizing_split env uf opt_split =
                [get-objective]. *)
             None
         in
-        { opt_split with value; case_split }
+        Some { opt_split with value; case_split }
     end
 
 (*** part dedicated to FPA reasoning ************************************)

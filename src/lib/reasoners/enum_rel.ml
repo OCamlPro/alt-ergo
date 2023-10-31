@@ -330,7 +330,7 @@ let case_split env uf ~for_model =
     Debug.no_case_split ();
     []
 
-let optimizing_split _env _uf opt_split = opt_split
+let optimizing_split _env _uf opt_split = Some opt_split
 
 let query env uf a_ex =
   try ignore(assume env uf [a_ex]); None
