@@ -994,11 +994,11 @@ module Main_Default : S = struct
   let get_case_split_env t = t.gamma_finite
 
   let compute_concrete_model env =
-    let {gamma_finite; _}, _ =
+    let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true in
     CC_X.extract_concrete_model
-      ~prop_model:env.assumed_set
-      ~optimized_splits:env.objectives
+      ~prop_model:assumed_set
+      ~optimized_splits:objectives
       gamma_finite
 
   let assume_th_elt t th_elt dep =
