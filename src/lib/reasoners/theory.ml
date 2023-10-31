@@ -630,12 +630,12 @@ module Main_Default : S = struct
                        choices. We're not in try-it *)
     }
 
-  let has_no_infinity objectives =
+  let has_no_limit objectives =
     Util.MI.for_all
       (fun _ {Th_util.value; _} ->
          match value with
-         | Pinfinity | Minfinity -> false
-         | Value _ | Unknown -> true
+         | Pinfinity | Minfinity | Value (_, (Above | Below))-> false
+         | Value (_, Exact) | Unknown -> true
       ) objectives
 
   (* This function attempts to produce a first-order model by case-splitting.
@@ -673,7 +673,7 @@ module Main_Default : S = struct
             let filt_choices = filter_choices uf t.choices in
             let filt_choices =
               if Util.MI.is_empty t.objectives ||
-                 has_no_infinity t.objectives
+                 has_no_limit t.objectives
                  (* otherwise, we may be unsound because infty optims
                     are not propagated *)
               then filt_choices
