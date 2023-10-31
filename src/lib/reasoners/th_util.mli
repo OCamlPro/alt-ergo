@@ -39,9 +39,11 @@ type theory =
 [@@deriving show]
 
 type limit_kind =
-  | Plus
-  | Minus
-  | None
+  | Above
+  | Below
+  | Exact
+  (* Type used to discriminate between limits from above or below. The
+     [Exact] constructor means the value isn't a limit but an exact value. *)
 
 type 'a optimized_split_value =
   | Minfinity

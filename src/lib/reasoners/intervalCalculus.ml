@@ -2048,9 +2048,9 @@ let case_split env uf ~for_model =
 (* Helper function used in [optimizing_split]. *)
 let limit_kind to_max is_le : Th_util.limit_kind =
   match to_max, is_le with
-  | true, false -> Plus
-  | false, false -> Minus
-  | _,  true-> None
+  | true, false -> Above
+  | false, false -> Below
+  | _,  true-> Exact
 
 let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
@@ -2074,7 +2074,7 @@ let optimizing_split env uf opt_split =
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let value = Th_util.Value (t2, None) in
+    let value = Th_util.Value (t2, Exact) in
     let case_split =
       Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
     in

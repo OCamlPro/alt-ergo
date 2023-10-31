@@ -1097,8 +1097,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              | Value (v, epsilon) ->
                begin
                  match epsilon with
-                 | Plus | Minus -> raise (Give_up ((e, v, is_max) :: acc))
-                 | None -> (e, v, is_max) :: acc
+                 | Above | Below -> raise (Give_up ((e, v, is_max) :: acc))
+                 | Exact -> (e, v, is_max) :: acc
                end
              | Unknown ->
                assert false

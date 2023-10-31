@@ -39,9 +39,9 @@ type theory =
 [@@deriving show]
 
 type limit_kind =
-  | Plus
-  | Minus
-  | None
+  | Above
+  | Below
+  | Exact
 
 type 'a optimized_split_value =
   | Minfinity

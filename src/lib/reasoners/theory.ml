@@ -377,10 +377,10 @@ module Main_Default : S = struct
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
-          | Value (_, None) ->
+          | Value (_, Exact) ->
             (* This split is already optimized. *)
             ()
-          | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
+          | Pinfinity | Minfinity | Value (_, (Above | Below)) ->
             (* We should block case-split at infinite values.
                   Otherwise, we may have soundness issues. We
                   may think an objective is unbounded, but some late
@@ -473,7 +473,7 @@ module Main_Default : S = struct
              and the procedure will optimize the problem in terms of U and y. *)
         assert false
 
-      | Pinfinity | Minfinity | Value (_, (Plus | Minus)) ->
+      | Pinfinity | Minfinity | Value (_, (Above | Below)) ->
         (* We stop optimizing the split [opt_split] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
@@ -481,7 +481,7 @@ module Main_Default : S = struct
         else
           { env with choices = List.rev acc_choices }, sem_facts
 
-      | Value (_, None) ->
+      | Value (_, Exact) ->
         begin
           match opt_split.case_split with
           | Some cs ->
