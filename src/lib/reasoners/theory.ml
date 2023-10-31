@@ -421,7 +421,7 @@ module Main_Default : S = struct
                assert false (* may happen? *)
         ) objectives objectives
 
-  let look_for_sat ~bad_last ~for_model env sem_facts new_choices =
+  let look_for_sat ~for_model env sem_facts new_choices =
     let rec generate_choices env sem_facts acc_choices =
       let new_splits, base_env =
         CC_X.case_split env.gamma_finite ~for_model
@@ -499,10 +499,10 @@ module Main_Default : S = struct
               participate to the inconsistency. *)
     and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
-      match new_choices, bad_last with
-      | [], _ -> aux env sem_facts acc_choices new_choices
+      match new_choices with
+      | [] -> aux env sem_facts acc_choices new_choices
 
-      | ((c, lit_orig, CNeg, ex_c, _order) as a) :: new_choices, _ ->
+      | ((c, lit_orig, CNeg, ex_c, _order) as a) :: new_choices ->
         let facts = CC_X.empty_facts () in
         CC_X.add_fact facts (LSem c, ex_c, lit_orig);
         let base_env, sem_facts =
@@ -511,15 +511,7 @@ module Main_Default : S = struct
         let env = { env with gamma_finite = base_env } in
         propagate_choices env sem_facts (a :: acc_choices) new_choices
 
-      (* This optimisation is not correct with the current explanation *)
-      (* | [(c, lit_orig, CPos exp, ex_c)], Yes (dep,_) -> *)
-      (*     let neg_c = CC_X.Rel.choice_mk_not c in *)
-      (*     let ex_c = Ex.union ex_c dep in *)
-      (*     Debug.split_backtrack neg_c ex_c; *)
-      (*     look_for_sat_aux ch No dl base_env
-              [neg_c, Numbers.Q.Int 1, CNeg, ex_c] *)
-
-      | ((c, lit_orig, CPos exp, ex_c_exp, order) as a) :: new_choices, _ ->
+      | ((c, lit_orig, CPos exp, ex_c_exp, order) as a) :: new_choices ->
         try
           Debug.split_assume c ex_c_exp;
           let facts = CC_X.empty_facts () in
@@ -661,15 +653,15 @@ module Main_Default : S = struct
           (* We haven't make choice yet. Initialize the environment
              [gamma_finite] with [gamma]. *)
           let t = reset_case_split_env t in
-          look_for_sat ~bad_last:None ~for_model t [] []
+          look_for_sat ~for_model t [] []
         else
           try
             (* We attempt to replay all the facts learnt by the SAT solver
                since the last call to [do_case_split]. *)
             let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
             let t = { t with gamma_finite = base_env } in
-            look_for_sat ~bad_last:None ~for_model t ch []
-          with Ex.Inconsistent (dep, classes) ->
+            look_for_sat ~for_model t ch []
+          with Ex.Inconsistent _ ->
             (* The inconsistency here doesn't mean there is no first-order model
                of the problem in the current branch of the SAT solver. For sake
                of soundness, we have to try to produce a model from the current
@@ -689,12 +681,12 @@ module Main_Default : S = struct
             in
             Debug.split_sat_contradicts_cs filt_choices;
             let t = reset_case_split_env t in
-            look_for_sat ~bad_last:(Some (dep, classes)) ~for_model
+            look_for_sat ~for_model
               { t with choices = [] } [] filt_choices
-      with Ex.Inconsistent (d, cl) ->
+      with Ex.Inconsistent (dep, classes) ->
         Debug.end_case_split t.choices;
         Options.tool_req 3 "TR-CCX-CS-Conflict";
-        raise (Ex.Inconsistent (d, cl))
+        raise (Ex.Inconsistent (dep, classes))
     in
     Debug.end_case_split (fst r).choices; r
 
