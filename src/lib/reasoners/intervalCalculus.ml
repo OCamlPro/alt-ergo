@@ -2027,10 +2027,9 @@ let model_from_unbounded_domains =
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
 let mk_const_term c ty =
-  let c = Q.to_string c in
   match ty with
-  | Ty.Tint -> E.int c
-  | Ty.Treal -> E.real c
+  | Ty.Tint -> E.Ints.of_Z (Q.to_z c)
+  | Ty.Treal -> E.Reals.of_Q c
   | _ -> assert false
 
 let case_split env uf ~for_model =
