@@ -97,12 +97,6 @@ let enable_maxsmt b =
 
 (* Dolmen util *)
 
-(** Returns the list of terms inside a dolmen binder. *)
-let terms_of_dolmen_binder = function
-  | DStd.Expr.Let_seq l | Let_par l ->
-    List.map snd l
-  | Lambda _ | Exists _ | Forall _ -> []
-
 (** Adds the named terms of the term [term] to the map accumulator [acc] *)
 let get_named_of_term
     (acc : DStd.Expr.term Util.MS.t)
@@ -117,8 +111,9 @@ let get_named_of_term
         match term.DStd.Expr.term_descr with
         | DStd.Expr.Var _ | Cst _ -> terms_to_check
         | App (t, _, tl) -> (t :: tl) :: terms_to_check
-        | Binder (b, t) ->
-          (t :: terms_of_dolmen_binder b) :: terms_to_check
+        | Binder (_b, t) ->
+          (* TODO: consider catching the terms in the binder *)
+          [t] :: terms_to_check
         | Match (t, plt) -> (t :: (List.map snd plt)) :: terms_to_check
       in
       match DStd.Expr.Term.get_tag term DStd.Expr.Tags.named with
