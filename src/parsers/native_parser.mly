@@ -54,7 +54,6 @@
 %token RIGHTPAR RIGHTSQ RIGHTBR
 %token SLASH POW POWDOT
 %token THEN TIMES TRUE TYPE
-%token MAXIMIZE MINIMIZE
 
 /* Precedences */
 

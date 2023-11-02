@@ -79,8 +79,6 @@
         "match"      , MATCH;
         "with"       , WITH;
         "of"         , OF;
-        "maximize"  , MAXIMIZE;
-        "minimize"  , MINIMIZE;
       ]
     in
     List.iter (fun (s, kw) -> Hashtbl.add tbl s kw) kw_list;
