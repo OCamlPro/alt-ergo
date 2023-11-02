@@ -3,9 +3,13 @@ unknown
 (
   (define-fun q () Bool false)
 )
+()
+
 
 unknown
 (
   (define-fun p () Bool true)
   (define-fun q () Bool true)
 )
+()
+
