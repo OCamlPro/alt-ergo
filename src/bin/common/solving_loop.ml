@@ -893,24 +893,15 @@ let main () =
         begin
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
-            begin
-              match SAT.get_model partial_model with
-              | Some _ ->
-                if State.get produce_assignment st then
-                  handle_get_assignment
-                    ~get_value:(SAT.get_value partial_model)
-                    st
-                else
-                  recoverable_error
-                    "Produce assignments disabled; \
-                     add (set-option :produce-assignments true)";
+            if State.get produce_assignment st then
+              handle_get_assignment
+                ~get_value:(SAT.get_value partial_model)
                 st
-              | _ ->
-                recoverable_error
-                  "Model generation disabled, cannot execute get-assignment; \
-                   add (set-option :produce-model true)";
-                st
-            end
+            else
+              recoverable_error
+                "Produce assignments disabled; \
+                 add (set-option :produce-assignments true)";
+            st
           | None ->
             (* TODO: add the location of the statement. *)
             recoverable_error
