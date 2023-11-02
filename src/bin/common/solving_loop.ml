@@ -343,8 +343,8 @@ let main () =
     State.create_key ~pipe:"" "optimize"
   in
 
-  let get_assignment: bool State.key =
-    State.create_key ~pipe:"" "get_assignment"
+  let produce_assignment: bool State.key =
+    State.create_key ~pipe:"" "produce_assignment"
   in
 
   let named_terms: DStd.Expr.term Util.MS.t State.key =
@@ -463,7 +463,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
     |> State.set optimize_key (O.get_optimize ())
-    |> State.set get_assignment false
+    |> State.set produce_assignment false
     |> State.set named_terms Util.MS.empty
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -599,7 +599,7 @@ let main () =
           print_wrn_opt ~name:":verbosity" st_loc "integer" value;
           st
         | Some b ->
-          State.set get_assignment b st
+          State.set produce_assignment b st
       end
     | (":global-declarations"
       | ":interactive-mode"
@@ -872,7 +872,7 @@ let main () =
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
         |> State.set optimize_key (O.get_optimize ())
-        |> State.set get_assignment false
+        |> State.set produce_assignment false
         |> State.set named_terms Util.MS.empty
 
       | {contents = `Exit; _} -> raise Exit
@@ -896,7 +896,7 @@ let main () =
             begin
               match SAT.get_model partial_model with
               | Some _ ->
-                if State.get get_assignment st then
+                if State.get produce_assignment st then
                   handle_get_assignment
                     ~get_value:(SAT.get_value partial_model)
                     st
@@ -907,8 +907,8 @@ let main () =
                 st
               | _ ->
                 recoverable_error
-                  "Model generation disactivated, cannot execute \
-                   get-assignment.";
+                  "Model generation disabled, cannot execute get-assignment; \
+                   add (set-option :produce-model true)";
                 st
             end
           | None ->
