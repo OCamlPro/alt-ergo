@@ -5,7 +5,7 @@
 (declare-const q Bool)
 ; (declare-const t Int)
 (define-fun nq () Bool q)
-(assert (=> (not p) (not nq)))
+(assert (=> (! (not p) :named notp) (! (not nq) :named notnq)))
 (check-sat)
 (get-model)
 (get-assignment)

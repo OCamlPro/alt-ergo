@@ -3,7 +3,7 @@
 (set-option :produce-assignments true)
 (declare-const x Bool)
 (declare-const y Bool)
-(assert (or x (not x)))
+(assert (or x (! (not x) :named notx)))
 (check-sat)
 (get-model)
 (get-assignment)
