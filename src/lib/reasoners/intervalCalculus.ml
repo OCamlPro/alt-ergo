@@ -2045,13 +2045,6 @@ let case_split env uf ~for_model =
       end
   | _ -> res
 
-(* Helper function used in [optimizing_split]. *)
-let limit_kind to_max is_le : Th_util.limit_kind =
-  match to_max, is_le with
-  | true, false -> Above
-  | false, false -> Below
-  | _,  true-> Exact
-
 let optimizing_split env uf opt_split =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
@@ -2066,15 +2059,15 @@ let optimizing_split env uf opt_split =
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
-    Printer.print_dbg "%a has a %s: %a@."
-      E.print e
-      (if to_max then "maximum" else "minimum")
-      Q.print optim;
+    if Options.get_debug_optimize () then
+      Printer.print_dbg "%a has the value %a@."
+        E.print e
+        Q.print optim;
 
     let r2 = alien_of (P.create [] optim  ty) in
     Debug.case_split r1 r2;
     let t2 = mk_const_term optim ty in
-    let value = Th_util.Value (t2, Exact) in
+    let value = Th_util.Value t2 in
     let case_split =
       Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
     in
@@ -2124,7 +2117,13 @@ let optimizing_split env uf opt_split =
         Debug.case_split r1 r2;
         let t2 = mk_const_term optim ty in
         let value =
-          Th_util.Value (t2, limit_kind to_max is_le)
+          if is_le then
+            Th_util.Value t2
+          else
+            begin
+              if to_max then Th_util.Limit (Below, t2)
+              else Th_util.Limit (Above, t2)
+            end
         in
         let case_split =
           if is_le then

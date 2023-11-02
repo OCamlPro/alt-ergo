@@ -1115,7 +1115,7 @@ let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
       (fun _ord v ((bounded, pinfty, minfty) as acc) ->
          let {Th_util.value; r; _} = v in
          match value with
-         | Value _ ->
+         | Value _ | Limit _ ->
            SetX.add v.Th_util.r bounded, pinfty, minfty
          | Pinfinity  -> bounded, SetX.add r pinfty, minfty
          | Minfinity -> bounded, pinfty, SetX.add r minfty
@@ -1156,7 +1156,7 @@ let compute_objectives ~optimized_splits env mrepr =
           match value with
           | Pinfinity -> seen_infinity := true; Obj_pinfty
           | Minfinity -> seen_infinity := true; Obj_minfty
-          | Value _ ->
+          | Value _ | Limit _ ->
             let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
             Obj_val r_s
           | Unknown ->

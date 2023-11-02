@@ -713,7 +713,7 @@ let case_split env _uf ~for_model =
         []
     end
 
-let optimizing_split _env _uf opt_split = Some opt_split
+let optimizing_split _env _uf _opt_split = None
 
 let query env uf (ra, _, ex, _) =
   if Options.get_disable_adts () then None

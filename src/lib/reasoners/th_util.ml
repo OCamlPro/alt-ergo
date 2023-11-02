@@ -41,12 +41,12 @@ type theory =
 type limit_kind =
   | Above
   | Below
-  | Exact
 
 type 'a optimized_split_value =
   | Minfinity
-  | Value of 'a * limit_kind
   | Pinfinity
+  | Value of 'a
+  | Limit of limit_kind * 'a
   | Unknown
 
 type lit_origin =

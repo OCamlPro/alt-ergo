@@ -143,16 +143,24 @@ let case_split env uf ~for_model =
        | _ -> assert false
     ) splits
 
-let (let*) = Option.bind
+let rec optimizing_dispatcher s l =
+  match l with
+  | [] -> None
+  | f :: l ->
+    begin match f s with
+      | Some u -> Some u
+      | None -> optimizing_dispatcher s l
+    end
 
 let optimizing_split env uf opt_split =
   Options.exec_thread_yield ();
-  let* opt_split = Rel1.optimizing_split env.r1 uf opt_split in
-  let* opt_split = Rel2.optimizing_split env.r2 uf opt_split in
-  let* opt_split = Rel3.optimizing_split env.r3 uf opt_split in
-  let* opt_split = Rel4.optimizing_split env.r4 uf opt_split in
-  let* opt_split = Rel5.optimizing_split env.r5 uf opt_split in
-  Some opt_split
+  optimizing_dispatcher opt_split [
+    Rel1.optimizing_split env.r1 uf;
+    Rel2.optimizing_split env.r2 uf;
+    Rel3.optimizing_split env.r3 uf;
+    Rel4.optimizing_split env.r4 uf;
+    Rel5.optimizing_split env.r5 uf
+  ]
 
 let add env uf r t =
   Options.exec_thread_yield ();

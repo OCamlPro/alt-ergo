@@ -1038,7 +1038,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
-  exception Give_up of (E.t * E.t * bool) list
+  exception Give_up of (E.t * E.t * bool * bool) list
 
   (* Getting [unknown] after a query can mean two things:
      - The problem is [unsat] but we didn't manage to find a contradiction;
@@ -1078,10 +1078,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      If this run produces the answer [unsat], we know that [2] was the best
      model value for [x]. Otherwise, we got a better value for [x]. *)
 
-  let op is_max =
-    match is_max with
-    | true -> Expr.Reals.(<=)
-    | false -> Expr.Reals.(>=)
+  let op is_max is_le =
+    if is_max then begin
+      if is_le then Expr.Reals.(<=)
+      else Expr.Reals.(<)
+    end
+    else begin
+      if is_le then Expr.Reals.(>=)
+      else Expr.Reals.(>)
+    end
 
   let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
     let obj = Th.get_objectives (SAT.current_tbox env.satml) in
@@ -1094,12 +1099,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              match value with
              | Pinfinity | Minfinity ->
                raise (Give_up acc)
-             | Value (v, epsilon) ->
-               begin
-                 match epsilon with
-                 | Above | Below -> raise (Give_up ((e, v, is_max) :: acc))
-                 | Exact -> (e, v, is_max) :: acc
-               end
+             | Value v ->
+               (e, v, is_max, true) :: acc
+             | Limit (_, v) ->
+               raise (Give_up ((e, v, is_max, false) :: acc))
              | Unknown ->
                assert false
           ) obj []
@@ -1112,14 +1115,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            priority cannot be optimized in presence of infinity values. *)
         raise unknown_exn;
 
-      | (e, tv, is_max) :: l ->
+      | (e, tv, is_max, is_le) :: l ->
         let neg =
           List.fold_left
-            (fun acc (e, tv, is_max) ->
+            (fun acc (e, tv, is_max, is_le) ->
                let eq = E.mk_eq e tv ~iff: false in
                let acc = E.Core.and_ acc eq in
-               E.Core.(or_ acc (not ((op is_max) e tv)))
-            ) (E.Core.not ((op is_max) e tv)) l
+               E.Core.(or_ acc (not ((op is_max is_le) e tv)))
+            ) (E.Core.not ((op is_max is_le) e tv)) l
         in
         if Options.get_debug_optimize () then
           Printer.print_dbg
@@ -1331,7 +1334,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )dep true
       end;
       dep
-    | (Util.Timeout | I_dont_know _ | Assert_failure _ ) as e -> raise e
+    | (Util.Timeout | I_dont_know _ ) as e -> raise e
+    | e ->
+      Printer.print_dbg
+        ~module_name:"Satml_frontend" ~function_name:"unsat"
+        "%s" (Printexc.to_string e);
+      assert false
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)

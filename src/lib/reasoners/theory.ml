@@ -377,10 +377,10 @@ module Main_Default : S = struct
     try
       Util.MI.iter (fun _ x ->
           match x.Th_util.value with
-          | Value (_, Exact) ->
+          | Value _ ->
             (* This split is already optimized. *)
             ()
-          | Pinfinity | Minfinity | Value (_, (Above | Below)) ->
+          | Pinfinity | Minfinity | Limit _ ->
             (* We should block case-split at infinite values.
                   Otherwise, we may have soundness issues. We
                   may think an objective is unbounded, but some late
@@ -415,7 +415,7 @@ module Main_Default : S = struct
            else
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
-             | Value _ ->
+             | Value _ | Limit _ ->
                Util.MI.add ord {v with value = Unknown} acc
              | Pinfinity | Minfinity ->
                assert false (* may happen? *)
@@ -473,15 +473,15 @@ module Main_Default : S = struct
              and the procedure will optimize the problem in terms of U and y. *)
         assert false
 
-      | Pinfinity | Minfinity | Value (_, (Above | Below)) ->
+      | Pinfinity | Minfinity | Limit _ ->
         (* We stop optimizing the split [opt_split] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
-          propagate_choices env sem_facts acc_choices []
+          aux env sem_facts acc_choices []
         else
           { env with choices = List.rev acc_choices }, sem_facts
 
-      | Value (_, Exact) ->
+      | Value _ ->
         begin
           match opt_split.case_split with
           | Some cs ->
@@ -559,11 +559,13 @@ module Main_Default : S = struct
 
     and aux env sem_facts acc_choices new_choices =
       Options.tool_req 3 "TR-CCX-CS-Case-Split";
-      match new_choices, next_optimization ~for_model env with
-      | [], None ->
-        generate_choices env sem_facts acc_choices
-      | [], Some opt_split ->
-        optimizing_split env sem_facts acc_choices opt_split
+      match new_choices with
+      | [] ->
+        begin match next_optimization ~for_model env with
+          | Some opt_split ->
+            optimizing_split env sem_facts acc_choices opt_split
+          | None -> generate_choices env sem_facts acc_choices
+        end
       | _ ->
         propagate_choices env sem_facts acc_choices new_choices
     in
@@ -634,8 +636,8 @@ module Main_Default : S = struct
     Util.MI.for_all
       (fun _ {Th_util.value; _} ->
          match value with
-         | Pinfinity | Minfinity | Value (_, (Above | Below))-> false
-         | Value (_, Exact) | Unknown -> true
+         | Pinfinity | Minfinity | Limit _ -> false
+         | Value _ | Unknown -> true
       ) objectives
 
   (* This function attempts to produce a first-order model by case-splitting.

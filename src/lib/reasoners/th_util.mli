@@ -41,16 +41,18 @@ type theory =
 type limit_kind =
   | Above
   | Below
-  | Exact
-  (* Type used to discriminate between limits from above or below. The
-     [Exact] constructor means the value isn't a limit but an exact value. *)
+  (** Type used to discriminate between limits from above or below. *)
 
 type 'a optimized_split_value =
   | Minfinity
-  | Value of 'a * limit_kind
-  (** [Value (v, e)] represents a real with a possible epsilon. *)
-
   | Pinfinity
+  | Value of 'a
+  | Limit of limit_kind * 'a
+  (** This case occurs when we try to optimize a strict bound. For instance,
+      we have a constraint of the form [x < 2], there is no maximum for [x] but
+      [2] is an upper bound. So [2] is a limit from below of the possible model
+      values. *)
+
   | Unknown
 
 (** Indicates where asserted literals come from.
