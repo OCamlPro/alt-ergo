@@ -724,35 +724,33 @@ let main () =
         ~decl_kind:Expr.Dgoal
     in
     match get_value ae_form with
-    | None -> "unknown" (* TODO: just don't print anything *)
-    | Some v ->
-      if Expr.equal v Expr.vrai then "true"
-      else if Expr.equal v Expr.faux then "false"
-      else "dunno"
+    | None -> "unknown" (* Not in the standard, but useful for recording when
+                           Alt-Ergo fails to guess the value of a term. *)
+    | Some v -> Fmt.to_to_string Expr.print v
   in
 
-  let print_term_assignment
-      get_value
-      name
-      (term : DStd.Expr.term)
-      fmt =
-    if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
-      Fmt.pf fmt "@,(%s %s)" name (evaluate_term get_value name term)
-  in
-
-  let print_terms_assignments get_value fmt map =
-    Util.MS.iter
-      (fun name term ->
-         Fmt.pf fmt "%t" (print_term_assignment get_value name term)
-      )
-      map
+  let print_terms_assignments =
+    Fmt.list
+      ~sep:(fun fmt _ -> Fmt.pf fmt "@,")
+      (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
   in
 
   let handle_get_assignment ~get_value st =
+    let assignments =
+      Util.MS.fold
+        (fun name term acc ->
+           if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
+             (name, evaluate_term get_value name term) :: acc
+           else
+             acc
+        )
+        (State.get named_terms st)
+        []
+    in
     Printer.print_std
       "(@[<v 0>%a@])@,"
-      (print_terms_assignments get_value)
-      (State.get named_terms st)
+      print_terms_assignments
+      assignments
   in
 
   let handle_stmt :
@@ -897,7 +895,7 @@ let main () =
           | Some Model ((module SAT), partial_model) ->
             begin
               match SAT.get_model partial_model with
-              | Some (lazy _) ->
+              | Some _ ->
                 if State.get get_assignment st then
                   handle_get_assignment
                     ~get_value:(SAT.get_value partial_model)
@@ -915,7 +913,9 @@ let main () =
             end
           | None ->
             (* TODO: add the location of the statement. *)
-            recoverable_error "No model produced."; st
+            recoverable_error
+              "No model produced, cannot execute get-assignment.";
+            st
         end
 
       | {contents = `Other (custom, args); _} ->
