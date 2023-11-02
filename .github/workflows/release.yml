@@ -37,5 +37,5 @@ jobs:
       - name: Upload the artefact
         uses: actions/upload-artifact@v3
         with:
-          name: distribution archive
+          name: alt-ergo-${{github.ref_name}}.tbz
           path: _build/alt-ergo-*.tbz
