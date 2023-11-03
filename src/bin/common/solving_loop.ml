@@ -112,7 +112,6 @@ let main () =
     O.get_sat_solver (),
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
-
   let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
     let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands () then
@@ -805,7 +804,7 @@ let main () =
     try
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
-
+      Options.Time.start ();
       let builtin_dir = "<builtin>" in
       let theory_preludes =
         Options.get_theory_preludes ()
