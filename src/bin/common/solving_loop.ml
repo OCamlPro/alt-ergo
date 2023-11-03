@@ -591,7 +591,7 @@ let main () =
       begin
         match bool_of_string_opt b with
         | None ->
-          print_wrn_opt ~name:":verbosity" st_loc "integer" value;
+          print_wrn_opt ~name:":verbosity" st_loc "boolean" value;
           st
         | Some b ->
           State.set produce_assignment b st
@@ -726,7 +726,7 @@ let main () =
 
   let print_terms_assignments =
     Fmt.list
-      ~sep:(fun fmt _ -> Fmt.pf fmt "@,")
+      ~sep:Fmt.cut
       (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
   in
 
