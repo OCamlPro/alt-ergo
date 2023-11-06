@@ -79,12 +79,11 @@ type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
-
 type t =
   | True
   | False
   | Void
-  | Name of { hs : Hstring.t ; kind : name_kind ; defined : bool }
+  | Name of { hs : Id.t ; kind : name_kind ; defined : bool }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -133,8 +132,7 @@ let is_internal sy =
   match sy with
   | Name { hs; _ } ->
     let s = Hstring.view hs in
-    Stdcompat.String.starts_with ~prefix:"." s ||
-    Stdcompat.String.starts_with ~prefix:"@" s
+    Id.Namespace.Internal.is_id s || Id.Namespace.Skolem.is_id s
   | _ -> false
 
 let compare_kinds k1 k2 =
@@ -454,54 +452,17 @@ let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
 
-module type Id = sig
-  val fresh : ?base:string -> unit -> string
-  val reset_fresh_cpt : unit -> unit
-  val is_id : string -> bool
-  val make_as_fresh : string -> string
-end
+let fresh_internal_name () = name (Id.Namespace.Internal.fresh ())
 
-module MakeId(S : sig val prefix : string end) : Id = struct
-
-  let make_as_fresh = (^) S.prefix
-
-  let fresh, reset_fresh_cpt =
-    let cpt = ref 0 in
-    let fresh_string ?(base = "") () =
-      incr cpt;
-      make_as_fresh (base ^ (string_of_int !cpt))
-    in
-    let reset_fresh_string_cpt () =
-      cpt := 0
-    in
-    fresh_string, reset_fresh_string_cpt
-
-  let is_id = Stdcompat.String.starts_with ~prefix:S.prefix
-end
-
-module InternalId = MakeId(struct let prefix = ".k" end)
-
-(* garder le suffixe "__" car cela influence l'ordre *)
-module SkolemId = MakeId(struct let prefix = ".?__" end)
-
-module AbstractId = MakeId(struct let prefix = "@a" end)
-
-let fresh_internal_string () = InternalId.fresh ()
-let fresh_internal_name () = name (fresh_internal_string ())
-
-let fresh_skolem_string base = SkolemId.fresh ~base ()
+let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
 let fresh_skolem_name base = name (fresh_skolem_string base)
 
-let fresh_abstract_string () = AbstractId.fresh ()
-
-let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
-
 let is_fresh_internal_name = function
-  | Name { hs = hd; _ } -> InternalId.is_id (Hstring.view hd)
+  | Name { hs = hd; _ } -> Id.Namespace.Internal.is_id (Hstring.view hd)
   | _ -> false
 
 let is_fresh_skolem = function
-  | Name { hs = hd; _ } -> SkolemId.is_id (Hstring.view hd)
+  | Name { hs = hd; _ } -> Id.Namespace.Skolem.is_id (Hstring.view hd)
   | _ -> false
 
 let is_get f = equal f (Op Get)
@@ -520,11 +481,6 @@ let add_label lbl t = Labels.replace labels t lbl
 let label t = try Labels.find labels t with Not_found -> Hstring.empty
 
 let clear_labels () = Labels.clear labels
-
-let reset_id_builders () =
-  InternalId.reset_fresh_cpt ();
-  SkolemId.reset_fresh_cpt ();
-  AbstractId.reset_fresh_cpt ()
 
 module Set : Set.S with type elt = t =
   Set.Make (struct type t=s let compare=compare end)

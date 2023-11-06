@@ -28,37 +28,24 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* TODO: update the documentation. *)
-(** Maps of values for alt-ergo's models.
-    Elements are sorted by symbols/types (P) and accumulated as sets
-    of expressions matching the P.key type (V).
-*)
+type t = Hstring.t [@@deriving ord]
 
-type sig_ = Id.t * Ty.t list * Ty.t
-(** Signature of a model value. *)
-
-module Value : sig
-  type abs_or_const = [
-    | `Abstract of sig_
-    | `Constant of Shostak.Combine.r * string
-  ]
-
-  type array = [
-    | `Abstract of sig_
-    | `Store of array * abs_or_const * abs_or_const
-  ]
-
-  type t = [
-    | `Array of array
-    | `Constructor of string * (abs_or_const list)
-    | abs_or_const
-  ]
-
-  val pp : t Fmt.t
-end
-
-type t
-
-val add : sig_ -> Value.t list -> Value.t -> t -> t
-val create : sig_ list -> t
+val show : t -> string
 val pp : t Fmt.t
+
+module Namespace : sig
+  module type S = sig
+    val fresh : ?base:string -> unit -> string
+    val is_id : string -> bool
+  end
+
+  module Internal : S
+  module Skolem : S
+  module Abstract : S
+
+  val make_as_fresh_skolem : string -> string
+
+  val reinit : unit -> unit
+  (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
+      counters. *)
+end

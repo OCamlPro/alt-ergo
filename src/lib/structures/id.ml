@@ -28,37 +28,49 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* TODO: update the documentation. *)
-(** Maps of values for alt-ergo's models.
-    Elements are sorted by symbols/types (P) and accumulated as sets
-    of expressions matching the P.key type (V).
-*)
+type t = Hstring.t [@@deriving ord]
 
-type sig_ = Id.t * Ty.t list * Ty.t
-(** Signature of a model value. *)
+let show hs = Util.quoted_string @@ Hstring.view hs
 
-module Value : sig
-  type abs_or_const = [
-    | `Abstract of sig_
-    | `Constant of Shostak.Combine.r * string
-  ]
+let pp ppf id = Fmt.pf ppf "%s" (show id)
 
-  type array = [
-    | `Abstract of sig_
-    | `Store of array * abs_or_const * abs_or_const
-  ]
+module Namespace = struct
+  module type S = sig
+    val fresh : ?base:string -> unit -> string
+    val is_id : string -> bool
+  end
 
-  type t = [
-    | `Array of array
-    | `Constructor of string * (abs_or_const list)
-    | abs_or_const
-  ]
+  module Make (S : sig val prefix : string end) = struct
+    let make_as_fresh = (^) S.prefix
 
-  val pp : t Fmt.t
+    let fresh, reset_fresh_cpt =
+      let cpt = ref 0 in
+      let fresh_string ?(base = "") () =
+        incr cpt;
+        make_as_fresh (base ^ (string_of_int !cpt))
+      in
+      let reset_fresh_string_cpt () =
+        cpt := 0
+      in
+      fresh_string, reset_fresh_string_cpt
+
+    let is_id = Stdcompat.String.starts_with ~prefix:S.prefix
+  end
+
+  module Internal = Make (struct let prefix = ".k" end)
+
+  module Skolem = Make
+      (struct
+        (* garder le suffixe "__" car cela influence l'ordre *)
+        let prefix = ".?__"
+      end)
+
+  let make_as_fresh_skolem = Skolem.make_as_fresh
+
+  module Abstract = Make (struct let prefix = "@a" end)
+
+  let reinit () =
+    Internal.reset_fresh_cpt ();
+    Skolem.reset_fresh_cpt ();
+    Abstract.reset_fresh_cpt ()
 end
-
-type t
-
-val add : sig_ -> Value.t list -> Value.t -> t -> t
-val create : sig_ list -> t
-val pp : t Fmt.t

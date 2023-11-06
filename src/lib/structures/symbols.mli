@@ -83,7 +83,7 @@ type t =
   | True
   | False
   | Void
-  | Name of { hs : Hstring.t ; kind : name_kind ; defined : bool }
+  | Name of { hs : Id.t ; kind : name_kind ; defined : bool }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -137,16 +137,13 @@ val pp_smtlib_operator : operator Fmt.t
 
 (*val dummy : t*)
 
-val fresh_internal_string : unit -> string
 val fresh_internal_name : unit -> t
 val is_fresh_internal_name : t -> bool
 
 val fresh_skolem_string : string -> string
 val fresh_skolem_name : string -> t
-val make_as_fresh_skolem : string -> t
 val is_fresh_skolem : t -> bool
 
-val fresh_abstract_string : unit -> string
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool
@@ -160,10 +157,6 @@ val string_of_bound : bound -> string
 
 val clear_labels : unit -> unit
 (** Empties the labels Hashtable *)
-
-val reset_id_builders : unit -> unit
-(** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
-    counters. *)
 
 module Set : Set.S with type elt = t
 

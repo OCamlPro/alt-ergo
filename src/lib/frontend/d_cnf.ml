@@ -39,7 +39,6 @@ module SM = Sy.Map
 
 module DE = DStd.Expr
 module DT = DE.Ty
-module Id = DStd.Id
 module B = DStd.Builtin
 
 let unsupported msg =
@@ -194,7 +193,7 @@ let builtin_term t = Dl.Typer.T.builtin_term t
 let builtin_ty t = Dl.Typer.T.builtin_ty t
 
 let ty name ty =
-  Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@
+  DStd.Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@
   fun env s ->
   builtin_ty @@
   Dolmen_type.Base.app0 (module Dl.Typer.T) env s ty
@@ -214,7 +213,7 @@ let builtin_enum = function
     let add_cstrs map =
       List.fold_left (fun map ((c : DE.term_cst), _) ->
           let name = get_basename c.path in
-          Id.Map.add { name = DStd.Name.simple name; ns = Term } (fun env _ ->
+          DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } (fun env _ ->
               builtin_term @@
               Dolmen_type.Base.term_app_cst
                 (module Dl.Typer.T) env c) map)
@@ -238,19 +237,19 @@ module Const = struct
   let bv2nat =
     with_cache (fun n ->
         let name = "bv2nat" in
-        Id.mk ~name ~builtin:(BV2Nat n)
+        DE.Id.mk ~name ~builtin:(BV2Nat n)
           (DStd.Path.global name) Ty.(arrow [bitv n] int))
 
   let int2bv =
     with_cache (fun n ->
         let name = "int2bv" in
-        Id.mk ~name ~builtin:(Int2BV n)
+        DE.Id.mk ~name ~builtin:(Int2BV n)
           (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
 
   let smt_round =
     with_cache (fun (n, m) ->
         let name = "ae.round" in
-        Id.mk
+        DE.Id.mk
           ~name
           ~builtin:(AERound (n, m))
           (DStd.Path.global name)
@@ -299,7 +298,7 @@ let bv_builtins env s =
     equivalent *)
 let inject_ae_to_smt2 id =
   match id with
-  | Id.{name = Simple n; _} ->
+  | DStd.Id.{name = Simple n; _} ->
     begin
       if String.equal n Fpa_rounding.fpa_rounding_mode_ae_type_name then
         (* Injecting the type name as the SMT2 Type name. *)
@@ -322,7 +321,7 @@ let inject_ae_to_smt2 id =
 let ae_fpa_builtins =
   let (->.) args ret = (args, ret) in
   let dterm name f =
-    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
     fun env s ->
     builtin_term @@
     Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
@@ -330,7 +329,7 @@ let ae_fpa_builtins =
   let op ?(tyvars = []) name builtin (args, ret) =
     let ty = DT.pi tyvars @@ DT.arrow args ret in
     let cst = DE.Id.mk ~name ~builtin (DStd.Path.global name) ty in
-    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
     fun env _ ->
     builtin_term @@
     Dolmen_type.Base.term_app_cst
@@ -358,13 +357,13 @@ let ae_fpa_builtins =
   let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
   let float64d x = float64 (mode "NearestTiesToEven") x in
   let partial1 name f =
-    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
     fun env s ->
     builtin_term @@
     Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
   in
   let partial2 name f =
-    Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
+    DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@
     fun env s ->
     builtin_term @@
     Dolmen_type.Base.term_app2 (module Dl.Typer.T) env s f
@@ -380,7 +379,7 @@ let ae_fpa_builtins =
   in
   let fpa_builtins =
     let open DT in
-    Id.Map.empty
+    DStd.Id.Map.empty
 
     |> add_rounding_modes
 
@@ -454,7 +453,7 @@ let ae_fpa_builtins =
   fun env s ->
     let search_id id =
       try
-        Id.Map.find_exn id fpa_builtins env s
+        DStd.Id.Map.find_exn id fpa_builtins env s
       with Not_found -> `Not_found
     in
     match s with
@@ -469,7 +468,7 @@ let smt_fpa_builtins =
     Dolmen_type.Base.term_app2 (module Dl.Typer.T) env s f
   in
   let other_builtins =
-    Id.Map.empty
+    DStd.Id.Map.empty
     |> add_rounding_modes
   in
   fun env s ->
@@ -487,7 +486,7 @@ let smt_fpa_builtins =
         | exception Failure _ -> `Not_found
       end
     | Dl.Typer.T.Id id -> begin
-        match Id.Map.find_exn id other_builtins env s with
+        match DStd.Id.Map.find_exn id other_builtins env s with
         | e -> e
         | exception Not_found -> `Not_found
       end
@@ -1876,7 +1875,7 @@ let make dloc_file acc stmt =
             let ns = DStd.Namespace.Decl in
             let name = Ty.fresh_hypothesis_name goal_sort in
             let decl: _ Typer_Pipe.stmt = {
-              id = Id.mk ns name;
+              id = DStd.Id.mk ns name;
               contents = `Hyp t; loc; attrs; implicit
             }
             in
@@ -1893,7 +1892,7 @@ let make dloc_file acc stmt =
       assert false
 
     (* Axiom definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
+    | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
         implicit=_ } ->
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in

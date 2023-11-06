@@ -1697,7 +1697,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     Fmt.kstr
-      (fun str -> Sy.make_as_fresh_skolem str)
+      (fun str -> Sy.name (Id.Namespace.make_as_fresh_skolem str))
       "%s%s!%d"
       s
       tyvars

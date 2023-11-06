@@ -31,7 +31,7 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type sig_ = string * Ty.t list * Ty.t [@@deriving ord]
+type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
   type abs_or_const = [
@@ -56,15 +56,15 @@ module Value = struct
 
   let pp_abs_or_const ppf v =
     match (v : abs_or_const) with
-    | `Abstract (s, _, ty) ->
-      Fmt.pf ppf "(as %s %a)" s Ty.pp_smtlib ty
+    | `Abstract (id, _, ty) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | `Constant (_, s) ->
-      Fmt.pf ppf "%s" (Util.quoted_string s)
+      Fmt.pf ppf "%s" s
 
   let rec pp_array ppf arr =
     match arr with
-    | `Abstract (s, _, ty) ->
-      Fmt.pf ppf "(as %s %a)" s Ty.pp_smtlib ty
+    | `Abstract (id, _, ty) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | `Store (arr, i, v) ->
       Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
         pp_array arr
@@ -203,10 +203,10 @@ let create _sigs = { values = P.empty; suspicious = false }
 let pp_named_arg_ty ppf (arg_name, arg_ty) =
   Fmt.pf ppf "(arg_%i %a)" arg_name Ty.pp_smtlib arg_ty
 
-let pp_define_fun ppf ((name, arg_tys, ret_ty), graph) =
+let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
-  Fmt.pf ppf "(@[define-fun %s (%a) %a@ %a)@]"
-    (Util.quoted_string name)
+  Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
+    Id.pp id
     Fmt.(list ~sep:cut pp_named_arg_ty) named_arg_tys
     Ty.pp_smtlib ret_ty
     Graph.pp graph

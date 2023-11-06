@@ -1032,17 +1032,17 @@ let model_repr_of_term t env mrepr =
 
 module Cache = struct
   type val_ = ModelMap.Value.abs_or_const
-  let arrays_cache : (string * Ty.t, (val_, val_) Hashtbl.t) Hashtbl.t = Hashtbl.create 17
+  let arrays_cache : (Id.t * Ty.t, (val_, val_) Hashtbl.t) Hashtbl.t = Hashtbl.create 17
   let records_cache = Hashtbl.create 17
 
-  let store_array_val name ty i v =
-    match Hashtbl.find_opt arrays_cache (name, ty) with
+  let store_array_val id ty i v =
+    match Hashtbl.find_opt arrays_cache (id, ty) with
     | Some values ->
       Hashtbl.replace values i v
     | None ->
       let values = Hashtbl.create 17 in
       Hashtbl.add values i v;
-      Hashtbl.add arrays_cache (name, ty) values
+      Hashtbl.add arrays_cache (id, ty) values
 
   let clear () =
     Hashtbl.clear arrays_cache;
@@ -1141,12 +1141,12 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
       | Sy.Name { hs; _ }, [], Ty.Tfarray _ ->
         let s = Hstring.view hs in
         begin
-          match Hashtbl.find_opt Cache.arrays_cache (s, ty) with
+          match Hashtbl.find_opt Cache.arrays_cache (hs, ty) with
           | Some _ -> acc
           | None ->
             (* We have to add an abstract array in case there is no
                constraint on its values. *)
-            Hashtbl.add Cache.arrays_cache (s, ty)
+            Hashtbl.add Cache.arrays_cache (hs, ty)
               (Hashtbl.create 17);
             acc
         end
@@ -1162,22 +1162,21 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
               Expr.term_view ta
             in
             assert (xs_ta == []);
-            let name =
+            let id =
               match f_ta with
-              | Sy.Name { hs; _ } -> Hstring.view hs
+              | Sy.Name { hs; _ } -> hs
               | _ -> assert false
             in
-            Cache.store_array_val name ty_ta (`Constant i) (`Constant ret_rep);
+            Cache.store_array_val id ty_ta (`Constant i) (`Constant ret_rep);
             acc
           | _ -> assert false
         end
-      | Sy.Name { hs; _ }, _, _ ->
-        let s = Hstring.view hs in
+      | Sy.Name { hs = id; _ }, _, _ ->
         let arg_vals =
           List.map (fun arg_val -> `Constant arg_val) arg_vals
         in
         let mdl =
-          ModelMap.(add (s, arg_tys, ty) arg_vals (`Constant ret_rep) mdl)
+          ModelMap.(add (id, arg_tys, ty) arg_vals (`Constant ret_rep) mdl)
         in
         mdl, mrepr
       | _ -> assert false
