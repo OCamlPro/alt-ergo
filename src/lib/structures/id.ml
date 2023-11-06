@@ -46,8 +46,9 @@ module Namespace = struct
     let fresh, reset_fresh_cpt =
       let cpt = ref 0 in
       let fresh_string ?(base = "") () =
+        let res = make_as_fresh (base ^ (string_of_int !cpt)) in
         incr cpt;
-        make_as_fresh (base ^ (string_of_int !cpt))
+        res
       in
       let reset_fresh_string_cpt () =
         cpt := 0

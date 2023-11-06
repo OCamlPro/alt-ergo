@@ -1091,8 +1091,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
           | None ->
             (* We have to add an abstract array in case there is no
                constraint on its values. *)
-            Hashtbl.add Cache.arrays_cache (hs, ty)
-              (Hashtbl.create 17);
+            Hashtbl.add Cache.arrays_cache (hs, ty) (Hashtbl.create 17);
             acc
         end
       | Sy.Op Sy.Set, _, _ ->
@@ -1120,8 +1119,18 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         let arg_vals =
           List.map (fun arg_val -> `Constant (arg_val |> snd)) arg_vals
         in
+        let value =
+          match ty with
+          | Ty.Text _ ->
+            (* We cannot produce a concrete value as the type is abstract.
+               In this case, we produce an abstract value with the appropriate
+               type. *)
+            let id = Id.Namespace.Abstract.fresh () |> Hstring.make in
+            `Abstract (id, arg_tys, ty)
+          | _ -> `Constant (ret_rep |> snd)
+        in
         let mdl =
-          ModelMap.(add (id, arg_tys, ty) arg_vals (`Constant (ret_rep |> snd)) mdl)
+          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
         in
         mdl, mrepr
       | _ -> assert false
