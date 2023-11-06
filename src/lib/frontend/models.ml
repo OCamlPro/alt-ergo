@@ -28,22 +28,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Format
-open Options
-
-module X = Shostak.Combine
-
-module Ac = Shostak.Ac
-module Ex = Explanation
-
 module Sy = Symbols
+module X = Shostak.Combine
 module E = Expr
-module ME = Expr.Map
-module SE = Expr.Set
-module MS = Map.Make(String)
-module MX = Shostak.MXH
-
-let constraints = ref MS.empty
 
 type t = {
   propositional : Expr.Set.t;
@@ -57,20 +44,20 @@ let empty = {
   terms_values = Expr.Map.empty;
 }
 
-module Pp_smtlib_term = struct
-
+(* module Pp_smtlib_term = struct
+  open Format
   let to_string_type t =
     asprintf "%a" Ty.pp_smtlib t
 
   let rec print fmt t =
-    let {E.f;xs;ty; _} = E.term_view t in
+    let {Expr.f;xs;ty; _} = Expr.term_view t in
     match f, xs with
 
     | Sy.Lit lit, xs ->
       begin
         match lit, xs with
         | Sy.L_eq, a::l ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(= %a%a)"
               print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
           else
@@ -78,13 +65,13 @@ module Pp_smtlib_term = struct
               print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
 
         | Sy.L_neg_eq, [a; b] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(not (= %a %a))" print a print b
           else
             fprintf fmt "(%a <> %a)" print a print b
 
         | Sy.L_neg_eq, a::l ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(distinct %a%a)"
               print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
           else
@@ -92,25 +79,25 @@ module Pp_smtlib_term = struct
               print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
 
         | Sy.L_built Sy.LE, [a;b] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(<= %a %a)" print a print b
           else
             fprintf fmt "(%a <= %a)" print a print b
 
         | Sy.L_built Sy.LT, [a;b] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(< %a %a)" print a print b
           else
             fprintf fmt "(%a < %a)" print a print b
 
         | Sy.L_neg_built Sy.LE, [a; b] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(> %a %a)" print a print b
           else
             fprintf fmt "(%a > %a)" print a print b
 
         | Sy.L_neg_built Sy.LT, [a; b] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(>= %a %a)" print a print b
           else
             fprintf fmt "(%a >= %a)" print a print b
@@ -119,13 +106,13 @@ module Pp_smtlib_term = struct
           fprintf fmt "(not %a)" print a
 
         | Sy.L_built (Sy.IsConstr hs), [e] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
           else
             fprintf fmt "(%a ? %a)" print e Hstring.print hs
 
         | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-          if get_output_smtlib () then
+          if Options.get_output_smtlib () then
             fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
           else
             fprintf fmt "not (%a ? %a)" print e Hstring.print hs
@@ -139,13 +126,13 @@ module Pp_smtlib_term = struct
       end
 
     | Sy.Op Sy.Get, [e1; e2] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(select %a %a)" print e1 print e2
       else
         fprintf fmt "%a[%a]" print e1 print e2
 
     | Sy.Op Sy.Set, [e1; e2; e3] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(store %a %a %a)"
           print e1
           print e2
@@ -160,7 +147,7 @@ module Pp_smtlib_term = struct
       fprintf fmt "%a^{%d,%d}" print e i j
 
     | Sy.Op (Sy.Access field), [e] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%s %a)" (Hstring.view field) print e
       else
         fprintf fmt "%a.%s" print e (Hstring.view field)
@@ -190,7 +177,7 @@ module Pp_smtlib_term = struct
       fprintf fmt "%a(%a)" Hstring.print hs print_list l
 
     | Sy.Op _, [e1; e2] ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
@@ -227,7 +214,7 @@ module Pp_smtlib_term = struct
       fprintf fmt "%a" Sy.print f
 
     | _, _ ->
-      if get_output_smtlib () then
+      if Options.get_output_smtlib () then
         fprintf fmt "(%a %a)" Sy.print f print_list xs
       else
         fprintf fmt "%a(%a)" Sy.print f print_list xs
@@ -239,7 +226,7 @@ module Pp_smtlib_term = struct
 
   and print_list fmt = print_list_sep "," fmt
 
-end
+end *)
 
 (* of module SmtlibCounterExample *)
 (*

@@ -10,9 +10,9 @@ appropriate here.
   
   unknown
   (
-    (define-fun a1 () (Array Int Int) (store (as @a0 (Array Int Int)) 0 0))
     (define-fun x () Int 0)
     (define-fun y () Int 0)
+    (define-fun a1 () (Array Int Int) (store (as @a1 (Array Int Int)) 0 0))
   )
 
 Now we will test some semantic triggers.

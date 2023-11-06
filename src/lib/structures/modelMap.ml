@@ -34,52 +34,39 @@ module Sy = Symbols
 type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
-  type abs_or_const = [
-    | `Abstract of sig_
-    | `Constant of
-        (Shostak.Combine.r [@compare Shostak.Combine.hash_cmp]) * string
-  ]
-  [@@deriving ord]
-
   type array = [
     | `Abstract of sig_
-    | `Store of array * abs_or_const * abs_or_const
+    | `Store of array * string * string
   ]
   [@@deriving ord]
 
   type t = [
+    | `Abstract of sig_
+    | `Constant of string
     | `Array of array
-    | `Constructor of string * (abs_or_const list)
-    | abs_or_const
+    | `Constructor of string * (string list)
   ]
   [@@deriving ord]
-
-  let pp_abs_or_const ppf v =
-    match (v : abs_or_const) with
-    | `Abstract (id, _, ty) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | `Constant (_, s) ->
-      Fmt.pf ppf "%s" s
 
   let rec pp_array ppf arr =
     match arr with
     | `Abstract (id, _, ty) ->
       Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | `Store (arr, i, v) ->
-      Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
-        pp_array arr
-        pp_abs_or_const i
-        pp_abs_or_const v
+      Fmt.pf ppf "(@[<hv>store@ %a@ %s %s)@]"
+        pp_array arr i v
 
   let pp ppf v =
-    match (v : t) with
+    match v with
+    | `Abstract (id, _, ty) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
+    | `Constant s ->
+      Fmt.pf ppf "%s" s
     | `Array arr -> pp_array ppf arr
     | `Constructor (s, args) ->
       Fmt.pf ppf "(@[<hv>%s %a)@]"
         (Util.quoted_string s)
-        Fmt.(list ~sep:sp pp_abs_or_const) args
-    | #abs_or_const as w ->
-      pp_abs_or_const ppf w
+        Fmt.(list ~sep:sp Fmt.string) args
 
   module Map = Map.Make (struct
       type nonrec t = t
@@ -87,11 +74,6 @@ module Value = struct
       let compare = compare
     end)
 end
-
-module P = Map.Make
-    (struct
-      type t = sig_ [@@deriving ord]
-    end)
 
 module Graph = struct
   module M = Map.Make
@@ -160,6 +142,11 @@ module Graph = struct
   let pp ppf graph = pp_inverse ppf (inverse graph)
 end
 
+module P = Map.Make
+    (struct
+      type t = sig_ [@@deriving ord]
+    end)
+
 type t = {
   values : Graph.t P.t;
   suspicious : bool;
@@ -181,20 +168,11 @@ let is_suspicious_symbol = function
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
-let add ((sy, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
+let add ((_, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
   assert (List.compare_lengths arg_tys arg_vals = 0);
   let graph = try P.find sig_ values with Not_found -> Graph.empty in
   let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
   { values; suspicious = suspicious (* || is_suspicious_symbol sy *) }
-
-(* let iter f { values; _ } =
-   P.iter (fun ((sy, _, _) as sig_) graph ->
-      match sy with
-      | Sy.Name { defined = true; _ } ->
-        (* We don't print constants defined by the user. *)
-        ()
-      | _ -> f sig_ graph
-    ) values *)
 
 let fold f { values; _ } acc = P.fold f values acc
 
@@ -211,10 +189,14 @@ let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
     Ty.pp_smtlib ret_ty
     Graph.pp graph
 
+let pp_seq ppf seq =
+  match seq () with
+  | Seq.Nil -> ()
+  | Cons _ -> Fmt.pf ppf "@,%a" Fmt.(seq ~sep:cut pp_define_fun) seq
+
 let pp ppf {values; suspicious} =
   if suspicious then begin
     Fmt.pf ppf "; This model is a best-effort. It includes symbols
         for which model generation is known to be incomplete. @."
   end;
-  Fmt.pf ppf "@[<v 2>(@,%a@]@,)"
-    Fmt.(seq ~sep:cut pp_define_fun) (P.to_seq values)
+  Fmt.pf ppf "@[<v 2>(%a@]@,)" pp_seq (P.to_seq values)

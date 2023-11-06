@@ -28,37 +28,42 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* TODO: update the documentation. *)
-(** Maps of values for alt-ergo's models.
-    Elements are sorted by symbols/types (P) and accumulated as sets
-    of expressions matching the P.key type (V).
-*)
-
 type sig_ = Id.t * Ty.t list * Ty.t
 (** Signature of a model value. *)
 
 module Value : sig
-  type abs_or_const = [
-    | `Abstract of sig_
-    | `Constant of Shostak.Combine.r * string
-  ]
-
   type array = [
     | `Abstract of sig_
-    | `Store of array * abs_or_const * abs_or_const
+    (** An unique abstract array value. *)
+
+    | `Store of array * string * string
+    (** An array store: [(store array key value)]. *)
   ]
 
   type t = [
+    | `Abstract of sig_
+    (** An unique abstract value. *)
+
+    | `Constant of string
+    (** A string representation of a semantic value. *)
+
     | `Array of array
-    | `Constructor of string * (abs_or_const list)
-    | abs_or_const
+
+    | `Constructor of string * (string list)
+    (** A string representation of a constructor application. *)
   ]
 
   val pp : t Fmt.t
+  (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the
+      SMT-LIB format. *)
 end
 
 type t
 
 val add : sig_ -> Value.t list -> Value.t -> t -> t
+
 val create : sig_ list -> t
+
 val pp : t Fmt.t
+(** [pp ppf mdl] prints the model [mdl] on the formatter [ppf] using the
+    SMT-LIB format. *)
