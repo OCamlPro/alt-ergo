@@ -1069,7 +1069,6 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
     acc
   else
     begin
-      Cache.clear ();
       let arg_vals, arg_tys, mrepr =
         List.fold_left
           (fun (arg_vals, arg_tys, mrepr) arg ->
@@ -1153,6 +1152,7 @@ let terms env =
     ) env.make MED.empty
 
 let compute_concrete_model env =
+  Cache.clear ();
   MED.fold
     (fun t _mk acc -> compute_concrete_model_of_val env t acc
     ) (terms env) (ModelMap.create [], Expr.Map.empty)
