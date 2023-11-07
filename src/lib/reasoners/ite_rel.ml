@@ -221,7 +221,9 @@ let assume env uf la =
       raise e
   else assume env uf la
 
-let case_split _ _ ~for_model:_ = []
+let case_split _env _uf ~for_model:_ = []
+
+let optimizing_split _env _uf _opt_split = None
 
 let query _ _ _ = None
 

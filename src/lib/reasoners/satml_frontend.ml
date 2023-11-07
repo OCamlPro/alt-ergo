@@ -65,6 +65,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
+
+    objectives : Th_util.optimized_split Util.MI.t option ref
   }
 
   let empty_guards () = {
@@ -95,6 +97,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       last_saved_model = ref None;
       model_gen_phase = ref false;
       unknown_reason = None;
+      objectives = ref None
     }
 
   let empty_with_inst add_inst =
@@ -1035,6 +1038,117 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
+  exception Give_up of (E.t * E.t * bool * bool) list
+
+  (* Getting [unknown] after a query can mean two things:
+     - The problem is [unsat] but we didn't manage to find a contradiction;
+     - We produce a model of the formulas.
+
+     In the latter case, we optimized our objective functions during the
+     exploration of this branch of the SAT solver. It doesn't mean there is no
+     other branch of the SAT solver in which all the formulas are satisfiable
+     and the objective functions have bigger values in some models of this
+     branch.
+
+     For instance, consider the SMT-LIB problem:
+       (declare-const x Int)
+       (assert (or (<= x 2) (<= x 4)))
+       (assert (or (<= y 3))
+       (maximize x)
+       (maximize y)
+       (check-sat)
+       (get-model)
+
+     Assume that the solver explores the first branch (<= x 2) of the or gate:
+       (or (<= x 2) (<= x 4)).
+
+     Let's imagine it discovers that [0] is a model of the first formula. After
+     optimization, it find that [2] is the best model for [x] and [3] is the
+     best model for [y] it can got in this branch. Still we have to explore
+     the second branch [(<= x 4)] to realize that [4] is actually the best
+     model for [x].
+
+     The following function ensures to explore adequate branches of the SAT
+     solver in order to get the best model, if the problem is SAT.
+
+     In our running example, after getting the model [2], the below function
+     run again the SAT solver with the extra assert:
+       (assert (or (> x 2) (and (= x 2) (> y 3)))
+
+     If this run produces the answer [unsat], we know that [2] was the best
+     model value for [x]. Otherwise, we got a better value for [x]. *)
+
+  let op is_max is_le =
+    if is_max then begin
+      if is_le then Expr.Reals.(<=)
+      else Expr.Reals.(<)
+    end
+    else begin
+      if is_le then Expr.Reals.(>=)
+      else Expr.Reals.(>)
+    end
+
+  let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
+    let obj = Th.get_objectives (SAT.current_tbox env.satml) in
+    if Util.MI.is_empty obj then raise unknown_exn;
+    env.objectives := Some obj;
+    let acc =
+      try
+        Util.MI.fold
+          (fun _ {Th_util.e; value; r=_; is_max; _} acc ->
+             match value with
+             | Pinfinity | Minfinity ->
+               raise (Give_up acc)
+             | Value v ->
+               (e, v, is_max, true) :: acc
+             | Limit (_, v) ->
+               raise (Give_up ((e, v, is_max, false) :: acc))
+             | Unknown ->
+               assert false
+          ) obj []
+      with Give_up acc -> acc
+    in
+    begin match acc with
+      | [] ->
+        (* The answer for the first objective is infinity. We stop here as
+           we cannot go beyond infinity and the next objectives with lower
+           priority cannot be optimized in presence of infinity values. *)
+        raise unknown_exn;
+
+      | (e, tv, is_max, is_le) :: l ->
+        let neg =
+          List.fold_left
+            (fun acc (e, tv, is_max, is_le) ->
+               let eq = E.mk_eq e tv ~iff: false in
+               let acc = E.Core.and_ acc eq in
+               E.Core.(or_ acc (not ((op is_max is_le) e tv)))
+            ) (E.Core.not ((op is_max is_le) e tv)) l
+        in
+        if Options.get_debug_optimize () then
+          Printer.print_dbg
+            "The objective function %a has an optimum. We should continue \
+             to explore other branches to try to find a better optimum than \
+             %a." Expr.print e Expr.print tv;
+        let l = [mk_gf neg] in
+        (* TODO: Can we add the clause without 'cancel_until 0' ? *)
+        SAT.cancel_until env.satml 0;
+        if Options.get_debug_optimize () then
+          Printer.print_dbg
+            "We assert the formula %a to explore another branch."
+            E.print neg;
+        let env, updated = assume_aux ~dec_lvl:0 env l in
+        if not updated then begin
+          Printer.print_dbg
+            "env not updated after injection of neg! termination \
+             issue.@.@.";
+          assert false
+        end;
+        Options.Time.unset_timeout ();
+        Options.Time.set_timeout (Options.get_timelimit ());
+        unsat_rec_prem env ~first_call:false
+    end
+
+
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
     with
@@ -1094,6 +1208,27 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
           | Util.Timeout -> model_gen_on_timeout env
         end
+
+  let rec unsat_rec_prem env ~first_call : unit =
+    try
+      unsat_rec env ~first_call
+    with
+    | I_dont_know env as e ->
+      begin
+        try analyze_unknown_for_objectives env e unsat_rec_prem
+        with
+        | IUnsat (env, _) ->
+          assert (!(env.objectives) != None);
+          (* objectives is a ref, it's necessiraly updated as a
+             side-effect to best value *)
+          raise (I_dont_know env)
+      end
+    | Util.Timeout as e -> raise e
+
+    | IUnsat (env, _) as e ->
+      if !(env.objectives) == None then raise e;
+      (* TODO: put the correct objectives *)
+      raise (I_dont_know env)
 
   (* copied from sat_solvers.ml *)
   let max_term_depth_in_sat env =
@@ -1186,7 +1321,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env, _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       let env = {env with inst = Inst.register_max_term_depth env.inst max_t} in
-      unsat_rec env ~first_call:true;
+      unsat_rec_prem env ~first_call:true;
       assert false
     with
     | IUnsat (_env, dep) ->
@@ -1199,7 +1334,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )dep true
       end;
       dep
-    | (Util.Timeout | I_dont_know _) as e -> raise e
+    | (Util.Timeout | I_dont_know _ ) as e -> raise e
     | e ->
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"unsat"

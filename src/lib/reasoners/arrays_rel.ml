@@ -384,7 +384,7 @@ let new_equalities env eqs la class_of =
 (* choisir une egalite sur laquelle on fait un case-split *)
 let two = Numbers.Q.from_int 2
 
-let case_split env _ ~for_model:_ =
+let case_split env _uf ~for_model:_ =
   (*if Numbers.Q.compare
     (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
     Numbers.Q.sign  (max_split ()) < 0 then*)
@@ -395,6 +395,8 @@ let case_split env _ ~for_model:_ =
   with Not_found ->
     Debug.case_split_none ();
     []
+
+let optimizing_split _env _uf _opt_split = None
 
 let count_splits env la =
   let nb =

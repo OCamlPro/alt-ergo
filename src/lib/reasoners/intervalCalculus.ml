@@ -2026,6 +2026,11 @@ let model_from_unbounded_domains =
     let l2 = model_from_simplex int_sim true  env uf in
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
+let mk_const_term c ty =
+  match ty with
+  | Ty.Tint -> E.Ints.of_Z (Q.to_z c)
+  | Ty.Treal -> E.Reals.of_Q c
+  | _ -> assert false
 
 let case_split env uf ~for_model =
   let res = default_case_split env uf ~for_model in
@@ -2040,6 +2045,101 @@ let case_split env uf ~for_model =
       end
   | _ -> res
 
+let optimizing_split env uf opt_split =
+  (* soundness: if there are expressions to optmize, this should be
+     done without waiting for ~for_model flag to be true *)
+  let {Th_util.r = r; is_max = to_max; e; value; _ } = opt_split in
+  assert (match value with
+      | Unknown -> true
+      | _ -> false
+    );
+  let repr, _ = Uf.find uf e in
+  let ty = E.type_info e in
+  let r1 = r in (* instead of repr, which may be a constant *)
+  let p = poly_of repr in
+  match P.is_const p with
+  | Some optim ->
+    if Options.get_debug_optimize () then
+      Printer.print_dbg "%a has the value %a@."
+        E.print e
+        Q.print optim;
+
+    let r2 = alien_of (P.create [] optim  ty) in
+    Debug.case_split r1 r2;
+    let t2 = mk_const_term optim ty in
+    let value = Th_util.Value t2 in
+    let case_split =
+      Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
+    in
+    Some { opt_split with value; case_split }
+
+  | None ->
+    begin
+      let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
+      let p = if to_max then p else P.mult_const Q.m_one p in
+      let l, c = P.to_list p in
+      let l = List.rev_map (fun (x, y) -> y, x) (List.rev l) in
+      let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
+      match Sim.Result.get mx_res sim with
+      | Sim.Core.Unknown ->
+        (* The decision procedure is complete. *)
+        assert false
+
+      | Sim.Core.Sat _   ->
+        (* This answer is only returned by OcplibSimplex if we only want to
+           check the satisfability of the linear program. *)
+        assert false
+
+      | Sim.Core.Unsat _ ->
+        (* We know that the linear program is satisfisable as we check it
+           before. *)
+        assert false
+
+      | Sim.Core.Unbounded _ ->
+        let value =
+          if to_max then Th_util.Pinfinity else Th_util.Minfinity
+        in
+        Some { opt_split with value }
+
+      | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
+        let max_p = Q.add max_v.bvalue.v c in
+        let optim = if to_max then max_p else Q.mult Q.m_one max_p in
+        if Options.get_debug_optimize () then
+          begin
+            if is_le then
+              Printer.print_dbg "%a has a %s: %a@." Expr.print e
+                (if to_max then "maximum" else "minimum") Q.print optim
+            else
+              Printer.print_dbg "%a is a %s bound of %a" Q.print optim
+                (if to_max then "upper" else "lower") Expr.print e
+          end;
+        let r2 = alien_of (P.create [] optim  ty) in
+        Debug.case_split r1 r2;
+        let t2 = mk_const_term optim ty in
+        let value =
+          if is_le then
+            Th_util.Value t2
+          else
+            begin
+              if to_max then Th_util.Limit (Below, t2)
+              else Th_util.Limit (Above, t2)
+            end
+        in
+        let case_split =
+          if is_le then
+            Some (LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one))
+          else
+            (* As some bounds are strict, the value [r2] doesn't satisfy the
+               constraints of the problem. We don't produce a case-split
+               in this case because we don't want to propagate the equality
+               [r1 = r2] in the CC(X) environment [gamma_finite]. But
+               we propagate the new value [value] for this objective. Indeed,
+               we want to be able to print it while using the statement
+               [get-objective]. *)
+            None
+        in
+        Some { opt_split with value; case_split }
+    end
 
 (*** part dedicated to FPA reasoning ************************************)
 

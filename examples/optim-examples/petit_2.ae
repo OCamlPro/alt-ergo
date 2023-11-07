@@ -1,0 +1,16 @@
+logic z : int
+logic x : int
+logic y : int
+
+goal g :
+minimize(z,1) ->
+minimize(x,2) ->
+minimize(y,3) ->
+
+(y <= x) ->
+(0 <= (y - (3 * z))) ->
+(10 <= z) ->
+false
+(* min of x is 30, but solving without optmizing returns a model where
+ x= 35, y = 34 and z = 11
+*)

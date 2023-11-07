@@ -30,13 +30,30 @@
 
 type answer = (Explanation.t * Expr.Set.t list) option
 
-
 type theory =
   | Th_arith
   | Th_sum
   | Th_adt
   | Th_arrays
   | Th_UF
+[@@deriving show]
+
+type limit_kind =
+  | Above
+  | Below
+  (** Type used to discriminate between limits from above or below. *)
+
+type 'a optimized_split_value =
+  | Minfinity
+  | Pinfinity
+  | Value of 'a
+  | Limit of limit_kind * 'a
+  (** This case occurs when we try to optimize a strict bound. For instance,
+      we have a constraint of the form [x < 2], there is no maximum for [x] but
+      [2] is an upper bound. So [2] is a limit from below of the possible model
+      values. *)
+
+  | Unknown
 
 (** Indicates where asserted literals come from.
 
@@ -77,3 +94,14 @@ type lit_origin =
   (** Literals of {!Other} are those that are not covered by any of the cases
       described above. In particular, user assertions, SAT decisions, SAT
       propagations and theory propagations all have the {!Other} origin. *)
+
+type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
+
+type optimized_split = {
+  r : Shostak.Combine.r;
+  e : Expr.t;
+  value : Expr.t optimized_split_value;
+  case_split : case_split option;
+  is_max : bool;
+  order : int
+}

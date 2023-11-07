@@ -173,6 +173,9 @@ val set_debug_warnings : bool -> unit
 (** Set [debug_commands] accessible with {!val:get_debug_commands} *)
 val set_debug_commands : bool -> unit
 
+(** Set [debug_optimize] accessible with {!val:get_optimize} *)
+val set_debug_optimize : bool -> unit
+
 (** Set [profiling] accessible with {!val:get_profiling} *)
 val set_profiling : bool -> float -> unit
 
@@ -224,6 +227,10 @@ val set_dump_models : bool -> unit
 (** Set [interpretation_use_underscore] accessible with
     {!val:get_interpretation_use_underscore} *)
 val set_interpretation_use_underscore : bool -> unit
+
+(** Set [objectives_in_interpretation] accessible with
+    {!val:get_objectives_in_interpretation} *)
+val set_objectives_in_interpretation : bool -> unit
 
 (** Set [max_split] accessible with {!val:get_max_split} *)
 val set_max_split : Numbers.Q.t -> unit
@@ -465,6 +472,10 @@ val get_debug_warnings : unit -> bool
 (** Get the debugging flag of commands. If enabled, Alt-Ergo will display all
     the commands that are sent to the solver. *)
 val get_debug_commands : unit -> bool
+
+(** Get the debugging flag of optimize. If enabled, Alt-Ergo will output
+    debugging messages about the optimization of values in models. *)
+val get_debug_optimize : unit -> bool
 
 (** Get the debugging flag of cc. *)
 val get_debug_cc : unit -> bool
@@ -737,6 +748,14 @@ val get_last_interpretation : unit -> bool
 (** [true] if the interpretation_use_underscore is set to output _
     instead of fresh values *)
 val get_interpretation_use_underscore : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the objectives_in_interpretation is set to inline
+    pretty-printing of optimized expressions in the model instead of a
+    dedicated section '(objectives ...)'. Be aware that the model may
+    be shrunk or not accurate if some expressions to optimize are
+    unbounded. *)
+val get_objectives_in_interpretation : unit -> bool
 (** Default to [false] *)
 
 (** Value specifying the default output format. possible values are

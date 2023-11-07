@@ -2698,6 +2698,9 @@ module Purification = struct
           | _ -> failwith "unexpected expression in purify_form"
         end
 
+      | Sy.Op Sy.Optimize _ ->
+        purify_literal e
+
       | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"
 

@@ -403,10 +403,31 @@ module Translate = struct
     in
     mk_goal loc gname e
 
+  let translate_optimize =
+    let cpt = ref 0 in
+    fun ~is_maximize pos term ->
+      Printer.print_wrn
+        "optimize commands only work if the file contains check-sat@.";
+      assert (name_of_assert term == None);
+      incr cpt;
+      let e = translate_term [] term in
+      let func = if is_maximize then mk_maximize else mk_minimize in
+      let e = func pos e (string_of_int !cpt) in
+      let name = Format.sprintf "unamed__assert__%d" !cpt in
+      mk_generic_axiom pos name e
+
   let translate_command acc command =
     match command.c with
     | Cmd_Assert(assert_term) ->
       (translate_assert (pos command) assert_term) :: acc
+
+    | Cmd_Maximize t ->
+      (translate_optimize ~is_maximize:true (pos command) t) :: acc
+
+
+    | Cmd_Minimize t ->
+      (translate_optimize ~is_maximize:false (pos command) t) :: acc
+
     | Cmd_CheckEntailment(assert_term) ->
       (translate_goal (pos command) assert_term) :: acc
     | Cmd_CheckSat ->
@@ -454,8 +475,6 @@ module Translate = struct
     | Cmd_Push n -> translate_push_pop mk_push n (pos command) :: acc
     | Cmd_Pop n -> translate_push_pop mk_pop n (pos command) :: acc
     | Cmd_CheckAllSat _ -> not_supported "check-all-sat"; acc
-    | Cmd_Maximize _ -> not_supported "maximize"; acc
-    | Cmd_Minimize _ -> not_supported "minimize"; acc
 
   let init () =
     if Psmt2Frontend.Options.get_is_int_real () then
@@ -483,7 +502,7 @@ module Translate = struct
       []
     end
     else begin
-      let l = List.fold_left translate_command [] (List.rev commands) in
+      let l = List.rev @@ List.fold_left translate_command [] commands in
       (init ()) @ l
     end
 

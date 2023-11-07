@@ -323,11 +323,14 @@ let case_split env uf ~for_model =
        Numbers.Q.sign  (Options.get_max_split ()) < 0 then
       let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
       Debug.case_split r r';
-      [LR.mkv_eq r r', true, Th_util.CS(Th_util.Th_sum, n)]
-    else []
+      [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+    else
+      []
   | None ->
     Debug.no_case_split ();
     []
+
+let optimizing_split _env _uf _opt_split = None
 
 let query env uf a_ex =
   try ignore(assume env uf [a_ex]); None

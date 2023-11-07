@@ -1,0 +1,7 @@
+
+unknown
+(
+  (define-fun x () Int 4)
+  (define-fun y () Int 4)
+  (define-fun z () Int 1)
+)

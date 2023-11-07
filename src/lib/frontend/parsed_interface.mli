@@ -255,3 +255,7 @@ val mk_match : Loc.t -> lexpr -> (pattern * lexpr) list -> lexpr
 val mk_algebraic_test : Loc.t -> lexpr -> string -> lexpr
 
 val mk_algebraic_project : Loc.t -> guarded:bool -> lexpr -> string -> lexpr
+
+val mk_maximize: Loc.t -> lexpr -> string -> lexpr
+
+val mk_minimize: Loc.t -> lexpr -> string -> lexpr

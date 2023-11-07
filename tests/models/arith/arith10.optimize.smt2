@@ -1,0 +1,8 @@
+(set-logic ALL)
+(declare-const x Real)
+(declare-const y Real)
+(assert (< x 2.0))
+(assert (<= y 10.0))
+(maximize x)
+(maximize y)
+(check-sat)

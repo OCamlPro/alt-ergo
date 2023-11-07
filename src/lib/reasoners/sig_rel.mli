@@ -59,10 +59,13 @@ module type RELATION = sig
   val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
 
   val case_split :
-    t -> Uf.t ->
-    for_model:bool ->
-    (Shostak.Combine.r Xliteral.view * bool * Th_util.lit_origin) list
+    t -> Uf.t -> for_model:bool -> Th_util.case_split list
   (** case_split env returns a list of equalities *)
+
+  val optimizing_split :
+    t -> Uf.t -> Th_util.optimized_split -> Th_util.optimized_split option
+  (** [optimizing_split env uf opt_split] try to optimize the expression
+      contained in [opt_split]. *)
 
   val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
     t * (Shostak.Combine.r Xliteral.view * Explanation.t) list

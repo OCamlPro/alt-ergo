@@ -74,6 +74,7 @@ val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 (** Compute a counterexample using the Uf environment *)
 val extract_concrete_model :
   prop_model:Expr.Set.t ->
+  optimized_splits:Th_util.optimized_split Util.MI.t ->
   t ->
   Models.t Lazy.t option
 

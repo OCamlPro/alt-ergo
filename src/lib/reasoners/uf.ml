@@ -1006,74 +1006,36 @@ let is_a_good_model_value (x, _) =
   | [y] -> X.equal x y
   | _ -> false
 
-let model_repr_of_term t env mrepr =
+let is_const_term (x, _) =
+  match X.term_extract x with
+  | Some t, _ ->
+    E.const_term t
+  | _ ->
+    (*cannot test for theories which don't implement term_extract*)
+    true
+
+let model_repr_of_term t env mrepr unbounded =
   try ME.find t mrepr, mrepr
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
     let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
-    let cls =
-      try SE.elements (MapX.find rep env.classes)
-      with Not_found -> assert false
-    in
-    let cls =
-      try List.rev_map (fun s -> s, ME.find s env.make) cls
-      with Not_found -> assert false
-    in
-    let e = X.choose_adequate_model t rep cls in
-    e, ME.add t e mrepr
+    match unbounded with
+    | Some string_repr -> (rep, string_repr), mrepr
+    | None ->
+      let cls =
+        try SE.elements (MapX.find rep env.classes)
+        with Not_found -> assert false
+      in
+      let cls =
+        try List.rev_map (fun s -> s, ME.find s env.make) cls
+        with Not_found -> assert false
+      in
+      let e = X.choose_adequate_model t rep cls in
+      e, ME.add t e mrepr
 
-let compute_concrete_model ({ make; _ } as env) =
-  ME.fold
-    (fun t _mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
-       let { E.f; xs; ty; _ } = E.term_view t in
-       (* Keep record constructors because models.ml expects them to be there *)
-       if (X.is_solvable_theory_symbol f ty
-           && not (Shostak.Records.is_mine_symb f ty))
-       || E.is_internal_name t || E.is_internal_skolem t
-       || E.equal t E.vrai || E.equal t E.faux
-       || Sy.is_internal f
-       then
-         acc
-       else
-         let xs, tys, mrepr =
-           List.fold_left
-             (fun (xs, tys, mrepr) x ->
-                let rep_x, mrepr = model_repr_of_term x env mrepr in
-                assert (is_a_good_model_value rep_x);
-                (x, rep_x)::xs,
-                (E.type_info x)::tys,
-                mrepr
-             ) ([],[], mrepr) (List.rev xs)
-         in
-         let rep, mrepr = model_repr_of_term t env mrepr in
-         assert (is_a_good_model_value rep);
-         match f, xs, ty with
-         | Sy.Op Sy.Set, _, _ -> acc
-
-         | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
-           begin
-             match X.term_extract a with
-             | Some ta, true ->
-               let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
-               assert (xs_ta == []);
-               fprofs,
-               cprofs,
-               ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
-               mrepr
-
-             | _ -> assert false
-           end
-
-         | _ ->
-           if tys == [] then
-             fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
-             mrepr
-           else
-             ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
-             mrepr
-
-    ) make
-    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
+let is_optimization_op = function
+  | Sy.Op Sy.Optimize _ -> true
+  | _ -> false
 
 let save_cache () =
   LX.save_cache ()
@@ -1081,14 +1043,147 @@ let save_cache () =
 let reinit_cache () =
   LX.reinit_cache ()
 
-let extract_concrete_model ~prop_model env =
+let compute_concrete_model_of_val
+    env t ((fprofs, cprofs, carrays, mrepr) as acc) unbounded =
+  let { E.f; xs; ty; _ } = E.term_view t in
+  (* Keep record constructors because models.ml expects them to be there *)
+  if (X.is_solvable_theory_symbol f ty
+      && not (Shostak.Records.is_mine_symb f ty))
+  || E.is_internal_name t || E.is_internal_skolem t
+  || E.equal t E.vrai || E.equal t E.faux
+  || is_optimization_op f
+  || Sy.is_internal f
+  then
+    acc
+  else
+    let xs, tys, mrepr =
+      List.fold_left
+        (fun (xs, tys, mrepr) x ->
+           let rep_x, mrepr = model_repr_of_term x env mrepr None in
+           assert (is_const_term rep_x);
+           (x, rep_x)::xs,
+           (E.type_info x)::tys,
+           mrepr
+        ) ([],[], mrepr) (List.rev xs)
+    in
+    let rep, mrepr = model_repr_of_term t env mrepr unbounded in
+    assert (is_a_good_model_value rep);
+    assert (is_const_term rep);
+    match f, xs, ty with
+    | Sy.Op Sy.Set, _, _ -> acc
+
+    | Sy.Op Sy.Get, [(_,(a,_));((_,(i,_)) as e)], _ ->
+      begin
+        match X.term_extract a with
+        | Some ta, true ->
+          let { E.f = f_ta; xs=xs_ta; _ } = E.term_view ta in
+          assert (xs_ta == []);
+          fprofs,
+          cprofs,
+          ModelMap.add (f_ta,[X.type_info i], ty) ([e], rep) carrays,
+          mrepr
+
+        | _ -> assert false
+      end
+
+    | _ ->
+      if tys == [] then
+        fprofs, ModelMap.add (f, tys, ty) (xs, rep) cprofs, carrays,
+        mrepr
+      else
+        ModelMap.add (f, tys, ty) (xs, rep) fprofs, cprofs, carrays,
+        mrepr
+
+(* A map of expressions / terms, ordered by depth first, and then by
+   Expr.compare for expressions with same depth. This structure will
+   be used to build a model, by starting with the inner/smaller terms
+   first. The values associated to the key will be their make *)
+module MED = Map.Make
+    (struct
+      type t = Expr.t
+      let compare a b =
+        let c = Expr.depth a - Expr.depth b in
+        if c <> 0 then c
+        else Expr.compare a b
+    end)
+
+let terms env = ME.fold MED.add env.make MED.empty
+
+let compute_concrete_model ?(optimized_splits=Util.MI.empty) env =
+  let bounded, pinfty, minfty =
+    Util.MI.fold
+      (fun _ord v ((bounded, pinfty, minfty) as acc) ->
+         let {Th_util.value; r; _} = v in
+         match value with
+         | Value _ | Limit _ ->
+           SetX.add v.Th_util.r bounded, pinfty, minfty
+         | Pinfinity  -> bounded, SetX.add r pinfty, minfty
+         | Minfinity -> bounded, pinfty, SetX.add r minfty
+         | Unknown -> acc
+      ) optimized_splits (SetX.empty, SetX.empty, SetX.empty)
+  in
+  let is_bounded = pinfty == SetX.empty && minfty == SetX.empty in
+  (* Here, we fold on each term that appears in the 'make' map,
+     starting from those with smaller depth, and we compute a concrete
+     model for it. For the objectives (if any), we check if it should
+     be +/- infinity *)
+  MED.fold
+    (fun t mk acc ->
+       if SetX.mem mk pinfty then
+         (* mk's optimum is +infinity *)
+         compute_concrete_model_of_val env t acc (Some "+oo")
+       else
+       if SetX.mem mk minfty then
+         (* mk's optimum is -infinity *)
+         compute_concrete_model_of_val env t acc (Some "-oo")
+       else
+       if is_bounded || SetX.mem mk bounded then
+         (* either the pb is bounded (or it isn't an optimization pb)
+            or we have an optimum for mk *)
+         compute_concrete_model_of_val env t acc None
+       else
+         acc
+    ) (terms env)
+    (ModelMap.empty, ModelMap.empty, ModelMap.empty, ME.empty)
+
+let compute_objectives ~optimized_splits env mrepr =
+  let seen_infinity = ref false in
+  Util.MI.map
+    (fun {Th_util.e; value; r=_; _} ->
+       e,
+       (if !seen_infinity then Models.Obj_unk
+        else
+          match value with
+          | Pinfinity -> seen_infinity := true; Obj_pinfty
+          | Minfinity -> seen_infinity := true; Obj_minfty
+          | Value _ | Limit _ ->
+            let (_r_x, r_s), _mrepr = model_repr_of_term e env mrepr None in
+            Obj_val r_s
+          | Unknown ->
+            (* in this case, we should have !seen_infinity == true.
+               Which is handled in the if branch. Moreover, we
+               continue optimization now even if infinity is
+               encountered. *)
+            assert false
+       )
+    ) optimized_splits
+
+let extract_concrete_model ~prop_model ~optimized_splits env =
+  let optimized_splits =
+    if Options.get_objectives_in_interpretation () then
+      optimized_splits
+    else
+      Util.MI.empty
+  in
   if Options.get_interpretation () then
     Some (lazy (
-        let functions, constants, arrays, _mrepr =
-          compute_concrete_model env
+        let functions, constants, arrays, mrepr =
+          compute_concrete_model env ~optimized_splits
         in
+        let objectives = compute_objectives ~optimized_splits env mrepr in
         { Models.propositional = prop_model;
-          functions; constants; arrays }
+          functions; constants; arrays; objectives;
+          terms_values = mrepr }
       ))
   else
     None
