@@ -415,9 +415,9 @@ module Main_Default : S = struct
            else
              match v.Th_util.value with
              | Th_util.Unknown -> acc (* not optimized yet *)
-             | Value _ | Limit _ ->
+             | Value _ ->
                Util.MI.add ord {v with value = Unknown} acc
-             | Pinfinity | Minfinity ->
+             | Pinfinity | Minfinity | Limit _ ->
                assert false (* may happen? *)
         ) objectives objectives
 
