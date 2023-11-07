@@ -1033,15 +1033,16 @@ let model_repr_of_term t env mrepr =
 module Cache = struct
   let arrays_cache = Hashtbl.create 17
   let records_cache = Hashtbl.create 17
+  let abstracts_cache = Hashtbl.create 17
 
-  let store_array_val id ty i v =
-    match Hashtbl.find_opt arrays_cache (id, ty) with
+  let store_array_val (t : Expr.t) (i : string) v =
+    match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v
     | None ->
       let values = Hashtbl.create 17 in
       Hashtbl.add values i v;
-      Hashtbl.add arrays_cache (id, ty) values
+      Hashtbl.add arrays_cache t values
 
   let store_record_sig id ty =
     match Hashtbl.find_opt records_cache (id, ty) with
@@ -1057,9 +1058,19 @@ module Cache = struct
     | None ->
       assert false
 
+  let get_abstract_for env t =
+    let r, _ = find env t in
+    match Hashtbl.find_opt abstracts_cache r with
+    | Some abstract -> abstract
+    | None ->
+      let abstract = Id.Namespace.Abstract.fresh () |> Hstring.make in
+      Hashtbl.add abstracts_cache r abstract;
+      abstract
+
   let clear () =
     Hashtbl.clear arrays_cache;
-    Hashtbl.clear records_cache
+    Hashtbl.clear records_cache;
+    Hashtbl.clear abstracts_cache
 end
 
 let save_cache () =
@@ -1097,15 +1108,14 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
       let ret_rep, mrepr = model_repr_of_term t env mrepr in
       assert (is_a_good_model_value ret_rep);
       match f, arg_vals, ty with
-      | Sy.Name { hs; _ }, [], Ty.Tfarray _ ->
-        let s = Hstring.view hs in
+      | Sy.Name _, [], Ty.Tfarray _ ->
         begin
-          match Hashtbl.find_opt Cache.arrays_cache (hs, ty) with
+          match Hashtbl.find_opt Cache.arrays_cache t with
           | Some _ -> acc
           | None ->
             (* We have to add an abstract array in case there is no
                constraint on its values. *)
-            Hashtbl.add Cache.arrays_cache (hs, ty) (Hashtbl.create 17);
+            Hashtbl.add Cache.arrays_cache t (Hashtbl.create 17);
             acc
         end
 
@@ -1118,16 +1128,11 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         begin
           match X.term_extract a with
           | Some ta, true ->
-            let Expr.{ f = f_ta; xs = xs_ta; ty = ty_ta; _ } =
+            let Expr.{ xs = xs_ta; _ } =
               Expr.term_view ta
             in
             assert (xs_ta == []);
-            let id =
-              match f_ta with
-              | Sy.Name { hs; _ } -> hs
-              | _ -> assert false
-            in
-            Cache.store_array_val id ty_ta i (ret_rep |> snd);
+            Cache.store_array_val ta i (ret_rep |> snd);
             acc
           | _ -> assert false
         end
@@ -1146,8 +1151,8 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
             (* We cannot produce a concrete value as the type is abstract.
                In this case, we produce an abstract value with the appropriate
                type. *)
-            let id = Id.Namespace.Abstract.fresh () |> Hstring.make in
-            `Abstract (id, arg_tys, ty)
+            let abstract = Cache.get_abstract_for env t in
+            `Abstract (abstract, arg_tys, ty)
           | _ -> `Constant (ret_rep |> snd)
         in
         let mdl =
