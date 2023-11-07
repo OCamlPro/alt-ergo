@@ -48,7 +48,11 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
-[@@deriving enum]
+(* [@@deriving enum] *)
+
+let max_ty_module = 14
+
+let ty_module_to_enum = Obj.magic
 
 let all_modules =
   let l = [
@@ -94,7 +98,8 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
-[@@deriving enum]
+
+let max_ty_function = 19
 
 let all_functions =
   let l = [
@@ -161,6 +166,8 @@ let string_of_ty_function f = match f with
   | F_new_facts     -> "new_facts"
   | F_apply_subst   -> "apply_subst"
   | F_instantiate   -> "instantiate"
+
+let ty_function_to_enum = Obj.magic
 
 module TimerTable : sig
   (** The table of timers (module -> function -> float). *)

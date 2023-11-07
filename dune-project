@@ -85,14 +85,11 @@ See more details on http://alt-ergo.ocamlpro.com/"
   seq
   (fmt (>= 0.9.0))
   stdlib-shims
-  (ppx_blob (>= 0.7.2))
   (camlzip (>= 1.07))
   (odoc :with-doc)
-  ppx_deriving
   stdcompat
  )
  (conflicts
-  (ppxlib (< 0.30.0))
   (result (< 1.5))
  )
 )

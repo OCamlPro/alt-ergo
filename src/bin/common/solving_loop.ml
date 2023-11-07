@@ -27,7 +27,6 @@
 (*     More details can be found in the directory licenses/               *)
 (*                                                                        *)
 (**************************************************************************)
-
 open AltErgoLib
 open D_loop
 
