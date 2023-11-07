@@ -34,6 +34,15 @@ module Sy = Symbols
 type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
+  type simple = [
+    | `Abstract of sig_
+    | `Constant of string
+  ]
+  [@@deriving ord]
+
+  type record = string * simple list
+  [@@deriving ord]
+
   type array = [
     | `Abstract of sig_
     | `Store of array * string * string
@@ -41,12 +50,18 @@ module Value = struct
   [@@deriving ord]
 
   type t = [
-    | `Abstract of sig_
-    | `Constant of string
     | `Array of array
-    | `Constructor of string * (string list)
+    | `Record of record
+    | simple
   ]
   [@@deriving ord]
+
+  let pp_simple ppf simple =
+    match simple with
+    | `Abstract (id, _, ty) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
+    | `Constant s ->
+      Fmt.pf ppf "%s" s
 
   let rec pp_array ppf arr =
     match arr with
@@ -58,15 +73,12 @@ module Value = struct
 
   let pp ppf v =
     match v with
-    | `Abstract (id, _, ty) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | `Constant s ->
-      Fmt.pf ppf "%s" s
     | `Array arr -> pp_array ppf arr
-    | `Constructor (s, args) ->
+    | `Record (id, fields) ->
       Fmt.pf ppf "(@[<hv>%s %a)@]"
-        (Util.quoted_string s)
-        Fmt.(list ~sep:sp Fmt.string) args
+        (Util.quoted_string id)
+        Fmt.(list ~sep:sp pp_simple) fields
+    | #simple as w -> pp_simple ppf w
 
   module Map = Map.Make (struct
       type nonrec t = t
@@ -173,8 +185,6 @@ let add ((_, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
   let graph = try P.find sig_ values with Not_found -> Graph.empty in
   let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
   { values; suspicious = suspicious (* || is_suspicious_symbol sy *) }
-
-let fold f { values; _ } acc = P.fold f values acc
 
 let create _sigs = { values = P.empty; suspicious = false }
 

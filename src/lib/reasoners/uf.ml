@@ -1031,7 +1031,7 @@ let model_repr_of_term t env mrepr =
     e, ME.add t e mrepr
 
 module Cache = struct
-  let arrays_cache : (Id.t * Ty.t, (string, string) Hashtbl.t) Hashtbl.t = Hashtbl.create 17
+  let arrays_cache = Hashtbl.create 17
   let records_cache = Hashtbl.create 17
 
   let store_array_val id ty i v =
@@ -1042,6 +1042,20 @@ module Cache = struct
       let values = Hashtbl.create 17 in
       Hashtbl.add values i v;
       Hashtbl.add arrays_cache (id, ty) values
+
+  let store_record_sig id ty =
+    match Hashtbl.find_opt records_cache (id, ty) with
+    | Some _ -> ()
+    | None ->
+      let values = Hashtbl.create 17 in
+      Hashtbl.add records_cache (id, ty) values
+
+  let store_record_access id ty (field : string) (v : string) =
+    match Hashtbl.find_opt records_cache (id, ty) with
+    | Some values ->
+      Hashtbl.replace values field v
+    | None ->
+      assert false
 
   let clear () =
     Hashtbl.clear arrays_cache;
@@ -1094,10 +1108,12 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
             Hashtbl.add Cache.arrays_cache (hs, ty) (Hashtbl.create 17);
             acc
         end
+
       | Sy.Op Sy.Set, _, _ ->
         (* As arrays are immutable, the result of the set operator is
            never a user-defined array and has to be ignored. *)
         acc
+
       | Sy.Op Sy.Get, [(a, _); (_, i)], _ ->
         begin
           match X.term_extract a with
@@ -1115,6 +1131,11 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
             acc
           | _ -> assert false
         end
+
+      | Sy.Name { hs = id; _ }, [], Ty.Trecord trecord ->
+        Cache.store_record_sig (Hstring.view id) trecord;
+        acc
+
       | Sy.Name { hs = id; _ }, _, _ ->
         let arg_vals =
           List.map (fun arg_val -> `Constant (arg_val |> snd)) arg_vals
@@ -1133,7 +1154,20 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
         in
         mdl, mrepr
-      | _ -> assert false
+
+      | Sy.(Op Access field), [(record, name)], _ ->
+        begin
+          match X.type_info record with
+          | Ty.Trecord trecord ->
+            Cache.store_record_access name trecord (Hstring.view field)
+              (ret_rep |> snd);
+            mdl, mrepr
+          | _ -> assert false
+        end
+
+      | _ ->
+        Fmt.pr "Unexpected term %a@." Expr.print t;
+        assert false
     end
 
 (* A map of expressions / terms, ordered by depth first, and then by

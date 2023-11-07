@@ -32,6 +32,16 @@ type sig_ = Id.t * Ty.t list * Ty.t
 (** Signature of a model value. *)
 
 module Value : sig
+  type simple = [
+    | `Abstract of sig_
+    (** An unique abstract value. *)
+
+    | `Constant of string
+    (** A string representation of a semantic value. *)
+  ]
+
+  type record = string * simple list
+
   type array = [
     | `Abstract of sig_
     (** An unique abstract array value. *)
@@ -41,16 +51,12 @@ module Value : sig
   ]
 
   type t = [
-    | `Abstract of sig_
-    (** An unique abstract value. *)
-
-    | `Constant of string
-    (** A string representation of a semantic value. *)
-
     | `Array of array
 
-    | `Constructor of string * (string list)
-    (** A string representation of a constructor application. *)
+    | `Record of record
+    (** A string representation of a record definition. *)
+
+    | simple
   ]
 
   val pp : t Fmt.t
