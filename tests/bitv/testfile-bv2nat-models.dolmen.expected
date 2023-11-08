@@ -1,5 +1,7 @@
 
 unknown
+; This model is a best-effort. It includes symbols
+        for which model generation is known to be incomplete. 
 (
   (define-fun x () (_ BitVec 4) #b0111)
 )
