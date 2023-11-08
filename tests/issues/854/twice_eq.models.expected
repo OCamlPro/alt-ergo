@@ -1,8 +1,8 @@
 
 unknown
 (
-  (define-fun intrefqtmk ((arg_0 Int)) intref (as @a0 intref))
-  (define-fun another_mk ((arg_0 Int)) intref (as @a1 intref))
+  (define-fun intrefqtmk ((_arg_0 Int)) intref (as @a0 intref))
+  (define-fun another_mk ((_arg_0 Int)) intref (as @a0 intref))
   (define-fun a () Int 0)
   (define-fun a1 () Int 0)
 )

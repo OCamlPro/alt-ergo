@@ -31,11 +31,11 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
+type type_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
   type simple = [
-    | `Abstract of sig_
+    | `Abstract of type_
     | `Constant of string
   ]
   [@@deriving ord]
@@ -44,7 +44,7 @@ module Value = struct
   [@@deriving ord]
 
   type array = [
-    | `Abstract of sig_
+    | `Abstract of type_
     | `Store of array * string * string
   ]
   [@@deriving ord]
@@ -93,6 +93,11 @@ module Graph = struct
         type t = Value.t list [@@deriving ord]
       end)
 
+  type t = Value.t M.t
+
+  let empty = M.empty
+  let add = M.add
+
   module Fiber = struct
     include Set.Make (struct
         type t = Value.t list [@@deriving ord]
@@ -122,11 +127,6 @@ module Graph = struct
       aux ppf (to_seq fiber)
   end
 
-  type t = Value.t M.t
-
-  let empty = M.empty
-  let add = M.add
-
   (* Compute the inverse relation of the graph. *)
   let inverse graph =
     M.fold (fun arg_vals ret_val acc ->
@@ -150,13 +150,11 @@ module Graph = struct
           aux seq
     in
     aux ppf (Value.Map.to_seq rel)
-
-  let pp ppf graph = pp_inverse ppf (inverse graph)
 end
 
 module P = Map.Make
     (struct
-      type t = sig_ [@@deriving ord]
+      type t = type_ [@@deriving ord]
     end)
 
 type t = {
@@ -180,24 +178,27 @@ let is_suspicious_symbol = function
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
-let add ((_, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
+let add ((id, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
   assert (List.compare_lengths arg_tys arg_vals = 0);
   let graph = try P.find sig_ values with Not_found -> Graph.empty in
   let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
-  { values; suspicious = suspicious (* || is_suspicious_symbol sy *) }
+  { values; suspicious = suspicious (* || is_suspicious_symbol sy  *)}
 
-let create _sigs = { values = P.empty; suspicious = false }
+let empty = { values = P.empty; suspicious = false }
 
-let pp_named_arg_ty ppf (arg_name, arg_ty) =
-  Fmt.pf ppf "(arg_%i %a)" arg_name Ty.pp_smtlib arg_ty
+let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
+  let pp_unused ppf unused = if unused then Fmt.pf ppf "_" else () in
+  Fmt.pf ppf "(%aarg_%i %a)" pp_unused unused arg_name Ty.pp_smtlib arg_ty
 
 let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
+  let inverse_rel = Graph.inverse graph in
+  let is_constant = Value.Map.cardinal inverse_rel = 1 in
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
     Id.pp id
-    Fmt.(list ~sep:cut pp_named_arg_ty) named_arg_tys
+    Fmt.(list ~sep:sp (pp_named_arg_ty ~unused:is_constant)) named_arg_tys
     Ty.pp_smtlib ret_ty
-    Graph.pp graph
+    Graph.pp_inverse inverse_rel
 
 let pp_seq ppf seq =
   match seq () with

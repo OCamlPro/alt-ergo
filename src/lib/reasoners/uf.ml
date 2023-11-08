@@ -1000,18 +1000,18 @@ let assign_next env =
   res, env
 
 (**** Counter examples functions ****)
-let is_a_good_model_value (x, _) =
-  match X.leaves x with
+let is_a_good_model_value r =
+  match X.leaves r with
     [] -> true
-  | [y] -> X.equal x y
+  | [r'] -> X.equal r r'
   | _ -> false
 
-let is_const_term (x, _) =
-  match X.term_extract x with
+let is_const_term r =
+  match X.term_extract r with
   | Some t, _ ->
     E.const_term t
   | _ ->
-    (*cannot test for theories which don't implement term_extract*)
+    (* Cannot test for theories which don't implement [term_extract]. *)
     true
 
 let model_repr_of_term t env mrepr =
@@ -1035,7 +1035,7 @@ module Cache = struct
   let records_cache = Hashtbl.create 17
   let abstracts_cache = Hashtbl.create 17
 
-  let store_array_val (t : Expr.t) (i : string) v =
+  let store_array_get (t : Expr.t) (i : string) v =
     match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v
@@ -1098,7 +1098,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         List.fold_left
           (fun (arg_vals, arg_tys, mrepr) arg ->
              let rep_arg, mrepr = model_repr_of_term arg env mrepr in
-             assert (is_a_good_model_value rep_arg);
+             assert (is_a_good_model_value (fst rep_arg));
              rep_arg :: arg_vals,
              (Expr.type_info arg) :: arg_tys,
              mrepr
@@ -1106,7 +1106,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
           ([], [], mrepr) (List.rev xs)
       in
       let ret_rep, mrepr = model_repr_of_term t env mrepr in
-      assert (is_a_good_model_value ret_rep);
+      assert (is_a_good_model_value (fst ret_rep));
       match f, arg_vals, ty with
       | Sy.Name _, [], Ty.Tfarray _ ->
         begin
@@ -1132,7 +1132,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
               Expr.term_view ta
             in
             assert (xs_ta == []);
-            Cache.store_array_val ta i (ret_rep |> snd);
+            Cache.store_array_get ta i (ret_rep |> snd);
             acc
           | _ -> assert false
         end
@@ -1203,7 +1203,7 @@ let compute_concrete_model env =
   Cache.clear ();
   MED.fold
     (fun t _mk acc -> compute_concrete_model_of_val env t acc
-    ) (terms env) (ModelMap.create [], Expr.Map.empty)
+    ) (terms env) (ModelMap.empty, Expr.Map.empty)
 
 let extract_concrete_model ~prop_model env =
   let model, mrepr = compute_concrete_model env in
