@@ -756,7 +756,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             List.fold_left (add_aux env) ma l
 
           | OR l  ->
-            match Lists.find_opt (fun e ->
+            match Stdcompat.List.find_opt (fun e ->
                 let p = get_atom_or_proxy e env.proxies in
                 p.is_true) l
             with

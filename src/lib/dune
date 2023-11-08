@@ -24,6 +24,7 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    stdcompat
   )
   (preprocess (pps ppx_blob ppx_deriving.show ppx_deriving.enum ppx_deriving.fold))
   (preprocessor_deps (glob_files ../preludes/*.ae))
@@ -49,7 +50,7 @@
     Emap Gc_debug Hconsing Hstring Iheap Lists Loc
     MyUnix Numbers
     Options Timers Util Vec Version Steps Printer My_zip
-    Theories Compat
+    Theories
   )
 
  (js_of_ocaml

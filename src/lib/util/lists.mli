@@ -38,9 +38,6 @@
 val is_empty : 'a list -> bool
 (** Is the list empty? *)
 
-val to_seq : 'a list -> 'a Seq.t
-(** Iterate on the list *)
-
 val apply : ('a -> 'a) -> 'a list -> 'a list * bool
 (** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
     same such that: (1) "same" is true if and only if a_i == a_i for
@@ -50,17 +47,3 @@ val apply : ('a -> 'a) -> 'a list -> 'a list * bool
 val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 (** similar to function apply, but the elements of the list are
     couples **)
-
-val find_opt : ('a -> bool) -> 'a list -> 'a option
-(** Tries and find the first element of the list satisfying the predicate. *)
-
-val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
-(** [compare cmp l1 l2] compares the lists [l1] and [l2] using the comparison
-    function [cmp] on elements. *)
-
-val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
-(** [equal eq l1 l2] holds when the two input lists have the same length and for
-    each pair of elements [ai], [bi] at the same position in [l1] and [l2]
-    respectively, we have [eq ai bi].
-
-    This is a backport of List.equal from OCaml 4.12.0 *)

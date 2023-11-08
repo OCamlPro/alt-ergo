@@ -293,9 +293,9 @@ let int2bv_const n z =
   done;
   !acc
 
-let equal_abstract eq = Lists.equal (equal_simple_term eq)
+let equal_abstract eq = Stdcompat.List.equal (equal_simple_term eq)
 
-let compare_abstract cmp = Lists.compare (compare_simple_term cmp)
+let compare_abstract cmp = Stdcompat.List.compare (compare_simple_term cmp)
 
 let hash_abstract hash =
   List.fold_left (fun acc e -> acc + 19 * hash_simple_term hash e) 19
@@ -1149,9 +1149,10 @@ module Shostak(X : ALIEN) = struct
               let _fw = apply_subs subs r in
               let eq (_, l1) (_, l2) =
                 (* [apply_subs] does not change the left-hand sides *)
-                Lists.equal (Lists.equal (equal_alpha_term equal_tvar)) l1 l2
+                Stdcompat.List.(equal (equal (equal_alpha_term equal_tvar)))
+                  l1 l2
               in
-              if Lists.equal eq _bw bw
+              if Stdcompat.List.equal eq _bw bw
               then slice_rec ((t,vls')::bw) _fw
               else slice_rec [] (_bw@((t,vls'):: _fw))
             end
