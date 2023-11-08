@@ -117,7 +117,7 @@ module Graph = struct
       let rec aux ppf seq =
         match seq () with
         | Seq.Nil -> ()
-        | Cons (args, seq) when Seq.is_empty seq ->
+        | Cons (args, seq) when Stdcompat.Seq.is_empty seq ->
           Fmt.pf ppf "%a" (pp_args 0) args
         | Cons (args, seq) ->
           Fmt.pf ppf "(or %a %a)"
@@ -141,7 +141,7 @@ module Graph = struct
     let rec aux ppf seq =
       match seq () with
       | Seq.Nil -> ()
-      | Cons ((ret_val, _), seq) when Seq.is_empty seq ->
+      | Cons ((ret_val, _), seq) when Stdcompat.Seq.is_empty seq ->
         Fmt.pf ppf "%a" Value.pp ret_val
       | Cons ((ret_val, fiber), seq) ->
         Fmt.pf ppf "(@[<hv>ite %a@ %a@ %a)@]"
