@@ -120,7 +120,6 @@ let main () =
         goal_name
         Fmt.(list ~sep:sp Commands.print) cnf;
     let used_context = Frontend.choose_used_context all_context ~goal_name in
-    let consistent_dep_stack = Stack.create () in
     Signals_profiling.init_profiling ();
     try
       if Options.get_timelimit_per_goal() then
@@ -129,11 +128,11 @@ let main () =
           Options.Time.set_timeout (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let _, consistent, _ =
+      let ftdn_env =
         List.fold_left
-          (FE.process_decl
-             Frontend.print_status used_context consistent_dep_stack)
-          (SAT.empty (), `Unknown (SAT.empty ()), Explanation.empty) cnf
+          (FE.process_decl ~hook_on_status:Frontend.print_status)
+          (FE.init_env used_context)
+          cnf
       in
       if Options.get_timelimit_per_goal() then
         Options.Time.unset_timeout ();
@@ -144,7 +143,7 @@ let main () =
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
          printing wrong model. *)
-      match consistent with
+      match ftdn_env.FE.res with
       | `Sat partial_model | `Unknown partial_model ->
         Some (Model ((module SAT), partial_model))
       | `Unsat -> None

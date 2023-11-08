@@ -45,6 +45,7 @@ val print_status : 'a status -> int -> unit
 
 module type S = sig
 
+  (** The SAT working environment. *)
   type sat_env
 
   type res = [
@@ -53,13 +54,35 @@ module type S = sig
     | `Unsat
   ]
 
+  type env = {
+    used_context : used_context;
+    consistent_dep_stack: (res * Explanation.t) Stack.t;
+    sat_env : sat_env;
+    res : res;
+    expl : Explanation.t
+  }
+
+  type 'a process = ?loc:Loc.t -> env -> 'a -> env
+
+  val init_env : ?sat_env:sat_env -> used_context -> env
+
+  val push : int process
+
+  val pop : int process
+
+  val assume : (string * Expr.t * bool) process
+
+  val pred_def : (string * Expr.t) process
+
+  val query : (string * Expr.t * Ty.goal_sort) process
+
+  val th_assume : Expr.th_elt process
+
   val process_decl:
-    (sat_env status -> int -> unit) ->
-    used_context ->
-    (res * Explanation.t) Stack.t ->
-    sat_env * res * Explanation.t ->
+    ?hook_on_status:(sat_env status -> int -> unit) ->
+    env ->
     Commands.sat_tdecl ->
-    sat_env * res * Explanation.t
+    env
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t

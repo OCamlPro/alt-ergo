@@ -122,17 +122,16 @@ let main worker_id content =
 
     let solve all_context (cnf, goal_name) =
       let used_context = Frontend.choose_used_context all_context ~goal_name in
-      let consistent_dep_stack = Stack.create () in
       SAT.reset_refs ();
-      let env = SAT.empty_with_inst add_inst in
-      let _,_,dep =
+      let sat_env = SAT.empty_with_inst add_inst in
+      let ftnd_env =
         List.fold_left
-          (FE.process_decl
-             get_status_and_print used_context consistent_dep_stack)
-          (env, `Unknown env, Explanation.empty) cnf in
-
+          (FE.process_decl ~hook_on_status:get_status_and_print)
+          (FE.init_env ~sat_env used_context)
+          cnf
+      in
       if Options.get_unsat_core () then begin
-        unsat_core := Explanation.get_unsat_core dep;
+        unsat_core := Explanation.get_unsat_core ftnd_env.FE.expl;
       end;
     in
 
