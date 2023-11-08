@@ -71,7 +71,7 @@ val add : type_ -> Value.t list -> Value.t -> t -> t
 (** [add type_ args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the signature [type_]. *)
 
-val empty : t
+val empty : suspicious:bool -> t
 (** An empty model. *)
 
 val pp : t Fmt.t

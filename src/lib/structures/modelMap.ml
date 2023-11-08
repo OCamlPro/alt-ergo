@@ -178,13 +178,13 @@ let is_suspicious_symbol = function
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
-let add ((id, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
+let add ((_, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
   assert (List.compare_lengths arg_tys arg_vals = 0);
   let graph = try P.find sig_ values with Not_found -> Graph.empty in
   let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
-  { values; suspicious = suspicious (* || is_suspicious_symbol sy  *)}
+  { values; suspicious }
 
-let empty = { values = P.empty; suspicious = false }
+let empty ~suspicious = { values = P.empty; suspicious }
 
 let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
   let pp_unused ppf unused = if unused then Fmt.pf ppf "_" else () in

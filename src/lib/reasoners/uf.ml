@@ -1188,22 +1188,42 @@ module MED = Map.Make
         else Expr.compare a b
     end)
 
+let is_suspicious_name hs =
+  match Hstring.view hs with
+  | "@/" | "@%" | "@*" -> true
+  | _ -> false
+
+(* The model generation is known to be imcomplete for FPA and Bitvector
+   theories. *)
+let is_suspicious_symbol = function
+  | Symbols.Op (Float | Abs_int | Abs_real | Sqrt_real
+               | Sqrt_real_default | Sqrt_real_excess
+               | Real_of_int | Int_floor | Int_ceil
+               | Max_int | Max_real | Min_int | Min_real
+               | Pow | Integer_log2 | Int2BV _ | BV2Nat
+               | BVand | BVor | Integer_round) -> true
+  | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
+  | _ -> false
+
 let terms env =
   ME.fold
-    (fun t r acc ->
+    (fun t r ((terms, suspicious) as acc) ->
        let Expr.{ f; _ } = Expr.term_view t in
        match f with
        | Name { defined = true; _ } ->
          (* We don't store names defined by the user. *)
          acc
-       | _ -> MED.add t r acc
-    ) env.make MED.empty
+       | _ ->
+         let suspicious = if is_suspicious_symbol f then true else suspicious in
+         MED.add t r terms, suspicious
+    ) env.make (MED.empty, false)
 
 let compute_concrete_model env =
   Cache.clear ();
+  let terms, suspicious = terms env in
   MED.fold
     (fun t _mk acc -> compute_concrete_model_of_val env t acc
-    ) (terms env) (ModelMap.empty, Expr.Map.empty)
+    ) terms (ModelMap.empty ~suspicious, Expr.Map.empty)
 
 let extract_concrete_model ~prop_model env =
   let model, mrepr = compute_concrete_model env in
