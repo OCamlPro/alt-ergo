@@ -31,11 +31,11 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type type_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
+type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
   type simple = [
-    | `Abstract of type_
+    | `Abstract of sig_
     | `Constant of string
   ]
   [@@deriving ord]
@@ -44,7 +44,7 @@ module Value = struct
   [@@deriving ord]
 
   type array = [
-    | `Abstract of type_
+    | `Abstract of sig_
     | `Store of array * string * string
   ]
   [@@deriving ord]
@@ -61,7 +61,7 @@ module Value = struct
     | `Abstract (id, _, ty) ->
       Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | `Constant s ->
-      Fmt.pf ppf "%s" s
+      Fmt.string ppf s
 
   let rec pp_array ppf arr =
     match arr with
@@ -103,6 +103,12 @@ module Graph = struct
         type t = Value.t list [@@deriving ord]
       end)
 
+    (* For an argument (x_1, ..., x_n) of the function represented by the graph,
+       prints the SMT-LIB formula:
+        (and (= arg_0 x_1)
+          (and (= arg_1 x2)
+            ... (= arg_n x_n).
+    *)
     let rec pp_args ctr ppf = function
       | [] -> ()
       | [arg] ->
@@ -113,6 +119,12 @@ module Graph = struct
           Value.pp arg
           (pp_args (ctr + 1)) args
 
+    (* For a fiber [x; y; z; ...] of the function represented by the graph,
+       prints the SMT-LIB formula:
+        (or (and (= arg_0 x_0) (and (= arg_1 x_1) ...))
+          (or (and (= arg_0 y_0) (and (= arg_1 y_1) ...))
+            ...
+    *)
     let pp ppf fiber =
       let rec aux ppf seq =
         match seq () with
@@ -127,7 +139,7 @@ module Graph = struct
       aux ppf (to_seq fiber)
   end
 
-  (* Compute the inverse relation of the graph. *)
+  (* Compute all the fibers of the function represented by the graph. *)
   let inverse graph =
     M.fold (fun arg_vals ret_val acc ->
         match Value.Map.find_opt ret_val acc with
@@ -154,7 +166,7 @@ end
 
 module P = Map.Make
     (struct
-      type t = type_ [@@deriving ord]
+      type t = sig_ [@@deriving ord]
     end)
 
 type t = {

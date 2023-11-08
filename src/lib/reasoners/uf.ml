@@ -999,6 +999,12 @@ let assign_next env =
   Debug.check_invariants "assign_next" env;
   res, env
 
+let save_cache () =
+  LX.save_cache ()
+
+let reinit_cache () =
+  LX.reinit_cache ()
+
 (**** Counter examples functions ****)
 let is_a_good_model_value r =
   match X.leaves r with
@@ -1027,8 +1033,9 @@ let model_repr_of_term t env mrepr =
       try List.rev_map (fun s -> s, ME.find s env.make) cls
       with Not_found -> assert false
     in
-    let e = X.choose_adequate_model t rep cls in
-    e, ME.add t e mrepr
+    let rep, string_repr = X.choose_adequate_model t rep cls in
+    assert (is_a_good_model_value rep && is_const_term rep);
+    (rep, string_repr), ME.add t (rep, string_repr) mrepr
 
 module Cache = struct
   let arrays_cache = Hashtbl.create 17
@@ -1051,7 +1058,7 @@ module Cache = struct
       let values = Hashtbl.create 17 in
       Hashtbl.add records_cache (id, ty) values
 
-  let store_record_access id ty (field : string) (v : string) =
+  let store_record_access id ty field v =
     match Hashtbl.find_opt records_cache (id, ty) with
     | Some values ->
       Hashtbl.replace values field v
@@ -1072,12 +1079,6 @@ module Cache = struct
     Hashtbl.clear records_cache;
     Hashtbl.clear abstracts_cache
 end
-
-let save_cache () =
-  LX.save_cache ()
-
-let reinit_cache () =
-  LX.reinit_cache ()
 
 let is_forbidden_symbol f ty =
   (X.is_solvable_theory_symbol f ty
@@ -1134,7 +1135,10 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
             assert (xs_ta == []);
             Cache.store_array_get ta i (ret_rep |> snd);
             acc
-          | _ -> assert false
+          | _ ->
+            (* There is no semantic values for arrays, which means an array
+               is directly represented as a term. *)
+            assert false
         end
 
       | Sy.Name { hs = id; _ }, [], Ty.Trecord trecord ->
@@ -1164,10 +1168,12 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         begin
           match X.type_info record with
           | Ty.Trecord trecord ->
-            Cache.store_record_access name trecord (Hstring.view field)
+            Cache.store_record_access name trecord field
               (ret_rep |> snd);
             mdl, mrepr
-          | _ -> assert false
+          | _ ->
+            (* This case is excluded by the parser. *)
+            assert false
         end
 
       | _ ->

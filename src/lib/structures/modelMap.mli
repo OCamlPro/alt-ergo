@@ -28,12 +28,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type type_ = Id.t * Ty.t list * Ty.t
+type sig_ = Id.t * Ty.t list * Ty.t
 (** Type of a model value. *)
 
 module Value : sig
   type simple = [
-    | `Abstract of type_
+    | `Abstract of sig_
     (** An unique abstract value. *)
 
     | `Constant of string
@@ -43,7 +43,7 @@ module Value : sig
   type record = string * simple list
 
   type array = [
-    | `Abstract of type_
+    | `Abstract of sig_
     (** An unique abstract array value. *)
 
     | `Store of array * string * string
@@ -67,9 +67,9 @@ end
 type t
 (** Type of model. *)
 
-val add : type_ -> Value.t list -> Value.t -> t -> t
-(** [add type_ args ret mdl] adds the binding [args -> ret] to the partial graph
-    associated with the signature [type_]. *)
+val add : sig_ -> Value.t list -> Value.t -> t -> t
+(** [add sig_ args ret mdl] adds the binding [args -> ret] to the partial graph
+    associated with the signature [sig_]. *)
 
 val empty : suspicious:bool -> t
 (** An empty model. *)
