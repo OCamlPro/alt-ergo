@@ -1,6 +1,0 @@
-(set-logic ALL)
-(set-option :produce-assignments true)
-(declare-const x Int)
-(assert (! (= x 0) :named foo))
-(check-sat)
-(get-assignment)

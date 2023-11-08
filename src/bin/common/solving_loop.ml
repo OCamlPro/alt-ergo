@@ -886,32 +886,22 @@ let main () =
 
       | {contents = `Get_assignment; _} ->
         begin
-          if Options.get_interpretation () then begin
-            match State.get partial_model_key st with
-            | Some Model ((module SAT), partial_model) ->
-              if State.get produce_assignment st then
-                handle_get_assignment
-                  ~get_value:(SAT.get_value partial_model)
-                  st
-              else
-                recoverable_error
-                  "Produce assignments disabled; \
-                   add (set-option :produce-assignments true)";
-              st
-            | None ->
-              (* TODO: add the location of the statement. *)
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            if State.get produce_assignment st then
+              handle_get_assignment
+                ~get_value:(SAT.get_value partial_model)
+                st
+            else
               recoverable_error
-                "No model produced, cannot execute get-assignment.";
-              st
-          end
-          else
-            begin
-              (* TODO: add the location of the statement. *)
-              recoverable_error
-                "(get-assignment) requires model generation, \
-                 but it is disabled (try --produce-models)";
-              st
-            end
+                "Produce assignments disabled; \
+                 add (set-option :produce-assignments true)";
+            st
+          | None ->
+            (* TODO: add the location of the statement. *)
+            recoverable_error
+              "No model produced, cannot execute get-assignment.";
+            st
         end
 
       | {contents = `Other (custom, args); _} ->

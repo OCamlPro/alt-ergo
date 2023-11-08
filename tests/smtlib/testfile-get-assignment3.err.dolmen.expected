@@ -1,3 +1,0 @@
-
-unknown
-(error "(get-assignment) requires model generation, but it is disabled (try --produce-models)")
