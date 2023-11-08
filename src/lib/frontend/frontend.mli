@@ -62,9 +62,13 @@ module type S = sig
     expl : Explanation.t
   }
 
-  type 'a process = ?loc:Loc.t -> env -> 'a -> env
-
   val init_env : ?sat_env:sat_env -> used_context -> env
+
+  (** Process are wrappers of calls to the SAT solver.
+      They catch the [Sat], [Unsat] and [I_dont_know] exceptions to update the
+      frontend environment, but not the [Timeout] exception which is raised to
+      the user. *)
+  type 'a process = ?loc:Loc.t -> env -> 'a -> env
 
   val push : int process
 

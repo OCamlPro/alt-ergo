@@ -433,6 +433,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | SAT.Sat t -> {env with res = `Sat t}
     | SAT.Unsat expl -> {env with res = `Unsat; expl = Ex.union expl env.expl}
     | SAT.I_dont_know t -> {env with res = `Unknown t}
+  (* The SAT.Timeout exception is not catched. *)
 
   let push = handle_sat_exn internal_push
 
@@ -451,10 +452,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       match d.st_decl with
       | Push n -> internal_push ~loc:d.st_loc env n
       | Pop n -> internal_pop ~loc:d.st_loc env n
-      | Assume(n, f, mf) -> internal_assume ~loc:d.st_loc env (n, f, mf)
+      | Assume (n, f, mf) -> internal_assume ~loc:d.st_loc env (n, f, mf)
       | PredDef (f, name) -> internal_pred_def ~loc:d.st_loc env (name, f)
       | RwtDef _ -> assert false
-      | Query(n, f, sort) ->
+      | Query (n, f, sort) ->
         begin
           let env = internal_query ~loc:d.st_loc env (n, f, sort) in
           match env.res with
