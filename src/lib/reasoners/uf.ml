@@ -1037,9 +1037,17 @@ let model_repr_of_term t env mrepr =
     assert (is_a_good_model_value rep && is_const_term rep);
     (rep, string_repr), ME.add t (rep, string_repr) mrepr
 
+(* Caches used during the computation of the model.
+   All these caches are flushed before generating a new model. *)
 module Cache = struct
+  (* Stores all the get accesses to arrays. *)
   let arrays_cache = Hashtbl.create 17
+
+  (* Stores all the accesses to records. *)
   let records_cache = Hashtbl.create 17
+
+  (* Stores all the abstract values generated. This cache is necessary
+     to ensure we don't generate twice an abstract value for a given symbol. *)
   let abstracts_cache = Hashtbl.create 17
 
   let store_array_get (t : Expr.t) (i : string) v =
@@ -1081,13 +1089,13 @@ module Cache = struct
 end
 
 let is_forbidden_symbol f ty =
+  (* Keep record constructors because models.ml expects them to be there *)
   (X.is_solvable_theory_symbol f ty
    && not (Shostak.Records.is_mine_symb f ty))
   || Sy.is_internal f
 
 let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
   let { E.f; xs; ty; _ } = E.term_view t in
-  (* Keep record constructors because models.ml expects them to be there *)
   if is_forbidden_symbol f ty
   || E.is_internal_name t || E.is_internal_skolem t
   || E.equal t E.vrai || E.equal t E.faux

@@ -31,11 +31,11 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type sig_ = Id.t * Ty.t list * Ty.t [@@deriving ord]
+type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
   type simple = [
-    | `Abstract of sig_
+    | `Abstract of sy
     | `Constant of string
   ]
   [@@deriving ord]
@@ -44,7 +44,7 @@ module Value = struct
   [@@deriving ord]
 
   type array = [
-    | `Abstract of sig_
+    | `Abstract of sy
     | `Store of array * string * string
   ]
   [@@deriving ord]
@@ -166,7 +166,7 @@ end
 
 module P = Map.Make
     (struct
-      type t = sig_ [@@deriving ord]
+      type t = sy [@@deriving ord]
     end)
 
 type t = {
@@ -190,10 +190,13 @@ let is_suspicious_symbol = function
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
-let add ((_, arg_tys, _) as sig_) arg_vals ret_val { values; suspicious } =
-  assert (List.compare_lengths arg_tys arg_vals = 0);
-  let graph = try P.find sig_ values with Not_found -> Graph.empty in
-  let values = P.add sig_ (Graph.add arg_vals ret_val graph) values in
+let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
+  if List.compare_lengths arg_tys arg_vals <> 0 then
+    Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
+                     arguments" Id.pp id;
+
+  let graph = try P.find sy values with Not_found -> Graph.empty in
+  let values = P.add sy (Graph.add arg_vals ret_val graph) values in
   { values; suspicious }
 
 let empty ~suspicious = { values = P.empty; suspicious }
