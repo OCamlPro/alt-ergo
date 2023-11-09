@@ -3,9 +3,15 @@ unknown
 (
   (define-fun q () Bool false)
 )
+((notp false)
+ (notnq true))
+
 
 unknown
 (
   (define-fun p () Bool true)
   (define-fun q () Bool true)
 )
+((notp false)
+ (notnq false))
+
