@@ -1220,7 +1220,7 @@ let terms env =
          (* We don't store names defined by the user. *)
          acc
        | _ ->
-         let suspicious = if is_suspicious_symbol f then true else suspicious in
+         let suspicious = is_suspicious_symbol f || suspicious
          MED.add t r terms, suspicious
     ) env.make (MED.empty, false)
 
