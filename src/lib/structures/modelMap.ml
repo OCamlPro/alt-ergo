@@ -34,51 +34,47 @@ module Sy = Symbols
 type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
-  type simple = [
-    | `Abstract of sy
-    | `Constant of string
-  ]
+  type simple =
+    | Abstract of sy
+    | Constant of string
   [@@deriving ord]
 
   type record = string * simple list
   [@@deriving ord]
 
-  type array = [
-    | `Abstract of sy
-    | `Store of array * string * string
-  ]
+  type array =
+    | AbstractArray of sy
+    | Store of array * simple * simple
   [@@deriving ord]
 
-  type t = [
-    | `Array of array
-    | `Record of record
-    | simple
-  ]
+  type t =
+    | Array of array
+    | Record of record
+    | Simple of simple
   [@@deriving ord]
 
   let pp_simple ppf simple =
     match simple with
-    | `Abstract (id, _, ty) ->
+    | Abstract (id, _, ty) ->
       Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | `Constant s ->
+    | Constant s ->
       Fmt.string ppf s
 
   let rec pp_array ppf arr =
     match arr with
-    | `Abstract (id, _, ty) ->
+    | AbstractArray (id, _, ty) ->
       Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | `Store (arr, i, v) ->
-      Fmt.pf ppf "(@[<hv>store@ %a@ %s %s)@]"
-        pp_array arr i v
+    | Store (arr, i, v) -> Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
+        pp_array arr pp_simple i pp_simple v
 
   let pp ppf v =
     match v with
-    | `Array arr -> pp_array ppf arr
-    | `Record (id, fields) ->
+    | Array arr -> pp_array ppf arr
+    | Record (id, fields) ->
       Fmt.pf ppf "(@[<hv>%s %a)@]"
         (Util.quoted_string id)
         Fmt.(list ~sep:sp pp_simple) fields
-    | #simple as w -> pp_simple ppf w
+    | Simple w -> pp_simple ppf w
 
   module Map = Map.Make (struct
       type nonrec t = t
@@ -103,40 +99,35 @@ module Graph = struct
         type t = Value.t list [@@deriving ord]
       end)
 
+    let pp_arg ppf (ctr, arg) =
+      Fmt.pf ppf "(= arg_%i %a)" ctr Value.pp arg
+
     (* For an argument (x_1, ..., x_n) of the function represented by the graph,
        prints the SMT-LIB formula:
-        (and (= arg_0 x_1)
-          (and (= arg_1 x2)
-            ... (= arg_n x_n).
+        (and (= arg_0 x_1)(= arg_1 x2) ... (= arg_n x_n)).
     *)
-    let rec pp_args ctr ppf = function
+    let pp_args ppf = function
       | [] -> ()
       | [arg] ->
-        Fmt.pf ppf "(= arg_%i %a)" ctr Value.pp arg
-      | arg :: args ->
-        Fmt.pf ppf "(and (= arg_%i %a) %a)"
-          ctr
-          Value.pp arg
-          (pp_args (ctr + 1)) args
+        pp_arg ppf (0, arg)
+      | args ->
+        Fmt.pf ppf "(and %a)" Fmt.(iter_bindings ~sep:sp List.iteri pp_arg) args
 
     (* For a fiber [x; y; z; ...] of the function represented by the graph,
        prints the SMT-LIB formula:
-        (or (and (= arg_0 x_0) (and (= arg_1 x_1) ...))
-          (or (and (= arg_0 y_0) (and (= arg_1 y_1) ...))
-            ...
+        (or
+          (and (= arg_0 x_0) (= arg_1 x_1) ...)
+          (and (= arg_0 y_0) (= arg_1 y_1) ...)
+           ...)
     *)
     let pp ppf fiber =
-      let rec aux ppf seq =
-        match seq () with
-        | Seq.Nil -> ()
-        | Cons (args, seq) when Stdcompat.Seq.is_empty seq ->
-          Fmt.pf ppf "%a" (pp_args 0) args
-        | Cons (args, seq) ->
-          Fmt.pf ppf "(or %a %a)"
-            (pp_args 0) args
-            aux seq
-      in
-      aux ppf (to_seq fiber)
+      match cardinal fiber with
+      | 0 -> ()
+      | 1 ->
+        let args = choose fiber in
+        Fmt.pf ppf "%a" pp_args args
+      | _ ->
+        Fmt.pf ppf "(or %a)" (Fmt.iter ~sep:Fmt.sp iter pp_args) fiber
   end
 
   (* Compute all the fibers of the function represented by the graph. *)
@@ -166,7 +157,9 @@ end
 
 module P = Map.Make
     (struct
-      type t = sy [@@deriving ord]
+      type t = sy
+
+      let compare = compare_sy
     end)
 
 type t = {
@@ -215,14 +208,13 @@ let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
     Ty.pp_smtlib ret_ty
     Graph.pp_inverse inverse_rel
 
-let pp_seq ppf seq =
-  match seq () with
-  | Seq.Nil -> ()
-  | Cons _ -> Fmt.pf ppf "@,%a" Fmt.(seq ~sep:cut pp_define_fun) seq
-
 let pp ppf {values; suspicious} =
   if suspicious then begin
     Fmt.pf ppf "; This model is a best-effort. It includes symbols\n\
                 ; for which model generation is known to be incomplete.@."
   end;
-  Fmt.pf ppf "@[<v 2>(%a@]@,)" pp_seq (P.to_seq values)
+  if P.is_empty values then
+    Fmt.pf ppf "@[<v 2>(@]@,)"
+  else
+    Fmt.pf ppf "@[<v 2>(@,%a@]@,)"
+      (Fmt.iter_bindings ~sep:Fmt.cut P.iter pp_define_fun) values

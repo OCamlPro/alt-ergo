@@ -1050,7 +1050,7 @@ module Cache = struct
      to ensure we don't generate twice an abstract value for a given symbol. *)
   let abstracts_cache = Hashtbl.create 17
 
-  let store_array_get (t : Expr.t) (i : string) v =
+  let store_array_get (t : Expr.t) i v =
     match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v
@@ -1059,16 +1059,16 @@ module Cache = struct
       Hashtbl.add values i v;
       Hashtbl.add arrays_cache t values
 
-  let store_record_sig id ty =
-    match Hashtbl.find_opt records_cache (id, ty) with
+  let store_record_decl (sy, args_ty, args) r =
+    match Hashtbl.find_opt records_cache r with
     | Some _ -> ()
     | None ->
       let values = Hashtbl.create 17 in
-      Hashtbl.add records_cache (id, ty) values
+      Hashtbl.add records_cache r (sy, args_ty, args, values)
 
-  let store_record_access id ty field v =
-    match Hashtbl.find_opt records_cache (id, ty) with
-    | Some values ->
+  let store_record_access decl field v =
+    match Hashtbl.find_opt records_cache decl with
+    | Some (_sy, _args_ty, _args, values) ->
       Hashtbl.replace values field v
     | None ->
       assert false
@@ -1141,7 +1141,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
               Expr.term_view ta
             in
             assert (xs_ta == []);
-            Cache.store_array_get ta i (ret_rep |> snd);
+            Cache.store_array_get ta ModelMap.Value.(Constant i) ModelMap.Value.(Constant (ret_rep |> snd));
             acc
           | _ ->
             (* There is no semantic values for arrays, which means an array
@@ -1149,13 +1149,19 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
             assert false
         end
 
-      | Sy.Name { hs = id; _ }, [], Ty.Trecord trecord ->
-        Cache.store_record_sig (Hstring.view id) trecord;
+      | Sy.Name { hs = id; _ }, _, Ty.Trecord _ ->
+        let r, _ = find env t in
+        let arg_vals =
+          List.map
+            (fun arg_val -> ModelMap.Value.Simple (Constant (arg_val |> snd))) arg_vals
+        in
+        Cache.store_record_decl (id, arg_tys, arg_vals) r;
         acc
 
       | Sy.Name { hs = id; _ }, _, _ ->
         let arg_vals =
-          List.map (fun arg_val -> `Constant (arg_val |> snd)) arg_vals
+          List.map
+            (fun arg_val -> ModelMap.Value.Simple (Constant (arg_val |> snd))) arg_vals
         in
         let value =
           match ty with
@@ -1164,24 +1170,19 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
                In this case, we produce an abstract value with the appropriate
                type. *)
             let abstract = Cache.get_abstract_for env t in
-            `Abstract (abstract, arg_tys, ty)
-          | _ -> `Constant (ret_rep |> snd)
+            ModelMap.Value.Simple (Abstract (abstract, arg_tys, ty))
+          | _ -> ModelMap.Value.Simple (Constant (ret_rep |> snd))
         in
         let mdl =
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
         in
         mdl, mrepr
 
-      | Sy.(Op Access field), [(record, name)], _ ->
+      | Sy.(Op Access field), [(r, _)], _ ->
         begin
-          match X.type_info record with
-          | Ty.Trecord trecord ->
-            Cache.store_record_access name trecord field
-              (ret_rep |> snd);
-            mdl, mrepr
-          | _ ->
-            (* This case is excluded by the parser. *)
-            assert false
+          let r, _ = find_r env r in
+          Cache.store_record_access r field (ret_rep |> snd);
+          mdl, mrepr
         end
 
       | _ ->
@@ -1210,12 +1211,12 @@ let is_suspicious_name hs =
 (* The model generation is known to be imcomplete for FPA and Bitvector
    theories. *)
 let is_suspicious_symbol = function
-  | Symbols.Op (Float | Abs_int | Abs_real | Sqrt_real
-               | Sqrt_real_default | Sqrt_real_excess
-               | Real_of_int | Int_floor | Int_ceil
-               | Max_int | Max_real | Min_int | Min_real
-               | Pow | Integer_log2 | Int2BV _ | BV2Nat
-               | BVand | BVor | Integer_round) -> true
+  | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real_default
+          | Sqrt_real_excess | Real_of_int | Int_floor
+          | Int_ceil | Max_int | Max_real | Min_int
+          | Min_real | Integer_log2 | Integer_round) ->
+    not (Options.get_theory_preludes () |> List.mem Theories.Fpa)
+  | Sy.Op (BVand | BVor) -> true
   | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 

@@ -32,32 +32,29 @@ type sy = Id.t * Ty.t list * Ty.t
 (** Typed symbol of function. *)
 
 module Value : sig
-  type simple = [
-    | `Abstract of sy
+  type simple =
+    | Abstract of sy
     (** An unique abstract value. *)
 
-    | `Constant of string
+    | Constant of string
     (** A string representation of a semantic value. *)
-  ]
 
   type record = string * simple list
 
-  type array = [
-    | `Abstract of sy
+  type array =
+    | AbstractArray of sy
     (** An unique abstract array value. *)
 
-    | `Store of array * string * string
+    | Store of array * simple * simple
     (** An array store: [(store array key value)]. *)
-  ]
 
-  type t = [
-    | `Array of array
+  type t =
+    | Array of array
 
-    | `Record of record
+    | Record of record
     (** A string representation of a record definition. *)
 
-    | simple
-  ]
+    | Simple of simple
 
   val pp : t Fmt.t
   (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the
@@ -72,7 +69,9 @@ val add : sy -> Value.t list -> Value.t -> t -> t
     associated with the symbol [sy]. *)
 
 val empty : suspicious:bool -> t
-(** An empty model. *)
+(** An empty model. The [suspicious] flag is used to remember that this
+    model may be wrong as it involves symbols from theories for which the
+    model generation is known to be incomplete. *)
 
 val pp : t Fmt.t
 (** [pp ppf mdl] prints the model [mdl] on the formatter [ppf] using the
