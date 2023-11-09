@@ -222,7 +222,7 @@ let pp_seq ppf seq =
 
 let pp ppf {values; suspicious} =
   if suspicious then begin
-    Fmt.pf ppf "; This model is a best-effort. It includes symbols \
-                for which model generation is known to be incomplete.@."
+    Fmt.pf ppf "; This model is a best-effort. It includes symbols\n\
+                ; for which model generation is known to be incomplete.@."
   end;
   Fmt.pf ppf "@[<v 2>(%a@]@,)" pp_seq (P.to_seq values)
