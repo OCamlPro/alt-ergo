@@ -135,4 +135,5 @@ val print_list_pp:
 
 val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
 
+(** Returns the string in argument as a smtlib2 valid identifier (either itself or quoted). *)
 val quoted_string : string -> string
