@@ -32,29 +32,15 @@ type sy = Id.t * Ty.t list * Ty.t
 (** Typed symbol of function. *)
 
 module Value : sig
-  type simple =
-    | Abstract of sy
-    (** An unique abstract value. *)
-
-    | Constant of string
-    (** A string representation of a semantic value. *)
-
-  type record = string * simple list
-
   type array =
-    | AbstractArray of sy
-    (** An unique abstract array value. *)
+    | AbstractArray of Id.t * Ty.t * Ty.t
+    | Store of array * t * t
 
-    | Store of array * simple * simple
-    (** An array store: [(store array key value)]. *)
-
-  type t =
+  and t =
+    | Abstract of sy
+    | Constant of string
     | Array of array
-
-    | Record of record
-    (** A string representation of a record definition. *)
-
-    | Simple of simple
+    | Record of string * t list
 
   val pp : t Fmt.t
   (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the

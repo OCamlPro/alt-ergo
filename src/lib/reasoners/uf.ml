@@ -32,7 +32,6 @@ module X = Shostak.Combine
 
 module Ac = Shostak.Ac
 module Ex = Explanation
-
 module Sy = Symbols
 module E = Expr
 module ME = Expr.Map
@@ -1153,7 +1152,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         let r, _ = find env t in
         let arg_vals =
           List.map
-            (fun arg_val -> ModelMap.Value.Simple (Constant (arg_val |> snd))) arg_vals
+            (fun arg_val -> ModelMap.Value.(Constant (arg_val |> snd))) arg_vals
         in
         Cache.store_record_decl (id, arg_tys, arg_vals) r;
         acc
@@ -1161,7 +1160,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
       | Sy.Name { hs = id; _ }, _, _ ->
         let arg_vals =
           List.map
-            (fun arg_val -> ModelMap.Value.Simple (Constant (arg_val |> snd))) arg_vals
+            (fun arg_val -> ModelMap.Value.(Constant (arg_val |> snd))) arg_vals
         in
         let value =
           match ty with
@@ -1170,8 +1169,8 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
                In this case, we produce an abstract value with the appropriate
                type. *)
             let abstract = Cache.get_abstract_for env t in
-            ModelMap.Value.Simple (Abstract (abstract, arg_tys, ty))
-          | _ -> ModelMap.Value.Simple (Constant (ret_rep |> snd))
+            ModelMap.Value.(Abstract (abstract, arg_tys, ty))
+          | _ -> ModelMap.Value.(Constant (ret_rep |> snd))
         in
         let mdl =
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
@@ -1181,7 +1180,7 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
       | Sy.(Op Access field), [(r, _)], _ ->
         begin
           let r, _ = find_r env r in
-          Cache.store_record_access r field (ret_rep |> snd);
+          Cache.store_record_access r (Hstring.view field) (ret_rep |> snd);
           mdl, mrepr
         end
 

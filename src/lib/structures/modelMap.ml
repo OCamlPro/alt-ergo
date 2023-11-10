@@ -34,47 +34,37 @@ module Sy = Symbols
 type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
-  type simple =
+  type array =
+    | AbstractArray of Id.t * Ty.t * Ty.t
+    | Store of array * t * t
+
+  and t =
     | Abstract of sy
     | Constant of string
-  [@@deriving ord]
-
-  type record = string * simple list
-  [@@deriving ord]
-
-  type array =
-    | AbstractArray of sy
-    | Store of array * simple * simple
-  [@@deriving ord]
-
-  type t =
     | Array of array
-    | Record of record
-    | Simple of simple
+    | Record of string * t list
   [@@deriving ord]
 
-  let pp_simple ppf simple =
-    match simple with
+  let rec pp_array ppf arr =
+    match arr with
+    | AbstractArray (id, ty_key, ty_val) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib
+        (Ty.Tfarray (ty_key, ty_val))
+    | Store (arr, i, v) ->
+      Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
+        pp_array arr pp i pp v
+
+  and pp ppf v =
+    match v with
     | Abstract (id, _, ty) ->
       Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | Constant s ->
       Fmt.string ppf s
-
-  let rec pp_array ppf arr =
-    match arr with
-    | AbstractArray (id, _, ty) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | Store (arr, i, v) -> Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
-        pp_array arr pp_simple i pp_simple v
-
-  let pp ppf v =
-    match v with
     | Array arr -> pp_array ppf arr
     | Record (id, fields) ->
       Fmt.pf ppf "(@[<hv>%s %a)@]"
         (Util.quoted_string id)
-        Fmt.(list ~sep:sp pp_simple) fields
-    | Simple w -> pp_simple ppf w
+        Fmt.(list ~sep:sp pp) fields
 
   module Map = Map.Make (struct
       type nonrec t = t
