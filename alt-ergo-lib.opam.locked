@@ -58,6 +58,7 @@ depends: [
   "sexplib0" {= "v0.16.0"}
   "spelll" {= "0.4"}
   "stdlib-shims" {= "0.3.0"}
+  "stdcompat" {= "19"}
   "topkg" {= "1.0.7"}
   "uutf" {= "1.0.3"}
   "yojson" {= "2.1.1"}
