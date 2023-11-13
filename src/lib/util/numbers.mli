@@ -59,6 +59,7 @@ module Z : sig
   val from_int : int -> t
   val from_string : string -> t
   val to_string : t -> string
+  val pp_print : t Fmt.t
 
   (** convert to machine integer. returns None in case of overflow *)
   val to_machine_int : t -> int option
