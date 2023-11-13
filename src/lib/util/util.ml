@@ -213,6 +213,8 @@ let rec print_list_pp ~sep ~pp fmt = function
 let internal_error msg =
   Format.kasprintf (fun s -> raise (Internal_error s)) msg
 
+(* TODO: we have to update the way we manage quoted symbols after
+   the merge of https://github.com/Gbury/dolmen/pull/198 *)
 let quoted_string =
   let no_need_to_quote s =
     String.length s > 0 &&

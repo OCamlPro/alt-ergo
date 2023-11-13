@@ -84,6 +84,11 @@ module Graph = struct
   let empty = M.empty
   let add = M.add
 
+  (* A fiber of the function [f] over a value [v] is the set of all the values
+     in the domain of [f] whose the image by [f] is [v].
+
+     The function [inverse] of this module constructs a map of all the
+     non-empty fibers of the function represented by its graph. *)
   module Fiber = struct
     include Set.Make (struct
         type t = Value.t list [@@deriving ord]
