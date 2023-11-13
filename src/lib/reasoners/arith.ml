@@ -813,23 +813,25 @@ module Shostak
         cpt := Q.add Q.one (max_constant distincts !cpt);
         Some (term_of_cst (Q.to_string !cpt), true)
 
-
-
-  let pprint_const_for_model =
-    let pprint_positive_const c =
-      let num = Q.num c in
-      let den = Q.den c in
-      if Z.is_one den then Z.to_string num
-      else Format.sprintf "(/ %s %s)" (Z.to_string num) (Z.to_string den)
-    in
-    fun r ->
-      match P.is_const (embed r) with
-      | None -> assert false
-      | Some c ->
-        let sg = Q.sign c in
-        if sg = 0 then "0"
-        else if sg > 0 then pprint_positive_const c
-        else Format.sprintf "(- %s)" (pprint_positive_const (Q.abs c))
+  let pp_constant ppf r =
+    match P.is_const (embed r), X.type_info r with
+    | Some q, Ty.Tint ->
+      assert (Z.equal (Q.den q) Z.one);
+      let i = Q.num q in
+      if Z.sign i = -1 then
+        Fmt.pf ppf "(- %a)" Z.pp_print (Z.abs i)
+      else
+        Fmt.pf ppf "%a" Z.pp_print i
+    | Some q, Ty.Treal ->
+      if Z.equal (Q.den q) Z.one then
+        Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
+      else if Q.sign q = -1 then
+        Fmt.pf ppf "(/ (- %a) %a)"
+          Z.pp_print (Z.abs (Q.num q))
+          Z.pp_print (Q.den q)
+      else
+        Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+    | _ -> assert false
 
   let choose_adequate_model t r l =
     if Options.get_debug_interpretation () then
@@ -854,6 +856,6 @@ module Shostak
         List.iter (fun (_,x) -> assert (X.equal x r)) l;
         r
     in
-    r, pprint_const_for_model r
+    r, Fmt.str "%a" pp_constant r
 
 end

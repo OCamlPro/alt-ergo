@@ -58,6 +58,7 @@ module Z = struct
   let from_string s = Z.of_string s
   let to_string t   = Z.to_string t
   let print fmt z   = Format.fprintf fmt "%s" (to_string z)
+  let pp_print = Z.pp_print
 
   let my_gcd a b =
     if is_zero a then b

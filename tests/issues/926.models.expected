@@ -1,0 +1,10 @@
+
+unknown
+(
+  (define-fun x1 () Int 5)
+  (define-fun x2 () Int (- 5))
+  (define-fun y1 () Real (/ 3 2))
+  (define-fun y2 () Real 4.0)
+  (define-fun y3 () Real (/ 16 5))
+  (define-fun y4 () Real (/ (- 3) 2))
+)
