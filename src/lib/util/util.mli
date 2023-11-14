@@ -28,14 +28,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type timeout_reason =
-  | Assume
-  | ProofSearch
-  | ModelGen
-  | Signal
-[@@deriving show]
-
-exception Timeout of timeout_reason option
+exception Timeout
 exception Unsolvable
 
 exception Cmp of int

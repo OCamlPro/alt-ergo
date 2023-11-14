@@ -73,16 +73,7 @@ let recoverable_error ?(code = 1) =
 let fatal_error ?(code = 1) =
   Format.kasprintf (fun msg -> recoverable_error ~code "%s" msg; exit code)
 
-let print_timeout_reason tr =
-  match tr with
-  | Some tr ->
-    Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-      "@[<v 0>; Returned timeout reason = %a@]" Util.pp_timeout_reason tr;
-  | None -> ()
-
-let exit_as_timeout tr =
-  print_timeout_reason tr;
-  fatal_error ~code:142 "timeout"
+let exit_as_timeout () = fatal_error ~code:142 "timeout"
 
 let warning (msg : ('a, Format.formatter, unit, unit, unit, 'b) format6) : 'a =
   if Options.get_warning_as_error () then
@@ -219,8 +210,8 @@ let main () =
           Some mdl
         end
       | `Unsat -> None
-    with Util.Timeout tr ->
-      if not (Options.get_timelimit_per_goal()) then exit_as_timeout tr;
+    with Util.Timeout ->
+      if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
       None
   in
 
@@ -299,9 +290,9 @@ let main () =
         Stdcompat.Seq.append theory_preludes @@
         I.parse_files ~filename ~preludes
       with
-      | Util.Timeout tr ->
+      | Util.Timeout ->
         Frontend.print_status (Timeout None) 0;
-        exit_as_timeout tr
+        exit_as_timeout ()
       | Parsing.Parse_error ->
         (* TODO(Steven): displaying a dummy value is a bad idea.
            This should only be executed with the legacy frontend, which should
@@ -346,9 +337,9 @@ let main () =
       let parsed_seq = parsed () in
       let _ : _ state = Seq.fold_left typing_loop state parsed_seq in
       Options.Time.unset_timeout ();
-    with Util.Timeout tr ->
+    with Util.Timeout ->
       Frontend.print_status (Timeout None) 0;
-      exit_as_timeout tr
+      exit_as_timeout ()
   in
 
   let solver_ctx_key: solver_ctx State.key =
@@ -398,9 +389,9 @@ let main () =
   let handle_exn st bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
       recoverable_error "%t" msg; st
-    | Util.Timeout tr ->
+    | Util.Timeout ->
       Printer.print_status_timeout None None None None;
-      exit_as_timeout tr
+      exit_as_timeout ()
     | Errors.Error e ->
       recoverable_error "%a" Errors.report e;
       st

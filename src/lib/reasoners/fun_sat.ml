@@ -1138,7 +1138,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = may_update_last_saved_model env compute_model in
       Options.Time.unset_timeout ();
       i_dont_know env unknown_reason
-    with Util.Timeout _ when !(env.model_gen_phase) ->
+    with Util.Timeout when !(env.model_gen_phase) ->
       (* In this case, timeout reason becomes 'ModelGen' *)
       i_dont_know env (Timeout ModelGen)
 
@@ -1415,7 +1415,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           with No_suitable_decision ->
             back_tracking (normal_instantiation env true)
     with
-    | Util.Timeout _ -> model_gen_on_timeout env
+    | Util.Timeout -> model_gen_on_timeout env
 
   and make_one_decision env =
     try
@@ -1734,7 +1734,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Debug.unsat ();
       assert (Ex.has_no_bj dep);
       dep
-    | Util.Timeout _ -> model_gen_on_timeout env
+    | Util.Timeout -> model_gen_on_timeout env
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
@@ -1749,7 +1749,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | IUnsat (d, classes) ->
       Debug.bottom classes;
       raise (Unsat d)
-    | Util.Timeout _ ->
+    | Util.Timeout ->
       (* don't attempt to compute a model if timeout before
          calling unsat function *)
       i_dont_know env (Timeout Assume)
