@@ -154,15 +154,11 @@ let main () =
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
 
-  let pp_unknown_reason_opt ppf = function
-    | None -> Fmt.pf ppf "Decided"
-    | Some ur -> Sat_solver_sig.pp_unknown_reason ppf ur
-  in
-
   let print_model ppf (Model ((module SAT), env)) =
     let ur = SAT.get_unknown_reason env in
     Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-      "@[<v 0>; Returned unknown reason = %a@]" pp_unknown_reason_opt ur;
+      "@[<v 0>; Returned unknown reason = %a@]"
+      Sat_solver_sig.pp_unknown_reason_opt ur;
     match SAT.get_model env with
     | None ->
       Printer.print_fmt (Options.Output.get_fmt_diagnostic ())

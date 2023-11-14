@@ -47,6 +47,10 @@ let pp_unknown_reason ppf = function
   | Memout -> Fmt.pf ppf "Memout"
   | Timeout t -> Fmt.pf ppf "Timeout:%a" pp_timeout_reason t
 
+let pp_unknown_reason_opt ppf = function
+  | None -> Fmt.pf ppf "Decided"
+  | Some ur -> pp_unknown_reason ppf ur
+
 module type S = sig
   type t
 
