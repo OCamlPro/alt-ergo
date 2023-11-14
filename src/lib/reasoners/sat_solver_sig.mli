@@ -38,6 +38,8 @@ type unknown_reason =
   | Memout
   | Timeout of timeout_reason
 
+val pp_unknown_reason: unknown_reason Fmt.t
+
 module type S = sig
   type t
 

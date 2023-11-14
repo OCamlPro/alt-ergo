@@ -153,6 +153,27 @@ let main () =
     O.get_sat_solver (),
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
+
+  let pp_unknown_reason_opt ppf = function
+    | None -> Fmt.pf ppf "Decided"
+    | Some ur -> Sat_solver_sig.pp_unknown_reason ppf ur
+  in
+
+  let print_model ppf (Model ((module SAT), env)) =
+    let ur = SAT.get_unknown_reason env in
+    Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+      "@[<v 0>; Returned unknown reason = %a@]" pp_unknown_reason_opt ur;
+    match SAT.get_model env with
+    | None ->
+      Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+        "@[<v 0>It seems that no model has been computed so \
+         far. You may need to change your model generation strategy \
+         or to increase your timeouts."
+
+    | Some (lazy model) ->
+      Models.output_concrete_model ppf model
+  in
+
   let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
     let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands () then
@@ -186,7 +207,12 @@ let main () =
          printing wrong model. *)
       match ftdn_env.FE.res with
       | `Sat partial_model | `Unknown partial_model ->
-        Some (Model ((module SAT), partial_model))
+        begin
+          let mdl = Model ((module SAT), partial_model) in
+          if Options.(get_interpretation () && get_dump_models ()) then
+            print_model (Options.Output.get_fmt_models ()) mdl;
+          Some mdl
+        end
       | `Unsat -> None
     with Util.Timeout ->
       if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
@@ -675,10 +701,8 @@ let main () =
       | Some Model ((module SAT), sat) ->
         match SAT.get_unknown_reason sat with
         | None -> err ()
-        | Some s ->
-          print_std
-            Format.pp_print_string
-            (Frontend.unknown_reason_to_string s)
+        | Some ur ->
+          print_std Sat_solver_sig.pp_unknown_reason ur
     in
     match name with
     | ":authors" ->
@@ -837,21 +861,14 @@ let main () =
 
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
-          match State.get partial_model_key st with
-          | Some Model ((module SAT), partial_model) ->
-            begin
-              match SAT.get_model partial_model with
-              | Some (lazy model) ->
-                Models.output_concrete_model
-                  (Options.Output.get_fmt_regular ()) model;
-                st
-              | _ ->
-                (* TODO: is it reachable? *)
-                st
-            end
-          | None ->
-            (* TODO: add the location of the statement. *)
-            recoverable_error "No model produced."; st
+          let _ = match State.get partial_model_key st with
+            | Some model ->
+              print_model (Options.Output.get_fmt_regular ()) model
+            | None ->
+              (* TODO: add the location of the statement. *)
+              recoverable_error "No model produced."
+          in
+          st
         else
           begin
             (* TODO: add the location of the statement. *)

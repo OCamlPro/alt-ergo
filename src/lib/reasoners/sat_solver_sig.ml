@@ -35,11 +35,17 @@ type timeout_reason =
   | Assume
   | ProofSearch
   | ModelGen
+[@@deriving show]
 
 type unknown_reason =
   | Incomplete
   | Memout
   | Timeout of timeout_reason
+
+let pp_unknown_reason ppf = function
+  | Incomplete -> Fmt.pf ppf "Incomplete"
+  | Memout -> Fmt.pf ppf "Memout"
+  | Timeout t -> Fmt.pf ppf "Timeout:%a" pp_timeout_reason t
 
 module type S = sig
   type t

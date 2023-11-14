@@ -32,21 +32,6 @@ open Commands
 open Format
 open Options
 
-let timeout_reason_to_string = function
-  | Sat_solver_sig.Assume -> "Assume"
-  | ProofSearch -> "ProofSearch"
-  | ModelGen -> "ModelGen"
-
-let unknown_reason_to_string = function
-  | Sat_solver_sig.Incomplete -> "Incomplete"
-  | Memout -> "Memout"
-  | Timeout t -> Format.sprintf "Timeout:%s" (timeout_reason_to_string t)
-
-let unknown_reason_opt_to_string =
-  function
-  | None -> "Decided"
-  | Some r -> unknown_reason_to_string r
-
 module E = Expr
 module Ex = Explanation
 
@@ -311,23 +296,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let print_model env unknown_reason_opt =
-    if Options.(get_interpretation () && get_dump_models ()) then begin
-      let s = unknown_reason_opt_to_string unknown_reason_opt in
-      match SAT.get_model env with
-      | None ->
-        Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-          "@[<v 0>It seems that no model has been computed so \
-           far. You may need to change your model generation strategy \
-           or to increase your timeouts. Returned unknown reason = %s@]" s
-
-      | Some (lazy model) ->
-        Printer.print_fmt
-          (Options.Output.get_fmt_diagnostic ())
-          "@[<v 0>; Returned unknown reason = %s@]" s;
-        Models.output_concrete_model (Options.Output.get_fmt_models ()) model
-    end
-
   let internal_push ?(loc = Loc.dummy) (env : env) (n : int) : env =
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
@@ -470,8 +438,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       hook_on_status (Sat (d,t)) (Steps.get_steps ());
-      print_model env.sat_env None;
       {env with res = `Sat t}
+
     | SAT.Unsat expl' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
@@ -480,6 +448,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       if get_debug_unsat_core () then check_produced_unsat_core expl;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       {env with res = `Unsat; expl}
+
     | SAT.I_dont_know t ->
       (* TODO: always print Unknown for why3 ? *)
       let ur = SAT.get_unknown_reason t in
@@ -489,7 +458,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         | _ -> Unknown (d, t)
       in
       hook_on_status status (Steps.get_steps ());
-      print_model t ur;
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
       {env with res = `Unknown t}
@@ -498,6 +466,5 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* In this case, we obviously want to print the status,
          since we exit right after  *)
       hook_on_status (Timeout (Some d)) (Steps.get_steps ());
-      print_model env.sat_env None;
       raise e
 end
