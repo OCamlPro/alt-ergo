@@ -155,16 +155,15 @@ let main () =
   in
 
   let print_model ppf (Model ((module SAT), env)) =
-    let ur = SAT.get_unknown_reason env in
-    Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-      "@[<v 0>; Returned unknown reason = %a@]"
-      Sat_solver_sig.pp_unknown_reason_opt ur;
     match SAT.get_model env with
     | None ->
+      let ur = SAT.get_unknown_reason env in
       Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
         "@[<v 0>It seems that no model has been computed so \
          far. You may need to change your model generation strategy \
-         or to increase your timeouts."
+         or to increase your timeouts. \
+         Returned unknown reason = %a@]"
+        Sat_solver_sig.pp_unknown_reason_opt ur;
 
     | Some (lazy model) ->
       Models.output_concrete_model ppf model
@@ -205,8 +204,13 @@ let main () =
       | `Sat partial_model | `Unknown partial_model ->
         begin
           let mdl = Model ((module SAT), partial_model) in
-          if Options.(get_interpretation () && get_dump_models ()) then
-            print_model (Options.Output.get_fmt_models ()) mdl;
+          if Options.(get_interpretation () && get_dump_models ()) then begin
+            let ur = SAT.get_unknown_reason partial_model in
+            Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+              "@[<v 0>Returned unknown reason = %a@]"
+              Sat_solver_sig.pp_unknown_reason_opt ur;
+            print_model (Options.Output.get_fmt_models ()) mdl
+          end;
           Some mdl
         end
       | `Unsat -> None
@@ -857,7 +861,7 @@ let main () =
 
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
-          let _ = match State.get partial_model_key st with
+          let () = match State.get partial_model_key st with
             | Some model ->
               print_model (Options.Output.get_fmt_regular ()) model
             | None ->
