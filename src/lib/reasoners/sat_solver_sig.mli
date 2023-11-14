@@ -28,15 +28,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type timeout_reason =
-  | Assume
-  | ProofSearch
-  | ModelGen
-
 type unknown_reason =
   | Incomplete
   | Memout
-  | Timeout of timeout_reason
+  | Timeout of Util.timeout_reason
 
 val pp_unknown_reason: unknown_reason Fmt.t
 val pp_unknown_reason_opt : unknown_reason option Fmt.t

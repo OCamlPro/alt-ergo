@@ -31,21 +31,15 @@
 (* We put an ml file for the module type, to avoid issues when
    building the lib *)
 
-type timeout_reason =
-  | Assume
-  | ProofSearch
-  | ModelGen
-[@@deriving show]
-
 type unknown_reason =
   | Incomplete
   | Memout
-  | Timeout of timeout_reason
+  | Timeout of Util.timeout_reason
 
 let pp_unknown_reason ppf = function
   | Incomplete -> Fmt.pf ppf "Incomplete"
   | Memout -> Fmt.pf ppf "Memout"
-  | Timeout t -> Fmt.pf ppf "Timeout:%a" pp_timeout_reason t
+  | Timeout t -> Fmt.pf ppf "Timeout:%a" Util.pp_timeout_reason t
 
 let pp_unknown_reason_opt ppf = function
   | None -> Fmt.pf ppf "Decided"
