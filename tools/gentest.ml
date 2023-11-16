@@ -258,7 +258,7 @@ end = struct
                   acc with
                   exclude =
                     "legacy" :: "fpa" :: acc.exclude;
-                  filters = Some ["tableaux"]
+                  filters = Some ["dolmen"]
                 }
               | "fpa" ->
                 {acc with filters = Some ["fpa"]}
