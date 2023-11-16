@@ -250,6 +250,10 @@ end = struct
                   exclude = "legacy" :: acc.exclude;
                   filters = Some ["dolmen"]
                 }
+              | "smt2" -> {
+                  acc with
+                  exclude = "legacy" :: acc.exclude;
+                }
               | "models" -> {
                   acc with
                   exclude =
