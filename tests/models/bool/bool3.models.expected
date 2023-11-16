@@ -1,9 +1,9 @@
 
 unknown
 (
-  (define-fun x () Bool true)
-  (define-fun y () Bool true)
+  (define-fun x () Bool false)
+  (define-fun y () Bool false)
 )
-((foo true)
+((foo unknown)
  (bar unknown))
 
