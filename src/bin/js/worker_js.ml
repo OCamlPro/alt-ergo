@@ -179,13 +179,8 @@ let main worker_id content =
         raise Exit
       | Errors.Error e ->
         begin match e with
-          | Errors.Run_error r -> begin
-              match r with
-              | Steps_limit _ ->
-                returned_status :=
-                  Worker_interface.LimitReached "Steps limit"
-              | _ -> returned_status := Worker_interface.Error "Run error"
-            end
+          | Errors.Run_error _ ->
+            returned_status := Worker_interface.Error "Run error"
           | _ -> returned_status := Worker_interface.Error "Error"
         end;
         Printer.print_err "%a" Errors.report e;

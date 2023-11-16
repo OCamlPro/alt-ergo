@@ -304,6 +304,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
       ~max:n ~elt:(env.res, env.expl) ~init:();
+    Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n);
     SAT.push env.sat_env n
 
   let internal_pop ?(loc = Loc.dummy) (env : env) (n : int) : unit =
@@ -395,6 +396,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
+  let check_step_limit f env =
+    match SAT.get_unknown_reason env.sat_env with
+    | Some (Step_limit _) -> env
+    | _ -> f env
+
   let handle_sat_exn f ?loc env x =
     try f ?loc env x with
     | SAT.Sat -> env.res <- `Sat
@@ -405,19 +411,25 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env.res <- `Unknown
   (* The SAT.Timeout exception is not catched. *)
 
-  let push = handle_sat_exn internal_push
+  (* Wraps the function f to check if the step limit is reached (in which case,
+     don't do anything), and then calls the function & catches the
+     exceptions. *)
+  let wrap_f f ?loc env x =
+    check_step_limit (fun env -> handle_sat_exn f ?loc env x) env
 
-  let pop = handle_sat_exn internal_pop
+  let push = wrap_f internal_push
 
-  let assume = handle_sat_exn internal_assume
+  let pop = wrap_f internal_pop
 
-  let pred_def = handle_sat_exn internal_pred_def
+  let assume = wrap_f internal_assume
 
-  let query = handle_sat_exn internal_query
+  let pred_def = wrap_f internal_pred_def
 
-  let th_assume = handle_sat_exn internal_th_assume
+  let query = wrap_f internal_query
 
-  let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
+  let th_assume = wrap_f internal_th_assume
+
+  let process_decl ~hook_on_status env d =
     try
       match d.st_decl with
       | Push n -> internal_push ~loc:d.st_loc env n
@@ -469,6 +481,9 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          since we exit right after  *)
       hook_on_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
+
+  let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
+    check_step_limit (fun env -> process_decl ~hook_on_status env d) env
 
   let print_model ppf env =
     match SAT.get_model env with

@@ -47,6 +47,12 @@ type incr_kind =
                           theories environment *)
 (** Define the type of increment *)
 
+(** Returns the max number of bounds *)
+val get_steps_bound : unit -> int
+
+(** Sets the max number of bounds *)
+val set_steps_bound : int -> unit
+
 val incr  : incr_kind -> unit
 (** Increment the number of steps depending of the incr_kind
     @raise Errors.Error.Invalid_steps_count if the number of steps is inbound
@@ -54,7 +60,7 @@ val incr  : incr_kind -> unit
     @raise Run_error
     {!Errors.Invalid_steps_count} if the number of steps sent to the theories
      is invalid.
-    {!Errors.Steps_limit} if the number of steps is reached *)
+    @raise {!Util.Step_limit_reached} if the number of steps is reached *)
 
 val reset_steps : unit -> unit
 (** Reset the global steps counter *)
@@ -73,6 +79,9 @@ val cs_steps : unit -> int
 
 (** Increase the number of case-split steps *)
 val incr_cs_steps : unit -> unit
+
+(** Disables the step limit during the execution of the continuation. *)
+val apply_without_step_limit : (unit -> 'a) -> 'a
 
 (** {2 Incrementality} *)
 

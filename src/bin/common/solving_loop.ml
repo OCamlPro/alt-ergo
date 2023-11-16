@@ -312,8 +312,24 @@ let main () =
     State.create_key ~pipe:"" "sat_state"
   in
 
+  let steps_bound: int State.key =
+    State.create_key ~pipe:"" "steps-bound"
+  in
+
   let named_terms: DStd.Expr.term Util.MS.t State.key =
     State.create_key ~pipe:"" "named_terms"
+  in
+
+  let set_steps_bound i st =
+    try
+      Steps.set_steps_bound i;
+      State.set steps_bound i st
+    with
+      Invalid_argument _ -> (* Raised by Steps.set_steps_bound*)
+      fatal_error
+        "Error while setting steps bound to %i: current step = %i."
+        i
+        (Steps.get_steps ())
   in
 
   let debug_parsed_pipe st c =
@@ -452,6 +468,7 @@ let main () =
     State.empty
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
+    |> set_steps_bound (O.get_steps_bound ())
     |> State.set named_terms Util.MS.empty
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
@@ -477,6 +494,7 @@ let main () =
         sat;
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      O.set_sat_solver sat;
       (* `make_sat` returns the sat solver corresponding to the new sat_solver
          option. *)
       DO.SatSolver.set sat st

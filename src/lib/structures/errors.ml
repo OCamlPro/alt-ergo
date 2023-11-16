@@ -81,7 +81,6 @@ type typing_error =
 
 type run_error =
   | Invalid_steps_count of int
-  | Steps_limit of int
   | Failed_check_unsat_core
   | Unsupported_feature of string
   | Dynlink_error of string
@@ -229,8 +228,6 @@ let report_typing_error fmt = function
 let report_run_error fmt = function
   | Invalid_steps_count i ->
     fprintf fmt "%d is not a valid number of steps" i
-  | Steps_limit i ->
-    fprintf fmt "Steps limit reached: %d" i
   | Failed_check_unsat_core ->
     fprintf fmt "Checking produced unsat-core failed"
   | Unsupported_feature f ->

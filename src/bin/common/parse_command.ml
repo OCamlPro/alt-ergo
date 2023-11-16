@@ -362,6 +362,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     set_fm_cross_limit fm_cross_limit;
     set_timelimit_interpretation timelimit_interpretation;
     set_steps_bound steps_bound;
+    Steps.set_steps_bound steps_bound;
     set_timelimit timelimit;
     set_timelimit_per_goal timelimit_per_goal;
     `Ok()

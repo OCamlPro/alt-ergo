@@ -1260,11 +1260,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let push env to_push =
     Util.loop ~f:(fun _n () () ->
-        let expr_guard, atom_guard = create_guard env in
-        SAT.push env.satml atom_guard;
-        Stack.push expr_guard env.guards.stack_guard;
-        Steps.push_steps ();
-        env.guards.current_guard <- expr_guard
+        try
+          let expr_guard, atom_guard = create_guard env in
+          SAT.push env.satml atom_guard;
+          Stack.push expr_guard env.guards.stack_guard;
+          Steps.push_steps ();
+          env.guards.current_guard <- expr_guard
+        with
+        | Util.Step_limit_reached _ ->
+          (* This function should be called without step limit
+             (see Steps.apply_without_step_limit) *)
+          assert false
       )
       ~max:to_push
       ~elt:()
@@ -1337,6 +1343,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      (* don't attempt to compute a model if timeout before
        calling unsat function *)
      i_dont_know env (Timeout Assume) *)
+         | Util.Step_limit_reached _ ->
+           (* When reaching the step limit on an assume, we do not want to
+              answer 'unknown' right away. *)
+           env
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =

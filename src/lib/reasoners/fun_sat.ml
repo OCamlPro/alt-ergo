@@ -1630,7 +1630,8 @@ module Make (Th : Theory.S) = struct
                       { acc.guards with
                         current_guard = new_guard;
                         guards = guards;
-                      }})
+                      }}
+        )
       ~max:to_push
       ~elt:()
       ~init:env
@@ -1735,6 +1736,7 @@ module Make (Th : Theory.S) = struct
       assert (Ex.has_no_bj dep);
       dep
     | Util.Timeout -> model_gen_on_timeout env
+    | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
 
   let add_guard env gf =
     let current_guard = env.guards.current_guard in
@@ -1753,6 +1755,10 @@ module Make (Th : Theory.S) = struct
       (* don't attempt to compute a model if timeout before
          calling unsat function *)
       i_dont_know env (Timeout Assume)
+    | Util.Step_limit_reached _ ->
+      (* When reaching the step limit on an assume, we do not want to answer
+         'unknown' right away. *)
+      env
 
   let pred_def env f name dep _loc =
     Debug.pred_def f;

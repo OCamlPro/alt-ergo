@@ -29,6 +29,7 @@
 (**************************************************************************)
 
 exception Timeout
+exception Step_limit_reached of int
 exception Unsolvable
 
 exception Cmp of int
