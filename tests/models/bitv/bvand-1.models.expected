@@ -1,0 +1,6 @@
+
+unknown
+(
+  (define-fun x () (_ BitVec 8) #b10100101)
+  (define-fun y () (_ BitVec 8) #b01011010)
+)

@@ -192,3 +192,116 @@ end = struct
     in
     env, { Sig_rel.assume = assume_nontrivial_eqs eqs la; remove = [] }
 end
+
+module Congruence : sig
+  (** The [Congruence] module implements a simil-congruence closure algorithm on
+      semantic values.
+
+      It provides an interface to register some semantic values of interest, and
+      for applying a callback when the representative of those registered values
+      change.
+  *)
+
+  type t
+  (** The type of congruences. *)
+
+  val empty : t
+  (** The empty congruence. *)
+
+  val add : X.r -> t -> t
+  (** [add r t] registers the semantic value [r] in the congruence. *)
+
+  val remove : X.r -> t -> t
+  (** [remove r t] unregisters the semantic value [r] from the congruence.
+
+      Note that if substitutions have been applied to the congruence after a
+      value has been added, those same substitutions must be applied to the
+      semantic value prior to calling [remove], or [Invalid_argument] will be
+      raised.
+
+      Raised [Invalid_argument] if [r] is not a registered semantic value. *)
+
+  val subst : X.r -> X.r -> t -> (X.r -> X.r -> 'a -> 'a) -> 'a -> t * 'a
+  (** [subst p v t f x] performs a local congruence closure of the
+      substitution [p -> v].
+
+      More precisely, it will fold [f] over the pairs [(rr, nrr)] such that:
+      - [rr] was registered in the congruence
+      - [nrr] is [X.subst p v rr]
+
+      For each such pair, [rr] is then unregistered from the congruence, and
+      [nrr] is registered instead.
+
+      [f] is intended to perform a substitution operation on the type ['a],
+      merging the values associated with [rr] into the values associated with
+      [nrr]. *)
+end = struct
+  module SX = Shostak.SXH
+  module MX = Shostak.MXH
+
+  type t = { parents : SX.t MX.t ; registered : SX.t }
+
+  let empty = { parents = MX.empty ; registered = SX.empty }
+
+  let add r t =
+    if SX.mem r t.registered then
+      t
+    else
+      let parents =
+        List.fold_left (fun parents leaf ->
+            MX.update leaf (function
+                | Some deps -> Some (SX.add r deps)
+                | None -> Some (SX.singleton r)
+              ) parents
+          ) t.parents (X.leaves r)
+      in
+      { parents ; registered  = SX.add r t.registered }
+
+  let remove r t =
+    if SX.mem r t.registered then
+      let parents =
+        List.fold_left (fun parents leaf ->
+            MX.update leaf (function
+                | Some deps ->
+                  let deps = SX.remove r deps in
+                  if SX.is_empty deps then None else Some deps
+                | None -> assert false
+              ) parents
+          ) t.parents (X.leaves r)
+      in
+      { parents ; registered = SX.remove r t.registered }
+    else
+      invalid_arg "Congruence.remove"
+
+  let subst rr nrr cgr f t =
+    match MX.find rr cgr.parents with
+    | rr_deps ->
+      let cgr = { cgr with parents = MX.remove rr cgr.parents } in
+      SX.fold (fun r (cgr, t) ->
+          let r' = X.subst rr nrr r in
+          (* [r] contains [rr] as a leaf by definition *)
+          assert (not (X.equal r r'));
+
+          (* Update the other leaves *)
+          let parents =
+            List.fold_left (fun parents other_leaf ->
+                if X.equal other_leaf rr then
+                  parents
+                else
+                  MX.update other_leaf (function
+                      | Some deps ->
+                        let deps = SX.remove r deps in
+                        if SX.is_empty deps then None else Some deps
+                      | None -> assert false
+                    ) parents
+              ) cgr.parents (X.leaves r)
+          in
+
+          (* Add the new representative to the congruence if needed *)
+          let cgr = add r' { cgr with parents } in
+
+          (* Propagate the substitution *)
+          cgr, f r r' t
+        ) rr_deps (cgr, t)
+    | exception Not_found -> cgr, t
+end

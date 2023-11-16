@@ -301,6 +301,35 @@ let fresh_bitv genre sz : bitv =
 
 let negate_bitv : bitv -> bitv = List.map negate_solver_simple_term
 
+let extract_st i j { bv; sz } =
+  if sz = j - i + 1 then
+    [ { bv ; sz } ]
+  else
+    match bv with
+    | Cte b -> [{ bv = Cte (Z.extract b i (j - i + 1)); sz = j - i + 1 }]
+    | Other r -> [{ bv = Ext (r, sz, i, j) ; sz = j - i + 1 }]
+    | Ext (r, sz, k, _) ->
+      [{ bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }]
+
+(* extract i..j from a composition of size size
+
+    an element of size [sz] at the head of the composition contains the bits
+    [size - 1 .. size - sz] inclusive *)
+let rec extract size i j = function
+  | [] ->
+    (* We can't extract a bv of length 0! *)
+    assert false
+  | [ st ] ->
+    assert (st.sz = size);
+    extract_st i j st
+  | { sz; _ } :: sts when j < size - sz ->
+    extract (size - sz) i j sts
+  | ({ sz; _ } as st) :: _ when i >= size - sz ->
+    extract_st (i - (size - sz)) (j - (size - sz)) st
+  | ({ sz; _ } as st) :: sts ->
+    extract_st 0 (j - (size - sz)) st @
+    extract (size - sz) i (size - sz - 1) sts
+
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
@@ -373,32 +402,6 @@ module Shostak(X : ALIEN) = struct
       let ctx = List.rev_append ctx' ctx in
       let bv = embed r in
       if neg then negate_abstract bv, ctx else bv, ctx
-
-    let extract_st i j { bv; sz } =
-      match bv with
-      | Cte b -> [{ bv = Cte (Z.extract b i (j - i + 1)); sz = j - i + 1 }]
-      | Other r -> [{ bv = Ext (r, sz, i, j) ; sz = j - i + 1 }]
-      | Ext (r, sz, k, _) ->
-        [{ bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }]
-
-    (* extract i..j from a composition of size size
-
-       an element of size [sz] at the head of the composition contains the bits
-       [size - 1 .. size - sz] inclusive *)
-    let rec extract size i j = function
-      | [] ->
-        (* We can't extract a bv of length 0! *)
-        assert false
-      | [ st ] ->
-        assert (st.sz = size);
-        extract_st i j st
-      | { sz; _ } :: sts when j < size - sz ->
-        extract (size - sz) i j sts
-      | ({ sz; _ } as st) :: _ when i >= size - sz ->
-        extract_st (i - (size - sz)) (j - (size - sz)) st
-      | ({ sz; _ } as st) :: sts ->
-        extract_st 0 (j - (size - sz)) st @
-        extract (size - sz) i (size - sz - 1) sts
 
     let normalize_st st =
       match st.bv with
@@ -1391,6 +1394,8 @@ module Shostak(X : ALIEN) = struct
 
     match X.extract u , X.extract t with
     | None   , None   -> if X.str_cmp u t > 0 then [u,t] else [t,u]
+    | None   , Some [ { bv = Cte _; _ } ] -> [u,t]
+    | Some [ { bv = Cte _; _ } ],    None -> [t,u]
     | None   , Some t -> solve_ter (embed u) t
     | Some u , None   -> solve_ter u (embed t)
     | Some u , Some t -> solve_ter u t
@@ -1417,7 +1422,7 @@ module Shostak(X : ALIEN) = struct
           embed (X.subst x subs y.value)
       in
       let y' = if y.negated then negate_abstract y' else y' in
-      Canon.extract y_sz i j y' @ subst_rec x subs biv
+      extract y_sz i j y' @ subst_rec x subs biv
 
   let subst x subs biv =
     if Options.get_debug_bitv () then
