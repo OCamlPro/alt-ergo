@@ -728,6 +728,7 @@ let print =
     the (get-statistics) instruction is performed. *)
 let statistics_table : (string, (unit -> string)) Hashtbl.t = Hashtbl.create 7
 
+
 let register_stat (key : string) (getter : unit -> string) =
   Hashtbl.add statistics_table key getter
 
@@ -746,6 +747,10 @@ let print_statistics fmt =
     (fun key getter -> Fmt.pf fmt "@,:%s %s" key (getter ()))
     statistics_table;
   Fmt.pf fmt "@])@,"
+
+(* Registering the statistics we want to display even when profiling is off. *)
+let () =
+  register_int_stat "steps" (fun () -> Steps.get_steps ())
 
 let init () =
   let state = Lazy.force state in
@@ -773,9 +778,7 @@ let init () =
   Timers.set_timer_pause (Timers.pause timers);
   Timers.reset timers;
   set_sigprof ();
-
-  (* Now, registering the statistics we want in (get-info :all-statistics). *)
-  register_int_stat "steps" (fun () -> Steps.get_steps ());
+  (* Registering timer statistics. *)
   List.iter
     (fun (m : Timers.ty_module) ->
        let name = Format.sprintf "timer-%s" (Timers.string_of_ty_module m) in
