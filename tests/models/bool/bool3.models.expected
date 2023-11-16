@@ -5,5 +5,5 @@ unknown
   (define-fun y () Bool true)
 )
 ((foo true)
- (bar false))
+ (bar unknown))
 

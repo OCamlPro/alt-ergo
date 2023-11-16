@@ -3,7 +3,7 @@ unknown
 (
   (define-fun q () Bool false)
 )
-((notp false)
+((notp unknown)
  (notnq true))
 
 
