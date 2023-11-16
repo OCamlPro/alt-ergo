@@ -1389,7 +1389,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Ty.Tbool ->
       begin
         match ME.find_opt t env.gamma with
-        | None -> Some E.faux
+        | None ->
+          begin
+            match ME.find_opt (E.neg t) env.gamma with
+            | None -> None
+            | Some _ -> Some E.faux
+          end
         | Some _ -> Some E.vrai
       end
     | _ -> None
