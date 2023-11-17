@@ -447,17 +447,27 @@ let main () =
         Filename.(chop_extension path |> extension) |> set_output_format;
         let content = AltErgoLib.My_zip.extract_zip_file path in
         `Raw (Filename.chop_extension filename, content))
-      else (
-        Filename.extension path |> set_output_format;
-        let content =
-          if not (String.equal path "") then
-            let cin = open_in path in
-            let content = read_all cin in
-            close_in cin;
-            content
-          else read_all stdin
+      else
+        let is_stdin = String.equal path "" in
+        let is_incremental =
+          match lang with
+          | Some (Dl.Logic.Smtlib2 _) | None -> true
+          | _ -> false
         in
-        `Raw (filename, content))
+        if is_stdin then (
+          if is_incremental then (
+            set_output_format ".smt2";
+            `Stdin
+          ) else (
+            `Raw (filename, read_all stdin)
+          )
+        ) else (
+          Filename.extension path |> set_output_format;
+          let cin = open_in path in
+          let content = read_all cin in
+          close_in cin;
+          `Raw (filename, content)
+        )
     in
     let logic_file =
       State.mk_file ?lang ~loc:(Dolmen.Std.Loc.mk_file path) dir source
