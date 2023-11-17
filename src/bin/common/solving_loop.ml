@@ -426,8 +426,21 @@ let main () =
     let lang =
       match Options.get_input_format () with
       | Some Native -> Some Dl.Logic.Alt_ergo
-      | Some Smtlib2 -> Some (Dl.Logic.Smtlib2 `Latest)
-      | None | Some (Why3 | Unknown _) -> None
+      | Some Smtlib2 -> Some (Dl.Logic.Smtlib2 `Poly)
+      | None ->
+        (* Dolmen auto-detects .smt2 files as adhering to the SMT-LIB standard,
+           but we want to allow the polymorphic extensions instead. *)
+        let filename =
+          if Filename.check_suffix path ".zip" then
+            Filename.chop_extension path
+          else
+            path
+        in
+        if Filename.check_suffix filename ".smt2" then
+          Some (Dl.Logic.Smtlib2 `Poly)
+        else
+          None
+      | Some (Why3 | Unknown _) -> None
     in
     let source =
       if Filename.check_suffix path ".zip" then (

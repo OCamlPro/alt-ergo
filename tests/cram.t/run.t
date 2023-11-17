@@ -93,3 +93,7 @@ Some errors are unescapable though. It its the case of syntax error in commands.
   
   (error "Invalid set-option")
   (error "Error on parsing errors (code 3)")
+
+Let us check that we can parse psmt2 files with a .smt2 extension. No output,
+no errors expected.
+  $ alt-ergo poly.smt2 --type-only
