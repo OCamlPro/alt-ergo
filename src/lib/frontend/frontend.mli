@@ -87,8 +87,8 @@ module type S = sig
     env ->
     Commands.sat_tdecl ->
     env
+
+  val print_model: sat_env Fmt.t
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t
-
-val unknown_reason_to_string : Sat_solver_sig.unknown_reason -> string

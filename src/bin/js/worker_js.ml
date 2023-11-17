@@ -133,6 +133,16 @@ let main worker_id content =
       if Options.get_unsat_core () then begin
         unsat_core := Explanation.get_unsat_core ftnd_env.FE.expl;
       end;
+      let () =
+        match ftnd_env.FE.res with
+        | `Sat partial_model | `Unknown partial_model ->
+          begin
+            if Options.(get_interpretation () && get_dump_models ()) then
+              FE.print_model (Options.Output.get_fmt_models ()) partial_model;
+          end
+        | `Unsat -> ()
+      in
+      ()
     in
 
     let typed_loop all_context state td =
