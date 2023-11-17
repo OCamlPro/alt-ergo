@@ -154,21 +154,6 @@ let main () =
     (module SatCont.Make(TH) : Sat_solver_sig.S)
   in
 
-  let print_model ppf (Model ((module SAT), env)) =
-    match SAT.get_model env with
-    | None ->
-      let ur = SAT.get_unknown_reason env in
-      Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-        "@[<v 0>It seems that no model has been computed so \
-         far. You may need to change your model generation strategy \
-         or to increase your timeouts. \
-         Returned unknown reason = %a@]"
-        Sat_solver_sig.pp_unknown_reason_opt ur;
-
-    | Some (lazy model) ->
-      Models.output_concrete_model ppf model
-  in
-
   let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
     let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands () then
@@ -209,7 +194,7 @@ let main () =
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
               Sat_solver_sig.pp_unknown_reason_opt ur;
-            print_model (Options.Output.get_fmt_models ()) mdl
+            FE.print_model (Options.Output.get_fmt_models ()) partial_model
           end;
           Some mdl
         end
@@ -862,8 +847,9 @@ let main () =
       | {contents = `Get_model; _ } ->
         if Options.get_interpretation () then
           let () = match State.get partial_model_key st with
-            | Some model ->
-              print_model (Options.Output.get_fmt_regular ()) model
+            | Some (Model ((module SAT), env)) ->
+              let module FE = Frontend.Make (SAT) in
+              FE.print_model (Options.Output.get_fmt_regular ()) env
             | None ->
               (* TODO: add the location of the statement. *)
               recoverable_error "No model produced."

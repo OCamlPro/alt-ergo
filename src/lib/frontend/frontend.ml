@@ -163,6 +163,8 @@ module type S = sig
     env ->
     sat_tdecl ->
     env
+
+  val print_model: sat_env Fmt.t
 end
 
 let init_with_replay_used acc f =
@@ -467,4 +469,18 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          since we exit right after  *)
       hook_on_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
+
+  let print_model ppf env =
+    match SAT.get_model env with
+    | None ->
+      let ur = SAT.get_unknown_reason env in
+      Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+        "@[<v 0>It seems that no model has been computed so \
+         far. You may need to change your model generation strategy \
+         or to increase your timeouts. \
+         Returned unknown reason = %a@]"
+        Sat_solver_sig.pp_unknown_reason_opt ur;
+
+    | Some (lazy model) ->
+      Models.output_concrete_model ppf model
 end

@@ -120,22 +120,6 @@ let main worker_id content =
       Frontend.print_status status n
     in
 
-    let print_model ppf env =
-      let ur = SAT.get_unknown_reason env in
-      Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-        "@[<v 0>; Returned unknown reason = %a@]"
-        Sat_solver_sig.pp_unknown_reason_opt ur;
-      match SAT.get_model env with
-      | None ->
-        Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
-          "@[<v 0>It seems that no model has been computed so \
-           far. You may need to change your model generation strategy \
-           or to increase your timeouts."
-
-      | Some (lazy model) ->
-        Models.output_concrete_model ppf model
-    in
-
     let solve all_context (cnf, goal_name) =
       let used_context = Frontend.choose_used_context all_context ~goal_name in
       SAT.reset_refs ();
@@ -154,7 +138,7 @@ let main worker_id content =
         | `Sat partial_model | `Unknown partial_model ->
           begin
             if Options.(get_interpretation () && get_dump_models ()) then
-              print_model (Options.Output.get_fmt_models ()) partial_model;
+              FE.print_model (Options.Output.get_fmt_models ()) partial_model;
           end
         | `Unsat -> ()
       in
