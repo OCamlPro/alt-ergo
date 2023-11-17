@@ -28,12 +28,29 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val get : Util.sat_solver -> (module Sat_solver_sig.SatContainer)
-(** Returns the SAT-solver corresponding to the argument. *)
+(** The Dolmen state option manager. Each module defined below is linked to
+    an option that can be set, fetched et reset independently from the
+    Options module, which is used as a static reference. *)
 
-val get_current : unit -> (module Sat_solver_sig.SatContainer)
-(** returns the current activated SAT-solver depending on the value of
-    `Options.sat_solver ()`. See command-line option `-sat-solver` for
-    more details **)
+module type S = sig
+  (** The type of options. It should match the type in the module Options. *)
+  type k
 
-val get_theory : no_th:bool -> (module Theory.S)
+  (** The data saved in the state. May differ from the saved option. *)
+  type t
+
+  (** Sets the option on the dolmen state, with a transformation from k to t. *)
+  val set : k -> D_loop.Typer.state -> D_loop.Typer.state
+
+  (** Returns the option stored in the state. If it has not been registered,
+      fetches the default option in the module Options. *)
+  val get : D_loop.Typer.state -> t
+
+  (** Resets the option to its default value in Options. *)
+  val reset : D_loop.Typer.state -> D_loop.Typer.state
+end
+
+module ProduceAssignment : S with type k = bool and type t = bool
+module Optimize : S with type k = bool and type t = bool
+module SatSolver : S with type k = Util.sat_solver
+                      and type t = Util.sat_solver * (module Sat_solver_sig.S)

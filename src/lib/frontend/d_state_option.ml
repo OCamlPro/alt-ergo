@@ -28,12 +28,90 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val get : Util.sat_solver -> (module Sat_solver_sig.SatContainer)
-(** Returns the SAT-solver corresponding to the argument. *)
+module O = Options
+module State = D_loop.State
+module Typer = D_loop.Typer
 
-val get_current : unit -> (module Sat_solver_sig.SatContainer)
-(** returns the current activated SAT-solver depending on the value of
-    `Options.sat_solver ()`. See command-line option `-sat-solver` for
-    more details **)
+module type Input = sig
+  type k
 
-val get_theory : no_th:bool -> (module Theory.S)
+  type t
+
+  val get : unit -> k
+
+  val key : string
+
+  val on_update : k -> unit
+
+  val map : k -> t
+end
+
+module type S = sig
+  type k
+
+  type t
+
+  val set : k -> Typer.state -> Typer.state
+
+  val get : Typer.state -> t
+
+  val reset : Typer.state -> Typer.state
+end
+
+module Make(O:Input) : S with type k = O.k and type t = O.t = struct
+  type k = O.k
+  type t = O.t
+
+  let key = State.create_key ~pipe:"" O.key
+
+  let set opt st =
+    let st = State.set key (O.map opt) st in
+    O.on_update opt;
+    st
+
+  let get st =
+    try State.get key st with
+    | State.Key_not_found _ -> O.map (O.get ())
+
+  let reset = set (O.get ())
+end
+
+let create_opt
+    (type k)
+    (type t)
+    ?(on_update=ignore)
+    key
+    (get : unit -> k)
+    (map : (k -> t)) =
+  (module (
+     Make (
+     struct
+       type nonrec k = k
+       type nonrec t = t
+       let key = key
+       let get = get
+       let on_update = on_update
+       let map = map
+     end)
+   ) : S with type k = k and type t = t)
+
+module ProduceAssignment =
+  (val (create_opt "produce_assignment" (fun _ -> false)) Fun.id)
+
+module Optimize =
+  (val (create_opt "optimize" O.get_optimize) Fun.id)
+
+let msatsolver =
+  let map s =
+    let module SatCont =
+      (val (Sat_solver.get s) : Sat_solver_sig.SatContainer) in
+    let module TH =
+      (val
+        (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
+         else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
+    s,
+    (module SatCont.Make(TH) : Sat_solver_sig.S)
+  in
+  (create_opt "sat_solver" O.get_sat_solver map)
+
+module SatSolver = (val msatsolver)
