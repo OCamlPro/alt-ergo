@@ -186,8 +186,8 @@ end = struct
 
   let create () =
     Array.init
-      max_ty_module
-      (fun _ -> Array.init max_ty_function (fun _ -> 0.))
+      (max_ty_module + 1)
+      (fun _ -> Array.init (max_ty_function + 1) (fun _ -> 0.))
 
   let clear =
     Array.iter (fun a -> Array.iteri (fun j _ -> a.(j) <- 0.) a)
