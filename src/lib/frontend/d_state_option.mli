@@ -28,12 +28,41 @@
 (*                                                                        *)
 (**************************************************************************)
 
-val get : Util.sat_solver -> (module Sat_solver_sig.SatContainer)
-(** Returns the SAT-solver corresponding to the argument. *)
+(** The Dolmen state option manager. Each module defined below is linked to
+    an option that can be set, fetched et reset independently from the
+    Options module, which is used as a static reference. *)
 
-val get_current : unit -> (module Sat_solver_sig.SatContainer)
-(** returns the current activated SAT-solver depending on the value of
-    `Options.sat_solver ()`. See command-line option `-sat-solver` for
-    more details **)
+module type Accessor = sig
+  (** The data saved in the state. *)
+  type t
 
-val get_theory : no_th:bool -> (module Theory.S)
+  (** Returns the option stored in the state. If it has not been registered,
+      fetches the default option in the module Options. *)
+  val get : D_loop.Typer.state -> t
+end
+
+module type S = sig
+  include Accessor
+
+  (** Sets the option on the dolmen state. *)
+  val set : t -> D_loop.Typer.state -> D_loop.Typer.state
+
+  (** Resets the option to its default value in Options. *)
+  val reset : D_loop.Typer.state -> D_loop.Typer.state
+end
+
+(** Option for enabling/disabling the get-assignment instruction. *)
+module ProduceAssignment : S with type t = bool
+
+(** Option for enabling/disabling the optimization engine. *)
+module Optimize : S with type t = bool
+
+(** The Sat solver used. When set, updates the SatSolverModule defined below. *)
+module SatSolver : S with type t = Util.sat_solver
+
+(** The Sat solver module used for the calculation. This option's value depends
+    on SatSolver: when SatSolver is updated, this one also is. *)
+module SatSolverModule : Accessor with type t = (module Sat_solver_sig.S)
+
+(** Initializes the state with options that requires some preprocessing. *)
+val init : D_loop.Typer.state -> D_loop.Typer.state

@@ -31,6 +31,7 @@
 open AltErgoLib
 open D_loop
 
+module DO = D_state_option
 module O = Options
 
 type solver_ctx = {
@@ -141,18 +142,6 @@ type model = Model : 'a sat_module * 'a -> model
 
 let main () =
   let () = Dolmen_loop.Code.init [] in
-
-  let make_sat () =
-    let module SatCont =
-      (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer) in
-
-    let module TH =
-      (val
-        (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
-         else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
-    O.get_sat_solver (),
-    (module SatCont.Make(TH) : Sat_solver_sig.S)
-  in
 
   let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
     let module FE = Frontend.Make (SAT) in
@@ -316,11 +305,17 @@ let main () =
         | Exit -> exit 0
       end
     in
-
+    let sat_solver =
+      let module SatCont =
+        (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
+      in
+      let module TH = (val Sat_solver.get_theory ~no_th:(O.get_no_theory ())) in
+      (module SatCont.Make(TH) : Sat_solver_sig.S)
+    in
     let state = {
       env = I.empty_env;
       solver_ctx = empty_solver_ctx;
-      sat_solver = snd @@ make_sat ();
+      sat_solver;
     } in
     try
       let parsed_seq = parsed () in
@@ -335,20 +330,8 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let sat_solver_key : (Util.sat_solver * (module Sat_solver_sig.S)) State.key =
-    State.create_key ~pipe:"" "sat_solver"
-  in
-
   let partial_model_key: model option State.key =
     State.create_key ~pipe:"" "sat_state"
-  in
-
-  let optimize_key: bool State.key =
-    State.create_key ~pipe:"" "optimize"
-  in
-
-  let produce_assignment: bool State.key =
-    State.create_key ~pipe:"" "produce_assignment"
   in
 
   let named_terms: DStd.Expr.term Util.MS.t State.key =
@@ -486,12 +469,10 @@ let main () =
     let response_file = State.mk_file dir (`Raw ("", "")) in
     logic_file,
     State.empty
-    |> State.set sat_solver_key (make_sat ())
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
-    |> State.set optimize_key (O.get_optimize ())
-    |> State.set produce_assignment false
     |> State.set named_terms Util.MS.empty
+    |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
@@ -506,7 +487,7 @@ let main () =
   in
 
   let set_sat_solver sat st =
-    let optim = State.get optimize_key st in
+    let optim = DO.Optimize.get st in
     match sat with
     | Util.Tableaux | Tableaux_CDCL when optim ->
       warning
@@ -515,17 +496,13 @@ let main () =
         sat;
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
-      O.set_sat_solver sat;
       (* `make_sat` returns the sat solver corresponding to the new sat_solver
          option. *)
-      State.set
-        sat_solver_key
-        (make_sat ())
-        st
+      DO.SatSolver.set sat st
   in
 
   let set_optimize optim st =
-    let sat, _ = State.get sat_solver_key st in
+    let sat = DO.SatSolver.get st in
     match sat with
     | Util.Tableaux | Tableaux_CDCL when optim ->
       warning
@@ -535,7 +512,7 @@ let main () =
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
       enable_maxsmt optim;
-      State.set optimize_key optim st
+      DO.Optimize.set optim st
   in
 
   let handle_option st_loc name (value : DStd.Term.t) st =
@@ -625,8 +602,7 @@ let main () =
         | None ->
           print_wrn_opt ~name:":verbosity" st_loc "boolean" value;
           st
-        | Some b ->
-          State.set produce_assignment b st
+        | Some b -> DO.ProduceAssignment.set b st
       end
     | (":global-declarations"
       | ":interactive-mode"
@@ -834,7 +810,7 @@ let main () =
         in
         let partial_model =
           solve
-            (snd @@ State.get sat_solver_key st)
+            (DO.SatSolverModule.get st)
             all_context
             (cnf, name)
         in
@@ -888,8 +864,8 @@ let main () =
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
-        |> State.set optimize_key (O.get_optimize ())
-        |> State.set produce_assignment false
+        |> DO.Optimize.reset
+        |> DO.ProduceAssignment.reset
         |> State.set named_terms Util.MS.empty
 
       | {contents = `Exit; _} -> raise Exit
@@ -910,7 +886,7 @@ let main () =
         begin
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
-            if State.get produce_assignment st then
+            if DO.ProduceAssignment.get st then
               handle_get_assignment
                 ~get_value:(SAT.get_value partial_model)
                 st
