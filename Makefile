@@ -117,6 +117,9 @@ packages:
 # Generate new Dune tests from the problems in
 # the directory tests/.
 gentest: $(wildcard tests/**/*)
+	# TODO: There should be an option to gentest to avoid printing the
+	# dune.inc file and only touch the expected files in this call.
+	dune exec -- tools/gentest.exe tests >/dev/null
 	dune build @tests/gentest --auto-promote
 
 # Run non-regression tests.
