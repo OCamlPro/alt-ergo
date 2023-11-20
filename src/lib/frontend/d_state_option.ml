@@ -79,7 +79,10 @@ module ProduceAssignment =
 module Optimize =
   (val (create_opt "optimize" O.get_optimize))
 
-let get_sat_solver ?(sat = O.get_sat_solver ()) ?(no_th = O.get_no_theory ()) () =
+let get_sat_solver
+    ?(sat = O.get_sat_solver ())
+    ?(no_th = O.get_no_theory ())
+    () =
   let module SatCont =
     (val (Sat_solver.get sat) : Sat_solver_sig.SatContainer) in
   let module TH =
