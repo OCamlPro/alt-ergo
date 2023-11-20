@@ -312,10 +312,19 @@ module SmtlibCounterExample = struct
     | [Ty.Trecord _r, _arg] -> begin
         match xs_values with
         | [record_name,_] ->
+          (* HOTFIX: this fix is temporary. The current implementation of
+             model generation for records relies on string representants,
+             which means the printer for access symbols has to agree with
+             the name of the field in the type trecord. As the printer
+             [Symbols.print] will always output AE native format, this
+             doesn't agree when the output format is SMT-LIB. But the
+             printer of expression will output the right string if we don't
+             give the arguments of the field. *)
+          let access = Fmt.str "%a" Expr.print (Expr.mk_term f [] ty) in
           add_records_destr
             records
             (asprintf "%a" Expr.print record_name)
-            (Sy.to_string f)
+            access
             rep
         | [] | _ -> records
       end

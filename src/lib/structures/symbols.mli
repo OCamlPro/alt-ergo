@@ -121,10 +121,16 @@ val compare_operators : operator -> operator -> int
 val hash : t -> int
 
 val to_string : t -> string
-val print : Format.formatter -> t -> unit
+val print : t Fmt.t
+(* Printer used by debugging messages. *)
 
 val to_string_clean : t -> string
-val print_clean : Format.formatter -> t -> unit
+val print_clean : t Fmt.t
+
+val pp_name : string Fmt.t
+
+val pp_operator : format:[`Ae | `Smtlib] -> operator Fmt.t
+(* [pp_smtlib ppf sy] prints the symbol [sy] on the formatter [ppf]. *)
 
 (*val dummy : t*)
 

@@ -311,393 +311,374 @@ module F_Htbl : Hashtbl.S with type key = t =
 
 (** pretty printing *)
 
-let print_binders =
-  let print_one fmt (sy, (ty, _)) =
-    Format.fprintf fmt "%a:%a" Sy.print sy Ty.print ty
-  in fun fmt b ->
-    match SMap.bindings b with
-    | [] ->
-      (* can happen when quantifying only on type variables *)
-      Format.fprintf fmt "(no term variables)"
-    | e::l ->
-      print_one fmt e;
-      List.iter (fun e -> Format.fprintf fmt ", %a" print_one e) l
-
-(* let print_list_sep sep pp fmt =
- *   Format.pp_print_list ~pp_sep:(fun fmt _ -> Format.fprintf fmt sep) pp fmt
- *
- * let print_list pp fmt = print_list_sep "," pp fmt *)
-
 module SmtPrinter = struct
+  let pp_binder ppf (var, (ty, _)) =
+    let var =
+      match var with
+      | Sy.Var v -> v
+      | _ -> assert false
+    in
+    Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
-  let rec print_formula fmt form xs bind =
-    let open Format in
+  let pp_binders = Fmt.(iter_bindings ~sep:sp SMap.iter pp_binder)
+
+  let rec pp_formula ppf form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      Format.fprintf fmt "@[(and %a %a)@]" print_silent f1 print_silent f2
+      Fmt.pf ppf "@[(and %a %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      fprintf fmt "@[(= %a %a)@]" print_silent f1 print_silent f2
+      Fmt.pf ppf "@[(= %a %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      fprintf fmt "@[(not (= %a %a))@]" print_silent f1 print_silent f2
+      Fmt.pf ppf "@[(xor %a %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      fprintf fmt "@[(or %a %a)@]" print_silent f1 print_silent f2
+      Fmt.pf ppf "@[(or %a %a)@]" pp_silent f1 pp_silent f2
 
-    | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
-      if Options.get_verbose () then
-        fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
-          name
-          print_binders binders
-          print_triggers user_trs
-          print_silent main
-      else
-        fprintf fmt "(lem %s)" name
+    | Sy.F_Lemma, [], B_lemma { main; name; binders; _ } ->
+      Fmt.pf ppf "(! (forall (%a) %a) :named %s)"
+        pp_binders binders pp_silent main name
 
-    | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
-      fprintf fmt "(<sko exists %a.> %a)"
-        print_binders binders print_silent main
+    | Sy.F_Skolem, [], B_skolem { main; name; binders; _ } ->
+      Fmt.pf ppf "(! (exists (%a) %a) :named %s)"
+        pp_binders binders pp_silent main name
 
     | _ -> assert false
 
-  and print_lit fmt lit xs =
-    let open Format in
+  and pp_lit ppf lit xs =
     match lit, xs with
     | Sy.L_eq, a::l ->
-      fprintf fmt "(= %a%a)"
-        print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
-    | Sy.L_neg_eq, [a; b] ->
-      fprintf fmt "(not (= %a %a))" print a print b
+      Fmt.pf ppf "(= %a %a)"
+        pp a (fun ppf -> List.iter (Fmt.pf ppf " %a" pp)) l
 
-    | Sy.L_neg_eq, a::l ->
-      fprintf fmt "(distinct %a%a)"
-        print a (fun fmt -> List.iter (fprintf fmt " %a" print)) l
+    | Sy.L_neg_eq, [a; b] ->
+      Fmt.pf ppf "(not (= %a %a))" pp a pp b
+
+    | Sy.L_neg_eq, _ :: _ ->
+      Fmt.pf ppf "(distinct %a)" Fmt.(list ~sep:sp pp) xs
 
     | Sy.L_built Sy.LE, [a;b] ->
-      fprintf fmt "(<= %a %a)" print a print b
+      Fmt.pf ppf "(<= %a %a)" pp a pp b
 
     | Sy.L_built Sy.LT, [a;b] ->
-      fprintf fmt "(< %a %a)" print a print b
+      Fmt.pf ppf "(< %a %a)" pp a pp b
 
     | Sy.L_neg_built Sy.LE, [a; b] ->
-      fprintf fmt "(> %a %a)" print a print b
+      Fmt.pf ppf "(> %a %a)" pp a pp b
 
     | Sy.L_neg_built Sy.LT, [a; b] ->
-      fprintf fmt "(>= %a %a)" print a print b
+      Fmt.pf ppf "(>= %a %a)" pp a pp b
 
     | Sy.L_neg_pred, [a] ->
-      fprintf fmt "(not %a)" print a
+      Fmt.pf ppf "(not %a)" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+      Fmt.pf ppf "((_ is %a) %a)" Hstring.print hs pp e
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+      Fmt.pf ppf "(not ((_ is %a) %a))" Hstring.print hs pp e
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
       | Sy.L_built (Sy.IsConstr _)
-      | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+      | Sy.L_neg_built (Sy.IsConstr _)), _ ->
       assert false
 
-  and print_silent fmt t =
-    let open Format in
+  and pp_operator = Symbols.pp_operator ~format:`Smtlib
+
+  and pp_silent ppf t =
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
-    (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Sy.Form form, xs -> pp_formula ppf form xs bind
+
+    | Sy.Lit lit, xs -> pp_lit ppf lit xs
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
-      fprintf fmt
-        "(let%a %a =@ %a in@ %a)"
-        (fun fmt x -> if Options.get_verbose () then
-            fprintf fmt
-              " [sko = %a]" print x.let_sko) x
-        Sy.print x.let_v print x.let_e print_silent x.in_e
+      Fmt.pf ppf "(let ((%a %a)) %a)"
+        Symbols.print x.let_v
+        pp x.let_e
+        pp_silent x.in_e
 
-    (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Sy.(Op Record), _ ->
+      begin
+        match ty with
+        | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
+          assert (List.compare_lengths xs lbs = 0);
+          Fmt.pf ppf "(%a %a)"
+            Hstring.print record_constr
+            Fmt.(list ~sep:sp pp) xs
 
-    | Sy.Op Sy.Get, [e1; e2] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(select %a %a)" print e1 print e2
-      else
-        fprintf fmt "%a[%a]" print e1 print e2
-
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(store %a %a %a)"
-          print e1
-          print e2
-          print e3
-      else
-        fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
-
-    | Sy.Op Sy.Concat, [e1; e2] ->
-      fprintf fmt "%a@@%a" print e1 print e2
-
-    | Sy.Op Sy.Extract (i, j), [e] ->
-      fprintf fmt "%a^{%d,%d}" print e i j
-
-    | Sy.Op (Sy.Access field), [e] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(%s %a)" (Hstring.view field) print e
-      else
-        fprintf fmt "%a.%s" print e (Hstring.view field)
-
-    | Sy.Op (Sy.Record), _ ->
-      begin match ty with
-        | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
-          fprintf fmt "{";
-          ignore (List.fold_left2 (fun first (field,_) e ->
-              fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-                (Hstring.view field) print e;
-              false
-            ) true lbs xs);
-          fprintf fmt "}";
-        | _ -> assert false
+        | _ ->
+          (* Exclude by the typechecker. *)
+          assert false
       end
 
-    (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
-                              op == Sy.Max_real || op == Sy.Max_int ||
-                              op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+    | Sy.Op op, [] -> Fmt.pf ppf "%a" pp_operator op
 
-    (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-      fprintf fmt
-        "%a(%a)" Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
+    | Sy.Op op, _ :: _ ->
+      Fmt.pf ppf "(%a %a)" pp_operator op Fmt.(list ~sep:sp pp) xs
 
-    | Sy.Op _, [e1; e2] ->
-      fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
+    | Sy.True, [] -> Fmt.pf ppf "true"
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
-      fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+    | Sy.False, [] -> Fmt.pf ppf "false"
 
+    | Sy.Name (n, _, _), [] -> Symbols.pp_name ppf (Hstring.view n)
 
-    | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
+    | Sy.Name (n, _, _), _ :: _ ->
+      Fmt.pf ppf "(%a %a)"
+        Symbols.pp_name (Hstring.view n)
+        Fmt.(list ~sep:sp pp) xs
 
-    | _, [] ->
-      fprintf fmt "%a" Sy.print f
+    | Sy.Var v, [] -> Var.print ppf v
 
-    | _, _ ->
-      Format.fprintf fmt "(%a %a)" Sy.print f
-        (Util.print_list ~sep:"," ~pp:print) xs
+    | Sy.Int i, [] ->
+      if Z.sign i = -1 then
+        Fmt.pf ppf "(- %a)" Z.pp_print (Z.abs i)
+      else
+        Fmt.pf ppf "%a" Z.pp_print i
 
-  and print_triggers fmt trs =
-    List.iter (fun { content = l; _ } ->
-        Format.fprintf fmt "| %a@,"  (Util.print_list ~sep:"," ~pp:print) l;
-      ) trs
+    | Sy.Real q, [] ->
+      if Z.equal (Q.den q) Z.one then
+        Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
+      else if Q.sign q = -1 then
+        Fmt.pf ppf "(/ (- %a) %a)"
+          Z.pp_print (Z.abs (Q.num q))
+          Z.pp_print (Q.den q)
+      else
+        Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
 
-  and print_verbose fmt t = print_silent fmt t
+    | Sy.Bitv (n, s), [] ->
+      Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
+
+    | Sy.MapsTo v, [t] ->
+      Fmt.pf ppf "(ae.mapsto %a %a)" Var.print v pp t
+
+    | Sy.In (_lb, _rb), [_t] ->
+      (* WARNING: we don't print the content of this semantic trigger as
+         it requires to write a SMT-LIB compliant printer for bounds. *)
+      Fmt.pf ppf "ae.in"
+
+    | Sy.Void, [] ->
+      (* The void type doesn't exist in SMT-LIB standard. *)
+      Fmt.pf ppf "ae.void"
+
+    | Sy.(True | False | Let | Void | Var _ | Int _ | Real _ | Bitv _
+         | MapsTo _ | In _), _ ->
+      (* All the cases have been excluded by the parser. *)
+      assert false
+
+  and pp_trigger ppf { content; _ } =
+    Fmt.pf ppf "@[<hv 2>(and %a)@]" Fmt.(list ~sep:sp pp) content
+
+  and pp_triggers ppf trs =
+    Fmt.pf ppf "@[<hv 2>(or %a)@]" Fmt.(list ~sep:sp pp_trigger) trs
+
   (* Not displaying types when int SMT format *)
+  and pp_verbose ppf t = pp_silent ppf t
 
-  and print fmt t =
-    if Options.get_debug () then print_verbose fmt t
-    else print_silent fmt t
+  and pp ppf t =
+    if Options.get_debug () then pp_verbose ppf t
+    else pp_silent ppf t
 
 end
 
 module AEPrinter = struct
+  let pp_binder ppf (var, (ty, _)) =
+    let var =
+      match var with
+      | Sy.Var v -> v
+      | _ -> assert false
+    in
+    Fmt.pf ppf "%a:%a" Var.print var Ty.pp_smtlib ty
 
-  (* Same as SmtPrinter.print_formula *)
-  let rec print_formula fmt form xs bind =
+  let pp_binders ppf binders =
+    if SMap.is_empty binders then
+      (* Can happen when quantifying only on type variables. *)
+      Fmt.pf ppf "(no term variables)"
+    else
+      Fmt.(iter_bindings ~sep:sp SMap.iter pp_binder) ppf binders
+
+  let rec pp_formula fmt form xs bind =
     let open Format in
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      fprintf fmt "@[(%a /\\@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(%a /\\@ %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      fprintf fmt "@[(%a <->@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(%a <->@ %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      fprintf fmt "@[(%a xor@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(%a xor@ %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      fprintf fmt "@[(%a \\/@ %a)@]" print_silent f1 print_silent f2
+      fprintf fmt "@[(%a \\/@ %a)@]" pp_silent f1 pp_silent f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
       if Options.get_verbose () then
         fprintf fmt "(lemma: %s forall %a[%a].@  %a)"
           name
-          print_binders binders
-          print_triggers user_trs
-          print_silent main
+          pp_binders binders
+          pp_triggers user_trs
+          pp_silent main
       else
         fprintf fmt "(lem %s)" name
 
     | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
       fprintf fmt "(<sko exists %a.> %a)"
-        print_binders binders print_silent main
+        pp_binders binders pp_silent main
 
     | _ -> assert false
 
-  and print_lit fmt lit xs =
-    let open Format in
+  and pp_lit ppf lit xs =
     match lit, xs with
-    | Sy.L_eq, a::l ->
-      fprintf fmt "(%a%a)"
-        print a (fun fmt -> List.iter (fprintf fmt " = %a" print)) l
+    | Sy.L_eq, _ :: _ ->
+      Fmt.pf ppf "@[<hv 2>(%a)@]"
+        Fmt.(list ~sep:(fun ppf () -> Fmt.pf ppf " =@, ") pp) xs
 
     | Sy.L_neg_eq, [a; b] ->
-      fprintf fmt "(%a <> %a)" print a print b
+      Fmt.pf ppf "(%a <> %a)" pp a pp b
 
-    | Sy.L_neg_eq, a::l ->
-      fprintf fmt "distinct(%a%a)"
-        print a (fun fmt -> List.iter (fprintf fmt ", %a" print)) l
+    | Sy.L_neg_eq, _ :: _ ->
+      Fmt.pf ppf "@[<hv 2>distinct(%a)@]" Fmt.(list ~sep:comma pp) xs
 
     | Sy.L_built Sy.LE, [a;b] ->
-      fprintf fmt "(%a <= %a)" print a print b
+      Fmt.pf ppf "(%a <= %a)" pp a pp b
 
     | Sy.L_built Sy.LT, [a;b] ->
-      fprintf fmt "(%a < %a)" print a print b
+      Fmt.pf ppf "(%a < %a)" pp a pp b
 
     | Sy.L_neg_built Sy.LE, [a; b] ->
-      fprintf fmt "(%a > %a)" print a print b
+      Fmt.pf ppf "(%a > %a)" pp a pp b
 
     | Sy.L_neg_built Sy.LT, [a; b] ->
-      fprintf fmt "(%a >= %a)" print a print b
+      Fmt.pf ppf "(%a >= %a)" pp a pp b
 
     | Sy.L_neg_pred, [a] ->
-      fprintf fmt "(not %a)" print a
+      Fmt.pf ppf "(not %a)" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      fprintf fmt "(%a ? %a)" print e Hstring.print hs
+      Fmt.pf ppf "(%a ? %a)" pp e Hstring.print hs
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+      Fmt.pf ppf "not (%a ? %a)" pp e Hstring.print hs
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
       | Sy.L_built (Sy.IsConstr _)
-      | Sy.L_neg_built (Sy.IsConstr _)) , _ ->
+      | Sy.L_neg_built (Sy.IsConstr _)), _ ->
       assert false
 
-  and print_silent fmt t =
-    let open Format in
+  and pp_operator = Sy.pp_operator ~format:`Ae
+
+  and pp_silent ppf t =
     let { f ; xs ; ty; bind; _ } = t in
     match f, xs with
-    (* Formulas *)
-    | Sy.Form form, xs -> print_formula fmt form xs bind
+    | Sy.Form form, xs -> pp_formula ppf form xs bind
+
+    | Sy.Lit lit, xs -> pp_lit ppf lit xs
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
-      fprintf fmt
+      Fmt.pf ppf
         "(let%a %a =@ %a in@ %a)"
-        (fun fmt x -> if Options.get_verbose () then
-            fprintf fmt
-              " [sko = %a]" print x.let_sko) x
-        Sy.print x.let_v print x.let_e print_silent x.in_e
+        (fun ppf x -> if Options.get_verbose () then
+            Fmt.pf ppf
+              " [sko = %a]" pp x.let_sko) x
+        Symbols.print x.let_v pp x.let_e pp_silent x.in_e
 
-    (* Literals *)
-    | Sy.Lit lit, xs -> print_lit fmt lit xs
+    | Sy.(Op Get), [e1; e2] ->
+      Fmt.pf ppf "%a[%a]" pp e1 pp e2
 
-    | Sy.Op Sy.Get, [e1; e2] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(select %a %a)" print e1 print e2
-      else
-        fprintf fmt "%a[%a]" print e1 print e2
+    | Sy.(Op Set), [e1; e2; e3] ->
+      Fmt.pf ppf "%a[%a<-%a]" pp e1 pp e2 pp e3
 
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(store %a %a %a)"
-          print e1
-          print e2
-          print e3
-      else
-        fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3
+    | Sy.(Op Concat), [e1; e2] ->
+      Fmt.pf ppf "%a@@%a" pp e1 pp e2
 
-    | Sy.Op Sy.Concat, [e1; e2] ->
-      fprintf fmt "%a@@%a" print e1 print e2
+    | Sy.(Op Extract (i, j)), [e] ->
+      Fmt.pf ppf "%a^{%d, %d}" pp e i j
 
-    | Sy.Op Sy.Extract (i, j), [e] ->
-      fprintf fmt "%a^{%d, %d}" print e i j
+    | Sy.(Op (Access field)), [e] ->
+      Fmt.pf ppf "%a.%s" pp e (Hstring.view field)
 
-    | Sy.Op (Sy.Access field), [e] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(%s %a)" (Hstring.view field) print e
-      else
-        fprintf fmt "%a.%s" print e (Hstring.view field)
-
-    | Sy.Op (Sy.Record), _ ->
+    | Sy.(Op Record), _ ->
       begin match ty with
         | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
-          fprintf fmt "{";
+          assert (List.compare_lengths xs lbs = 0);
+          Fmt.pf ppf "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
-              fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-                (Hstring.view field) print e;
+              Fmt.pf ppf "%s%s = %a"  (if first then "" else "; ")
+                (Hstring.view field) pp e;
               false
             ) true lbs xs);
-          fprintf fmt "}";
-        | _ -> assert false
+          Fmt.pf ppf "}";
+        | _ ->
+          (* Exclude by the typechecker. *)
+          assert false
       end
 
-    (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||
-                              op == Sy.Max_real || op == Sy.Max_int ||
-                              op == Sy.Min_real || op == Sy.Min_int ->
-      fprintf fmt "%a(%a,%a)" Sy.print f print e1 print e2
+    | Sy.(Op ((Pow | Integer_round | Max_real | Min_real | Max_int
+              | Min_int) as op)), [e1; e2] ->
+      Fmt.pf ppf "%a(%a, %a)" pp_operator op pp e1 pp e2
 
-    (* TODO: introduce PrefixOp in the future to simplify this ? *)
-    | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-      fprintf fmt "%a(%a)"
-        Hstring.print hs (Util.print_list ~sep:"," ~pp:print) l
+    | Sy.(Op (Constr _ as op)), _::_ ->
+      Fmt.pf ppf "%a(%a)" pp_operator op Fmt.(list ~sep:comma pp) xs
 
-    | Sy.Op _, [e1; e2] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(%a %a %a)" Sy.print f print e1 print e2
-      else
-        fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
+    | Sy.(Op Destruct (hs, grded)), [e] ->
+      Fmt.pf ppf "%a#%s%a"
+        pp e (if grded then "" else "!") Hstring.print hs
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
-      fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+    | Sy.Op op, [e1; e2] ->
+      Fmt.pf ppf "(%a %a %a)" pp e1 pp_operator op pp e2
 
-
-    | Sy.In(lb, rb), [t] ->
-      fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
-
+    | Sy.In (lb, rb), [t] ->
+      Fmt.pf ppf "(%a in %a, %a)" pp t Sy.print_bound lb Sy.print_bound rb
 
     | _, [] ->
-      fprintf fmt "%a" Sy.print f
+      Fmt.pf ppf "%a" Sy.print f
 
     | _, _ ->
-      fprintf fmt "%a(%a)" Sy.print f (Util.print_list ~sep:"," ~pp:print) xs
+      Fmt.pf ppf "%a(%a)" Sy.print f Fmt.(list ~sep:comma pp) xs
 
-  and print_triggers fmt trs =
-    List.iter (fun { content = l; _ } ->
-        Format.fprintf fmt "| %a@," (Util.print_list ~sep:"," ~pp:print) l;
-      ) trs
+  and pp_trigger ppf { content; _ } =
+    Fmt.list ~sep:Fmt.comma pp ppf content
 
-  and print_verbose fmt t =
-    Format.fprintf fmt "(%a : %a)" print_silent t Ty.print t.ty
+  and pp_triggers ppf trs =
+    Fmt.list ~sep:(fun ppf () -> Fmt.pf ppf "|@,") pp_trigger ppf trs
 
-  and print fmt t =
+  and print_verbose ppf t =
+    Fmt.pf ppf "(%a : %a)" pp_silent t Ty.print t.ty
+
+  and pp fmt t =
     if Options.get_debug () then print_verbose fmt t
-    else print_silent fmt t
+    else pp_silent fmt t
 
 end
 
-let print fmt =
+let print ppf =
   if Options.get_output_smtlib ()
-  then SmtPrinter.print fmt
-  else AEPrinter.print fmt
+  then SmtPrinter.pp ppf
+  else AEPrinter.pp ppf
 
-let print_triggers fmt =
+let print_triggers ppf =
   if Options.get_output_smtlib ()
-  then SmtPrinter.print_triggers fmt
-  else AEPrinter.print_triggers fmt
+  then SmtPrinter.pp_triggers ppf
+  else AEPrinter.pp_triggers ppf
 
-let print_list_sep sep = Util.print_list ~sep ~pp:print
+let print_list_sep sep =
+  if Options.get_output_smtlib () then
+    Fmt.list ~sep:(fun ppf () -> Fmt.pf ppf "%s" sep) SmtPrinter.pp
+  else
+    Fmt.list ~sep:(fun ppf () -> Fmt.pf ppf "%s" sep) AEPrinter.pp
 
-let print_list fmt = print_list_sep "," fmt
+let print_list ppf = print_list_sep "," ppf
+
+let pp_binders ppf =
+  if Options.get_output_smtlib ()
+  then SmtPrinter.pp_binders ppf
+  else AEPrinter.pp_binders ppf
 
 (** different views of an expression *)
 
@@ -1254,8 +1235,8 @@ let no_capture_issue s_t binders =
       Printer.print_wrn
         "captures between@,%aand%a!@,(captured = %a)"
         (SMap.print print) s_t
-        print_binders binders
-        print_binders capt_bind;
+        pp_binders binders
+        pp_binders capt_bind;
       false
     end
 
