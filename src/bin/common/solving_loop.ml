@@ -32,6 +32,7 @@ open AltErgoLib
 open D_loop
 
 module DO = D_state_option
+module Sy = Symbols
 module O = Options
 
 type solver_ctx = {
@@ -694,17 +695,30 @@ let main () =
 
   (* Fetches the term value in the current model. *)
   let evaluate_term get_value name term =
-    let ae_form =
-      D_cnf.make_form
-        name
-        term
-        Loc.dummy
-        ~decl_kind:Expr.Dgoal
+    (* There are two ways to evaluate a term:
+       - if its name is registered in the environment, get its value;
+       - if not, check if the formula is in the environment.
+    *)
+    let simple_form =
+      Expr.mk_term
+        (Sy.name name)
+        []
+        (D_cnf.dty_to_ty term.DStd.Expr.term_ty)
     in
-    match get_value ae_form with
-    | None -> "unknown" (* Not in the standard, but useful for recording when
-                           Alt-Ergo fails to guess the value of a term. *)
+    match get_value simple_form with
     | Some v -> Fmt.to_to_string Expr.print v
+    | None -> (* Trying with the actual formula. *)
+      let ae_form =
+        D_cnf.make_form
+          name
+          term
+          Loc.dummy
+          ~decl_kind:Expr.Dgoal
+      in
+      match get_value ae_form with
+      | None -> "unknown" (* Not in the standard, but useful for recording when
+                             Alt-Ergo fails to guess the value of a term. *)
+      | Some v -> Fmt.to_to_string Expr.print v
   in
 
   let print_terms_assignments =
