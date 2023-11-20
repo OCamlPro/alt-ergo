@@ -1014,7 +1014,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let env = may_update_last_saved_model env compute_model in
       Options.Time.unset_timeout ();
       i_dont_know env unknown_reason
-    with Util.Timeout when !(env.model_gen_phase) ->
+    (* Timeout -> I_dont_know conversions temporarily disabled
+       https://github.com/OCamlPro/alt-ergo/issues/946 *)
+    with Util.Timeout when !(env.model_gen_phase) && false ->
       (* In this case, timeout reason becomes 'ModelGen' *)
       i_dont_know env (Timeout ModelGen)
 
@@ -1153,7 +1155,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-    | Util.Timeout -> model_gen_on_timeout env
+    (* Timeout -> I_dont_know conversions temporarily disabled
+       https://github.com/OCamlPro/alt-ergo/issues/946 *)
+    (* | Util.Timeout -> model_gen_on_timeout env *)
 
     | Satml.Sat ->
       try
@@ -1197,7 +1201,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         unsat_rec env ~first_call:false
 
       with
-      | Util.Timeout -> model_gen_on_timeout env
+      (* Timeout -> I_dont_know conversions temporarily disabled
+         https://github.com/OCamlPro/alt-ergo/issues/946 *)
+      (* | Util.Timeout -> model_gen_on_timeout env *)
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
         begin
@@ -1206,7 +1212,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             unsat_rec env ~first_call:false
           with
           | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-          | Util.Timeout -> model_gen_on_timeout env
+          (* Timeout -> I_dont_know conversions temporarily disabled
+             https://github.com/OCamlPro/alt-ergo/issues/946 *)
+          (* | Util.Timeout -> model_gen_on_timeout env *)
         end
 
   let rec unsat_rec_prem env ~first_call : unit =
@@ -1223,7 +1231,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
              side-effect to best value *)
           raise (I_dont_know env)
       end
-    | Util.Timeout as e -> raise e
 
     | IUnsat (env, _) as e ->
       if !(env.objectives) == None then raise e;
@@ -1346,10 +1353,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     assert (SAT.decision_level env.satml == 0);
     try fst (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with | IUnsat (_env, dep) -> raise (Unsat dep)
-         | Util.Timeout ->
-           (* don't attempt to compute a model if timeout before
-              calling unsat function *)
-           i_dont_know env (Timeout Assume)
+  (* Timeout -> I_dont_know conversions temporarily disabled
+     https://github.com/OCamlPro/alt-ergo/issues/946 *)
+  (* | Util.Timeout ->
+     (* don't attempt to compute a model if timeout before
+       calling unsat function *)
+     i_dont_know env (Timeout Assume) *)
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
