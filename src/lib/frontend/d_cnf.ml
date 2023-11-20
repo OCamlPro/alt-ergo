@@ -1879,6 +1879,7 @@ let make dloc_file acc stmt =
     | {
       id; loc; attrs;
       contents = (`Goal _ | `Check _) as contents;
+      implicit;
     } ->
       let name =
         match id.name with
@@ -1905,7 +1906,7 @@ let make dloc_file acc stmt =
             let name = Ty.fresh_hypothesis_name goal_sort in
             let decl: _ Typer_Pipe.stmt = {
               id = Id.mk ns name;
-              contents = `Hyp t; loc; attrs
+              contents = `Hyp t; loc; attrs; implicit
             }
             in
             aux acc decl
@@ -1921,7 +1922,8 @@ let make dloc_file acc stmt =
       assert false
 
     (* Axiom definitions *)
-    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs } ->
+    | { id = Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
+        implicit=_ } ->
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in
       (* Dolmen adds information about theory extensions and case splits in the
