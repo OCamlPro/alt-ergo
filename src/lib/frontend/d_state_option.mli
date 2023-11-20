@@ -51,9 +51,17 @@ module type S = sig
   val reset : D_loop.Typer.state -> D_loop.Typer.state
 end
 
+(** Option for enabling/disabling the get-assignment instruction. *)
 module ProduceAssignment : S with type t = bool
+
+(** Option for enabling/disabling the optimization engine. *)
 module Optimize : S with type t = bool
+
+(** The Sat solver used. When set, updates the SatSolverModule defined below. *)
 module SatSolver : S with type t = Util.sat_solver
+
+(** The Sat solver module used for the calculation. This option's value depends
+    on SatSolver: when SatSolver is updated, this one also is. *)
 module SatSolverModule : Accessor with type t = (module Sat_solver_sig.S)
 
 (** Initializes the state with options that requires some preprocessing. *)
