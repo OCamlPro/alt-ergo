@@ -103,13 +103,15 @@ let get_named_of_stmt
     ~(acc : DStd.Expr.term Util.MS.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
-  | `Defs [`Term_def (id, _, _, _, t)] ->
+  | `Defs [`Term_def ({name = Simple n; _}, id, _, _, t)] ->
     begin
-      match DStd.Id.name id with
-      | Simple n -> Util.MS.add n t acc
-      | _ -> assert false (* Named terms are expected to be simple *)
+      match DStd.Expr.Id.get_tag id DStd.Expr.Tags.named with
+      | None -> acc
+      | Some _ -> Util.MS.add n t acc
     end
-  | _ -> assert false (* Implicit definitions are epected to be definitions *)
+  | _ -> (* Named terms are expected to be definitions with simple
+            names. *)
+    assert false
 
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
