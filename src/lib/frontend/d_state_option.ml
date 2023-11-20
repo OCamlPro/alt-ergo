@@ -85,13 +85,7 @@ let get_sat_solver
     () =
   let module SatCont =
     (val (Sat_solver.get sat) : Sat_solver_sig.SatContainer) in
-  let module TH =
-    (val
-      (if no_th then
-         (module Theory.Main_Empty : Theory.S)
-       else
-         (module Theory.Main_Default : Theory.S)) : Theory.S )
-  in
+  let module TH = (val Sat_solver.get_theory ~no_th) in
   (module SatCont.Make(TH) : Sat_solver_sig.S)
 
 module SatSolverModule =
