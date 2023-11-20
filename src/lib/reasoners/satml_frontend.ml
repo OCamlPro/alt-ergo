@@ -1020,15 +1020,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (* In this case, timeout reason becomes 'ModelGen' *)
       i_dont_know env (Timeout ModelGen)
 
-  let model_gen_on_timeout env =
-    let i = Options.get_interpretation () in
-    let ti = Options.get_timelimit_interpretation () in
-    if not i || (* not asked to gen a model *)
+  (* WARNING: temporary unused after the PR #950. *)
+  (* let model_gen_on_timeout env =
+     let i = Options.get_interpretation () in
+     let ti = Options.get_timelimit_interpretation () in
+     if not i || (* not asked to gen a model *)
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
        Stdlib.(=) ti 0. (* no time allocated for extra model search *)
-    then
+     then
       i_dont_know env (Timeout ProofSearch)
-    else
+     else
       begin
         (* Beware: models generated on timeout of ProofSearch phase may
            be incoherent wrt. the ground part of the pb (ie. if delta
@@ -1038,7 +1039,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.Time.set_timeout ti;
         update_model_and_return_unknown
           env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
-      end
+      end *)
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
