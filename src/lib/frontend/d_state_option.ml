@@ -66,7 +66,7 @@ let create_opt
       |> on_update key opt
       |> State.set key opt
 
-    let reset = set (get ())
+    let reset st = set (get ()) st
 
     let get st =
       try State.get key st with
