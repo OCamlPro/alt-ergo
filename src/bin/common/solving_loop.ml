@@ -472,6 +472,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
     |> State.set named_terms Util.MS.empty
+    |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
@@ -501,7 +502,7 @@ let main () =
   in
 
   let set_optimize optim st =
-    let sat, _ = DO.SatSolver.get st in
+    let sat = DO.SatSolver.get st in
     match sat with
     | Util.Tableaux | Tableaux_CDCL when optim ->
       warning
@@ -809,7 +810,7 @@ let main () =
         in
         let partial_model =
           solve
-            (snd @@ DO.SatSolver.get st)
+            (DO.SatSolverModule.get st)
             all_context
             (cnf, name)
         in

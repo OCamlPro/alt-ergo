@@ -32,25 +32,29 @@
     an option that can be set, fetched et reset independently from the
     Options module, which is used as a static reference. *)
 
-module type S = sig
-  (** The type of options. It should match the type in the module Options. *)
-  type k
-
-  (** The data saved in the state. May differ from the saved option. *)
+module type Accessor = sig
+  (** The data saved in the state. *)
   type t
-
-  (** Sets the option on the dolmen state, with a transformation from k to t. *)
-  val set : k -> D_loop.Typer.state -> D_loop.Typer.state
 
   (** Returns the option stored in the state. If it has not been registered,
       fetches the default option in the module Options. *)
   val get : D_loop.Typer.state -> t
+end
+
+module type S = sig
+  include Accessor
+
+  (** Sets the option on the dolmen state. *)
+  val set : t -> D_loop.Typer.state -> D_loop.Typer.state
 
   (** Resets the option to its default value in Options. *)
   val reset : D_loop.Typer.state -> D_loop.Typer.state
 end
 
-module ProduceAssignment : S with type k = bool and type t = bool
-module Optimize : S with type k = bool and type t = bool
-module SatSolver : S with type k = Util.sat_solver
-                      and type t = Util.sat_solver * (module Sat_solver_sig.S)
+module ProduceAssignment : S with type t = bool
+module Optimize : S with type t = bool
+module SatSolver : S with type t = Util.sat_solver
+module SatSolverModule : Accessor with type t = (module Sat_solver_sig.S)
+
+(** Initializes the state with options that requires some preprocessing. *)
+val init : D_loop.Typer.state -> D_loop.Typer.state

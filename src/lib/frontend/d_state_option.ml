@@ -32,60 +32,83 @@ module O = Options
 module State = D_loop.State
 module Typer = D_loop.Typer
 
-module type S = sig
-  type k
-
+module type Accessor = sig
+  (** The data saved in the state. *)
   type t
 
-  val set : k -> Typer.state -> Typer.state
+  (** Returns the option stored in the state. If it has not been registered,
+      fetches the default option in the module Options. *)
+  val get : D_loop.Typer.state -> t
+end
 
-  val get : Typer.state -> t
+module type S = sig
+  include Accessor
 
-  val reset : Typer.state -> Typer.state
+  (** Sets the option on the dolmen state. *)
+  val set : t -> D_loop.Typer.state -> D_loop.Typer.state
+
+  (** Resets the option to its default value in Options. *)
+  val reset : D_loop.Typer.state -> D_loop.Typer.state
 end
 
 let create_opt
-    (type k)
     (type t)
-    ?(on_update=ignore)
+    ?(on_update=(fun _ _ -> Fun.id))
     (key : string)
-    (get : unit -> k)
-    (map : (k -> t)) : (module S with type k = k and type t = t) =
+    (get : unit -> t) : (module S with type t = t) =
   (module struct
-    type nonrec k = k
     type nonrec t = t
 
     let key = State.create_key ~pipe:"" key
 
     let set opt st =
-      let st = State.set key (map opt) st in
-      on_update opt;
       st
+      |> on_update key opt
+      |> State.set key opt
 
     let reset = set (get ())
 
     let get st =
       try State.get key st with
-      | State.Key_not_found _ -> map (get ())
+      | State.Key_not_found _ -> get ()
   end)
 
 module ProduceAssignment =
-  (val (create_opt "produce_assignment" (fun _ -> false)) Fun.id)
+  (val (create_opt "produce_assignment" (fun _ -> false)))
 
 module Optimize =
-  (val (create_opt "optimize" O.get_optimize) Fun.id)
+  (val (create_opt "optimize" O.get_optimize))
+
+let get_sat_solver ?(sat = O.get_sat_solver ()) ?(no_th = O.get_no_theory ()) () =
+  let module SatCont =
+    (val (Sat_solver.get sat) : Sat_solver_sig.SatContainer) in
+  let module TH =
+    (val
+      (if no_th then
+         (module Theory.Main_Empty : Theory.S)
+       else
+         (module Theory.Main_Default : Theory.S)) : Theory.S )
+  in
+  (module SatCont.Make(TH) : Sat_solver_sig.S)
+
+module SatSolverModule =
+  (val (create_opt "sat_solver_module" (fun _ -> get_sat_solver ())))
 
 let msatsolver =
-  let map s =
-    let module SatCont =
-      (val (Sat_solver.get s) : Sat_solver_sig.SatContainer) in
-    let module TH =
-      (val
-        (if Options.get_no_theory() then (module Theory.Main_Empty : Theory.S)
-         else (module Theory.Main_Default : Theory.S)) : Theory.S ) in
-    s,
-    (module SatCont.Make(TH) : Sat_solver_sig.S)
+  let on_update _ sat st =
+    SatSolverModule.set (get_sat_solver ~sat ()) st
   in
-  (create_opt "sat_solver" O.get_sat_solver map)
+  (create_opt ~on_update "sat_solver" O.get_sat_solver)
 
 module SatSolver = (val msatsolver)
+
+(* Some options can be initialized to gain some performance. *)
+let options_requiring_initialization = [
+  (module SatSolverModule : S);
+]
+
+let init st =
+  List.fold_left
+    (fun st (module S : S) -> S.reset st)
+    st
+    options_requiring_initialization
