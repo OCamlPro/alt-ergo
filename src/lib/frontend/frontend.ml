@@ -142,7 +142,7 @@ module type S = sig
     mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : Loc.t -> env -> 'a -> unit
+  type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
   val init_env : ?sat_env:sat_env -> used_context -> env
 
@@ -226,7 +226,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : Loc.t -> env -> 'a -> unit
+  type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
   let init_env ?(sat_env=SAT.empty ()) used_context =
     {
@@ -273,11 +273,10 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 from_terms = [];
                 theory_elim = true;
                } Ex.empty
-          )
-          pb
+          ) (SAT.empty ()) pb
       in
       ignore (SAT.unsat
-                satenv
+                env
                 {E.ff=E.vrai;
                  origin_name = "";
                  gdist = -1;
@@ -300,14 +299,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let internal_push ?(loc = Loc.dummy) (env : env) (n : int) : unit =
+  let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
       ~max:n ~elt:(env.res, env.expl) ~init:();
     Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n);
     SAT.push env.sat_env n
 
-  let internal_pop ?(loc = Loc.dummy) (env : env) (n : int) : unit =
+  let internal_pop ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     let res, expl =
       Util.loop ~f:(fun _n () _env -> Stack.pop env.consistent_dep_stack)
@@ -319,8 +318,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let internal_assume
       ?(loc = Loc.dummy)
-      (env : env)
-      ((name, f, mf) : string * E.t * bool) =
+      ((name, f, mf) : string * E.t * bool)
+      (env : env) =
     let is_hyp = try (Char.equal '@' name.[0]) with _ -> false in
     if is_hyp || not (unused_context name env.used_context) then
       let expl =
@@ -350,13 +349,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | `Unsat ->
         env.expl <- expl
 
-  let internal_pred_def ?(loc = Loc.dummy) env (name, f) =
+  let internal_pred_def ?(loc = Loc.dummy) (name, f) env =
     if not (unused_context name env.used_context) then
       let expl = mk_root_dep name f loc in
       SAT.pred_def env.sat_env f name expl loc;
       env.expl <- expl
 
-  let internal_query ?(loc = Loc.dummy) env (n, f, sort) =
+  let internal_query ?(loc = Loc.dummy) (n, f, sort) env =
     ignore loc;
     let expl =
       match env.res with
@@ -386,8 +385,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let internal_th_assume
       ?(loc = Loc.dummy)
-      env
-      ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) =
+      ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt)
+      env =
     if not (unused_context ax_name env.used_context) then
       match env.res with
       | `Sat | `Unknown ->
@@ -401,8 +400,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | Some (Step_limit _) -> env
     | _ -> f env
 
-  let handle_sat_exn f ?loc env x =
-    try f ?loc env x with
+  let handle_sat_exn f ?loc x env =
+    try f ?loc x env with
     | SAT.Sat -> env.res <- `Sat
     | SAT.Unsat expl ->
       env.res <- `Unsat;
@@ -414,8 +413,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   (* Wraps the function f to check if the step limit is reached (in which case,
      don't do anything), and then calls the function & catches the
      exceptions. *)
-  let wrap_f f ?loc env x =
-    check_step_limit (fun env -> handle_sat_exn f ?loc env x) env
+  let wrap_f f ?loc x env =
+    check_step_limit (handle_sat_exn f ?loc x) env
 
   let push = wrap_f internal_push
 
@@ -432,20 +431,33 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let process_decl ~hook_on_status env d =
     try
       match d.st_decl with
-      | Push n -> internal_push ~loc:d.st_loc env n
-      | Pop n -> internal_pop ~loc:d.st_loc env n
-      | Assume (n, f, mf) -> internal_assume ~loc:d.st_loc env (n, f, mf)
-      | PredDef (f, name) -> internal_pred_def ~loc:d.st_loc env (name, f)
+      | Push n -> check_step_limit (internal_push ~loc:d.st_loc n) env
+      | Pop n -> check_step_limit (internal_pop ~loc:d.st_loc n) env
+      | Assume (n, f, mf) ->
+        check_step_limit (internal_assume ~loc:d.st_loc (n, f, mf)) env
+      | PredDef (f, name) ->
+        check_step_limit (internal_pred_def ~loc:d.st_loc (name, f)) env
       | RwtDef _ -> assert false
       | Query (n, f, sort) ->
         begin
-          internal_query ~loc:d.st_loc env (n, f, sort);
-          match env.res with
-          | `Unsat ->
-            hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ())
-          | _ -> assert false
+          (* If we have reached an unknown state, we can return it right
+             away. *)
+          match SAT.get_unknown_reason env.sat_env with
+          | Some (Step_limit _) -> raise (SAT.I_dont_know env.sat_env)
+          | Some _ ->
+            (* For now, only the step limit is an unknown step reachable
+               here. We could raise SAT.I_dont_know as in the previous case,
+               but we have choosen a defensive strategy. *)
+            assert false
+          | None ->
+            internal_query ~loc:d.st_loc env (n, f, sort);
+            match env.res with
+            | `Unsat ->
+              hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ())
+            | _ -> assert false
         end
-      | ThAssume th_elt -> internal_th_assume ~loc:d.st_loc env th_elt
+      | ThAssume th_elt ->
+        check_step_limit (internal_th_assume ~loc:d.st_loc th_elt) env
     with
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,
@@ -481,9 +493,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          since we exit right after  *)
       hook_on_status (Timeout (Some d)) (Steps.get_steps ());
       raise e
-
-  let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
-    check_step_limit (fun env -> process_decl ~hook_on_status env d) env
 
   let print_model ppf env =
     match SAT.get_model env with
