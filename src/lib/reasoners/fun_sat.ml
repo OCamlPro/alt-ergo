@@ -1755,10 +1755,10 @@ module Make (Th : Theory.S) = struct
       (* don't attempt to compute a model if timeout before
          calling unsat function *)
       i_dont_know env (Timeout Assume)
-    | Util.Step_limit_reached _ ->
+    | Util.Step_limit_reached n ->
       (* When reaching the step limit on an assume, we do not want to answer
          'unknown' right away. *)
-      env
+      {env with unknown_reason = Some (Step_limit n)}
 
   let pred_def env f name dep _loc =
     Debug.pred_def f;
