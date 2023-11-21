@@ -433,11 +433,10 @@ module SmtPrinter = struct
     | Abs_int | Abs_real -> Fmt.pf ppf "abs"
     | Real_of_int -> Fmt.pf ppf "to_real"
     | Real_is_int -> Fmt.pf ppf "is_int"
-    | Integer_round -> Fmt.pf ppf "to_int"
+    | Int_floor -> Fmt.pf ppf "to_int"
 
     (* FixedSizedBitVectors theory *)
-    | Extract (i, j) ->
-      Fmt.pf ppf "(_ extract %d %d)" i j
+    | Extract (i, j) -> Fmt.pf ppf "(_ extract %d %d)" j i
     | Concat -> Fmt.pf ppf "concat"
     | BV2Nat -> Fmt.pf ppf "bv2nat"
     | BVnot -> Fmt.pf ppf "bvnot"
@@ -456,20 +455,20 @@ module SmtPrinter = struct
     | Float -> Fmt.pf ppf "ae.round"
 
     (* Not in the SMT-LIB standard *)
-    | Int2BV _ -> Fmt.pf ppf "(_ int2bv)"
+    | Int2BV n -> Fmt.pf ppf "(_ int2bv %d)" n
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "ae.linear_dependency"
     | Sqrt_real -> Fmt.pf ppf "ae.sqrt_real"
     | Sqrt_real_default -> Fmt.pf ppf "ae.sqrt_real_default"
     | Sqrt_real_excess -> Fmt.pf ppf "ae.sqrt_real_excess"
-    | Int_floor -> Fmt.pf ppf "ae.int_floor"
     | Int_ceil -> Fmt.pf ppf "ae.int_ceil"
     | Max_real -> Fmt.pf ppf "ae.max_real"
     | Max_int -> Fmt.pf ppf "ae.max_int"
     | Min_real -> Fmt.pf ppf "ae.min_real"
     | Min_int -> Fmt.pf ppf "ae.min_int"
     | Integer_log2 -> Fmt.pf ppf "ae.integer_log2"
+    | Integer_round -> Fmt.pf ppf "ae.integer_round"
     | Pow -> Fmt.pf ppf "ae.pow"
 
     | Optimize _ ->
@@ -478,10 +477,8 @@ module SmtPrinter = struct
 
 end
 
-let[@inline always] pp_operator ~(format:[`Ae | `Smtlib]) ppf op =
-  match format with
-  | `Ae -> AEPrinter.pp_operator ppf op
-  | `Smtlib -> SmtPrinter.pp_operator ppf op
+let pp_ae_operator = AEPrinter.pp_operator
+let pp_smtlib_operator = SmtPrinter.pp_operator
 
 let print_clean = AEPrinter.pp ~show_vars:false
 let print = AEPrinter.pp ~show_vars:true

@@ -129,8 +129,13 @@ val print_clean : t Fmt.t
 
 val pp_name : string Fmt.t
 
-val pp_operator : format:[`Ae | `Smtlib] -> operator Fmt.t
-(* [pp_smtlib ppf sy] prints the symbol [sy] on the formatter [ppf]. *)
+val pp_ae_operator : operator Fmt.t
+(* [pp_ae_operator ppf op] prints the operator symbol [op] on the
+   formatter [ppf] using the Alt-Ergo native format. *)
+
+val pp_smtlib_operator : operator Fmt.t
+(* [pp_smtlib_operator ppf op] prints the operator symbol [op] on the
+   formatter [ppf] using the SMT-LIB format. *)
 
 (*val dummy : t*)
 
