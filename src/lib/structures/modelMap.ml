@@ -94,7 +94,7 @@ let is_suspicious_name hs =
 (* The model generation is known to be imcomplete for FPA and Bitvector
    theories. *)
 let is_suspicious_symbol = function
-  | Sy.Op (Float | Fixed | Abs_int | Abs_real | Sqrt_real
+  | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real
           | Sqrt_real_default | Sqrt_real_excess
           | Real_of_int | Int_floor | Int_ceil
           | Max_int | Max_real | Min_int | Min_real
