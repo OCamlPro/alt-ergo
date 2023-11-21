@@ -1399,7 +1399,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Ty.Tbool ->
       begin
         let bmodel = SAT.boolean_model env.satml in
-        List.find_map
+        Stdcompat.List.find_map
           (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
              if E.equal t lit then
                Some E.vrai
