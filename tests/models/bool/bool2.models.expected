@@ -3,5 +3,5 @@ unknown
 (
   (define-fun x () Bool false)
 )
-((notx unknown))
+((notx true))
 
