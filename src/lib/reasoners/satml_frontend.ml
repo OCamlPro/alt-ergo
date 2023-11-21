@@ -1337,16 +1337,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     assert (SAT.decision_level env.satml == 0);
     try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with | IUnsat (_env, dep) -> raise (Unsat dep)
-  (* Timeout -> I_dont_know conversions temporarily disabled
-     https://github.com/OCamlPro/alt-ergo/issues/946 *)
-  (* | Util.Timeout ->
-     (* don't attempt to compute a model if timeout before
-       calling unsat function *)
-     i_dont_know env (Timeout Assume) *)
-         | Util.Step_limit_reached _ ->
+         (* Timeout -> I_dont_know conversions temporarily disabled
+            https://github.com/OCamlPro/alt-ergo/issues/946 *)
+         (* | Util.Timeout ->
+            (* don't attempt to compute a model if timeout before
+              calling unsat function *)
+            i_dont_know env (Timeout Assume) *)
+         | Util.Step_limit_reached n ->
            (* When reaching the step limit on an assume, we do not want to
               answer 'unknown' right away. *)
-           env
+           {env with unknown_reason = Some (Step_limit n)}
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
