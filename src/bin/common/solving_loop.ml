@@ -626,6 +626,12 @@ let main () =
         | Some b ->
           set_optimize b st
       end
+    | ":steps-bound", Symbol { name = Simple level; _ } ->
+      begin
+        match int_of_string_opt level with
+        | None -> print_wrn_opt ~name st_loc "integer" value; st
+        | Some i -> set_steps_bound i st
+      end
     | _ ->
       unsupported_opt name; st
   in
