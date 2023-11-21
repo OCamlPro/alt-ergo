@@ -1,7 +1,8 @@
 
 unknown
 (
-  (define-fun q () Bool false)
+  (define-fun p () Bool true)
+  (define-fun q () Bool true)
 )
 ((notp unknown)
  (notnq unknown))

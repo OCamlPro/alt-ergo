@@ -32,6 +32,7 @@ open AltErgoLib
 open D_loop
 
 module DO = D_state_option
+module Sy = Symbols
 module O = Options
 
 type solver_ctx = {
@@ -98,44 +99,20 @@ let enable_maxsmt b =
 
 (* Dolmen util *)
 
-(** Adds the named terms of the term [term] to the map accumulator [acc] *)
-let get_named_of_term
-    (acc : DStd.Expr.term Util.MS.t)
-    (term : DStd.Expr.term) =
-  let rec loop acc terms_to_check =
-    match terms_to_check with
-    | [] -> acc
-    | [] :: rest -> loop acc rest
-    | (term :: tl) :: rest ->
-      let terms_to_check = tl :: rest in
-      let terms_to_check =
-        match term.DStd.Expr.term_descr with
-        | DStd.Expr.Var _ | Cst _ -> terms_to_check
-        | App (t, _, tl) -> (t :: tl) :: terms_to_check
-        | Binder (_b, t) ->
-          (* TODO: consider catching the terms in the binder *)
-          [t] :: terms_to_check
-        | Match (t, plt) -> (t :: (List.map snd plt)) :: terms_to_check
-      in
-      match DStd.Expr.Term.get_tag term DStd.Expr.Tags.named with
-      | None -> loop acc terms_to_check
-      | Some name -> loop (Util.MS.add name term acc) terms_to_check
-  in
-  loop acc [[term]]
-
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
 let get_named_of_stmt
     ~(acc : DStd.Expr.term Util.MS.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
-  | `Hyp f | `Goal f -> get_named_of_term acc f
-  | `Clause l -> List.fold_left get_named_of_term acc l
-  | `Solve (l1, l2) ->
-    List.fold_left
-      get_named_of_term
-      (List.fold_left get_named_of_term acc l1)
-      l2
-  | _ -> acc
+  | `Defs [`Term_def ({name = Simple n; _}, id, _, _, t)] ->
+    begin
+      match DStd.Expr.Id.get_tag id DStd.Expr.Tags.named with
+      | None -> acc
+      | Some _ -> Util.MS.add n t acc
+    end
+  | _ -> (* Named terms are expected to be definitions with simple
+            names. *)
+    assert false
 
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
@@ -348,15 +325,18 @@ let main () =
     else
       st, `Continue c
   in
-  let debug_typed_pipe st stmt =
+  let debug_stmt stmt =
+    Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
+      Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
+      Typer_Pipe.print stmt
+  in
+  let debug_typed_pipe st stmts =
     if State.get State.debug st then
-      Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
-        Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
-        Typer_Pipe.print stmt;
+      List.iter debug_stmt stmts;
     if O.get_type_only () then
       st, `Done ()
     else
-      st, `Continue stmt
+      st, `Continue stmts
   in
   let handle_exn st bt = function
     | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
@@ -715,17 +695,30 @@ let main () =
 
   (* Fetches the term value in the current model. *)
   let evaluate_term get_value name term =
-    let ae_form =
-      D_cnf.make_form
-        name
-        term
-        Loc.dummy
-        ~decl_kind:Expr.Dgoal
+    (* There are two ways to evaluate a term:
+       - if its name is registered in the environment, get its value;
+       - if not, check if the formula is in the environment.
+    *)
+    let simple_form =
+      Expr.mk_term
+        (Sy.name name)
+        []
+        (D_cnf.dty_to_ty term.DStd.Expr.term_ty)
     in
-    match get_value ae_form with
-    | None -> "unknown" (* Not in the standard, but useful for recording when
-                           Alt-Ergo fails to guess the value of a term. *)
+    match get_value simple_form with
     | Some v -> Fmt.to_to_string Expr.print v
+    | None -> (* Trying with the actual formula. *)
+      let ae_form =
+        D_cnf.make_form
+          name
+          term
+          Loc.dummy
+          ~decl_kind:Expr.Dgoal
+      in
+      match get_value ae_form with
+      | None -> "unknown" (* Not in the standard, but useful for recording when
+                             Alt-Ergo fails to guess the value of a term. *)
+      | Some v -> Fmt.to_to_string Expr.print v
   in
 
   let print_terms_assignments =
@@ -754,21 +747,15 @@ let main () =
 
   let handle_stmt :
     Frontend.used_context -> State.t ->
-    _ D_loop.Typer_Pipe.stmt -> State.t =
+    'a D_loop.Typer_Pipe.stmt -> State.t =
     let goal_cnt = ref 0 in
     fun all_context st td ->
       let file_loc = (State.get State.logic_file st).loc in
       let solver_ctx = State.get solver_ctx_key st in
-      let st =
-        let named_terms_map =
-          get_named_of_stmt ~acc:(State.get named_terms st) td
-        in
-        State.set named_terms named_terms_map st
-      in
       match td with
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id; contents = (`Solve _ as contents); loc ; attrs } ->
+      | { id; contents = (`Solve _ as contents); loc ; attrs; implicit } ->
         let l =
           solver_ctx.local @
           solver_ctx.global @
@@ -798,7 +785,7 @@ let main () =
             Fmt.failwith "%a: internal error: unknown statement"
               DStd.Loc.fmt loc
         in
-        let stmt = { Typer_Pipe.id; contents; loc ; attrs } in
+        let stmt = { Typer_Pipe.id; contents; loc ; attrs; implicit } in
         let cnf, is_thm =
           match D_cnf.make (State.get State.logic_file st).loc l stmt with
           | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
@@ -920,6 +907,19 @@ let main () =
           { solver_ctx with ctx = cnf }
         ) st
   in
+  let handle_stmts all_context st l =
+    let rec aux named_map st = function
+      | [] -> st
+      | [main_stmt] ->
+        let st = handle_stmt all_context st main_stmt in
+        State.set named_terms named_map st
+      | named_stmt :: tl ->
+        let st = handle_stmt all_context st named_stmt in
+        let named_map = get_named_of_stmt ~acc:named_map named_stmt in
+        aux named_map st tl
+    in
+    aux (State.get named_terms st) st l
+  in
   let d_fe filename =
     let logic_file, st = mk_state filename in
     let () =
@@ -959,7 +959,7 @@ let main () =
              (op ~name:"debug_pre" debug_parsed_pipe
               @>|> op ~name:"typecheck" Typer_Pipe.typecheck
               @>|> op ~name:"debug_post" debug_typed_pipe
-              @>|> op_i (handle_stmt all_used_context)
+              @>|> op_i (handle_stmts all_used_context)
               @>>> _end))
       in
       State.flush st () |> ignore
