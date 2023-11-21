@@ -312,20 +312,13 @@ let main () =
     State.create_key ~pipe:"" "sat_state"
   in
 
-  let steps_bound: int State.key =
-    State.create_key ~pipe:"" "steps-bound"
-  in
-
   let named_terms: DStd.Expr.term Util.MS.t State.key =
     State.create_key ~pipe:"" "named_terms"
   in
 
   let set_steps_bound i st =
-    try
-      Steps.set_steps_bound i;
-      State.set steps_bound i st
-    with
-      Invalid_argument _ -> (* Raised by Steps.set_steps_bound*)
+    try DO.Steps.set i st with
+      Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
       fatal_error
         "Error while setting steps bound to %i: current step = %i."
         i
