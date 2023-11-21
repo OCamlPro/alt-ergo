@@ -36,7 +36,6 @@ type operator =
   | Tite
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
-  | Reach
   (* ADTs *)
   | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
@@ -49,7 +48,7 @@ type operator =
   | BVnot | BVand | BVor | Int2BV of int | BV2Nat
   (* FP *)
   | Float
-  | Integer_round | Fixed
+  | Integer_round
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Real_is_int
   | Int_floor | Int_ceil | Integer_log2
@@ -165,7 +164,7 @@ let compare_operators op1 op2 =
         if c <> 0 then c
         else Stdlib.compare b1 b2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
-            | Concat | Extract _ | Get | Set | Fixed | Float | Reach
+            | Concat | Extract _ | Get | Set | Float
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
@@ -344,7 +343,6 @@ let to_string ?(show_vars=true) x = match x with
   | Op Get -> "get"
   | Op Set -> "set"
   | Op Float -> "float"
-  | Op Fixed -> "fixed"
   | Op Abs_int -> "abs_int"
   | Op Abs_real -> "abs_real"
   | Op Sqrt_real -> "sqrt_real"
@@ -372,7 +370,6 @@ let to_string ?(show_vars=true) x = match x with
   | Op Int2BV n -> Format.sprintf "int2bv[%d]" n
   | Op BV2Nat -> "bv2nat"
   | Op Tite -> "ite"
-  | Op Reach -> assert false
   | True -> "true"
   | False -> "false"
   | Void -> "void"

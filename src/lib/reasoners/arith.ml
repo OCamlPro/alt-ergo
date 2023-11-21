@@ -116,7 +116,7 @@ module Shostak
     match sy with
     | Int _ | Real _ -> true
     | Op (Plus | Minus | Mult | Div | Modulo
-         | Float | Fixed | Abs_int | Abs_real | Sqrt_real
+         | Float | Abs_int | Abs_real | Sqrt_real
          | Sqrt_real_default | Sqrt_real_excess
          | Real_of_int | Int_floor | Int_ceil
          | Max_int | Max_real | Min_int | Min_real
@@ -353,10 +353,6 @@ module Shostak
     | Sy.Op Sy.Pow, [x; y] ->
       mk_partial_interpretation_2
         (fun x y -> calc_power x y ty) coef p ty t x y, ctx
-
-    | Sy.Op Sy.Fixed, _ ->
-      (* Fixed-Point arithmetic currently not implemented *)
-      assert false
 
     (*** <end>: partial handling of some arith/FPA operators **)
 

@@ -36,7 +36,6 @@ type operator =
   | Tite
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
-  | Reach
   (* ADTs *)
   | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
@@ -49,7 +48,7 @@ type operator =
   | BVnot | BVand | BVor | Int2BV of int | BV2Nat
   (* FP *)
   | Float
-  | Integer_round | Fixed
+  | Integer_round
   | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
   | Abs_int | Abs_real | Real_of_int | Real_is_int
   | Int_floor | Int_ceil | Integer_log2
