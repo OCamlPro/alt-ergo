@@ -4,6 +4,6 @@ unknown
   (define-fun x () Bool true)
   (define-fun y () Bool true)
 )
-((foo unknown)
- (bar unknown))
+((foo true)
+ (bar false))
 

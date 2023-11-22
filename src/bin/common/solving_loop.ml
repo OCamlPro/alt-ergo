@@ -100,7 +100,7 @@ let enable_maxsmt b =
 (* Dolmen util *)
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
-let get_named_of_stmt
+let add_if_named
     ~(acc : DStd.Expr.term Util.MS.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
@@ -112,7 +112,7 @@ let get_named_of_stmt
     end
   | _ -> (* Named terms are expected to be definitions with simple
             names. *)
-    assert false
+    acc
 
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
@@ -695,10 +695,6 @@ let main () =
 
   (* Fetches the term value in the current model. *)
   let evaluate_term get_value name term =
-    (* There are two ways to evaluate a term:
-       - if its name is registered in the environment, get its value;
-       - if not, check if the formula is in the environment.
-    *)
     let simple_form =
       Expr.mk_term
         (Sy.name name)
@@ -707,18 +703,7 @@ let main () =
     in
     match get_value simple_form with
     | Some v -> Fmt.to_to_string Expr.print v
-    | None -> (* Trying with the actual formula. *)
-      let ae_form =
-        D_cnf.make_form
-          name
-          term
-          Loc.dummy
-          ~decl_kind:Expr.Dgoal
-      in
-      match get_value ae_form with
-      | None -> "unknown" (* Not in the standard, but useful for recording when
-                             Alt-Ergo fails to guess the value of a term. *)
-      | Some v -> Fmt.to_to_string Expr.print v
+    | None -> "unknown"
   in
 
   let print_terms_assignments =
@@ -909,13 +894,10 @@ let main () =
   in
   let handle_stmts all_context st l =
     let rec aux named_map st = function
-      | [] -> st
-      | [main_stmt] ->
-        let st = handle_stmt all_context st main_stmt in
-        State.set named_terms named_map st
-      | named_stmt :: tl ->
-        let st = handle_stmt all_context st named_stmt in
-        let named_map = get_named_of_stmt ~acc:named_map named_stmt in
+      | [] -> State.set named_terms named_map st
+      | stmt :: tl ->
+        let st = handle_stmt all_context st stmt in
+        let named_map = add_if_named ~acc:named_map stmt in
         aux named_map st tl
     in
     aux (State.get named_terms st) st l

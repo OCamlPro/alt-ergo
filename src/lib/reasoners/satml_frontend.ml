@@ -1398,14 +1398,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match E.type_info t with
     | Ty.Tbool ->
       begin
-        match ME.find_opt t env.gamma with
-        | None ->
-          begin
-            match ME.find_opt (E.neg t) env.gamma with
-            | None -> None
-            | Some _ -> Some E.faux
-          end
-        | Some _ -> Some E.vrai
+        let bmodel = SAT.boolean_model env.satml in
+        Stdcompat.List.find_map
+          (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
+             if E.equal t lit then
+               Some E.vrai
+             else if E.equal t neglit then
+               Some E.faux
+             else
+               None
+          )
+          bmodel
       end
     | _ -> None
 
