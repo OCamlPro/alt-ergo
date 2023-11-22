@@ -160,7 +160,7 @@ let main () =
             let ur = SAT.get_unknown_reason partial_model in
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
-              Sat_solver_sig.pp_unknown_reason_opt ur;
+              Sat_solver_sig.pp_ae_unknown_reason_opt ur;
             FE.print_model (Options.Output.get_fmt_models ()) partial_model
           end;
           Some mdl

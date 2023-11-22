@@ -35,7 +35,16 @@ type timeout_reason =
   | Assume
   | ProofSearch
   | ModelGen
-[@@deriving show]
+
+let pp_timeout_reason ppf = function
+  | Assume -> Fmt.pf ppf ":assume"
+  | ProofSearch -> Fmt.pf ppf ":proof-search"
+  | ModelGen -> Fmt.pf ppf ":model-gen"
+
+let pp_ae_timeout_reason ppf = function
+  | Assume -> Fmt.pf ppf "Assume"
+  | ProofSearch -> Fmt.pf ppf "ProofSearch"
+  | ModelGen -> Fmt.pf ppf "ModelGen"
 
 type unknown_reason =
   | Incomplete
@@ -44,14 +53,17 @@ type unknown_reason =
   | Timeout of timeout_reason
 
 let pp_unknown_reason ppf = function
-  | Incomplete -> Fmt.pf ppf "Incomplete"
-  | Memout -> Fmt.pf ppf "Memout"
-  | Step_limit i -> Fmt.pf ppf "Step limit: %i" i
-  | Timeout t -> Fmt.pf ppf "Timeout:%a" pp_timeout_reason t
+  | Incomplete -> Fmt.pf ppf "incomplete"
+  | Memout -> Fmt.pf ppf "memout"
+  | Step_limit i -> Fmt.pf ppf "(:step-limit %i)" i
+  | Timeout t -> Fmt.pf ppf "(:timeout %a)" pp_timeout_reason t
 
-let pp_unknown_reason_opt ppf = function
-  | None -> Fmt.pf ppf "Decided"
-  | Some ur -> pp_unknown_reason ppf ur
+let pp_ae_unknown_reason_opt ppf = function
+  | None -> Fmt.pf ppf ":decided"
+  | Some Incomplete -> Fmt.pf ppf "Incomplete"
+  | Some Memout -> Fmt.pf ppf "Memout"
+  | Some Step_limit i -> Fmt.pf ppf "StepLimit:%i" i
+  | Some Timeout t -> Fmt.pf ppf "Timeout:%a" pp_ae_timeout_reason t
 
 module type S = sig
   type t
