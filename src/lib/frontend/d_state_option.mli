@@ -64,7 +64,8 @@ module SatSolver : S with type t = Util.sat_solver
     on SatSolver: when SatSolver is updated, this one also is. *)
 module SatSolverModule : Accessor with type t = (module Sat_solver_sig.S)
 
-(** Option for setting the max number of steps. Interfaces with Steps.
+(** Option for setting the max number of steps. Interfaces with the toplevel
+    Steps module.
     The [set] function may raise Invalid_arg from the Steps.set_steps_bound call
     if the new option value is lower than the current number of steps. *)
 module Steps : S with type t = int

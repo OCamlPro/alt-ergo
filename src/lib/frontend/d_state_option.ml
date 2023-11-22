@@ -99,11 +99,11 @@ let msatsolver =
 
 module SatSolver = (val msatsolver)
 
-let mstate =
+let msteps =
   let on_update _ sat st = Steps.set_steps_bound sat; st in
   (create_opt ~on_update "steps_bound" O.get_steps_bound)
 
-module Steps = (val mstate)
+module Steps = (val msteps)
 
 (* Some options can be initialized to gain some performance. *)
 let options_requiring_initialization = [

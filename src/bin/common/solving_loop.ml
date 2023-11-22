@@ -461,7 +461,6 @@ let main () =
     State.empty
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key partial_model
-    |> set_steps_bound (O.get_steps_bound ())
     |> State.set named_terms Util.MS.empty
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
