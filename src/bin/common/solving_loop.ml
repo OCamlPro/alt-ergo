@@ -136,10 +136,10 @@ let main () =
           Options.Time.set_timeout (Options.get_timelimit ());
         end;
       SAT.reset_refs ();
-      let ftdn_env =
-        List.fold_left
-          (FE.process_decl ~hook_on_status:Frontend.print_status)
-          (FE.init_env used_context)
+      let ftdn_env = FE.init_env used_context in
+      let () =
+        List.iter
+          (FE.process_decl ~hook_on_status:Frontend.print_status ftdn_env)
           cnf
       in
       if Options.get_timelimit_per_goal() then
@@ -152,8 +152,9 @@ let main () =
          we have to drop the partial model in order to prevent
          printing wrong model. *)
       match ftdn_env.FE.res with
-      | `Sat partial_model | `Unknown partial_model ->
+      | `Sat | `Unknown ->
         begin
+          let partial_model = ftdn_env.sat_env in
           let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
             let ur = SAT.get_unknown_reason partial_model in
