@@ -121,10 +121,21 @@ val compare_operators : operator -> operator -> int
 val hash : t -> int
 
 val to_string : t -> string
-val print : Format.formatter -> t -> unit
+val print : t Fmt.t
+(* Printer used by debugging messages. *)
 
 val to_string_clean : t -> string
-val print_clean : Format.formatter -> t -> unit
+val print_clean : t Fmt.t
+
+val pp_name : string Fmt.t
+
+val pp_ae_operator : operator Fmt.t
+(* [pp_ae_operator ppf op] prints the operator symbol [op] on the
+   formatter [ppf] using the Alt-Ergo native format. *)
+
+val pp_smtlib_operator : operator Fmt.t
+(* [pp_smtlib_operator ppf op] prints the operator symbol [op] on the
+   formatter [ppf] using the SMT-LIB format. *)
 
 (*val dummy : t*)
 
