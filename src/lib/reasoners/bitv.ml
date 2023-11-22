@@ -1317,7 +1317,7 @@ module Shostak(X : ALIEN) = struct
      we do so, we may end up in a loop where we repeatedly call [X.make] on a
      [BV2Nat] term -- so instead if we are a single [Other] term, we become
      uninterpreted. *)
-  let bv2nat bv =
+  let bv2nat ot bv =
     match bv with
     | [{ bv = Other { value = r; negated }; sz }] ->
       let t = term_extract r in
@@ -1342,7 +1342,14 @@ module Shostak(X : ALIEN) = struct
         | { ty; _ } ->
           Util.internal_error "expected bitv, got %a" Ty.print ty
       end
-    | _ -> abstract_to_nat bv |> X.make
+    | _ ->
+      (* Note: we can't just call [X.make] on the result of [abstract_to_nat]
+         because [X.make] should only be called on subterms. If we do it, it
+         causes crashes when `IntervalCalculus.add` assumes that the arguments
+         of division operators have been added to the `Uf` prior to the
+         division itself. *)
+      let t' = abstract_to_nat bv in
+      X.term_embed ot, [ E.Core.eq ot t' ]
 
   let make t =
     let { E.f; xs; _ } = E.term_view t in
@@ -1357,7 +1364,7 @@ module Shostak(X : ALIEN) = struct
          [int2bv] terms, we convert the composition [(bv2nat ((_ int2bv n) x))]
          into [(mod x (pow 2 n))]. *)
       let r, ctx = Canon.make x in
-      let r, ctx' = bv2nat r in
+      let r, ctx' = bv2nat t r in
       r, List.rev_append ctx' ctx
     | _ ->
       let r, ctx = Canon.make t in
