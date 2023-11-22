@@ -41,6 +41,7 @@ jobs:
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prelease-opam: true
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true
 
@@ -66,6 +67,7 @@ jobs:
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 
@@ -95,6 +97,7 @@ jobs:
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 

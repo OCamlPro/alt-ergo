@@ -46,6 +46,7 @@ jobs:
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
 
       # Install dependencies

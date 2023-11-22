@@ -60,18 +60,3 @@ license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
 ]
-
-pin-depends: [
-  [
-  "dolmen.dev"
-  "git+https://github.com/Gbury/dolmen.git#b14eb8a2400c3dd2c34cded212c2135bbce1a57c"
-  ]
-  [
-  "dolmen_loop.dev"
-  "git+https://github.com/Gbury/dolmen.git#b14eb8a2400c3dd2c34cded212c2135bbce1a57c"
-  ]
-  [
-  "dolmen_type.dev"
-  "git+https://github.com/Gbury/dolmen.git#b14eb8a2400c3dd2c34cded212c2135bbce1a57c"
-  ]
-]
