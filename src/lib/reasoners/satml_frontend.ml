@@ -1083,6 +1083,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let analyze_unknown_for_objectives env unsat_rec_prem : unit =
     let obj = Th.get_objectives (SAT.current_tbox env.satml) in
     if Util.MI.is_empty obj then raise I_dont_know;
+    env.objectives <- Some obj;
     let acc =
       try
         Util.MI.fold
@@ -1105,9 +1106,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            we cannot go beyond infinity and the next objectives with lower
            priority cannot be optimized in presence of infinity values. *)
         raise I_dont_know;
-
       | (e, tv, is_max, is_le) :: l ->
-        env.objectives <- Some obj;
         let neg =
           List.fold_left
             (fun acc (e, tv, is_max, is_le) ->
