@@ -806,7 +806,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let ff_abstr,new_proxies,proxies_mp, new_vars =
               FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
             in
-            let () = env.proxies <- proxies_mp in
+            env.proxies <- proxies_mp;
             let nunit =
               List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
             in
@@ -1078,10 +1078,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       else Expr.Reals.(>)
     end
 
-  let analyze_unknown_for_objectives env unknown_exn unsat_rec_prem : unit =
+  (* This function is called after receiving an `I_dont_know` exception from
+     unsat_rec. It may re-raise this exception. *)
+  let analyze_unknown_for_objectives env unsat_rec_prem : unit =
     let obj = Th.get_objectives (SAT.current_tbox env.satml) in
-    if Util.MI.is_empty obj then raise unknown_exn;
-    env.objectives <- Some obj;
+    if Util.MI.is_empty obj then raise I_dont_know;
     let acc =
       try
         Util.MI.fold
@@ -1103,9 +1104,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (* The answer for the first objective is infinity. We stop here as
            we cannot go beyond infinity and the next objectives with lower
            priority cannot be optimized in presence of infinity values. *)
-        raise unknown_exn;
+        raise I_dont_know;
 
       | (e, tv, is_max, is_le) :: l ->
+        env.objectives <- Some obj;
         let neg =
           List.fold_left
             (fun acc (e, tv, is_max, is_le) ->
@@ -1137,7 +1139,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         Options.Time.set_timeout (Options.get_timelimit ());
         unsat_rec_prem env ~first_call:false
     end
-
 
   let rec unsat_rec env ~first_call:_ : unit =
     try SAT.solve env.satml; assert false
@@ -1205,9 +1206,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try
       unsat_rec env ~first_call
     with
-    | I_dont_know as e ->
+    | I_dont_know ->
       begin
-        try analyze_unknown_for_objectives env e unsat_rec_prem
+        try analyze_unknown_for_objectives env unsat_rec_prem
         with
         | IUnsat (env, _) ->
           assert (env.objectives != None);
