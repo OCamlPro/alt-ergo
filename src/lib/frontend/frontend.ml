@@ -129,20 +129,20 @@ module type S = sig
   type sat_env
 
   type res = [
-    | `Sat of sat_env
-    | `Unknown of sat_env
+    | `Sat
+    | `Unknown
     | `Unsat
   ]
 
-  type env = {
+  type env = private {
     used_context : used_context;
     consistent_dep_stack: (res * Explanation.t) Stack.t;
     sat_env : sat_env;
-    res : res;
-    expl : Explanation.t
+    mutable res : res;
+    mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : Loc.t -> env -> 'a -> env
+  type 'a process = ?loc : Loc.t -> env -> 'a -> unit
 
   val init_env : ?sat_env:sat_env -> used_context -> env
 
@@ -162,7 +162,7 @@ module type S = sig
     ?hook_on_status: (sat_env status -> int -> unit) ->
     env ->
     sat_tdecl ->
-    env
+    unit
 
   val print_model: sat_env Fmt.t
 end
@@ -213,8 +213,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   type sat_env = SAT.t
 
   type res = [
-    | `Sat of sat_env
-    | `Unknown of sat_env
+    | `Sat
+    | `Unknown
     | `Unsat
   ]
 
@@ -222,18 +222,18 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     used_context : used_context;
     consistent_dep_stack: (res * Explanation.t) Stack.t;
     sat_env : sat_env;
-    res : res;
-    expl : Explanation.t
+    mutable res : res;
+    mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : Loc.t -> env -> 'a -> env
+  type 'a process = ?loc : Loc.t -> env -> 'a -> unit
 
   let init_env ?(sat_env=SAT.empty ()) used_context =
     {
       used_context;
       consistent_dep_stack = Stack.create ();
       sat_env;
-      res = `Unknown (SAT.empty ());
+      res = `Unknown;
       expl = Explanation.empty
     }
 
@@ -255,10 +255,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         (Ex.print_unsat_core ~tab:false) dep;
     try
       let pb = E.Set.elements (Ex.formulas_of dep) in
-      let env =
-        List.fold_left
-          (fun env f ->
-             SAT.assume env
+      let satenv = SAT.empty () in
+      let () =
+        List.iter
+          (fun f ->
+             SAT.assume satenv
                {E.ff=f;
                 origin_name = "";
                 gdist = -1;
@@ -272,10 +273,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 from_terms = [];
                 theory_elim = true;
                } Ex.empty
-          ) (SAT.empty ()) pb
+          )
+          pb
       in
       ignore (SAT.unsat
-                env
+                satenv
                 {E.ff=E.vrai;
                  origin_name = "";
                  gdist = -1;
@@ -292,76 +294,72 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       Errors.run_error Errors.Failed_check_unsat_core
     with
     | SAT.Unsat _  -> ()
-    | (SAT.Sat _ | SAT.I_dont_know _) as e -> raise e
+    | (SAT.Sat | SAT.I_dont_know) as e -> raise e
 
   let mk_root_dep name f loc =
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let internal_push ?(loc = Loc.dummy) (env : env) (n : int) : env =
+  let internal_push ?(loc = Loc.dummy) (env : env) (n : int) : unit =
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
       ~max:n ~elt:(env.res, env.expl) ~init:();
-    {env with sat_env = SAT.push env.sat_env n}
+    SAT.push env.sat_env n
 
-  let internal_pop ?(loc = Loc.dummy) (env : env) (n : int) : env =
+  let internal_pop ?(loc = Loc.dummy) (env : env) (n : int) : unit =
     ignore loc;
     let res, expl =
       Util.loop ~f:(fun _n () _env -> Stack.pop env.consistent_dep_stack)
         ~max:n ~elt:() ~init:(env.res, env.expl)
     in
-    let sat_env = SAT.pop env.sat_env n in
-    {env with sat_env; res; expl}
+    SAT.pop env.sat_env n;
+    env.res <- res;
+    env.expl <- expl
 
   let internal_assume
       ?(loc = Loc.dummy)
       (env : env)
       ((name, f, mf) : string * E.t * bool) =
     let is_hyp = try (Char.equal '@' name.[0]) with _ -> false in
-    if not is_hyp && unused_context name env.used_context then
-      env
-    else
+    if is_hyp || not (unused_context name env.used_context) then
       let expl =
         if is_hyp then
           Ex.empty
         else
           mk_root_dep name f loc
       in
-      let sat_env =
-        match env.res with
-        | `Sat _ | `Unknown _ ->
-          SAT.assume env.sat_env
-            {E.ff=f;
-             origin_name = name;
-             gdist = -1;
-             hdist = (if is_hyp then 0 else -1);
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age=0;
-             lem=None;
-             mf=mf;
-             gf=false;
-             from_terms = [];
-             theory_elim = true;
-            }
-            expl
-        | `Unsat -> env.sat_env
-      in
-      {env with sat_env; expl}
+      match env.res with
+      | `Sat | `Unknown ->
+        SAT.assume env.sat_env
+          {E.ff=f;
+           origin_name = name;
+           gdist = -1;
+           hdist = (if is_hyp then 0 else -1);
+           trigger_depth = max_int;
+           nb_reductions = 0;
+           age=0;
+           lem=None;
+           mf=mf;
+           gf=false;
+           from_terms = [];
+           theory_elim = true;
+          }
+          expl;
+        env.expl <- expl;
+      | `Unsat ->
+        env.expl <- expl
 
   let internal_pred_def ?(loc = Loc.dummy) env (name, f) =
-    if unused_context name env.used_context then
-      env
-    else
+    if not (unused_context name env.used_context) then
       let expl = mk_root_dep name f loc in
-      let sat_env = SAT.pred_def env.sat_env f name expl loc in
-      {env with sat_env; expl}
+      SAT.pred_def env.sat_env f name expl loc;
+      env.expl <- expl
 
   let internal_query ?(loc = Loc.dummy) env (n, f, sort) =
     ignore loc;
     let expl =
       match env.res with
-      | `Sat _ | `Unknown _ ->
+      | `Sat | `Unknown ->
         let expl' = SAT.unsat env.sat_env
             {E.ff=f;
              origin_name = n;
@@ -382,27 +380,29 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     in
     if get_debug_unsat_core () then check_produced_unsat_core expl;
     if get_save_used_context () then output_used_context n expl;
-    {env with res = `Unsat; expl}
+    env.res <- `Unsat;
+    env.expl <- expl
 
   let internal_th_assume
       ?(loc = Loc.dummy)
       env
       ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt) =
-    if unused_context ax_name env.used_context then
-      env
-    else
+    if not (unused_context ax_name env.used_context) then
       match env.res with
-      | `Sat _ | `Unknown _ ->
+      | `Sat | `Unknown ->
         let expl = mk_root_dep ax_name ax_form loc in
-        let sat_env = SAT.assume_th_elt env.sat_env th_elt expl in
-        {env with sat_env; expl}
-      | `Unsat -> env
+        SAT.assume_th_elt env.sat_env th_elt expl;
+        env.expl <- expl
+      | `Unsat -> ()
 
   let handle_sat_exn f ?loc env x =
     try f ?loc env x with
-    | SAT.Sat t -> {env with res = `Sat t}
-    | SAT.Unsat expl -> {env with res = `Unsat; expl = Ex.union expl env.expl}
-    | SAT.I_dont_know t -> {env with res = `Unknown t}
+    | SAT.Sat -> env.res <- `Sat
+    | SAT.Unsat expl ->
+      env.res <- `Unsat;
+      env.expl <- Ex.union expl env.expl
+    | SAT.I_dont_know ->
+      env.res <- `Unknown
   (* The SAT.Timeout exception is not catched. *)
 
   let push = handle_sat_exn internal_push
@@ -427,20 +427,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | RwtDef _ -> assert false
       | Query (n, f, sort) ->
         begin
-          let env = internal_query ~loc:d.st_loc env (n, f, sort) in
+          internal_query ~loc:d.st_loc env (n, f, sort);
           match env.res with
           | `Unsat ->
-            hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ());
-            env
+            hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ())
           | _ -> assert false
         end
       | ThAssume th_elt -> internal_th_assume ~loc:d.st_loc env th_elt
     with
-    | SAT.Sat t ->
+    | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
-      hook_on_status (Sat (d,t)) (Steps.get_steps ());
-      {env with res = `Sat t}
+      hook_on_status (Sat (d, env.sat_env)) (Steps.get_steps ());
+      env.res <- `Sat
 
     | SAT.Unsat expl' ->
       (* This case should mainly occur when a new assumption results in an unsat
@@ -449,20 +448,21 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let expl = Ex.union env.expl expl' in
       if get_debug_unsat_core () then check_produced_unsat_core expl;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      {env with res = `Unsat; expl}
+      env.res <- `Unsat;
+      env.expl <- expl
 
-    | SAT.I_dont_know t ->
+    | SAT.I_dont_know ->
       (* TODO: always print Unknown for why3 ? *)
-      let ur = SAT.get_unknown_reason t in
+      let ur = SAT.get_unknown_reason env.sat_env in
       let status =
         match ur with
         | Some (Sat_solver_sig.Timeout _) -> Timeout (Some d)
-        | _ -> Unknown (d, t)
+        | _ -> Unknown (d, env.sat_env)
       in
       hook_on_status status (Steps.get_steps ());
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      {env with res = `Unknown t}
+      env.res <- `Unknown
 
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,

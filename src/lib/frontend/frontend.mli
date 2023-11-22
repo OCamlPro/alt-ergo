@@ -49,17 +49,17 @@ module type S = sig
   type sat_env
 
   type res = [
-    | `Sat of sat_env
-    | `Unknown of sat_env
+    | `Sat
+    | `Unknown
     | `Unsat
   ]
 
-  type env = {
+  type env = private {
     used_context : used_context;
     consistent_dep_stack: (res * Explanation.t) Stack.t;
     sat_env : sat_env;
-    res : res;
-    expl : Explanation.t
+    mutable res : res;
+    mutable expl : Explanation.t
   }
 
   val init_env : ?sat_env:sat_env -> used_context -> env
@@ -68,7 +68,7 @@ module type S = sig
       They catch the [Sat], [Unsat] and [I_dont_know] exceptions to update the
       frontend environment, but not the [Timeout] exception which is raised to
       the user. *)
-  type 'a process = ?loc:Loc.t -> env -> 'a -> env
+  type 'a process = ?loc:Loc.t -> env -> 'a -> unit
 
   val push : int process
 
@@ -86,7 +86,7 @@ module type S = sig
     ?hook_on_status:(sat_env status -> int -> unit) ->
     env ->
     Commands.sat_tdecl ->
-    env
+    unit
 
   val print_model: sat_env Fmt.t
 end
