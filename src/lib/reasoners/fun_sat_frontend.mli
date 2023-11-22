@@ -28,37 +28,4 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A functional implementation of the solver. *)
-module Make (Th : Theory.S) : sig
-  type t
-
-  exception Sat of t
-  exception Unsat of Explanation.t
-  exception I_dont_know of t
-
-  val empty : unit -> t
-
-  val empty_with_inst : (Expr.t -> bool) -> t
-
-  val push : t -> int -> t
-
-  val pop : t -> int -> t
-
-  val assume : t -> Expr.gformula -> Explanation.t -> t
-
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
-
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
-
-  val unsat : t -> Expr.gformula -> Explanation.t
-
-  val reset_refs : unit -> unit
-
-  val reinit_ctx : unit -> unit
-
-  val get_model: t -> Models.t Lazy.t option
-
-  val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
-
-  val get_value : t -> Expr.t -> Expr.t option
-end
+include Sat_solver_sig.SatContainer

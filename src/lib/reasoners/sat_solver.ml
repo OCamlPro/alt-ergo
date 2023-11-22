@@ -34,7 +34,7 @@ let get = function
       Printer.print_dbg
         ~module_name:"Sat_solver"
         "use Tableaux-like solver";
-    (module Fun_sat : Sat_solver_sig.SatContainer)
+    (module Fun_sat_frontend : Sat_solver_sig.SatContainer)
   | Util.CDCL | Util.CDCL_Tableaux ->
     if Options.get_verbose () then
       Printer.print_dbg

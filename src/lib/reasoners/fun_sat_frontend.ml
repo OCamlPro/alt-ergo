@@ -28,37 +28,47 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A functional implementation of the solver. *)
-module Make (Th : Theory.S) : sig
-  type t
-
-  exception Sat of t
+module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+  exception Sat
   exception Unsat of Explanation.t
-  exception I_dont_know of t
+  exception I_dont_know
 
-  val empty : unit -> t
+  module FS = Fun_sat.Make(Th)
 
-  val empty_with_inst : (Expr.t -> bool) -> t
+  type t = FS.t ref
 
-  val push : t -> int -> t
+  let empty () = ref (FS.empty ())
 
-  val pop : t -> int -> t
+  let empty_with_inst f = ref (FS.empty_with_inst f)
 
-  val assume : t -> Expr.gformula -> Explanation.t -> t
+  let exn_handler f env =
+    try f !env with
+    | FS.Sat e -> env := e; raise Sat
+    | FS.Unsat expl -> raise (Unsat expl)
+    | FS.I_dont_know e -> env := e; raise I_dont_know
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  let push t i = exn_handler (fun env -> t := FS.push env i) t
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  let pop t i = exn_handler (fun env -> t := FS.pop env i) t
 
-  val unsat : t -> Expr.gformula -> Explanation.t
+  let assume t g expl = exn_handler (fun env -> t := FS.assume env g expl) t
 
-  val reset_refs : unit -> unit
+  let assume_th_elt t th expl =
+    exn_handler (fun env -> t := FS.assume_th_elt env th expl) t
 
-  val reinit_ctx : unit -> unit
+  let pred_def t expr n expl loc =
+    exn_handler (fun env -> t := FS.pred_def env expr n expl loc) t
 
-  val get_model: t -> Models.t Lazy.t option
+  let unsat t g =
+    exn_handler (fun env -> FS.unsat env g) t
 
-  val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
+  let reset_refs = FS.reset_refs
 
-  val get_value : t -> Expr.t -> Expr.t option
+  let reinit_ctx = FS.reinit_ctx
+
+  let get_model t = FS.get_model !t
+
+  let get_unknown_reason t = FS.get_unknown_reason !t
+
+  let get_value t expr = FS.get_value !t expr
 end
