@@ -319,7 +319,9 @@ module SmtlibCounterExample = struct
              [Symbols.print] will always output AE native format, this
              doesn't agree when the output format is SMT-LIB. But the
              printer of expression will output the right string if we don't
-             give the arguments of the field. *)
+             give the arguments of the field.
+
+             Issue: https://github.com/OCamlPro/alt-ergo/issues/958 *)
           let access = Fmt.str "%a" Expr.print (Expr.mk_term f [] ty) in
           add_records_destr
             records
