@@ -96,7 +96,9 @@ module Domains : sig
   val update : Ex.t -> X.r -> t -> Bitlist.t -> t
   (** [update ex r d bl] intersects the domain of [r] with bitlist [bl].
 
-      The explanation [ex] justifies that [bl] applies to [r]. *)
+      The explanation [ex] justifies that [bl] applies to [r].
+
+      @raise Bitlist.Inconsistent if the new domain is empty. *)
 
   val get : X.r -> t -> Bitlist.t
   (** [get r d] returns the bitlist currently associated with [r] in [d].
@@ -112,7 +114,10 @@ module Domains : sig
       [v] must have an existing associated domain (possibly unconstrained)
       before calling [subst]. Call [update] beforehand.
 
-      The explanation [ex] justifies the equality [p = v]. *)
+      The explanation [ex] justifies the equality [p = v].
+
+      @raise Bitlist.Inconsistent if this causes any domain in [d] to become
+        empty. *)
 
   val choose_changed : t -> X.r * t
   (** [choose_changed d] returns a pair [r, d'] such that:
