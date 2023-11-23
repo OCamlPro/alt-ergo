@@ -239,7 +239,15 @@ end = struct
   module SX = Shostak.SXH
   module MX = Shostak.MXH
 
-  type t = { parents : SX.t MX.t ; registered : SX.t }
+  type t =
+    { parents : SX.t MX.t
+    (** Map from leaves to terms that contain them as a leaf.
+
+        [p] is in [parents(x)] => [x] is in [leaves(p)] *)
+    ; registered : SX.t
+    (** The set of terms we care about. If [x] is in [registered],
+        then [x] is also in [parents(y)] for each [y] in [leaves(x)]. *)
+    }
 
   let empty = { parents = MX.empty ; registered = SX.empty }
 
@@ -265,7 +273,10 @@ end = struct
                 | Some deps ->
                   let deps = SX.remove r deps in
                   if SX.is_empty deps then None else Some deps
-                | None -> assert false
+                | None ->
+                  (* [r] is in registered, and [leaf] is in [leaves(r)], so
+                     [r] must be in [parents(leaf)]. *)
+                  assert false
               ) parents
           ) t.parents (X.leaves r)
       in
