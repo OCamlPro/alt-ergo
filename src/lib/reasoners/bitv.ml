@@ -1215,7 +1215,7 @@ module Shostak(X : ALIEN) = struct
        an abstract term, involving only constants and *fresh* A, B and C
        variables.
 
-       @raises Valid if the two terms are already equal. *)
+       @raise Valid if the two terms are already equal. *)
     let solve u v =
       if equal_abstract X.equal u v then raise Valid
       else begin

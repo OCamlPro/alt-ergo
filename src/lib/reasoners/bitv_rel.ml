@@ -101,7 +101,7 @@ module Domains : sig
   val get : X.r -> t -> Bitlist.t
   (** [get r d] returns the bitlist currently associated with [r] in [d].
 
-      Raises [Not_found] if there is no bitlist associated with [r] in [d]. *)
+      @raise Not_found if there is no bitlist associated with [r] in [d]. *)
 
   val subst : Ex.t -> X.r -> X.r -> t -> t
   (** [subst ex p v d] replaces all the instances of [p] with [v] in any domain,
