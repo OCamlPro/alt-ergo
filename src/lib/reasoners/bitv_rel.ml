@@ -740,7 +740,7 @@ let assume env uf la =
   in
   { delayed ; constraints ; domain ; congruence }, result
 let query _ _ _ = None
-let case_split env uf ~for_model:_ =
+let case_split env _uf ~for_model:_ =
   (* Look for representatives with minimal, non-fully known, domain size.
      [nunk] is the number of unknown bits. *)
   let _, candidates =
