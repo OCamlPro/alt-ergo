@@ -96,7 +96,6 @@ let create_opt_only_start_mode
     key
     get
 
-
 (* Any mode options. *)
 
 module Optimize =
@@ -140,6 +139,6 @@ let options_requiring_initialization = [
 
 let init st =
   List.fold_left
-    (fun st (module S : S) -> S.reset st)
+    (fun st (module S : S) -> S.set (S.get (S.reset st)) st)
     st
     options_requiring_initialization

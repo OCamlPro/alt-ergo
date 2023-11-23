@@ -117,6 +117,11 @@ let add_if_named
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
+type solve_res =
+  | Sat of model
+  | Unknown of model option
+  | Unsat
+
 let main () =
   let () = Dolmen_loop.Code.init [] in
 
@@ -159,9 +164,16 @@ let main () =
          we have to drop the partial model in order to prevent
          printing wrong model. *)
       match ftdn_env.FE.res with
-      | `Sat | `Unknown ->
+      | `Sat ->
         begin
-          let partial_model = ftdn_env.sat_env in
+          let mdl = Model ((module SAT), partial_model) in
+          if Options.(get_interpretation () && get_dump_models ()) then begin
+            FE.print_model (Options.Output.get_fmt_models ()) partial_model
+          end;
+          Sat mdl
+        end
+      | `Unknown ->
+        begin
           let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
             let ur = SAT.get_unknown_reason partial_model in
@@ -170,14 +182,14 @@ let main () =
               Sat_solver_sig.pp_ae_unknown_reason_opt ur;
             FE.print_model (Options.Output.get_fmt_models ()) partial_model
           end;
-          Some mdl
+          Unknown (Some mdl)
         end
-      | `Unsat -> None
+      | `Unsat -> Unsat
     with Util.Timeout ->
       (* It is still necessary to leave this catch here, because we may
          trigger this exception in between calls of the sat solver. *)
       if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
-      None
+      Unknown None
   in
 
   let typed_loop all_context state td =
@@ -384,6 +396,22 @@ let main () =
           "The output format %s is not supported by the Dolmen frontend."
           s
   in
+  let set_partial_model_and_mode solve_res st =
+    match solve_res with
+    | Unsat
+    | Unknown None ->
+      st
+      |> DO.Mode.set Util.Unsat
+      |> State.set partial_model_key None
+    | Unknown (Some m) ->
+      st
+      |> DO.Mode.set Util.Unsat
+      |> State.set partial_model_key (Some m)
+    | Sat m ->
+      st
+      |> DO.Mode.set Util.Sat
+      |> State.set partial_model_key (Some m)
+  in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
   let read_all ch =
     let b = Buffer.create 113 in
@@ -398,8 +426,7 @@ let main () =
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
-      ?(solver_ctx = empty_solver_ctx)
-      ?(partial_model = None) path =
+      ?(solver_ctx = empty_solver_ctx) path =
     let reports =
       Dolmen_loop.Report.Conf.(
         let disable m t =
@@ -469,7 +496,7 @@ let main () =
     logic_file,
     State.empty
     |> State.set solver_ctx_key solver_ctx
-    |> State.set partial_model_key partial_model
+    |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
@@ -721,6 +748,10 @@ let main () =
 
   (* Fetches the term value in the current model. *)
   let evaluate_term get_value name term =
+    (* There are two ways to evaluate a term:
+       - if its name is registered in the environment, get its value;
+       - if not, check if the formula is in the environment.
+    *)
     let simple_form =
       Expr.mk_term
         (Sy.name name)
@@ -767,6 +798,7 @@ let main () =
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
       | { id; contents = (`Solve _ as contents); loc ; attrs; implicit } ->
+        let st = DO.Mode.set Util.Assert st in
         let l =
           solver_ctx.local @
           solver_ctx.global @
@@ -806,7 +838,7 @@ let main () =
             List.rev (cnf :: hyps), is_thm
           | _ -> assert false
         in
-        let partial_model =
+        let solve_res =
           solve
             (DO.SatSolverModule.get st)
             all_context
@@ -818,13 +850,13 @@ let main () =
             let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with global = []; local = [] }
           ) st
-          |> State.set partial_model_key partial_model
+          |> set_partial_model_and_mode solve_res
         else
           State.set solver_ctx_key (
             let solver_ctx = State.get solver_ctx_key st in
             { solver_ctx with local = [] }
           ) st
-          |> State.set partial_model_key partial_model
+          |> set_partial_model_and_mode solve_res
 
       | {contents = `Set_option
              { DStd.Term.term =
@@ -862,8 +894,10 @@ let main () =
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
+        |> DO.Mode.reset
         |> DO.Optimize.reset
         |> DO.ProduceAssignment.reset
+        |> DO.init
         |> State.set named_terms Util.MS.empty
 
       | {contents = `Exit; _} -> raise Exit
