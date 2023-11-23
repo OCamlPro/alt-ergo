@@ -93,11 +93,8 @@ module Domains : sig
   val empty : t
   (** Returns an empty domain map. *)
 
-  val update : ?init:bool -> Ex.t -> X.r -> t -> Bitlist.t -> t
+  val update : Ex.t -> X.r -> t -> Bitlist.t -> t
   (** [update ex r d bl] intersects the domain of [r] with bitlist [bl].
-
-      There must already be a domain associated with [r] before calling
-      [update], unless [init] is set to true.
 
       The explanation [ex] justifies that [bl] applies to [r]. *)
 
@@ -113,7 +110,7 @@ module Domains : sig
       Use this to ensure that the representation is always normalized.
 
       [v] must have an existing associated domain (possibly unconstrained)
-      before calling [subst]. Call [update ~init:true] beforehand.
+      before calling [subst]. Call [update] beforehand.
 
       The explanation [ex] justifies the equality [p = v]. *)
 
@@ -142,7 +139,7 @@ end = struct
       ppf t.bitlists
   let empty = { bitlists = MX.empty ; changed = SX.empty }
 
-  let update ?(init = false) ex r t bl =
+  let update ex r t bl =
     let changed = ref false in
     let bitlists =
       MX.update r (function
@@ -161,12 +158,6 @@ end = struct
               Some bl''
             )
           | None ->
-            if not init then (
-              Printer.print_err
-                "Bitv_rel: trying to update inexistent domain for %a"
-                X.print r;
-              assert false
-            );
             changed := true;
             Some (Bitlist.add_explanation bl ex)
         ) t.bitlists
@@ -174,7 +165,12 @@ end = struct
     let changed = if !changed then SX.add r t.changed else t.changed in
     { changed; bitlists }
 
-  let get r t = MX.find r t.bitlists
+  let get r t =
+    try MX.find r t.bitlists with
+    | Not_found ->
+      match X.type_info r with
+      | Tbitv n -> Bitlist.unknown n Explanation.empty
+      | _ -> assert false
 
   let subst ex rr nrr t =
     match MX.find rr t.bitlists with
@@ -700,7 +696,7 @@ let assume env uf la =
             | L.Eq (rr, nrr), Th_util.Subst when is_bv_r rr ->
               Congruence.subst rr nrr cgr (fun rr nrr (bcs, dom) ->
                   let bl = abstract_bitlist (Shostak.Bitv.embed nrr) Ex.empty in
-                  let dom = Domains.update ~init:true Ex.empty nrr dom bl in
+                  let dom = Domains.update Ex.empty nrr dom bl in
                   (Constraints.subst ex rr nrr bcs, Domains.subst ex rr nrr dom)
                 ) (bcs, dom)
             | _ -> (cgr, (bcs, dom))
@@ -781,7 +777,7 @@ let add env uf r t =
       try
         let bcs = extract_constraints env.constraints uf r t in
         let dr = abstract_bitlist (Shostak.Bitv.embed r) Ex.empty in
-        let dom = Domains.update ~init:true Ex.empty r env.domain dr in
+        let dom = Domains.update Ex.empty r env.domain dr in
         let congruence = Congruence.add r env.congruence in
         let eqs', dom = propagate bcs dom in
         { env with congruence ; constraints = bcs ; domain = dom },
