@@ -92,6 +92,10 @@ type run_error =
   | Unsupported_feature of string
   | Dynlink_error of string
 
+(** Errors raised when performing actions forbidden in some modes. *)
+type mode_error =
+  | Invalid_set_option of string
+
 (** All types of error that can be raised *)
 type error =
   | Parser_error of string (** Error used at parser loading *)
@@ -102,6 +106,8 @@ type error =
   | Warning_as_error
   | Dolmen_error of (int * string)
   (** Error code + description raised by dolmen. *)
+  | Mode_error of Util.mode * mode_error
+  (** Error used when performing actions forbidden in some modes. *)
 
 (** {2 Exceptions } *)
 
@@ -122,6 +128,10 @@ val run_error : run_error -> 'a
     if the option warning-as-error is set
     This function can be use after warning *)
 val warning_as_error : unit -> unit
+
+(** Raise [Mode_error (Invalid_set_option str)] as {!Error} if an option is
+    being set when it should be immutable. *)
+val invalid_set_option : Util.mode -> string -> 'a
 
 (** {2 Printing } *)
 

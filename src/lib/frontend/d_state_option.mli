@@ -51,11 +51,22 @@ module type S = sig
   val reset : D_loop.Typer.state -> D_loop.Typer.state
 end
 
-(** Option for enabling/disabling the get-assignment instruction. *)
-module ProduceAssignment : S with type t = bool
+(** The current mode of the solver. *)
+module Mode : S with type t = Util.mode
+
+(** Options are divided in two categories:
+    1. options that can be updated anytime;
+    2. options that can only be updated during start mode. *)
+
+(** 1. Options that can be updated anytime. *)
 
 (** Option for enabling/disabling the optimization engine. *)
 module Optimize : S with type t = bool
+
+(** 2. Options that can only be updated during start mode. *)
+
+(** Option for enabling/disabling the get-assignment instruction. *)
+module ProduceAssignment : S with type t = bool
 
 (** The Sat solver used. When set, updates the SatSolverModule defined below. *)
 module SatSolver : S with type t = Util.sat_solver

@@ -66,18 +66,46 @@ let create_opt
       |> on_update key opt
       |> State.set key opt
 
-    let reset st = set (get ()) st
+    let unsafe_get st = State.get key st
+
+    let reset st = State.update_opt key (fun _ -> None) st
 
     let get st =
-      try State.get key st with
+      try unsafe_get st with
       | State.Key_not_found _ -> get ()
   end)
 
-module ProduceAssignment =
-  (val (create_opt "produce_assignment" (fun _ -> false)))
+(* The current mode of the sat solver. Serves as a flag for some options that cannot
+   be updated outside start mode. *)
+module Mode = (val (create_opt "start_mode") (fun _ -> Util.Start))
+
+(* Similar to `create_opt`, except we fail if we set the option while we are not
+   in start mode. *)
+let create_opt_only_start_mode
+    (type t)
+    ?(on_update=(fun _ _ -> Fun.id))
+    (key : string)
+    (get : unit -> t) : (module S with type t = t) =
+  let on_update k opt st =
+    match Mode.get st with
+    | Util.Start -> on_update k opt st
+    | curr_mode -> Errors.invalid_set_option curr_mode key
+  in
+  create_opt
+    ~on_update
+    key
+    get
+
+
+(* Any mode options. *)
 
 module Optimize =
   (val (create_opt "optimize" O.get_optimize))
+
+(* Start mode options. *)
+
+module ProduceAssignment =
+  (val (create_opt_only_start_mode "produce_assignment" (fun _ -> false)))
 
 let get_sat_solver
     ?(sat = O.get_sat_solver ())
@@ -89,13 +117,13 @@ let get_sat_solver
   (module SatCont.Make(TH) : Sat_solver_sig.S)
 
 module SatSolverModule =
-  (val (create_opt "sat_solver_module" (fun _ -> get_sat_solver ())))
+  (val (create_opt_only_start_mode "sat_solver_module" (fun _ -> get_sat_solver ())))
 
 let msatsolver =
   let on_update _ sat st =
     SatSolverModule.set (get_sat_solver ~sat ()) st
   in
-  (create_opt ~on_update "sat_solver" O.get_sat_solver)
+  (create_opt_only_start_mode ~on_update "sat_solver" O.get_sat_solver)
 
 module SatSolver = (val msatsolver)
 

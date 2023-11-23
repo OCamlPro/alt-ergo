@@ -98,6 +98,13 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+type mode =
+  | Start
+  | Assert
+  | Sat
+  | Unsat
+[@@deriving show]
+
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum
