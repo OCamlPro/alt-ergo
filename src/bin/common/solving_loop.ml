@@ -167,6 +167,7 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Options.Output.get_fmt_diagnostic ());
+      let partial_model = ftdn_env.sat_env in
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
          printing wrong model. *)
