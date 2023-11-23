@@ -97,6 +97,11 @@ let enable_maxsmt b =
   else
     DStd.Extensions.Smtlib2.(disable maxsmt)
 
+let cmd_on_modes st modes cmd =
+  let curr_mode = DO.Mode.get st in
+  if List.for_all (Fun.negate (Util.equal_mode curr_mode)) modes then
+    Errors.forbidden_command curr_mode cmd
+
 (* Dolmen util *)
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
@@ -398,15 +403,15 @@ let main () =
   in
   let set_partial_model_and_mode solve_res st =
     match solve_res with
-    | Unsat
-    | Unknown None ->
+    | Unsat ->
       st
       |> DO.Mode.set Util.Unsat
       |> State.set partial_model_key None
-    | Unknown (Some m) ->
+    | Unknown None ->
       st
-      |> DO.Mode.set Util.Unsat
-      |> State.set partial_model_key (Some m)
+      |> DO.Mode.set Util.Sat
+      |> State.set partial_model_key None
+    | Unknown (Some m)
     | Sat m ->
       st
       |> DO.Mode.set Util.Sat
@@ -685,10 +690,13 @@ let main () =
   let handle_custom_statement id args st =
     match id, args with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
+      cmd_on_modes st [Assert] "minimize";
       handle_minimize_term term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
+      cmd_on_modes st [Assert] "maximize";
       handle_maximize_term term st
     | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
+      cmd_on_modes st [Sat] "maximize";
       handle_get_objectives args st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
@@ -795,10 +803,13 @@ let main () =
       let file_loc = (State.get State.logic_file st).loc in
       let solver_ctx = State.get solver_ctx_key st in
       match td with
+      | { contents = `Set_logic _; _} ->
+        cmd_on_modes st [Start] "set-logic";
+        DO.Mode.set Util.Assert st
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
       | { id; contents = (`Solve _ as contents); loc ; attrs; implicit } ->
-        let st = DO.Mode.set Util.Assert st in
+        cmd_on_modes st [Assert; Sat; Unsat] "solve";
         let l =
           solver_ctx.local @
           solver_ctx.global @
@@ -872,6 +883,7 @@ let main () =
         st
 
       | {contents = `Get_model; _ } ->
+        cmd_on_modes st [Sat] "get-model";
         if Options.get_interpretation () then
           let () = match State.get partial_model_key st with
             | Some (Model ((module SAT), env)) ->
@@ -916,6 +928,7 @@ let main () =
 
       | {contents = `Get_assignment; _} ->
         begin
+          cmd_on_modes st [Sat] "get-assignment";
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
             if DO.ProduceAssignment.get st then

@@ -91,10 +91,7 @@ let create_opt_only_start_mode
     | Util.Start -> on_update k opt st
     | curr_mode -> Errors.invalid_set_option curr_mode key
   in
-  create_opt
-    ~on_update
-    key
-    get
+  create_opt ~on_update key get
 
 (* Any mode options. *)
 

@@ -105,6 +105,14 @@ type mode =
   | Unsat
 [@@deriving show]
 
+let equal_mode x y = match x, y with
+  | Start, Start
+  | Assert, Assert
+  | Sat, Sat
+  | Unsat, Unsat -> true
+  | (Start | Assert | Sat | Unsat), (Start | Assert | Sat | Unsat) ->
+    false
+
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum

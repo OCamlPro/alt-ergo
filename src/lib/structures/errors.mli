@@ -95,6 +95,7 @@ type run_error =
 (** Errors raised when performing actions forbidden in some modes. *)
 type mode_error =
   | Invalid_set_option of string
+  | Forbidden_command of string
 
 (** All types of error that can be raised *)
 type error =
@@ -132,6 +133,10 @@ val warning_as_error : unit -> unit
 (** Raise [Mode_error (Invalid_set_option str)] as {!Error} if an option is
     being set when it should be immutable. *)
 val invalid_set_option : Util.mode -> string -> 'a
+
+(** Raise [Mode_error (Forbidden_command str)] as {!Error} if a command is
+    being used in a mode where it should not be available. *)
+val forbidden_command : Util.mode -> string -> 'a
 
 (** {2 Printing } *)
 
