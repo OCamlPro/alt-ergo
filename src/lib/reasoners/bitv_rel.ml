@@ -530,6 +530,7 @@ end = struct
       let cs_map, cs_set, fresh =
         CS.fold (fun cs (cs_map, cs_set, fresh) ->
             let fresh = CS.remove cs fresh in
+            let cs_set = CS.remove cs cs_set in
             let cs_map = Constraint.fold_deps (cs_remove cs) cs cs_map in
             let cs' = Constraint.subst ex rr nrr cs in
             if CS.mem cs' cs_set then
