@@ -124,21 +124,21 @@ let main worker_id content =
       let used_context = Frontend.choose_used_context all_context ~goal_name in
       SAT.reset_refs ();
       let sat_env = SAT.empty_with_inst add_inst in
-      let ftnd_env =
-        List.fold_left
-          (FE.process_decl ~hook_on_status:get_status_and_print)
-          (FE.init_env ~sat_env used_context)
-          cnf
-      in
+      let ftnd_env = FE.init_env ~sat_env used_context in
+      List.iter
+        (FE.process_decl ~hook_on_status:get_status_and_print ftnd_env)
+        cnf;
       if Options.get_unsat_core () then begin
         unsat_core := Explanation.get_unsat_core ftnd_env.FE.expl;
       end;
       let () =
         match ftnd_env.FE.res with
-        | `Sat partial_model | `Unknown partial_model ->
+        | `Sat | `Unknown ->
           begin
             if Options.(get_interpretation () && get_dump_models ()) then
-              FE.print_model (Options.Output.get_fmt_models ()) partial_model;
+              FE.print_model
+                (Options.Output.get_fmt_models ())
+                ftnd_env.sat_env;
           end
         | `Unsat -> ()
       in

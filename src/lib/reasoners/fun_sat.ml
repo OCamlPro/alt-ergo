@@ -33,7 +33,7 @@ module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
 
-module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+module Make (Th : Theory.S) = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)
 

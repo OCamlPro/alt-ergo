@@ -54,9 +54,9 @@ let pp_unknown_reason_opt ppf = function
 module type S = sig
   type t
 
-  exception Sat of t
+  exception Sat
   exception Unsat of Explanation.t
-  exception I_dont_know of t
+  exception I_dont_know
 
   (* the empty sat-solver context *)
   val empty : unit -> t
@@ -67,21 +67,21 @@ module type S = sig
       assertion level.
       Ie. assuming e after the push will become g -> e,
       a g will be forced to be true (but not propagated at level 0) *)
-  val push : t -> int -> t
+  val push : t -> int -> unit
 
   (** [pop env n] remove an assertion level.
       Internally, the guard g introduced in the push correponsding to this pop
       will be propagated to false (at level 0) *)
-  val pop : t -> int -> t
+  val pop : t -> int -> unit
 
   (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
      [f] is unsatisfiable in [env] *)
-  val assume : t -> Expr.gformula -> Explanation.t -> t
+  val assume : t -> Expr.gformula -> Explanation.t -> unit
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
 
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
 
   (* [unsat env f size] checks the unsatisfiability of [f] in
      [env]. Raises I_dont_know when the proof tree's height reaches
