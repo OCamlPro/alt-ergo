@@ -689,6 +689,7 @@ let empty _ =
   ; domain = Domains.empty
   ; constraints = Constraints.empty
   ; congruence = Congruence.empty }
+
 let assume env uf la =
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let (congruence, domain, constraints, eqs) =
@@ -741,7 +742,9 @@ let assume env uf la =
     { result with assume = List.rev_append assume result.assume }
   in
   { delayed ; constraints ; domain ; congruence }, result
+
 let query _ _ _ = None
+
 let case_split env _uf ~for_model:_ =
   (* Look for representatives with minimal, non-fully known, domain size.
      [nunk] is the number of unknown bits. *)
@@ -781,6 +784,7 @@ let case_split env _uf ~for_model:_ =
         "[BV-CS-1] Setting %a to 0" X.print lhs;
     [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
   | exception Not_found -> []
+
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   let env, eqs =
@@ -799,8 +803,11 @@ let add env uf r t =
       env, eqs
   in
   { env with delayed }, eqs
+
 let optimizing_split _env _uf _opt_split = None
+
 let new_terms _ = Expr.Set.empty
+
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t th_elt _ =
