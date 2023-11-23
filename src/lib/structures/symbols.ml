@@ -277,29 +277,8 @@ let string_of_bound b =
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
-let pp_name ppf =
-  let no_need_to_quote s =
-    String.length s > 0 &&
-    (match s.[0] with | '0'..'9' -> false | _ -> true) &&
-    try
-      String.iter
-        (function
-          | 'a' .. 'z'
-          | 'A' .. 'Z'
-          | '0' .. '9'
-          | '~' | '!' | '@' | '$' | '%' | '^' | '&'
-          | '*' | '_' | '-' | '+' | '=' | '<' | '>'
-          | '.' | '?' | '/' -> ()
-          | _ -> raise Exit
-        ) s;
-      true
-    with Exit -> false
-  in
-  fun s ->
-    if no_need_to_quote s then
-      Fmt.string ppf s
-    else
-      Fmt.pf ppf "|%s|" s
+let pp_name ppf s =
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
 
 module AEPrinter = struct
   let pp_operator ppf op =
