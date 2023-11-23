@@ -700,6 +700,22 @@ let assume env uf la =
                   let dom = Domains.update Ex.empty nrr dom bl in
                   (Constraints.subst ex rr nrr bcs, Domains.subst ex rr nrr dom)
                 ) (bcs, dom)
+            | L.Distinct (false, [rr; nrr]), NCS (Th_bitv, _) ->
+              (* We don't support [distinct] in general yet, but we must
+                 support it for case splits to avoid looping.
+
+                 Note that for 1-bit vectors (i.e. booleans), we have `x <> y`
+                 iff `x = not y`. *)
+              assert Stdlib.(X.type_info rr = Ty.Tbitv 1);
+              let drr = abstract_bitlist (Shostak.Bitv.embed rr) Ex.empty in
+              let dnrr = abstract_bitlist (Shostak.Bitv.embed nrr) Ex.empty in
+              let dom = Domains.update Ex.empty rr dom drr in
+              let dom = Domains.update Ex.empty nrr dom dnrr in
+              let bcs =
+                Constraints.add bcs @@
+                { repr = Constraint.hcons @@ Bnot (rr, nrr)  ; ex }
+              in
+              (cgr, (bcs, dom))
             | _ -> (cgr, (bcs, dom))
           ) (env.congruence, (env.constraints, env.domain)) la
       in
@@ -755,21 +771,13 @@ let case_split env uf ~for_model:_ =
         Bitv.extract part.sz (part.sz - 1) (part.sz - 1) [ part ]
     in
     let lhs = Shostak.Bitv.is_mine @@ aux biv in
+    (* Just always pick zero for now. *)
     let zero = Shostak.Bitv.is_mine Bitv.[ { bv = Cte Z.zero ; sz = 1 } ] in
-    let one = Shostak.Bitv.is_mine Bitv.[ { bv = Cte Z.one ; sz = 1 } ] in
-    if Uf.already_distinct uf [ lhs; zero ] then (
-      if Options.get_debug_bitv () then
-        Printer.print_dbg
-          ~module_name:"Bitv_rel" ~function_name:"case_split"
-          "[BV-CS-2] %a is forced to 1" X.print lhs;
-      [ Uf.LX.mkv_eq lhs one, false, Th_util.CS (Th_util.Th_bitv, Q.one) ]
-    ) else (
-      if Options.get_debug_bitv () then
-        Printer.print_dbg
-          ~module_name:"Bitv_rel" ~function_name:"case_split"
-          "[BV-CS-1] Setting %a to 0" X.print lhs;
-      [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
-    )
+    if Options.get_debug_bitv () then
+      Printer.print_dbg
+        ~module_name:"Bitv_rel" ~function_name:"case_split"
+        "[BV-CS-1] Setting %a to 0" X.print lhs;
+    [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
   | exception Not_found -> []
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
