@@ -75,8 +75,8 @@ let create_opt
       | State.Key_not_found _ -> get ()
   end)
 
-(* The current mode of the sat solver. Serves as a flag for some options that cannot
-   be updated outside start mode. *)
+(* The current mode of the sat solver. Serves as a flag for some options that
+   cannot be updated outside start mode. *)
 module Mode = (val (create_opt "start_mode") (fun _ -> Util.Start))
 
 (* Similar to `create_opt`, except we fail if we set the option while we are not
@@ -113,7 +113,10 @@ let get_sat_solver
   (module SatCont.Make(TH) : Sat_solver_sig.S)
 
 module SatSolverModule =
-  (val (create_opt_only_start_mode "sat_solver_module" (fun _ -> get_sat_solver ())))
+  (val (
+     create_opt_only_start_mode
+       "sat_solver_module"
+       (fun _ -> get_sat_solver ())))
 
 let msatsolver =
   let on_update _ sat st =
