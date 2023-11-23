@@ -479,7 +479,7 @@ module Constraints : sig
   (** [propagate cs r dom] propagates the constraints associated with [r] in the
       constraint set [cs] and returns the new domain map after propagation. *)
 end = struct
-  module IM = Map.Make(Int)
+  module IM = Util.MI
 
   module CS = Set.Make(struct
       type t = Constraint.t
