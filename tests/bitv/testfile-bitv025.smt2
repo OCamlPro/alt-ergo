@@ -1,0 +1,5 @@
+(set-logic QF_BV)
+(declare-fun s () (_ BitVec 32))
+(declare-fun t () (_ BitVec 32))
+(assert (= (bvshl s (bvnot (bvmul s t))) (_ bv0 32)))
+(check-sat)

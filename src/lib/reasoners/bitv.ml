@@ -1324,24 +1324,26 @@ module Shostak(X : ALIEN) = struct
       let maybe_negate t =
         if negated then E.Ints.(~$$Z.(~$1 lsl sz - ~$1) - t) else t
       in
-      begin match E.term_view t with
-        | { f = Op Int2BV _; _ } ->
-          (* bv2nat will simplify: we must call [X.make] again *)
-          E.BV.bv2nat t |> maybe_negate |> X.make
-        | { ty = Tbitv n; _ } ->
-          assert (n = sz);
-          if negated then
-            (* if we are negated, we will simplify *)
-            E.BV.bv2nat t |> maybe_negate |> X.make
-          else
-            (* bv2nat will *not* simplify: become uninterpreted with interval
-               information *)
-            let t = E.BV.bv2nat t |> maybe_negate in
-            X.term_embed t,
-            [ E.Ints.(~$0 <= t) ; E.Ints.(t < ~$$Z.(~$1 lsl n)) ]
-        | { ty; _ } ->
-          Util.internal_error "expected bitv, got %a" Ty.print ty
-      end
+      let t', ctx =
+        begin match E.term_view t with
+          | { f = Op Int2BV _; _ } ->
+            (* bv2nat will simplify: we must call [X.make] again *)
+            E.BV.bv2nat t |> maybe_negate, []
+          | { ty = Tbitv n; _ } ->
+            assert (n = sz);
+            if negated then
+              (* if we are negated, we will simplify *)
+              E.BV.bv2nat t |> maybe_negate, []
+            else
+              (* bv2nat will *not* simplify: become uninterpreted with interval
+                 information *)
+              let t = E.BV.bv2nat t |> maybe_negate in
+              t, [ E.Ints.(~$0 <= t) ; E.Ints.(t < ~$$Z.(~$1 lsl n)) ]
+          | { ty; _ } ->
+            Util.internal_error "expected bitv, got %a" Ty.print ty
+        end
+      in
+      X.term_embed ot, E.Core.eq ot t' :: ctx
     | _ ->
       (* Note: we can't just call [X.make] on the result of [abstract_to_nat]
          because [X.make] should only be called on subterms. If we do it, it
