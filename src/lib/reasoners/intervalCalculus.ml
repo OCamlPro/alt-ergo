@@ -1988,7 +1988,12 @@ let model_from_simplex sim is_int env uf =
       if int_sol || not is_int then main_vars, slake_vars
       else round_to_integers main_vars, round_to_integers slake_vars
     in
-    let fct = if is_int then E.int else E.real in
+    let fct =
+      if is_int
+      then
+        fun q -> E.Ints.of_Z (Q.num q)
+      else E.Reals.of_Q
+    in
     List.fold_left
       (fun acc (v, q) ->
          assert (not is_int || Q.is_int q);
@@ -1996,7 +2001,7 @@ let model_from_simplex sim is_int env uf =
            (* may happen because of incremental simplex on rationals *)
            acc
          else
-           let t = fct (Q.to_string q) in
+           let t = fct q in
            let r, _ = X.make t in
            if get_debug_interpretation () then
              Printer.print_dbg
@@ -2026,10 +2031,12 @@ let model_from_unbounded_domains =
     let l2 = model_from_simplex int_sim true  env uf in
     List.fold_left mk_cs (List.fold_left mk_cs [] l1) l2
 
-let mk_const_term c ty =
+let mk_const_term q ty =
   match ty with
-  | Ty.Tint -> E.Ints.of_Z (Q.to_z c)
-  | Ty.Treal -> E.Reals.of_Q c
+  | Ty.Tint ->
+    assert (Z.equal (Q.den q) Z.one);
+    E.Ints.of_Z (Q.num q)
+  | Ty.Treal -> E.Reals.of_Q q
   | _ -> assert false
 
 let case_split env uf ~for_model =
@@ -2171,12 +2178,6 @@ let best_interval_of optimized env p =
         end;
         raise (Ex.Inconsistent (expl, env.classes))
 
-let mk_const_term ty s =
-  match ty with
-  | Ty.Tint -> E.int (Q.to_string s)
-  | Ty.Treal -> E.real (Q.to_string s)
-  | _ -> assert false
-
 let integrate_mapsTo_bindings sbs maps_to =
   try
     let sbs =
@@ -2197,7 +2198,7 @@ let integrate_mapsTo_bindings sbs maps_to =
                  Sy.print x E.print tx;
              raise Exit
            | Some c ->
-             let tc = mk_const_term (E.type_info t) c in
+             let tc = mk_const_term c (E.type_info t) in
              Symbols.Map.add x tc sbt, sty
         )sbs maps_to
     in
@@ -2218,7 +2219,7 @@ let extend_with_domain_substitution =
            let lb_val = match lv, uv with
              | None, None -> raise Exit
              | Some (q1, false), Some (q2, false) when Q.equal q1 q2 ->
-               mk_const_term ty q1
+               mk_const_term q1 ty
 
              | Some (q1,_), Some (q2,_) ->
                Printer.print_err
@@ -2231,10 +2232,10 @@ let extend_with_domain_substitution =
                assert false
 
              | Some (q, is_strict), None -> (* hs > q or hs >= q *)
-               mk_const_term ty (if is_strict then Q.add q eps else q)
+               mk_const_term (if is_strict then Q.add q eps else q) ty
 
              | None, Some (q, is_strict) -> (* hs < q or hs <= q *)
-               mk_const_term ty (if is_strict then Q.sub q eps else q)
+               mk_const_term (if is_strict then Q.sub q eps else q) ty
            in
            Sy.Map.add lb_var lb_val sbt
       ) idoms sbt

@@ -802,12 +802,12 @@ module Shostak
       then None
       else
         let term_of_cst, cpt = match X.type_info r with
-          | Ty.Tint  -> E.int, cpt_int
-          | Ty.Treal -> E.real, cpt_real
+          | Ty.Tint  -> (fun q -> Q.num q |> E.Ints.of_Z), cpt_int
+          | Ty.Treal -> E.Reals.of_Q, cpt_real
           | _ -> assert false
         in
         cpt := Q.add Q.one (max_constant distincts !cpt);
-        Some (term_of_cst (Q.to_string !cpt), true)
+        Some (term_of_cst !cpt, true)
 
   let pp_constant ppf r =
     match P.is_const (embed r), X.type_info r with

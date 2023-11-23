@@ -985,7 +985,7 @@ let destruct_app e =
 let mk_lt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate y; E.int "1"] Ty.Tint
+      E.mk_term (Sy.Op Sy.Minus) [translate y; E.Ints.of_int 1] Ty.Tint
     in
     let e1 = translate x in
     E.mk_builtin ~is_pos:true Sy.LE [e1; e3]
@@ -995,7 +995,7 @@ let mk_lt translate ty x y =
 let mk_gt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate x; E.int "1"] Ty.Tint
+      E.mk_term (Sy.Op Sy.Minus) [translate x; E.Ints.of_int 1] Ty.Tint
     in
     let e2 = translate y in
     E.mk_builtin ~is_pos:true Sy.LE [e2; e3]
@@ -1037,8 +1037,8 @@ let rec mk_expr
         begin match builtin with
           | B.True -> E.vrai
           | B.False -> E.faux
-          | B.Integer s -> E.int s
-          | B.Decimal s -> E.real s
+          | B.Integer s -> E.Ints.of_Z (Z.of_string s)
+          | B.Decimal s -> E.Reals.of_Q (Q.of_string s)
           | B.Bitvec s ->
             let ty = dty_to_ty term_ty in
             E.bitv s ty
@@ -1081,7 +1081,9 @@ let rec mk_expr
 
           | B.Minus mty, [x] ->
             let e1, ty =
-              if mty == `Int then E.int "0", Ty.Tint else E.real "0",Ty.Treal
+              if mty == `Int
+              then E.Ints.of_int 0, Ty.Tint
+              else E.Reals.of_int 0, Ty.Treal
             in
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 

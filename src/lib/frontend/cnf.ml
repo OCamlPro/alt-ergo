@@ -59,9 +59,9 @@ let rec make_term up_qv quant_basename t =
     | TTconst Tvoid ->
       E.void
     | TTconst (Tint i) ->
-      E.int i
+      E.Ints.of_Z (Z.of_string i)
     | TTconst (Treal n) ->
-      E.real (Numbers.Q.to_string n)
+      E.Reals.of_Q n
     | TTconst (Tbitv bt) ->
       E.bitv bt ty
     | TTvar s -> E.mk_term s [] ty
@@ -84,7 +84,7 @@ let rec make_term up_qv quant_basename t =
       end
 
     | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
-      let t1 = if ty == Ty.Tint then E.int "0" else E.real "0"  in
+      let t1 = if ty == Ty.Tint then E.Ints.of_int 0 else E.Reals.of_int 0 in
       E.mk_term s [t1; mk_term n] ty
     | TTprefix _ ->
       assert false

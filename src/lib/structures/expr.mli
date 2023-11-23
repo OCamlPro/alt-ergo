@@ -194,8 +194,6 @@ val mk_term : Symbols.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t
 val void : t
-val int : string -> t
-val real : string -> t
 val bitv : string -> Ty.t -> t
 val fresh_name : Ty.t -> t
 val pred : t -> t

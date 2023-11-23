@@ -917,34 +917,7 @@ let is_internal_name t =
 
 let is_internal_skolem t = Sy.is_fresh_skolem t.f
 
-let positive_int i = mk_term (Sy.int i) [] Ty.Tint
-
-let int i =
-  let len = String.length i in
-  assert (len >= 1);
-  match i.[0] with
-  | '-' ->
-    assert (len >= 2);
-    let pi = String.sub i 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [ positive_int "0"; positive_int pi ] Ty.Tint
-  | _ -> positive_int i
-
-let positive_real i = mk_term (Sy.real i) [] Ty.Treal
-
-let real r =
-  let len = String.length r in
-  assert (len >= 1);
-  match r.[0] with
-  | '-' ->
-    assert (len >= 2);
-    let pi = String.sub r 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [ positive_real "0"; positive_real pi ] Ty.Treal
-  | _ -> positive_real r
-
 let bitv bt ty = mk_term (Sy.bitv bt) [] ty
-
-let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
-
 
 (** simple smart constructors for formulas *)
 
@@ -2848,13 +2821,13 @@ end
 (** Constructors from the smtlib theory of integers.
     https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
 module Ints = struct
-  let of_int n = int (string_of_int n)
-
-  let ( ~$ ) = of_int
-
-  let of_Z n = int (Z.to_string n)
+  let of_Z i = mk_term (Sy.Int i) [] Ty.Tint
 
   let ( ~$$ ) = of_Z
+
+  let of_int i = of_Z (Z.of_int i)
+
+  let ( ~$ ) = of_int
 
   let ( + ) x y = mk_term (Op Plus) [ x; y ] Tint
 
@@ -2885,17 +2858,17 @@ end
 (** Constructors from the smtlib theory of real numbers.
     https://smtlib.cs.uiowa.edu/theories-Reals.shtml *)
 module Reals = struct
-  let of_int n = real (string_of_int n)
+  let of_Q r = mk_term (Sy.Real r) [] Ty.Treal
+
+  let ( ~$$$ ) = of_Q
+
+  let of_int i = of_Q (Q.of_int i)
 
   let ( ~$ ) = of_int
 
-  let of_Z n = real (Z.to_string n)
+  let of_Z i = of_Q (Q.of_bigint i)
 
   let ( ~$$ ) = of_Z
-
-  let of_Q q = real (Q.to_string q)
-
-  let ( ~$$$ ) = of_Q
 
   let ( - ) x y = mk_term (Op Minus) [ x; y ] Treal
 
@@ -2917,6 +2890,8 @@ module Reals = struct
 
   let ( > ) x y = y < x
 end
+
+let pred t = mk_term (Sy.Op Sy.Minus) [t; Ints.of_int 1] Ty.Tint
 
 (** Constructors from the smtlib theory of fixed-size bit-vectors and the QF_BV
     logic.
