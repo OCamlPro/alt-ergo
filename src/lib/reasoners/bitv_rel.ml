@@ -221,7 +221,7 @@ module Constraint : sig
     | Bor of X.r * X.r * X.r
     (** [Bor (x, y, z)] represents [x = y | z] *)
     | Bxor of SX.t
-    (** [Bxor {x₁, ..., xₙ}] represents [x₁ ^ ... ^ xₙ = 0] *)
+    (** [Bxor {x1, ..., xn}] represents [x1 ^ ... ^ xn = 0] *)
     | Bnot of X.r * X.r
     (** [Bnot (x, y)] represents [x = not y] *)
 
