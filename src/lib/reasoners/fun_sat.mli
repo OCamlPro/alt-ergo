@@ -28,7 +28,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A functional implementation of the solver. *)
+(** A functional SAT solver implementation. *)
 module Make (Th : Theory.S) : sig
   type t
 
