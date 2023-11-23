@@ -146,7 +146,7 @@ end = struct
           | Some bl' as o ->
             (* Need to always call [intersect] to check for consistency *)
             let bl'' = Bitlist.intersect bl bl' ex in
-            if Bitlist.subsumes bl' bl'' then
+            if Bitlist.equal bl' bl'' then
               o
             else (
               if Options.get_debug_bitv () then
@@ -181,7 +181,7 @@ end = struct
             | Some bl' as o ->
               (* Need to always call [intersect] to check for consistency *)
               let bl'' = Bitlist.intersect bl bl' ex in
-              if Bitlist.subsumes bl' bl'' then
+              if Bitlist.equal bl' bl'' then
                 o
               else (
                 has_changed := true;

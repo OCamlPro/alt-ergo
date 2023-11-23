@@ -80,11 +80,6 @@ let value b = b.bits_set
 let is_fully_known b =
   Z.(equal (shift_right (bits_known b + ~$1) b.width) ~$1)
 
-(* True if everything known by b2 is known by b1 (b1 has more info than b2) *)
-let subsumes b1 b2 =
-  let b1_known = bits_known b1 and b2_known = bits_known b2 in
-  Z.(equal (logand (lognot b1_known) b2_known) Z.zero)
-
 let intersect b1 b2 ex =
   let width = b1.width in
   let bits_set = Z.logor b1.bits_set b2.bits_set in

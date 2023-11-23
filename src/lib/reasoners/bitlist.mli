@@ -14,10 +14,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Bit-lists provide a domain on bit-vectors that represent the known bits sets
-    to [1] and [0], respectively.
+(** Bit-lists provide a domain on bit-vectors that represent the known bits
+    sets to [1] and [0], respectively.
 
-    This module provides an implementation of bitlists and related operators. *)
+    This module provides an implementation of bitlists and related operators.*)
 
 type t
 (** The type of bitlists.
@@ -86,12 +86,6 @@ val value : t -> Z.t
 (** [value b] returns the value associated with the bitlist [b]. If the bitlist
     [b] is not fully known, then only the known bits (those that are set in
     [bits_known b]) are meaningful; unknown bits are set to [0]. *)
-
-val subsumes : t -> t -> bool
-(** [subsumes b1 b2] returns [true] if [b1] has more information than [b2].
-
-    More precisely, it checks that all the bits known by [b2] are also known by
-    [b1]; it *does not* check that [b1] and [b2] are consistent. *)
 
 val intersect : t -> t -> Explanation.t -> t
 (** [intersect b1 b2 ex] returns a new bitlist [b] that subsumes both [b1] and
