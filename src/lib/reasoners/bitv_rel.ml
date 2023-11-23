@@ -144,8 +144,9 @@ end = struct
     let bitlists =
       MX.update r (function
           | Some bl' as o ->
-            (* Need to always call [intersect] to check for consistency *)
             let bl'' = Bitlist.intersect bl bl' ex in
+            (* Keep simpler explanations, and don't loop adding the domain to
+               the changed set infinitely. *)
             if Bitlist.equal bl' bl'' then
               o
             else (
@@ -179,8 +180,9 @@ end = struct
       let bitlists =
         MX.update nrr (function
             | Some bl' as o ->
-              (* Need to always call [intersect] to check for consistency *)
               let bl'' = Bitlist.intersect bl bl' ex in
+              (* Keep simpler explanations, and don't loop adding the domain to
+                 the changed set infinitely. *)
               if Bitlist.equal bl' bl'' then
                 o
               else (
