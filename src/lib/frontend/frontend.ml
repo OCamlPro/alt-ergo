@@ -273,10 +273,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 from_terms = [];
                 theory_elim = true;
                } Ex.empty
-          ) (SAT.empty ()) pb
+          )
+          pb
       in
       ignore (SAT.unsat
-                env
+                satenv
                 {E.ff=E.vrai;
                  origin_name = "";
                  gdist = -1;
@@ -397,7 +398,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let check_step_limit f env =
     match SAT.get_unknown_reason env.sat_env with
-    | Some (Step_limit _) -> env
+    | Some (Step_limit _) -> ()
     | _ -> f env
 
   let handle_sat_exn f ?loc x env =
@@ -428,7 +429,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let th_assume = wrap_f internal_th_assume
 
-  let process_decl ~hook_on_status env d =
+  let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
     try
       match d.st_decl with
       | Push n -> check_step_limit (internal_push ~loc:d.st_loc n) env
@@ -443,14 +444,14 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (* If we have reached an unknown state, we can return it right
              away. *)
           match SAT.get_unknown_reason env.sat_env with
-          | Some (Step_limit _) -> raise (SAT.I_dont_know env.sat_env)
+          | Some (Step_limit _) -> raise SAT.I_dont_know
           | Some _ ->
             (* For now, only the step limit is an unknown step reachable
                here. We could raise SAT.I_dont_know as in the previous case,
                but we have choosen a defensive strategy. *)
             assert false
           | None ->
-            internal_query ~loc:d.st_loc env (n, f, sort);
+            internal_query ~loc:d.st_loc (n, f, sort) env;
             match env.res with
             | `Unsat ->
               hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ())

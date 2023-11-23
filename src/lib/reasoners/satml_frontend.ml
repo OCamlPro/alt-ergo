@@ -1346,7 +1346,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | Util.Step_limit_reached n ->
            (* When reaching the step limit on an assume, we do not want to
               answer 'unknown' right away. *)
-           {env with unknown_reason = Some (Step_limit n)}
+           env.unknown_reason <- Some (Step_limit n)
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
