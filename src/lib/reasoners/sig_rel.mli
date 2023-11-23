@@ -60,7 +60,17 @@ module type RELATION = sig
 
   val case_split :
     t -> Uf.t -> for_model:bool -> Th_util.case_split list
-  (** case_split env returns a list of equalities *)
+  (** case_split env returns a list of equalities
+
+      The returned case splits *must* have a [CS] origin; see the doc of
+      [Th_util.case_split].
+
+      The [for_model] flag is [true] when we are splitting for the purpose of
+      generating a model; the case split may need to be more aggressive in this
+      case to ensure completeness.
+
+      Note: not always equalities (e.g. the arrays theory returns
+      disequalities) *)
 
   val optimizing_split :
     t -> Uf.t -> Th_util.optimized_split -> Th_util.optimized_split option

@@ -1473,8 +1473,8 @@ module Shostak(X : ALIEN) = struct
 
      Currently a fairly naive backtracking search. *)
   let rec search buf pos sz abstracts =
-    (* [t] are the values we must be distinct from that starts with a '1' *)
-    (* [f] are the values we must be distinct from that starts with a '0' *)
+    (* [t] : values (a) we must be distinct from and (b) start with a '1' *)
+    (* [f] : values (a) we must be distinct from and (b) start with a '0' *)
     let t, nt, f, nf = List.fold_left (fun (t, nt, f, nf) ab ->
         let b, bv = pop_bit ab in
         match b with
@@ -1520,25 +1520,11 @@ module Shostak(X : ALIEN) = struct
       let buf = Bytes.create sz in
       match search buf 0 sz distincts with
       | () ->
-        (* If there are exactly [2^n - 1] constant values we must be distinct
-           from, this is not a case split: the choice is forced. *)
-        let nb =
-          List.fold_left (fun nb a ->
-              if is_cte_abstract a then nb + 1 else nb) 1 distincts
-        in
-        let is_cs = not (Z.equal (Z.of_int nb) (Z.pow (Z.of_int 2) sz)) in
         let bv = Bytes.unsafe_to_string buf in
-        Some (E.bitv bv (Ty.Tbitv sz), is_cs)
+        Some (E.bitv bv (Ty.Tbitv sz), true)
       | exception Not_found ->
-        (* This is not solvable: we are forced to be distinct from all possible
-           values. We signal that by returning an arbitrary bitvector and
-           setting the "case-split" flag to [false], which means that the
-           choice was "forced".
-
-           Since a forced choice is actually inconsistent, this will cause
-           backtracking (and possibly unsat-ness). *)
         let bv = String.make sz '0' in
-        Some (E.bitv bv (Ty.Tbitv sz), false)
+        Some (E.bitv bv (Ty.Tbitv sz), true)
 
   let choose_adequate_model t r l =
     if Options.get_debug_interpretation () then

@@ -112,7 +112,7 @@ module Test : sig
     exclude: string list;
     filters: string list option;
     compare_should_succeed: bool;
-    ae_should_succeed: bool;
+    accepted_exit_codes: int list;
   }
 
   type t = private {
@@ -138,7 +138,7 @@ end = struct
     exclude: string list;
     filters: string list option;
     compare_should_succeed: bool;
-    ae_should_succeed: bool;
+    accepted_exit_codes: int list;
   }
 
   type t = {
@@ -151,7 +151,7 @@ end = struct
     exclude = [];
     filters = None;
     compare_should_succeed = true;
-    ae_should_succeed = true;
+    accepted_exit_codes = [0];
   }
 
   let make ~cmd ~pb_file ~params = {cmd; pb_file; params}
@@ -178,9 +178,10 @@ end = struct
           pp_output tst
     in
     let accepted_ae_exit_code =
-      if tst.params.ae_should_succeed
-      then "0"
-      else "1"
+      Format.(
+        asprintf "@[<2>(or@ @[%a@]@])"
+          (pp_print_list pp_print_int) tst.params.accepted_exit_codes
+      )
     in
     Format.fprintf fmt "\
 @[<v 1>\
@@ -244,7 +245,9 @@ end = struct
               | "fail" ->
                 {acc with compare_should_succeed = false}
               | "err" ->
-                {acc with ae_should_succeed = false}
+                {acc with accepted_exit_codes = [1]}
+              | "timeout" ->
+                {acc with accepted_exit_codes = [142]}
               | "dolmen" -> {
                   acc with
                   exclude = "legacy" :: acc.exclude;
