@@ -320,14 +320,14 @@ end = struct
 
   let pp_repr ppf = function
     | Band (x, y, z) ->
-      Format.fprintf ppf "%a & %a = %a" X.print y X.print z X.print x
+      Fmt.pf ppf "%a & %a = %a" X.print y X.print z X.print x
     | Bor (x, y, z) ->
-      Format.fprintf ppf "%a | %a = %a" X.print y X.print z X.print x
+      Fmt.pf ppf "%a | %a = %a" X.print y X.print z X.print x
     | Bxor xs ->
       Fmt.(iter ~sep:(any " ^@ ") SX.iter X.print |> box) ppf xs;
       Fmt.pf ppf " = 0"
     | Bnot (x, y) ->
-      Format.fprintf ppf "%a = ~%a" X.print x X.print y
+      Fmt.pf ppf "%a = ~%a" X.print x X.print y
 
   (* TODO: for bitwise constraints (eg Band, Bor, Bxor)
       on initialisation and also after substitution
