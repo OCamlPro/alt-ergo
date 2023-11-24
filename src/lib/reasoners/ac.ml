@@ -166,7 +166,16 @@ module Make (X : Sig.X) = struct
   let abstract2 sy t r acc =
     match X.ac_extract r with
     | Some ac when Sy.equal sy ac.h -> r, acc
-    | None -> r, acc
+    | None -> (
+        if X.is_constant r then r, acc
+        else
+          match Expr.term_view t with
+          | { Expr.xs = []; bind = B_none; _ } -> r, acc
+          | { ty; _ } ->
+            let k = Expr.fresh_name ty in
+            let eq = Expr.mk_eq ~iff:false k t in
+            X.term_embed k, eq::acc
+      )
     | Some _ -> match Expr.term_view t with
       | { Expr.f = Sy.Name (hs, Sy.Ac, _); xs; ty; _ } ->
         let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
