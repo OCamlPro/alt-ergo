@@ -100,7 +100,7 @@ let enable_maxsmt b =
 let cmd_on_modes st modes cmd =
   if O.get_input_format () = Some Options.Smtlib2 then begin
     let curr_mode = DO.Mode.get st in
-    if not (List.exists (Util.equal_mode curr_mode)) modes then
+    if not @@ (List.exists (Util.equal_mode curr_mode)) modes then
       Errors.forbidden_command curr_mode cmd
   end
 
@@ -909,9 +909,9 @@ let main () =
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
-        |> DO.Mode.reset
-        |> DO.Optimize.reset
-        |> DO.ProduceAssignment.reset
+        |> DO.Mode.clear
+        |> DO.Optimize.clear
+        |> DO.ProduceAssignment.clear
         |> DO.init
         |> State.set named_terms Util.MS.empty
 

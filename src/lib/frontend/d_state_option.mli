@@ -48,7 +48,7 @@ module type S = sig
   val set : t -> D_loop.Typer.state -> D_loop.Typer.state
 
   (** Resets the option to its default value in Options. *)
-  val reset : D_loop.Typer.state -> D_loop.Typer.state
+  val clear : D_loop.Typer.state -> D_loop.Typer.state
 end
 
 (** The current mode of the solver. *)

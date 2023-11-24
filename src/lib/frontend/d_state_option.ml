@@ -47,8 +47,8 @@ module type S = sig
   (** Sets the option on the dolmen state. *)
   val set : t -> D_loop.Typer.state -> D_loop.Typer.state
 
-  (** Resets the option to its default value in Options. *)
-  val reset : D_loop.Typer.state -> D_loop.Typer.state
+  (** Clears the option from the state. *)
+  val clear : D_loop.Typer.state -> D_loop.Typer.state
 end
 
 let create_opt
@@ -68,7 +68,7 @@ let create_opt
 
     let unsafe_get st = State.get key st
 
-    let reset st = State.update_opt key (fun _ -> None) st
+    let clear st = State.update_opt key (fun _ -> None) st
 
     let get st =
       try unsafe_get st with
@@ -139,6 +139,6 @@ let options_requiring_initialization = [
 
 let init st =
   List.fold_left
-    (fun st (module S : S) -> S.set (S.get (S.reset st)) st)
+    (fun st (module S : S) -> S.set (S.get (S.clear st)) st)
     st
     options_requiring_initialization
