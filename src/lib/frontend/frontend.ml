@@ -504,7 +504,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          far. You may need to change your model generation strategy \
          or to increase your timeouts. \
          Returned unknown reason = %a@]"
-        Sat_solver_sig.pp_unknown_reason_opt ur;
+        Sat_solver_sig.pp_ae_unknown_reason_opt ur;
 
     | Some (lazy model) ->
       Models.output_concrete_model ppf model

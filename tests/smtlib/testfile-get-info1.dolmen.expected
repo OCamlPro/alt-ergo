@@ -8,5 +8,5 @@ unsupported
 (:authors "Alt-Ergo developers")
 (:error-behavior immediate-exit)
 (:name "Alt-Ergo")
-(:reason-unknown Incomplete)
+(:reason-unknown incomplete)
 (:version dev)
