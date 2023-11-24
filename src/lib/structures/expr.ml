@@ -1413,7 +1413,9 @@ and mk_forall_bis (q : quantified) =
       else
         let trs = List.map (apply_subst_trigger subst) q.user_trs in
         let sko_v   = List.map (apply_subst_aux subst) q.sko_v in
-        let binders = Var.Map.filter (fun x _ -> not (Var.Map.mem x sbs)) binders in
+        let binders =
+          Var.Map.filter (fun x _ -> not (Var.Map.mem x sbs)) binders
+        in
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q
 
@@ -1677,7 +1679,8 @@ let mk_let let_v let_e in_e =
   let let_e_ty = type_info let_e in
   let free_vars = let_e.vars in (* dep vars are only those appearing in let_e*)
   let free_v_as_terms =
-    Var.Map.fold (fun v (ty ,_) acc -> (mk_term (Sy.var v) [] ty)::acc) free_vars []
+    Var.Map.fold (fun v (ty ,_) acc -> (mk_term (Sy.var v) [] ty)::acc)
+      free_vars []
   in
   let let_sko = mk_term (Sy.fresh_skolem "_let") free_v_as_terms let_e_ty in
   let is_bool = type_info in_e == Ty.Tbool in
@@ -2431,7 +2434,9 @@ let mk_forall name loc binders trs f ~toplevel ~decl_kind =
   in
   let sko_v =
     Var.Map.fold (fun v (ty, _) acc ->
-        if Var.Map.mem v binders then acc else (mk_term (Sy.var v) [] ty) :: acc)
+        if Var.Map.mem v binders
+        then acc
+        else (mk_term (Sy.var v) [] ty) :: acc)
       (free_vars f Var.Map.empty) []
   in
   let free_vty = free_type_vars_as_types f in
