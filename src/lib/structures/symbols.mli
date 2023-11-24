@@ -98,7 +98,6 @@ type t =
 
 val name : ?kind:name_kind -> ?defined:bool -> string -> t
 val var : Var.t -> t
-val underscore : t
 val int : string -> t
 val bitv : string -> t
 val real : string -> t
@@ -171,8 +170,4 @@ val reset_id_builders : unit -> unit
 
 module Set : Set.S with type elt = t
 
-module Map : sig
-  include Map.S with type key = t
-  val print :
-    (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-end
+module Map : Map.S with type key = t

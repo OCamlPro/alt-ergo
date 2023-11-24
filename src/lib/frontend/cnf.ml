@@ -116,12 +116,13 @@ let rec make_term up_qv quant_basename t =
 
     | TTlet (binders, t2) ->
       let binders =
-        List.rev_map (fun (s, t1) -> s, mk_term t1)
+        List.rev_map (fun (s, t1) ->
+            match s with Sy.Var v -> v, mk_term t1 | _ -> assert false)
           (List.rev binders)
       in
       List.fold_left
-        (fun acc (sy, e) ->
-           E.mk_let sy e acc
+        (fun acc (v, e) ->
+           E.mk_let v e acc
            [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )(mk_term t2) binders
 
@@ -339,8 +340,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
     | TFlet(_,binders,lf) ->
       let binders =
         List.rev_map
-          (fun (sy, (e : _ Typed.tlet_kind))  ->
-             sy,
+          (fun (v, (e : _ Typed.tlet_kind))  ->
+             v,
              match e with
              | TletTerm t -> make_term up_qv name_base t
              | TletForm g -> mk_form up_qv ~toplevel:false g.c
@@ -348,8 +349,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
       in
       let res = mk_form up_qv ~toplevel:false lf.c in
       List.fold_left
-        (fun acc (sy, e) ->
-           E.mk_let sy e acc
+        (fun acc (v, e) ->
+           E.mk_let v e acc
            [@ocaml.ppwarning "TODO: should introduce fresh vars"]
         )res binders
 
@@ -376,11 +377,11 @@ let make_form name f loc ~decl_kind =
   let ff =
     make_form Sy.Map.empty name f loc ~decl_kind ~toplevel:true
   in
-  assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+  assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
-    E.mk_forall name loc Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
+    E.mk_forall name loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
 let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in

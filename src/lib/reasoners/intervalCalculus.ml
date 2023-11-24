@@ -2182,8 +2182,7 @@ let integrate_mapsTo_bindings sbs maps_to =
     let sbs =
       List.fold_left
         (fun ((sbt, sty) as sbs) (x, tx) ->
-           let x = Sy.Var x in
-           assert (not (Symbols.Map.mem x sbt));
+           assert (not (Var.Map.mem x sbt));
            let t = E.apply_subst sbs tx in
            let mk, _ = X.make t in
            match P.is_const (poly_of mk) with
@@ -2194,11 +2193,11 @@ let integrate_mapsTo_bindings sbs maps_to =
                  ~function_name:"integrate_maps_to_bindings"
                  "bad semantic trigger %a |-> %a@,\
                   left-hand side is not a constant!"
-                 Sy.print x E.print tx;
+                 Var.print x E.print tx;
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
-             Symbols.Map.add x tc sbt, sty
+             Var.Map.add x tc sbt, sty
         )sbs maps_to
     in
     Some sbs
@@ -2214,7 +2213,7 @@ let extend_with_domain_substitution =
          match s.[0] with
          | '?' -> sbt
          | _ ->
-           let lb_var = Sy.var v_hs in
+           let lb_var = v_hs in
            let lb_val = match lv, uv with
              | None, None -> raise Exit
              | Some (q1, false), Some (q2, false) when Q.equal q1 q2 ->
@@ -2225,7 +2224,7 @@ let extend_with_domain_substitution =
                  "[Error] %a <= %a <= %a@,\
                   Which value should we choose?"
                  Q.print q1
-                 Sy.print lb_var
+                 Var.print lb_var
                  Q.print q2;
                assert (Q.compare q2 q1 >= 0);
                assert false
@@ -2236,7 +2235,7 @@ let extend_with_domain_substitution =
              | None, Some (q, is_strict) -> (* hs < q or hs <= q *)
                mk_const_term ty (if is_strict then Q.sub q eps else q)
            in
-           Sy.Map.add lb_var lb_val sbt
+           Var.Map.add lb_var lb_val sbt
       ) idoms sbt
   in
   fun (sbt, sbty) idoms ->
@@ -2371,7 +2370,7 @@ let new_facts_for_axiom
               ~module_name:"IntervalCalculus"
               ~function_name:"new_facts_for_axiom"
               "try to extend synt sbt %a of ax %a@ "
-              (Symbols.Map.print E.print) sbs E.print orig;
+              (Var.Map.print E.print) sbs E.print orig;
           match tr.E.guard with
           | Some _ -> assert false (*guards not supported for TH axioms*)
 
@@ -2399,7 +2398,7 @@ let new_facts_for_axiom
                 Printer.print_dbg
                   ~header:false
                   "semantic matching succeeded:@ %a"
-                  (Symbols.Map.print E.print) (fst sbs);
+                  (Var.Map.print E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)

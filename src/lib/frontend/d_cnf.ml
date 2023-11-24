@@ -1498,9 +1498,9 @@ let rec mk_expr
           List.map (
             fun ({ DE.path; _ } as tv, t) ->
               let name = get_basename path in
-              let sy = Symbols.var @@ Var.of_string name in
-              Cache.store_sy tv sy;
-              sy,t
+              let v = Var.of_string name in
+              Cache.store_sy tv (Sy.var v);
+              v, t
           ) ls
         in
         let binders =
@@ -1854,11 +1854,11 @@ let make_form name_base f loc ~decl_kind =
   let ff =
     mk_expr ~loc ~name_base ~toplevel:true ~decl_kind f
   in
-  assert (SM.is_empty (E.free_vars ff SM.empty));
+  assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
   else
-    E.mk_forall name_base loc SM.empty [] ff ~toplevel:true ~decl_kind
+    E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
 let make dloc_file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
@@ -2074,13 +2074,13 @@ let make dloc_file acc stmt =
                   E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
                 in
-                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
                   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
-                      Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
+                      Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
                 Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
               | None ->
@@ -2096,13 +2096,13 @@ let make dloc_file acc stmt =
                   E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
                 in
-                assert (Sy.Map.is_empty (E.free_vars ff Sy.Map.empty));
+                assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
                   if Ty.Svty.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
-                      Symbols.Map.empty [] ff ~toplevel:true ~decl_kind
+                      Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
                 if Options.get_verbose () then
                   Format.eprintf "defining term of %a@." DE.Term.print body;

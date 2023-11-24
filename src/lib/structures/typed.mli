@@ -207,7 +207,7 @@ and 'a tform =
   | TFexists of 'a quant_form
   (** Existencial quantification. *)
   | TFlet of (Symbols.t * Ty.t) list *
-             (Symbols.t * 'a tlet_kind) list *
+             (Var.t * 'a tlet_kind) list *
              'a atform
   (** Let binding.
       TODO: what is in the first list ? *)

@@ -138,10 +138,6 @@ let is_internal sy =
     Stdcompat.String.starts_with ~prefix:"@" s
   | _ -> false
 
-let underscore =
-  Random.self_init ();
-  var @@ Var.of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
-
 let compare_kinds k1 k2 =
   Util.compare_algebraic k1 k2
     (function
@@ -466,7 +462,7 @@ let to_string_clean sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:false) sy
 
 let to_string sy =
-  Fmt.str "%a"(AEPrinter.pp ~show_vars:true) sy
+  Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
 
 module type Id = sig
@@ -550,12 +546,5 @@ let reset_id_builders () =
 module Set : Set.S with type elt = t =
   Set.Make (struct type t=s let compare=compare end)
 
-module Map : sig
-  include Map.S with type key = t
-  val print :
-    (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-end = struct
-  include Map.Make (struct type t = s let compare = compare end)
-  let print pr_elt fmt sbt =
-    iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
-end
+module Map : Map.S with type key = t =
+  Map.Make (struct type t = s let compare = compare end)

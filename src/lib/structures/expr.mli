@@ -30,7 +30,7 @@
 
 (** Data structures *)
 
-type binders = (Ty.t * int) Symbols.Map.t (*int tag in globally unique *)
+type binders = (Ty.t * int) Var.Map.t (*int tag in globally unique *)
 
 type t
 
@@ -47,7 +47,7 @@ type term_view = private {
   ty: Ty.t;
   bind : bind_kind;
   tag: int;
-  vars : (Ty.t * int) Symbols.Map.t; (* vars to types and nb of occurences *)
+  vars : (Ty.t * int) Var.Map.t; (* vars to types and nb of occurences *)
   vty : Ty.Svty.t;
   depth: int;
   nb_nodes : int;
@@ -76,7 +76,7 @@ and quantified = private {
 }
 
 and letin = private {
-  let_v: Symbols.t;
+  let_v: Var.t;
   let_e : t;
   in_e : t;
   let_sko : t; (* fresh symb. with free vars *)
@@ -105,7 +105,7 @@ module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
 
-type subst = t Symbols.Map.t * Ty.subst
+type subst = t Var.Map.t * Ty.subst
 
 type lit_view = private
   | Eq of t * t
@@ -165,7 +165,7 @@ val compare_let : letin -> letin -> int
 (** Some auxiliary functions *)
 
 val mk_binders : Set.t -> binders
-val free_vars : t -> (Ty.t * int) Symbols.Map.t -> (Ty.t * int) Symbols.Map.t
+val free_vars : t -> (Ty.t * int) Var.Map.t -> (Ty.t * int) Var.Map.t
 val free_type_vars : t -> Ty.Svty.t
 val is_ground : t -> bool
 val size : t -> int
@@ -285,7 +285,7 @@ val mk_exists :
   decl_kind:decl_kind ->
   t
 
-val mk_let : Symbols.t -> t -> t -> t
+val mk_let : Var.t -> t -> t -> t
 
 val mk_match : t -> (Typed.pattern * t) list -> t
 
