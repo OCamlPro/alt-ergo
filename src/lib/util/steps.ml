@@ -39,6 +39,8 @@ type incr_kind =
   | Th_assumed of int  (* Increment the counter for each term assumed in the
                           theories environment *)
 
+let steps_bound = ref (Options.get_steps_bound ())
+
 let naive_steps = ref 0
 let steps = ref 0
 let mult_f = ref 0
@@ -104,17 +106,16 @@ let incr k =
         Errors.run_error (Invalid_steps_count n);
       naive_steps := !naive_steps + n;
   end;
-  let steps_bound = Options.get_steps_bound () in
-  if steps_bound <> -1
-  && ((Stdlib.compare !steps ((steps_bound)) > 0)
-      || (Stdlib.compare !naive_steps ((steps_bound)) > 0)) then
+  if !steps_bound <> -1
+  && ((Stdlib.compare !steps !steps_bound > 0)
+      || (Stdlib.compare !naive_steps !steps_bound > 0)) then
     begin
       let n =
         if !naive_steps > 0 then !naive_steps
         else if !steps > 0 then !steps
-        else steps_bound
+        else !steps_bound
       in
-      Errors.run_error (Steps_limit n)
+      raise (Util.Step_limit_reached n)
     end
 
 let reset_steps () =
@@ -158,3 +159,16 @@ let get_steps () =
 let cs_steps_cpt = ref 0
 let cs_steps () = !cs_steps_cpt
 let incr_cs_steps () = Stdlib.incr cs_steps_cpt
+
+let set_steps_bound i =
+  if get_steps () > i  && i >= 0 then invalid_arg "Steps.set_steps_bound";
+  steps_bound := i
+
+let get_steps_bound () = !steps_bound
+
+let apply_without_step_limit cont =
+  let bound = !steps_bound in
+  steps_bound := -1;
+  match cont () with
+  | res ->         steps_bound := bound; res
+  | exception e -> steps_bound := bound; raise e

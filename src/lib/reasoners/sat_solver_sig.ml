@@ -40,11 +40,13 @@ type timeout_reason =
 type unknown_reason =
   | Incomplete
   | Memout
+  | Step_limit of int
   | Timeout of timeout_reason
 
 let pp_unknown_reason ppf = function
   | Incomplete -> Fmt.pf ppf "Incomplete"
   | Memout -> Fmt.pf ppf "Memout"
+  | Step_limit i -> Fmt.pf ppf "Step limit: %i" i
   | Timeout t -> Fmt.pf ppf "Timeout:%a" pp_timeout_reason t
 
 let pp_unknown_reason_opt ppf = function

@@ -36,6 +36,7 @@ type timeout_reason =
 type unknown_reason =
   | Incomplete
   | Memout
+  | Step_limit of int
   | Timeout of timeout_reason
 
 val pp_unknown_reason: unknown_reason Fmt.t

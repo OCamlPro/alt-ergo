@@ -88,7 +88,6 @@ type typing_error =
 (** Errors that can be raised at solving*)
 type run_error =
   | Invalid_steps_count of int
-  | Steps_limit of int
   | Failed_check_unsat_core
   | Unsupported_feature of string
   | Dynlink_error of string

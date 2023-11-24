@@ -316,6 +316,15 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
+  let set_steps_bound i st =
+    try DO.Steps.set i st with
+      Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
+      fatal_error
+        "Error while setting steps bound to %i: current step = %i."
+        i
+        (Steps.get_steps ())
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
@@ -477,6 +486,7 @@ let main () =
         sat;
       st
     | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
+      O.set_sat_solver sat;
       (* `make_sat` returns the sat solver corresponding to the new sat_solver
          option. *)
       DO.SatSolver.set sat st
@@ -607,6 +617,12 @@ let main () =
         | None -> print_wrn_opt ~name st_loc "bool" value; st
         | Some b ->
           set_optimize b st
+      end
+    | ":steps-bound", Symbol { name = Simple level; _ } ->
+      begin
+        match int_of_string_opt level with
+        | None -> print_wrn_opt ~name st_loc "integer" value; st
+        | Some i -> set_steps_bound i st
       end
     | _ ->
       unsupported_opt name; st
