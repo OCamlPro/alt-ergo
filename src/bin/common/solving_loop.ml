@@ -683,7 +683,7 @@ let main () =
         match SAT.get_unknown_reason sat with
         | None -> err ()
         | Some ur ->
-          print_std Sat_solver_sig.pp_unknown_reason ur
+          print_std Sat_solver_sig.pp_smt_unknown_reason ur
     in
     match name with
     | ":authors" ->

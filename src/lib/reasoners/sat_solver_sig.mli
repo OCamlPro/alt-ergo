@@ -40,7 +40,7 @@ type unknown_reason =
   | Timeout of timeout_reason
 
 (** Prints the unknown reason in the default SMT-LIB format *)
-val pp_unknown_reason: unknown_reason Fmt.t
+val pp_smt_unknown_reason: unknown_reason Fmt.t
 
 (** Prints an optional unknown reason in Alt-Ergo format *)
 val pp_ae_unknown_reason_opt : unknown_reason option Fmt.t

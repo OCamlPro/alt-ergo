@@ -52,7 +52,7 @@ type unknown_reason =
   | Step_limit of int
   | Timeout of timeout_reason
 
-let pp_unknown_reason ppf = function
+let pp_smt_unknown_reason ppf = function
   | Incomplete -> Fmt.pf ppf "incomplete"
   | Memout -> Fmt.pf ppf "memout"
   | Step_limit i -> Fmt.pf ppf "(:step-limit %i)" i
