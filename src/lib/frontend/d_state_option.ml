@@ -128,7 +128,7 @@ module SatSolver = (val msatsolver)
 
 let msteps =
   let on_update _ sat st = Steps.set_steps_bound sat; st in
-  (create_opt ~on_update "steps_bound" O.get_steps_bound)
+  (create_opt_only_start_mode ~on_update "steps_bound" O.get_steps_bound)
 
 module Steps = (val msteps)
 
