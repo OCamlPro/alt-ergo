@@ -96,6 +96,24 @@ type lit_origin =
       propagations and theory propagations all have the {!Other} origin. *)
 
 type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
+(** A case split is a triple [(a, is_cs, origin)].
+
+    The literal [a] is simply the literal that is the source of the split, or
+    its negation (depending on [origin]).
+
+    The [origin] should be either [CS] or [NCS]. Case splits returned by
+    relations have an origin of [CS], which is then flipped to [NCS] if a
+    contradiction is found involving [a].
+
+    The [is_cs] flag should *always* be [true], unless the literal [a] is a
+    *unit fact*, i.e. a fact that is true in all possible environments, not
+    merely the current one. Note that it is acceptable for unit facts to be
+    returned with [is_cs = true]; but if the [is_cs] flag is [false], the
+    solver *will* assume that the literal can't take part in any conflict.
+    Returning [is_cs = false] if the literal is not an unit fact **is
+    unsound**.
+
+    TL;DR: When in doubt, just set [is_cs] to [true]. *)
 
 type optimized_split = {
   r : Shostak.Combine.r;

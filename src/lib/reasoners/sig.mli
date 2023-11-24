@@ -87,12 +87,46 @@ module type SHOSTAK = sig
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
-  (* the returned bool is true when the returned term in a constant of the
-     theory. Otherwise, the term contains aliens that should be assigned
-     (eg. records). In this case, it's a unit fact, not a decision
-  *)
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+  (**[assign_value r distincts eq] selects the value to assign to [r] in the
+     model as a term [t], and returns [Some (t, is_cs)]. [is_cs] is described
+     below.
+
+     If no appropriate value can be chosen here, return [None] (only do this if
+     either [r] is already a value, or there is a mechanism somewhere else in
+     the code, such as the [case_split] function of a relation module, that
+     ensures completeness of the generated model).
+
+     [r] is the current class representative that a value should be chosen for.
+     No assumptions should be made on the shape of [r], but do return [None] if
+     it is already a value.
+
+     [distincts] is a list of term representatives that the returned value must
+     be distinct from (choosing a value that is present in [distincts] will
+     cause the solver to loop infinitely).
+
+     [eq] is a list of pairs [(t, r)] of terms and their initial representative
+     (i.e., [r] is [fst (X.make t)] for each pair) that encode the equivalence
+     class of [r].
+
+     The returned bool serves a similar purpose as the [is_cs] flag in
+     [Th_util.case_split].
+
+     It should usually be [true], which indicates that the returned term is not
+     forced.
+
+     Use [false] only when the returned term contains aliens that should be
+     assigned (e.g. records).
+
+     **When returning [false], you must ensure that the equality between the
+     first argument and the return value always hold (i.e. is a *unit* fact).
+     In particular, the equality *must not* depend on [distincts] -- doing so
+     would be unsound.**
+
+     In other words, if [assign_value r distincts eq] returns
+     [Some (t, false)], then there must be no context in which
+     [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
 
   (* choose the value to print and how to print it for the given term.
      The second term is its representative. The list is its equivalence class
