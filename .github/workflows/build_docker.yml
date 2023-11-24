@@ -46,4 +46,4 @@ jobs:
       - run: opam switch create . ocaml-system --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
       # Install the project packages
-      - run: opam install .
+      - run: opam install . --locked
