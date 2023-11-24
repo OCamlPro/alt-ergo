@@ -985,7 +985,7 @@ let destruct_app e =
 let mk_lt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate y; E.Ints.of_int 1] Ty.Tint
+      E.Ints.((translate y) - (of_Z Z.one))
     in
     let e1 = translate x in
     E.mk_builtin ~is_pos:true Sy.LE [e1; e3]
@@ -995,7 +995,7 @@ let mk_lt translate ty x y =
 let mk_gt translate ty x y =
   if ty == `Int then
     let e3 =
-      E.mk_term (Sy.Op Sy.Minus) [translate x; E.Ints.of_int 1] Ty.Tint
+      E.Ints.((translate x) - (of_Z Z.one))
     in
     let e2 = translate y in
     E.mk_builtin ~is_pos:true Sy.LE [e2; e3]
@@ -1080,12 +1080,10 @@ let rec mk_expr
             E.neg (aux_mk_expr x)
 
           | B.Minus mty, [x] ->
-            let e1, ty =
-              if mty == `Int
-              then E.Ints.of_int 0, Ty.Tint
-              else E.Reals.of_int 0, Ty.Treal
-            in
-            E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
+            if mty == `Int then
+              E.Ints.(~- (aux_mk_expr x))
+            else
+              E.Reals.(~- (aux_mk_expr x))
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
@@ -1347,11 +1345,9 @@ let rec mk_expr
             mk_add aux_mk_expr sy rty args
 
           | B.Sub ty, h :: t ->
-            let rty = if ty == `Int then Ty.Tint else Treal in
-            let sy = Sy.Op Sy.Minus in
+            let minus = if ty == `Int then E.Ints.(-) else E.Reals.(-) in
             let args = List.rev_map aux_mk_expr (List.rev t) in
-            List.fold_left
-              (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
+            List.fold_left minus (aux_mk_expr h) args
 
           | B.Mul ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in

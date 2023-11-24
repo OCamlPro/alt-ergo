@@ -83,9 +83,12 @@ let rec make_term up_qv quant_basename t =
         E.mk_term s [t1; t2] ty
       end
 
-    | TTprefix ((Sy.Op Sy.Minus) as s, n) ->
-      let t1 = if ty == Ty.Tint then E.Ints.of_int 0 else E.Reals.of_int 0 in
-      E.mk_term s [t1; mk_term n] ty
+    | TTprefix (Sy.Op Sy.Minus, n) ->
+      if ty == Ty.Tint then
+        E.Ints.(~- (mk_term n))
+      else
+        E.Reals.(~- (mk_term n))
+
     | TTprefix _ ->
       assert false
 
@@ -253,10 +256,8 @@ and make_form up_qv name_base ~toplevel f loc ~decl_kind : E.t =
                 {c = {tt_ty = Ty.Tint;
                       tt_desc = TTconst(Tint "1")}; annot = t1.annot} in
               let tt2 =
-                E.mk_term (Sy.Op Sy.Minus)
-                  [make_term up_qv name_base t2;
-                   make_term up_qv name_base one]
-                  Ty.Tint
+                E.Ints.((make_term up_qv name_base t2)
+                        - (make_term up_qv name_base one))
               in
               E.mk_builtin ~is_pos:true Sy.LE
                 [make_term up_qv name_base t1; tt2]

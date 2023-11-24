@@ -353,10 +353,20 @@ module Make (X : Arg) : S with type theory = X.t = struct
       SLE.elements mtl
 
   let plus_of_minus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Minus) [t; d] ty ; d]
+    match ty with
+    | Ty.Tint ->
+      [E.Ints.(t - d); d]
+    | Ty.Treal ->
+      [E.Reals.(t - d); d]
+    | _ -> assert false
 
   let minus_of_plus t d ty =
-    [E.mk_term (Symbols.Op Symbols.Plus)  [t; d] ty ; d]
+    match ty with
+    | Ty.Tint ->
+      [E.Ints.(t + d); d]
+    | Ty.Treal ->
+      [E.Reals.(t + d); d]
+    | _ -> assert false
 
   let linear_arithmetic_matching f_pat pats _ty_pat t =
     let ty = E.type_info t in
