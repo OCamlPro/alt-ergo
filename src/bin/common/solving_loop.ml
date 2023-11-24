@@ -100,7 +100,7 @@ let enable_maxsmt b =
 let cmd_on_modes st modes cmd =
   if O.get_input_format () = Some Options.Smtlib2 then begin
     let curr_mode = DO.Mode.get st in
-    if List.for_all (Fun.negate (Util.equal_mode curr_mode)) modes then
+    if not (List.exists (Util.equal_mode curr_mode)) modes then
       Errors.forbidden_command curr_mode cmd
   end
 
