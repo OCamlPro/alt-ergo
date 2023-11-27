@@ -921,11 +921,14 @@ module Shostak(X : ALIEN) = struct
 
     (* [assoc_var v sub] is the same as [assoc_var_id] but takes a variable.
 
-       Requires: [v] is an unconstrained root variable.
+       Requires: [v] is an unconstrainted root variable or a constant.
+       Raises: [Not_found] if [v] is not in the substitution, or if [v] is a
+         constant.
        Requires: the variables in [sub] are unconstrained root variables. *)
     let assoc_var v sub =
       match v.bv.defn with
       | Droot { id; _ } -> assoc_var_id id sub
+      | Dcte _ -> raise Not_found
       | _ -> (* Can only substitute [Droot] variables *) assert false
 
     (* This is a helper function for [slice_vars].
