@@ -444,7 +444,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (* If we have reached an unknown state, we can return it right
              away. *)
           match SAT.get_unknown_reason env.sat_env with
-          | Some (Step_limit _) -> raise SAT.I_dont_know
+          | Some (Step_limit _ | Timeout _)  -> raise SAT.I_dont_know
           | Some _ ->
             (* For now, only the step limit is an unknown step reachable
                here. We could raise SAT.I_dont_know as in the previous case,

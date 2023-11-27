@@ -35,16 +35,19 @@ type timeout_reason =
   | Assume
   | ProofSearch
   | ModelGen
+  | ExnRaised of exn
 
 let pp_smt_timeout_reason ppf = function
   | Assume -> Fmt.pf ppf ":assume"
   | ProofSearch -> Fmt.pf ppf ":proof-search"
   | ModelGen -> Fmt.pf ppf ":model-gen"
+  | ExnRaised e -> Fmt.pf ppf "(:failure \"%s\")" (Printexc.to_string e)
 
 let pp_ae_timeout_reason ppf = function
   | Assume -> Fmt.pf ppf "Assume"
   | ProofSearch -> Fmt.pf ppf "ProofSearch"
   | ModelGen -> Fmt.pf ppf "ModelGen"
+  | ExnRaised e -> Fmt.pf ppf "Failure (\"%s\")" (Printexc.to_string e)
 
 type unknown_reason =
   | Incomplete
