@@ -84,9 +84,10 @@ type mode =
   | Assert
   | Sat
   | Unsat
-[@@deriving show]
 
 val equal_mode : mode -> mode -> bool
+
+val pp_mode : Format.formatter -> mode -> unit
 
 val th_ext_of_string : string -> theories_extensions option
 val string_of_th_ext : theories_extensions -> string

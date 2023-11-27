@@ -103,7 +103,15 @@ type mode =
   | Assert
   | Sat
   | Unsat
-[@@deriving show]
+
+let pp_mode fmt m =
+  Format.pp_print_string fmt begin
+    match m with
+    | Start -> "Start"
+    | Assert -> "Assert"
+    | Sat -> "Sat"
+    | Unsat -> "Unsat"
+  end
 
 let equal_mode x y = match x, y with
   | Start, Start
