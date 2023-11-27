@@ -32,7 +32,6 @@ type timeout_reason =
   | Assume
   | ProofSearch
   | ModelGen
-  | ExnRaised of exn
 
 type unknown_reason =
   | Incomplete
