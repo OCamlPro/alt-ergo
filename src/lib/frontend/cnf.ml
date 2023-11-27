@@ -117,6 +117,13 @@ let rec make_term up_qv quant_basename t =
     | TTlet (binders, t2) ->
       let binders =
         List.rev_map (fun (s, t1) ->
+            (* Remark: the parser ensures that binders' symbol are always
+               variables. We could modify the typechecker module to
+               produce the appropriate type for binders, that is `Var.t list`,
+               but this requires a large amount of modifications in the
+               typechecker, which is a legacy part of our codebase.
+
+               See PR: https://github.com/OCamlPro/alt-ergo/pull/976. *)
             match s with Sy.Var v -> v, mk_term t1 | _ -> assert false)
           (List.rev binders)
       in
