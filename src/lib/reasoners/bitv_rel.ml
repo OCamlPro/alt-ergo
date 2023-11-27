@@ -687,27 +687,39 @@ type t =
   { delayed : Rel_utils.Delayed.t
   ; domain : Domains.t
   ; constraints : Constraints.t
-  ; congruence : Congruence.t }
+  ; congruence : Congruence.t
+  ; size_splits : Q.t }
 
 let empty _ =
   { delayed = Rel_utils.Delayed.create dispatch
   ; domain = Domains.empty
   ; constraints = Constraints.empty
-  ; congruence = Congruence.empty }
+  ; congruence = Congruence.empty
+  ; size_splits = Q.one }
 
 let assume env uf la =
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
-  let (congruence, domain, constraints, eqs) =
+  let (congruence, domain, constraints, eqs, size_splits) =
     try
-      let (congruence, (constraints, domain)) =
-        List.fold_left (fun (cgr, (bcs, dom)) (a, _root, ex, orig) ->
+      let (congruence, (constraints, domain), size_splits) =
+        List.fold_left (fun (cgr, (bcs, dom), ss) (a, _root, ex, orig) ->
+            let ss =
+              match orig with
+              | Th_util.CS (Th_bitv, n) -> Q.(ss * n)
+              | _ -> ss
+            in
             match a, orig with
-            | L.Eq (rr, nrr), Th_util.Subst when is_bv_r rr ->
-              Congruence.subst rr nrr cgr (fun rr nrr (bcs, dom) ->
-                  let bl = abstract_bitlist (Shostak.Bitv.embed nrr) Ex.empty in
-                  let dom = Domains.update Ex.empty nrr dom bl in
-                  (Constraints.subst ex rr nrr bcs, Domains.subst ex rr nrr dom)
-                ) (bcs, dom)
+            | L.Eq (rr, nrr), Subst when is_bv_r rr ->
+              let cc, acc =
+                Congruence.subst rr nrr cgr (fun rr nrr (bcs, dom) ->
+                    let bl =
+                      abstract_bitlist (Shostak.Bitv.embed nrr) Ex.empty
+                    in
+                    let dom = Domains.update Ex.empty nrr dom bl in
+                    ( Constraints.subst ex rr nrr bcs
+                    , Domains.subst ex rr nrr dom )
+                  ) (bcs, dom)
+              in (cc, acc, ss)
             | L.Distinct (false, [rr; nrr]), NCS (Th_bitv, _) ->
               (* We don't support [distinct] in general yet, but we must
                  support it for case splits to avoid looping.
@@ -723,9 +735,11 @@ let assume env uf la =
                 Constraints.add bcs @@
                 { repr = Constraint.hcons @@ Bnot (rr, nrr)  ; ex }
               in
-              (cgr, (bcs, dom))
-            | _ -> (cgr, (bcs, dom))
-          ) (env.congruence, (env.constraints, env.domain)) la
+              (cgr, (bcs, dom), ss)
+            | _ -> (cgr, (bcs, dom), ss)
+          )
+          (env.congruence, (env.constraints, env.domain), env.size_splits)
+          la
       in
       let eqs, domain = propagate constraints domain in
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
@@ -736,7 +750,7 @@ let assume env uf la =
           ~module_name:"Bitv_rel" ~function_name:"assume"
           "bitlist contraints: @[%a@]" Constraints.pp constraints;
       );
-      (congruence, domain, constraints, eqs)
+      (congruence, domain, constraints, eqs, size_splits)
     with Bitlist.Inconsistent ex ->
       raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
   in
@@ -746,49 +760,52 @@ let assume env uf la =
   let result =
     { result with assume = List.rev_append assume result.assume }
   in
-  { delayed ; constraints ; domain ; congruence }, result
+  { delayed ; constraints ; domain ; congruence ; size_splits }, result
 
 let query _ _ _ = None
 
-let case_split env _uf ~for_model:_ =
-  (* Look for representatives with minimal, non-fully known, domain size.
-     [nunk] is the number of unknown bits. *)
-  let _, candidates =
-    match
-      Domains.fold (fun r bl acc ->
-          let nunk = Bitlist.num_unknown bl in
-          if nunk = 0 then
-            acc
-          else
-            match acc with
-            | Some (nunk', _) when nunk > nunk' -> acc
-            | Some (nunk', xs) when nunk = nunk' ->
-              Some (nunk', SX.add r xs)
-            | _ -> Some (nunk, SX.singleton r)
-        ) env.domain None
-    with
-    | Some (nunk, xs) -> nunk, xs
-    | None -> 0, SX.empty
-  in
-  (* For now, just pick a value for the most significant bit. *)
-  match SX.choose candidates with
-  | r ->
-    let biv = Shostak.Bitv.embed r in
-    let rec aux = function
-      | [] -> assert false
-      | { Bitv.bv = Bitv.Cte _; _ } :: biv -> aux biv
-      | part :: _ ->
-        Bitv.extract part.sz (part.sz - 1) (part.sz - 1) [ part ]
+let case_split env _uf ~for_model =
+  if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
+    []
+  else
+    (* Look for representatives with minimal, non-fully known, domain size.
+       [nunk] is the number of unknown bits. *)
+    let _, candidates =
+      match
+        Domains.fold (fun r bl acc ->
+            let nunk = Bitlist.num_unknown bl in
+            if nunk = 0 then
+              acc
+            else
+              match acc with
+              | Some (nunk', _) when nunk > nunk' -> acc
+              | Some (nunk', xs) when nunk = nunk' ->
+                Some (nunk', SX.add r xs)
+              | _ -> Some (nunk, SX.singleton r)
+          ) env.domain None
+      with
+      | Some (nunk, xs) -> nunk, xs
+      | None -> 0, SX.empty
     in
-    let lhs = Shostak.Bitv.is_mine @@ aux biv in
-    (* Just always pick zero for now. *)
-    let zero = Shostak.Bitv.is_mine Bitv.[ { bv = Cte Z.zero ; sz = 1 } ] in
-    if Options.get_debug_bitv () then
-      Printer.print_dbg
-        ~module_name:"Bitv_rel" ~function_name:"case_split"
-        "[BV-CS-1] Setting %a to 0" X.print lhs;
-    [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
-  | exception Not_found -> []
+    (* For now, just pick a value for the most significant bit. *)
+    match SX.choose candidates with
+    | r ->
+      let biv = Shostak.Bitv.embed r in
+      let rec aux = function
+        | [] -> assert false
+        | { Bitv.bv = Bitv.Cte _; _ } :: biv -> aux biv
+        | part :: _ ->
+          Bitv.extract part.sz (part.sz - 1) (part.sz - 1) [ part ]
+      in
+      let lhs = Shostak.Bitv.is_mine @@ aux biv in
+      (* Just always pick zero for now. *)
+      let zero = Shostak.Bitv.is_mine Bitv.[ { bv = Cte Z.zero ; sz = 1 } ] in
+      if Options.get_debug_bitv () then
+        Printer.print_dbg
+          ~module_name:"Bitv_rel" ~function_name:"case_split"
+          "[BV-CS-1] Setting %a to 0" X.print lhs;
+      [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
+    | exception Not_found -> []
 
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
