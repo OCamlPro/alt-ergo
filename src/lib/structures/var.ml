@@ -59,6 +59,10 @@ let equal a b = compare a b = 0
 
 let hash { id; _ } = id
 
+let underscore =
+  Random.self_init ();
+  of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
+
 let to_string {hs ; id} =
   Format.sprintf "%s~%d" (Hstring.view hs) id
 
@@ -77,4 +81,12 @@ let save_cnt, reinit_cnt =
 
 
 module Set = Set.Make(struct type t = view let compare = compare end)
-module Map = Map.Make(struct type t = view let compare = compare end)
+
+module Map : sig
+  include Map.S with type key = t
+  val print : 'a Fmt.t -> 'a t Fmt.t
+end = struct
+  include Map.Make (struct type nonrec t = t let compare = compare end)
+  let print pr_elt fmt sbt =
+    iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
+end

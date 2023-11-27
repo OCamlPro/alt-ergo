@@ -43,6 +43,8 @@ val equal : t -> t -> bool
 
 val hash : t -> int
 
+val underscore : t
+
 val print : Format.formatter -> t -> unit
 
 val to_string : t -> string
@@ -55,7 +57,9 @@ val reinit_cnt: unit -> unit
     is saved, since after the initialization of the modules [cnt] is set to 1
     when initializing the [underscore] constant in the Symbols module *)
 
-module Map : Map.S with type key = t
-
 module Set : Set.S with type elt = t
 
+module Map : sig
+  include Map.S with type key = t
+  val print : 'a Fmt.t -> 'a t Fmt.t
+end

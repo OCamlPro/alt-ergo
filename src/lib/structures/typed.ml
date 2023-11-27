@@ -124,7 +124,7 @@ and 'a tform =
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
   | TFlet of (Symbols.t * Ty.t) list *
-             (Symbols.t * 'a tlet_kind) list * 'a atform
+             (Var.t * 'a tlet_kind) list * 'a atform
   | TFnamed of Hstring.t * 'a atform
   | TFmatch of 'a atterm * (pattern * 'a atform) list
 
@@ -332,7 +332,7 @@ and print_formula =
     | TFlet (_, binders, f) ->
       List.iter
         (fun (sy, let_e) ->
-           fprintf fmt " let %a = " Symbols.print sy;
+           fprintf fmt " let %a = " Var.print sy;
            match let_e with
            | TletTerm t -> fprintf fmt "%a in@." print_term t
            | TletForm f -> fprintf fmt "%a in@." print_formula f

@@ -30,7 +30,7 @@
 
 module E = Expr
 module ME = E.Map
-module SubstE = Symbols.Map
+module SubstE = Var.Map
 
 module type S = sig
   type t
@@ -41,7 +41,7 @@ module type S = sig
   val make:
     max_t_depth:int ->
     Matching_types.info ME.t ->
-    E.t list ME.t SubstE.t ->
+    E.t list ME.t Symbols.Map.t ->
     Matching_types.trigger_info list ->
     t
 
@@ -49,7 +49,7 @@ module type S = sig
   val max_term_depth : t -> int -> t
   val add_triggers :
     Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
-  val terms_info : t -> Matching_types.info ME.t * E.t list ME.t SubstE.t
+  val terms_info : t -> Matching_types.info ME.t * E.t list ME.t Symbols.Map.t
   val query :
     Util.matching_env -> t -> theory ->
     (Matching_types.trigger_info * Matching_types.gsubst list) list
@@ -70,7 +70,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   type theory = X.t
 
   type t = {
-    fils : E.t list ME.t SubstE.t ;
+    fils : E.t list ME.t Symbols.Map.t ;
     info : Matching_types.info ME.t ;
     max_t_depth : int;
     pats : Matching_types.trigger_info list
@@ -79,7 +79,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
   exception Echec
 
   let empty = {
-    fils = SubstE.empty ;
+    fils = Symbols.Map.empty ;
     info = ME.empty ;
     pats = [ ];
     max_t_depth = 0;
@@ -198,7 +198,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         let { E.f = f; xs = xs; _ } = E.term_view t in
         let env =
           let map_f =
-            try SubstE.find f env.fils with Not_found -> ME.empty in
+            try Symbols.Map.find f env.fils with Not_found -> ME.empty in
 
           (* - l'age d'un terme est le min entre l'age passe en argument
              et l'age dans la map
@@ -217,7 +217,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
               info.term_from_terms
           in
           { env with
-            fils = SubstE.add f (ME.add t xs map_f) env.fils;
+            fils = Symbols.Map.add f (ME.add t xs map_f) env.fils;
             info =
               ME.add t
                 { age=g; lem_orig = from_lems; but=b;
@@ -237,7 +237,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         s_term_orig=s_torig;
         s_lem_orig = s_lorig}: Matching_types.gsubst) lsbt_acc =
     let open Matching_types in
-    SubstE.fold
+    Symbols.Map.fold
       (fun _ s l ->
          ME.fold
            (fun t _ l ->
@@ -380,17 +380,17 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_term sg t pat;
     let { E.f = f_pat; xs = pats; ty = ty_pat; _ } = E.term_view pat in
     match f_pat with
-    |  Symbols.Var _ when Symbols.equal f_pat Symbols.underscore ->
+    |  Symbols.Var v when Var.equal v Var.underscore ->
       begin
         try [ { sg with sty = Ty.matching s_ty ty_pat (E.type_info t) } ]
         with Ty.TypeClash _ -> raise Echec
       end
-    | Symbols.Var _ ->
+    | Symbols.Var v ->
       let sb =
         (try
            let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
            let g',b' = infos max (||) t g b env in
-           add_msymb tbox f_pat t
+           add_msymb tbox v t
              { sg with sty=s_ty; gen=g'; goal=b' }
              env.max_t_depth
          with Ty.TypeClash _ -> raise Echec)
@@ -454,7 +454,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
     let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
     match f with
-    | Symbols.Var _ -> all_terms f ty env tbox sg lsbt_acc
+    | Symbols.Var v -> all_terms v ty env tbox sg lsbt_acc
     | _ ->
       let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
       let f_aux t xs lsbt =
@@ -475,7 +475,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
             List.rev_append aux lsbt
           with Echec | Ty.TypeClash _ -> lsbt
       in
-      try ME.fold f_aux (SubstE.find f env.fils) lsbt_acc
+      try ME.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
   let match_pats_modulo mconf env tbox lsubsts pat =

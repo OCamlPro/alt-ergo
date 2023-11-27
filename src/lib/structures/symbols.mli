@@ -98,7 +98,6 @@ type t =
 
 val name : ?kind:name_kind -> ?defined:bool -> string -> t
 val var : Var.t -> t
-val underscore : t
 val int : string -> t
 val bitv : string -> t
 val real : string -> t
@@ -143,7 +142,8 @@ val fresh_internal_string : unit -> string
 val fresh_internal_name : unit -> t
 val is_fresh_internal_name : t -> bool
 
-val fresh_skolem : ?is_var:bool -> string -> t
+val fresh_skolem_string : string -> string
+val fresh_skolem_name : string -> t
 val make_as_fresh_skolem : string -> t
 val is_fresh_skolem : t -> bool
 (** Resets to 0 the fresh symbol counter *)
@@ -171,8 +171,4 @@ val reset_id_builders : unit -> unit
 
 module Set : Set.S with type elt = t
 
-module Map : sig
-  include Map.S with type key = t
-  val print :
-    (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-end
+module Map : Map.S with type key = t

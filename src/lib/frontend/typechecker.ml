@@ -1349,14 +1349,15 @@ and type_form ?(in_theory=false) env f =
                  let fzz = type_form env e in
                  TletForm fzz, Ty.Tbool
              in
-             (sy, Symbols.var @@ Var.of_string sy, xx, tty):: binders
+             (sy, Var.of_string sy, xx, tty):: binders
           )[] binders
       in
       let up = Env.list_of env in
       let env =
         List.fold_left
           (fun env (v, sv, _, ty) ->
-             {env with Env.var_map = MString.add v (sv, ty) env.Env.var_map}
+             {env with Env.var_map =
+                         MString.add v (Symbols.var sv, ty) env.Env.var_map}
           ) env binders
       in
       let f = type_form env f in
