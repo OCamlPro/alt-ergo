@@ -137,9 +137,15 @@ let main () =
         end;
       SAT.reset_refs ();
       let ftdn_env = FE.init_env used_context in
+      let hook_on_status status i =
+        Frontend.print_status status i;
+        match status with
+        | Timeout _ -> exit_as_timeout ()
+        | _ -> ()
+      in
       let () =
         List.iter
-          (FE.process_decl ~hook_on_status:Frontend.print_status ftdn_env)
+          (FE.process_decl ~hook_on_status ftdn_env)
           cnf
       in
       if Options.get_timelimit_per_goal() then
