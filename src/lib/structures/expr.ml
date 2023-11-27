@@ -1682,7 +1682,9 @@ let mk_let let_v let_e in_e =
     Var.Map.fold (fun v (ty ,_) acc -> (mk_term (Sy.var v) [] ty)::acc)
       free_vars []
   in
-  let let_sko = mk_term (Sy.fresh_skolem_name "_let") free_v_as_terms let_e_ty in
+  let let_sko =
+    mk_term (Sy.fresh_skolem_name "_let") free_v_as_terms let_e_ty
+  in
   let is_bool = type_info in_e == Ty.Tbool in
   mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
