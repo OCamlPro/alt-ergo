@@ -181,6 +181,9 @@ type 'a alpha_term = {
   sz : int;
 }
 
+let pp_alpha_term pp ppf { bv; sz } =
+  Fmt.pf ppf "%a[%d]" pp bv sz
+
 let equal_alpha_term eq { bv = bv1; sz = sz1 } {bv = bv2; sz = sz2 } =
   Int.equal sz1 sz2 && eq bv1 bv2
 
@@ -304,10 +307,14 @@ let negate_abstract xs = List.map negate_simple_term xs
 
 type solver_simple_term = tvar alpha_term
 
+let pp_solver_simple_term = pp_alpha_term pp_tvar
+
 let negate_solver_simple_term (st : solver_simple_term) : solver_simple_term =
   { st with bv = negate_tvar st.bv }
 
 type bitv = solver_simple_term list
+
+let pp_bitv = Fmt.(list ~sep:(any " @@@ ") pp_solver_simple_term |> box)
 
 let fresh_bitv genre sz : bitv =
   if sz <= 0 then [] else [ { bv = s_var genre ; sz } ]
@@ -481,9 +488,6 @@ module Shostak(X : ALIEN) = struct
   module Debug = struct
     open Printer
 
-    let print_tvar fmt (tv,sz) =
-      Format.fprintf fmt "%a[%d]" pp_tvar tv sz
-
     let print fmt ast =
       let open Format in
       match ast.bv with
@@ -500,12 +504,6 @@ module Shostak(X : ALIEN) = struct
         [] -> assert false
       | x::l -> print fmt x; List.iter (Format.fprintf fmt " @@ %a" print) l
 
-    let print_s fmt ast = print_tvar fmt (ast.bv, ast.sz)
-
-    let print_S_ast fmt = function
-        [] -> assert false
-      | x::l -> print_s fmt x; List.iter (Format.fprintf fmt " @@ %a" print_s) l
-
     let print_sliced_sys l =
       let print fmt (a,b) =
         Format.fprintf fmt " %a == %a@ " print a print b
@@ -518,7 +516,7 @@ module Shostak(X : ALIEN) = struct
 
     let print_c_solve_res l =
       let print fmt (a,b) =
-        Format.fprintf fmt " %a == %a@ " print_X a print_S_ast b
+        Format.fprintf fmt " %a == %a@ " print_X a pp_bitv b
       in
       if Options.get_debug_bitv () then
         Printer.print_dbg
@@ -530,7 +528,7 @@ module Shostak(X : ALIEN) = struct
       let print fmt (t,cte_l) =
         Format.fprintf fmt " %a%a@ " print_X t
           (fun fmt ->
-             List.iter (fun l' -> Format.fprintf fmt " == %a" print_S_ast l'))
+             List.iter (fun l' -> Format.fprintf fmt " == %a" pp_bitv l'))
           cte_l
       in
       if Options.get_debug_bitv () then
@@ -1103,13 +1101,15 @@ module Shostak(X : ALIEN) = struct
       in
       slice_vars_fix pat [] [] eqs
 
-
     let apply_subs subs sys =
       let rec f_aux = function
-        |[] -> []
-        |v::r ->
+        | [] -> []
+        | v::r ->
           match assoc_var v subs with
-          | vl -> vl @ f_aux r
+          | vl ->
+            (* Substitutions may be recursive and need to be applied again to
+               their result. *)
+            f_aux (vl @ r)
           | exception Not_found -> v :: f_aux r
       in List.map (fun (t,vls) ->(t,List.map f_aux vls))sys
 
@@ -1129,7 +1129,7 @@ module Shostak(X : ALIEN) = struct
 
        [equations_slice parts] returns a new system that is equivalent to the
        original system, but where each uninterpreted term is associated with a
-      *uniform* multi-equation (see the definition of [uniforme_slice]).
+       *uniform* multi-equation (see the definition of [uniforme_slice]).
 
        Note that [equations_slice] works recursively: trying to make an uniform
        multi-equation for a specific uninterpreted term may cause some of its
@@ -1141,12 +1141,12 @@ module Shostak(X : ALIEN) = struct
       let rec slice_rec bw = function
         |[] -> bw
         |(t,vls)::r ->
-          let (vls',subs) = uniforme_slice vls
-          in if Lists.is_empty subs then slice_rec ((t,vls')::bw) r
+          let (vls', csub) = uniforme_slice vls in
+          if Lists.is_empty csub then slice_rec ((t,vls')::bw) r
           else
             begin
-              let _bw = apply_subs subs bw in
-              let _fw = apply_subs subs r in
+              let _bw = apply_subs csub bw in
+              let _fw = apply_subs csub r in
               let eq (_, l1) (_, l2) =
                 (* [apply_subs] does not change the left-hand sides *)
                 Stdcompat.List.(equal (equal (equal_alpha_term equal_tvar)))
@@ -1227,18 +1227,20 @@ module Shostak(X : ALIEN) = struct
         else
           begin
             let st_sys = slice u v in
+            if Options.get_debug_bitv () then
+              Debug.print_sliced_sys st_sys;
             let sys_sols = sys_solve st_sys in
+            if Options.get_debug_bitv () then
+              Debug.print_c_solve_res sys_sols;
             let parts = partition (equal_alpha_term X.equal) sys_sols in
+            if Options.get_debug_bitv () then
+              Debug.print_partition_res parts;
             let unif_slic = equations_slice parts in
+            if Options.get_debug_bitv () then
+              Debug.print_partition_res unif_slic;
             let sol = build_solution unif_slic in
             if Options.get_debug_bitv () then
-              begin
-                Debug.print_sliced_sys st_sys;
-                Debug.print_c_solve_res sys_sols;
-                Debug.print_partition_res parts;
-                Debug.print_partition_res unif_slic;
-                Debug.print_final_solution sol;
-              end;
+              Debug.print_final_solution sol;
             sol
           end
       end
