@@ -1206,7 +1206,7 @@ let is_skolem_cst v =
 
 let get_skolem =
   let hsko = Hsko.create 17 in
-  let gen_sko ty = mk_term (Sy.fresh_skolem "@sko") [] ty in
+  let gen_sko ty = mk_term (Sy.fresh_skolem_name "@sko") [] ty in
   fun v ty ->
     try Hsko.find hsko v
     with Not_found ->
@@ -1682,7 +1682,7 @@ let mk_let let_v let_e in_e =
     Var.Map.fold (fun v (ty ,_) acc -> (mk_term (Sy.var v) [] ty)::acc)
       free_vars []
   in
-  let let_sko = mk_term (Sy.fresh_skolem "_let") free_v_as_terms let_e_ty in
+  let let_sko = mk_term (Sy.fresh_skolem_name "_let") free_v_as_terms let_e_ty in
   let is_bool = type_info in_e == Ty.Tbool in
   mk_let_aux {let_v; let_e; in_e; let_sko; is_bool}
 
@@ -2570,21 +2570,13 @@ module Purification = struct
         in_e, add_let let_v let_e lets
 
       | (Sy.Lit _ | Sy.Form _), _ ->
-        let fresh_var =
-          match Sy.fresh_skolem ~is_var:true "Pur-F" with
-          | Sy.Var v -> v
-          | _ -> assert false
-        in
+        let fresh_var = Var.of_string @@ Sy.fresh_skolem_string "Pur-F" in
         mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
       | _ -> (* detect ITEs *)
         match t.xs with
         | [_;_;_] when is_ite t.f ->
-          let fresh_var =
-            match Sy.fresh_skolem ~is_var:true "Pur-Ite" with
-            | Sy.Var v -> v
-            | _ -> assert false
-          in
+          let fresh_var = Var.of_string @@ Sy.fresh_skolem_string "Pur-Ite" in
           mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
         | _ ->

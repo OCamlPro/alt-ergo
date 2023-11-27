@@ -497,12 +497,8 @@ module SkolemId = MakeId(struct let prefix = ".?__" end)
 let fresh_internal_string () = InternalId.fresh ()
 let fresh_internal_name () = name (fresh_internal_string ())
 
-let fresh_skolem ?(is_var=false) base =
-  let fresh = SkolemId.fresh ~base () in
-  if is_var then
-    var @@ Var.of_string fresh
-  else
-    name fresh
+let fresh_skolem_string base = SkolemId.fresh ~base ()
+let fresh_skolem_name base = name (fresh_skolem_string base)
 
 let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
 

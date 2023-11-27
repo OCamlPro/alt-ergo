@@ -142,7 +142,8 @@ val fresh_internal_string : unit -> string
 val fresh_internal_name : unit -> t
 val is_fresh_internal_name : t -> bool
 
-val fresh_skolem : ?is_var:bool -> string -> t
+val fresh_skolem_string : string -> string
+val fresh_skolem_name : string -> t
 val make_as_fresh_skolem : string -> t
 val is_fresh_skolem : t -> bool
 (** Resets to 0 the fresh symbol counter *)
