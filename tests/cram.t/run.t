@@ -40,7 +40,20 @@ And some SMT2 action.
 Here are some tests to check that we have sane behavior given the insane
 combinations of produce-models et al.
 
-First, if model generation is not enabled, we should error out when a
+First, if (get-model) is called outside the SAT mode, we should fail.
+  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  (error "Invalid action during mode Start: Command get-model")
+
+
+  $ echo '(set-logic ALL)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  (error "Invalid action during mode Assert: Command get-model")
+
+  $ echo '(set-logic ALL)(assert false)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unsat
+  (error "Invalid action during mode Unsat: Command get-model")
+
+Then, if model generation is not enabled, we should error out when a
 `(get-model)` statement is issued:
 
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
