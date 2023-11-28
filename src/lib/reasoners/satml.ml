@@ -208,8 +208,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable nb_init_clauses : int;
 
-      mutable model : Atom.var Vec.t;
-
       mutable tenv : Th.t;
 
       mutable unit_tenv : Th.t;
@@ -313,8 +311,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       nb_init_vars = 0;
 
       nb_init_clauses = 0;
-
-      model = Vec.make 0 Atom.dummy_var;
 
       tenv = Th.empty();
 
@@ -1684,7 +1680,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           ) (unit_cnf, nunit_cnf) new_v
       in
       env.nb_init_vars <- nbv;
-      Vec.grow_to_by_double env.model nbv;
       accu
 
   let set_new_proxies env proxies =
