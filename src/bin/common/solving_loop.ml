@@ -140,7 +140,8 @@ let main () =
       let hook_on_status status i =
         Frontend.print_status status i;
         match status with
-        | Timeout _ -> exit_as_timeout ()
+        | Timeout _ when not (Options.get_timelimit_per_goal ()) ->
+          exit_as_timeout ()
         | _ -> ()
       in
       let () =
@@ -173,6 +174,8 @@ let main () =
         end
       | `Unsat -> None
     with Util.Timeout ->
+      (* It is still necessary to leave this catch here, because we may
+         trigger this exception in between calls of the sat solver. *)
       if not (Options.get_timelimit_per_goal()) then exit_as_timeout ();
       None
   in

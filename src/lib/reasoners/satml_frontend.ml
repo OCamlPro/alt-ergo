@@ -61,7 +61,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     add_inst : E.t -> bool;
     guards : guards;
     mutable last_saved_model : Models.t Lazy.t option;
-    mutable model_gen_phase : bool;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
@@ -95,7 +94,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       guards = init_guards ();
       add_inst = (fun _ -> true);
       last_saved_model = None;
-      model_gen_phase = false;
       unknown_reason = None;
       objectives = None
     }
@@ -997,13 +995,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let update_model_and_return_unknown env compute_model ~unknown_reason =
-    try
-      may_update_last_saved_model env compute_model;
-      Options.Time.unset_timeout ();
-      i_dont_know env unknown_reason
-    with Util.Timeout when env.model_gen_phase ->
-      (* In this case, timeout reason becomes 'ModelGen' *)
-      i_dont_know env (Timeout ModelGen)
+    may_update_last_saved_model env compute_model;
+    Options.Time.unset_timeout ();
+    i_dont_know env unknown_reason
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
@@ -1256,7 +1250,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           assert (not (Stack.is_empty env.guards.stack_guard));
           let b = Stack.top env.guards.stack_guard in
           Steps.pop_steps ();
-          env.model_gen_phase <- false;
           env.last_saved_model <- None;
           env.inst <- inst;
           env.guards.current_guard <- b
