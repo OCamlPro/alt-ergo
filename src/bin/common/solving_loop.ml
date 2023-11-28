@@ -129,6 +129,8 @@ type solve_res =
   | Unknown of model option
   | Unsat
 
+exception StopProcessDecl
+
 let main () =
   let () = Dolmen_loop.Code.init [] in
 
@@ -154,12 +156,15 @@ let main () =
         match status with
         | Timeout _ when not (Options.get_timelimit_per_goal ()) ->
           exit_as_timeout ()
-        | _ -> ()
+        | _ -> raise StopProcessDecl
       in
       let () =
-        List.iter
-          (FE.process_decl ~hook_on_status ftdn_env)
-          cnf
+        try
+          List.iter
+            (FE.process_decl ~hook_on_status ftdn_env)
+            cnf
+        with
+        | StopProcessDecl -> ()
       in
       if Options.get_timelimit_per_goal() then
         Options.Time.unset_timeout ();
