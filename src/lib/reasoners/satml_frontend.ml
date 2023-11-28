@@ -61,7 +61,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     add_inst : E.t -> bool;
     guards : guards;
     mutable last_saved_model : Models.t Lazy.t option;
-    mutable model_gen_phase : bool;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
@@ -95,7 +94,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       guards = init_guards ();
       add_inst = (fun _ -> true);
       last_saved_model = None;
-      model_gen_phase = false;
       unknown_reason = None;
       objectives = None
     }
@@ -997,36 +995,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
 
   let update_model_and_return_unknown env compute_model ~unknown_reason =
-    try
-      may_update_last_saved_model env compute_model;
-      Options.Time.unset_timeout ();
-      i_dont_know env unknown_reason
-    (* Timeout -> I_dont_know conversions temporarily disabled
-       https://github.com/OCamlPro/alt-ergo/issues/946 *)
-    with Util.Timeout when env.model_gen_phase && false ->
-      (* In this case, timeout reason becomes 'ModelGen' *)
-      i_dont_know env (Timeout ModelGen)
-
-  (* WARNING: temporary unused after the PR #950. *)
-  (* let model_gen_on_timeout env =
-     let i = Options.get_interpretation () in
-     let ti = Options.get_timelimit_interpretation () in
-     if not i || (* not asked to gen a model *)
-       !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
-       Stdlib.(=) ti 0. (* no time allocated for extra model search *)
-     then
-      i_dont_know env (Timeout ProofSearch)
-     else
-      begin
-        (* Beware: models generated on timeout of ProofSearch phase may
-           be incoherent wrt. the ground part of the pb (ie. if delta
-           is not empty ? *)
-        env.model_gen_phase := true;
-        Options.Time.unset_timeout ();
-        Options.Time.set_timeout ti;
-        update_model_and_return_unknown
-          env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
-      end *)
+    may_update_last_saved_model env compute_model;
+    Options.Time.unset_timeout ();
+    i_dont_know env unknown_reason
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
@@ -1143,9 +1114,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     try SAT.solve env.satml; assert false
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-    (* Timeout -> I_dont_know conversions temporarily disabled
-       https://github.com/OCamlPro/alt-ergo/issues/946 *)
-    (* | Util.Timeout -> model_gen_on_timeout env *)
+    | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
     | Satml.Sat ->
       try
         do_case_split env Util.BeforeMatching;
@@ -1185,9 +1154,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         unsat_rec env ~first_call:false
 
       with
-      (* Timeout -> I_dont_know conversions temporarily disabled
-         https://github.com/OCamlPro/alt-ergo/issues/946 *)
-      (* | Util.Timeout -> model_gen_on_timeout env *)
+      | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
         begin
@@ -1196,9 +1163,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             unsat_rec env ~first_call:false
           with
           | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-          (* Timeout -> I_dont_know conversions temporarily disabled
-             https://github.com/OCamlPro/alt-ergo/issues/946 *)
-          (* | Util.Timeout -> model_gen_on_timeout env *)
+          | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
         end
 
   let rec unsat_rec_prem env ~first_call : unit =
@@ -1285,7 +1250,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           assert (not (Stack.is_empty env.guards.stack_guard));
           let b = Stack.top env.guards.stack_guard in
           Steps.pop_steps ();
-          env.model_gen_phase <- false;
           env.last_saved_model <- None;
           env.inst <- inst;
           env.guards.current_guard <- b
@@ -1337,12 +1301,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     assert (SAT.decision_level env.satml == 0);
     try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with | IUnsat (_env, dep) -> raise (Unsat dep)
-         (* Timeout -> I_dont_know conversions temporarily disabled
-            https://github.com/OCamlPro/alt-ergo/issues/946 *)
-         (* | Util.Timeout ->
-            (* don't attempt to compute a model if timeout before
+         | Util.Timeout ->
+           (* don't attempt to compute a model if timeout before
               calling unsat function *)
-            i_dont_know env (Timeout Assume) *)
+           i_dont_know env (Timeout Assume)
          | Util.Step_limit_reached n ->
            (* When reaching the step limit on an assume, we do not want to
               answer 'unknown' right away. *)
