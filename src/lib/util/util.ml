@@ -98,6 +98,29 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+type mode =
+  | Start
+  | Assert
+  | Sat
+  | Unsat
+
+let pp_mode fmt m =
+  Format.pp_print_string fmt begin
+    match m with
+    | Start -> "Start"
+    | Assert -> "Assert"
+    | Sat -> "Sat"
+    | Unsat -> "Unsat"
+  end
+
+let equal_mode x y = match x, y with
+  | Start, Start
+  | Assert, Assert
+  | Sat, Sat
+  | Unsat, Unsat -> true
+  | (Start | Assert | Sat | Unsat), (Start | Assert | Sat | Unsat) ->
+    false
+
 let th_ext_of_string ext =
   match ext with
   | "Sum" -> Some Sum

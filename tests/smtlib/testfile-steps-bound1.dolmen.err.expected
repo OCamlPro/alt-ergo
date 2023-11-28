@@ -1,0 +1,1 @@
+(error "Invalid action during Assert mode: Set option steps_bound")

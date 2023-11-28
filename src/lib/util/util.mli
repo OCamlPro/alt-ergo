@@ -76,6 +76,19 @@ type theories_extensions =
 
 type axiom_kind = Default | Propagator
 
+(** The different modes alt-ergo can be in.
+    https://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf#52
+*)
+type mode =
+  | Start
+  | Assert
+  | Sat
+  | Unsat
+
+val equal_mode : mode -> mode -> bool
+
+val pp_mode : Format.formatter -> mode -> unit
+
 val th_ext_of_string : string -> theories_extensions option
 val string_of_th_ext : theories_extensions -> string
 

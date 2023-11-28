@@ -396,9 +396,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
-  let check_step_limit f env =
+  (** Checks whether the env can be used before actually calling the
+      function. *)
+  let check_if_over f env =
     match SAT.get_unknown_reason env.sat_env with
-    | Some (Step_limit _) -> ()
+    | Some (Step_limit _ | Timeout _) -> ()
     | _ -> f env
 
   let handle_sat_exn f ?loc x env =
@@ -415,7 +417,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
      don't do anything), and then calls the function & catches the
      exceptions. *)
   let wrap_f f ?loc x env =
-    check_step_limit (handle_sat_exn f ?loc x) env
+    check_if_over (handle_sat_exn f ?loc x) env
 
   let push = wrap_f internal_push
 
@@ -432,19 +434,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
     try
       match d.st_decl with
-      | Push n -> check_step_limit (internal_push ~loc:d.st_loc n) env
-      | Pop n -> check_step_limit (internal_pop ~loc:d.st_loc n) env
+      | Push n -> check_if_over (internal_push ~loc:d.st_loc n) env
+      | Pop n -> check_if_over (internal_pop ~loc:d.st_loc n) env
       | Assume (n, f, mf) ->
-        check_step_limit (internal_assume ~loc:d.st_loc (n, f, mf)) env
+        check_if_over (internal_assume ~loc:d.st_loc (n, f, mf)) env
       | PredDef (f, name) ->
-        check_step_limit (internal_pred_def ~loc:d.st_loc (name, f)) env
+        check_if_over (internal_pred_def ~loc:d.st_loc (name, f)) env
       | RwtDef _ -> assert false
       | Query (n, f, sort) ->
         begin
           (* If we have reached an unknown state, we can return it right
              away. *)
           match SAT.get_unknown_reason env.sat_env with
-          | Some (Step_limit _) -> raise SAT.I_dont_know
+          | Some (Step_limit _ | Timeout _)  -> raise SAT.I_dont_know
           | Some _ ->
             (* For now, only the step limit is an unknown step reachable
                here. We could raise SAT.I_dont_know as in the previous case,
@@ -458,7 +460,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             | _ -> assert false
         end
       | ThAssume th_elt ->
-        check_step_limit (internal_th_assume ~loc:d.st_loc th_elt) env
+        check_if_over (internal_th_assume ~loc:d.st_loc th_elt) env
     with
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,

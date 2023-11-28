@@ -40,47 +40,68 @@ And some SMT2 action.
 Here are some tests to check that we have sane behavior given the insane
 combinations of produce-models et al.
 
-First, if model generation is not enabled, we should error out when a
+First, if (get-model) is called outside the SAT mode, we should fail.
+  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  (error "Invalid action during Start mode: Command get-model")
+
+
+  $ echo '(set-logic ALL)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  (error "Invalid action during Assert mode: Command get-model")
+
+  $ echo '(set-logic ALL)(assert false)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unsat
+  (error "Invalid action during Unsat mode: Command get-model")
+
+Then, if model generation is not enabled, we should error out when a
 `(get-model)` statement is issued:
 
-  $ echo '(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error
+  $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unknown
   (error "Model generation disabled (try --produce-models)")
 
 This should be the case Tableaux solver as well:
 
-  $ echo '(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error
+  $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unknown
   (error "Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
 
-  $ echo '(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 --continue-on-error
-  (error "No model produced.")
+  $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unknown
+  (error "Model generation disabled (try --produce-models)")
 
-  $ echo '(set-option :produce-models true)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error
-  (error "No model produced.")
+  $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
+  
+  unknown
+  (error "Model generation disabled (try --produce-models)")
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
 
-  $ echo '(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
 
-  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(set-option :produce-models true)(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
-  $ echo '(set-option :produce-models true)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
+  $ echo '(set-option :produce-models true)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
 
 We now test the --continue-on-error strategy where alt-ergo fails (legitimately) on some commands but keeps running.
-  $ echo '(get-info :foo) (set-option :bar) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
+  $ echo '(get-info :foo) (set-option :bar) (set-logic ALL) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
   unsupported
   
   (error "Invalid set-option")

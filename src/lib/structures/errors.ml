@@ -85,6 +85,10 @@ type run_error =
   | Unsupported_feature of string
   | Dynlink_error of string
 
+type mode_error =
+  | Invalid_set_option of string
+  | Forbidden_command of string
+
 type error =
   | Parser_error of string
   | Lexical_error of Loc.t * string
@@ -93,6 +97,7 @@ type error =
   | Run_error of run_error
   | Warning_as_error
   | Dolmen_error of (int * string)
+  | Mode_error of Util.mode * mode_error
 
 exception Error of error
 
@@ -107,6 +112,12 @@ let run_error e =
 let warning_as_error () =
   if Options.get_warning_as_error () then
     error (Warning_as_error)
+
+let invalid_set_option mode opt_key =
+  error (Mode_error (mode, Invalid_set_option opt_key))
+
+let forbidden_command mode cmd_name =
+  error (Mode_error (mode, Forbidden_command cmd_name))
 
 let report_typing_error fmt = function
   | BitvExtract(i,j) ->
@@ -235,6 +246,12 @@ let report_run_error fmt = function
   | Dynlink_error s ->
     fprintf fmt "[Dynlink] %s" s
 
+let report_mode_error fmt = function
+  | Invalid_set_option s ->
+    fprintf fmt "Set option %s" s
+  | Forbidden_command s ->
+    fprintf fmt "Command %s" s
+
 let report fmt = function
   | Parser_error s ->
     Format.fprintf fmt "Parser Error: %s" s;
@@ -254,3 +271,9 @@ let report fmt = function
   | Dolmen_error (code, descr) ->
     Format.fprintf fmt "Error %s (code %i)" descr code;
   | Warning_as_error -> ()
+  | Mode_error (mode, merr) ->
+    Format.fprintf
+      fmt
+      "Invalid action during %a mode: %a"
+      Util.pp_mode mode
+      report_mode_error merr;
