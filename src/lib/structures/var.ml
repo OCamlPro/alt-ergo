@@ -59,9 +59,7 @@ let equal a b = compare a b = 0
 
 let hash { id; _ } = id
 
-let underscore =
-  Random.self_init ();
-  of_string @@ Format.sprintf "_%d" (Random.int 1_000_000)
+let underscore = of_string "._"
 
 let to_string {hs ; id} =
   Format.sprintf "%s~%d" (Hstring.view hs) id
