@@ -397,7 +397,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
- let internal_optimize ?(loc = Loc.dummy) (f, to_max) env =
+  let internal_optimize ?(loc = Loc.dummy) (f, to_max) env =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
