@@ -62,7 +62,7 @@ module Value : sig
         model values. *)
 
     | Unknown
-    (** The value of the objective function has not yet be determined. *)
+    (** The value of the objective function has not yet been determined. *)
 
   val pp : t Fmt.t
 end
@@ -71,14 +71,14 @@ module Model : sig
   type t
 
   val empty : t
-  (** [empty] *)
+  (** The empty model without objective functions. *)
 
   val is_empty : t -> bool
   (** [is_empty mdl] checks if the model doesn't contain any objective
       function. *)
 
   val fold : (Function.t -> Value.t -> 'b -> 'b) -> t -> 'b -> 'b
-  (** Iterator on the objective functions. *)
+  (** Iterator on the objective functions in decreasing order of priority. *)
 
   val add : Function.t -> Value.t -> t -> t
   (** [add o v] adds or updates the value of the objective function [o]. *)
