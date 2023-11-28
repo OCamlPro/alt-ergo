@@ -699,7 +699,7 @@ let main () =
       cmd_on_modes st [Assert] "maximize";
       handle_maximize_term term st
     | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
-      cmd_on_modes st [Sat] "maximize";
+      cmd_on_modes st [Sat] "get-objectives";
       handle_get_objectives args st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error

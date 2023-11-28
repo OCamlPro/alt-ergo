@@ -274,6 +274,6 @@ let report fmt = function
   | Mode_error (mode, merr) ->
     Format.fprintf
       fmt
-      "Invalid action during mode %a: %a"
+      "Invalid action during %a mode: %a"
       Util.pp_mode mode
       report_mode_error merr;
