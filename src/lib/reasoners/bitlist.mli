@@ -79,7 +79,7 @@ val num_unknown : t -> int
 (** [num_unknown b] returns the number of bits unknown in [b]. *)
 
 val is_fully_known : t -> bool
-(** [is_fully_known b] determines there are unknown bits in [b] or not.
+(** [is_fully_known b] determines if there are unknown bits in [b] or not.
     [is_fully_known b] is [true] iff [num_unknown b] is [0]. *)
 
 val value : t -> Z.t

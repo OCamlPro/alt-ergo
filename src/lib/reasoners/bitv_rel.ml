@@ -79,13 +79,13 @@ module MX = Shostak.MXH
 
 module Domains : sig
   type t
-  (** The type of domain maps. A domain map maps each representatives (semantic
-      values, of type [X.r]) to their associated domains.
+  (** The type of domain maps. A domain map maps each representative (semantic
+      value, of type [X.r]) to its associated domain.
 
       The keys of the domain maps are expected to be current *class
-      representatives*, i.e.  normal forms wrt the `Uf` module, in which case we
-      say the domain map is *normalized*. Use `subst` to ensure that domain maps
-      stay normalized. *)
+      representatives*, i.e.  normal forms wrt to the `Uf` module, in which
+      case we say the domain map is *normalized*. Use `subst` to ensure that
+      domain maps stay normalized. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for domain maps. *)
@@ -495,7 +495,7 @@ end = struct
 
   type t = {
     cs_set : CS.t ;
-    (*** All the contraints currently active *)
+    (*** All the constraints currently active *)
     cs_map : CS.t MX.t ;
     (*** Mapping from semantic values to the constraints that involves them *)
     fresh : CS.t ;
@@ -663,7 +663,7 @@ let add_eqs =
 
    - The constraints that were never propagated since they were added (this
       includes constraints that changed due to substitutions)
-   - The contraints involving variables whose domain changed since the last
+   - The constraints involving variables whose domain changed since the last
       propagation *)
 let propagate =
   let rec propagate changed bcs dom =
@@ -748,7 +748,7 @@ let assume env uf la =
           "bitlist domain: @[%a@]" Domains.pp domain;
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
-          "bitlist contraints: @[%a@]" Constraints.pp constraints;
+          "bitlist constraints: @[%a@]" Constraints.pp constraints;
       );
       (congruence, domain, constraints, eqs, size_splits)
     with Bitlist.Inconsistent ex ->

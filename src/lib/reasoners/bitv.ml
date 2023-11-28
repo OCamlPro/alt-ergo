@@ -311,13 +311,13 @@ let extract_st i j { bv; sz } =
     | Ext (r, sz, k, _) ->
       [{ bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }]
 
-(* extract i..j from a composition of size size
+(* extract [i..j] from a composition of size [size]
 
     an element of size [sz] at the head of the composition contains the bits
     [size - 1 .. size - sz] inclusive *)
 let rec extract size i j = function
   | [] ->
-    (* We can't extract a bv of length 0! *)
+    (* We can't extract from a bv of length 0! *)
     assert false
   | [ st ] ->
     assert (st.sz = size);

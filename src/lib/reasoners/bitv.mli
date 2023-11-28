@@ -48,7 +48,7 @@ type 'a simple_term = ('a simple_term_aux) alpha_term
 
 type 'a abstract = 'a simple_term list
 
-(** [extract size i j x] extracts [i..=j] from a composition of size [size].
+(** [extract size i j x] extracts [i..j] from a composition of size [size].
 
     An element of size [sz] at the head of the composition contains the bits
     [size - 1 .. size - sz] inclusive. *)

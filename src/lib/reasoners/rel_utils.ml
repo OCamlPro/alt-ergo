@@ -219,7 +219,7 @@ module Congruence : sig
       semantic value prior to calling [remove], or [Invalid_argument] will be
       raised.
 
-      Raised [Invalid_argument] if [r] is not a registered semantic value. *)
+      @raise [Invalid_argument] if [r] is not a registered semantic value. *)
 
   val subst : X.r -> X.r -> t -> (X.r -> X.r -> 'a -> 'a) -> 'a -> t * 'a
   (** [subst p v t f x] performs a local congruence closure of the
