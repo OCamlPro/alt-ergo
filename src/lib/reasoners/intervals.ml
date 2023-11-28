@@ -1064,10 +1064,6 @@ type interval_matching =
 module MV = Var.Map
 module Sy = Symbols
 
-let is_question_mark =
-  let qm = Hstring.make "?" in
-  fun s -> Hstring.equal qm (Var.view s).Var.hs
-
 let consistent_bnds low up =
   match low, up with
   | Some (q_low, str_low), Some (q_up, str_up) ->
@@ -1124,7 +1120,7 @@ let new_var idoms s ty =
 let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
   assert (not is_lower);
   match kind, max_bound i with
-  | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
+  | Sy.Unbounded, _ -> imatch (* ? var *)
   | Sy.VarBnd _, Minfty -> assert false
   | Sy.VarBnd s, Pinfty -> new_var imatch s sort
   | Sy.VarBnd s, Strict (v, _) -> new_low_bound imatch s sort v false
@@ -1146,7 +1142,7 @@ let match_interval_upper {Sy.sort; is_open; kind; is_lower} i imatch =
 let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
   assert (is_lower);
   match kind, min_bound i with
-  | Sy.VarBnd s, _ when is_question_mark s -> imatch (* ? var *)
+  | Sy.Unbounded, _ -> imatch (* ? var *)
   | Sy.VarBnd _, Pinfty -> assert false
   | Sy.VarBnd s,  Minfty -> new_var imatch s sort
   | Sy.VarBnd s, Strict (v, _) -> new_up_bound imatch s sort v false

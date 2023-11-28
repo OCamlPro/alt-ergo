@@ -47,12 +47,6 @@ let unsupported msg =
     (fun str -> Errors.(run_error (Unsupported_feature str)))
     msg
 
-module Shared = struct
-  (* Shared constants to avoid allocations*)
-
-  let qm = Sy.VarBnd (Var.of_string "?")
-end
-
 module HT = Hashtbl.Make(
   struct
     type t = int
@@ -1630,7 +1624,7 @@ let rec mk_expr
     (* open-ended in interval *)
     | (B.Lt _ | B.Leq _ | B.Gt _ | B.Geq _) as b, [x; y] ->
       let main_var, main_expr = Option.get var in
-      let qm = Shared.qm in
+      let qm = Sy.Unbounded in
       let sort, lb, ub = parse_semantic_bound ~loc ~var:main_var b x y in
       let lb =
         match lb with
@@ -1687,7 +1681,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
         (fun (v : DE.term_var) ->
            let var =
              match v.path with
-             | Local { name } -> Var.of_string name
+             | Local { name } -> Var.local name
              | _ -> assert false
            in
            Cache.store_var v var)

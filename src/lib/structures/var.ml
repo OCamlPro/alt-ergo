@@ -28,46 +28,36 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type view = {
-  hs : Hstring.t ;
-  id : int ;
-}
+type repr = Underscore | Local of Hstring.t | Named of Hstring.t
+(** A variable can be:
 
-type t = view
+    - The special `Underscore` variable that is used to discard values in
+      triggers (the {!underscore} constant in this module should be the only
+      such variable)
+    - A local variable, used for semantic triggers and bound to the enclosing
+      theory lemma (all local variable names start with '?')
+    - A regular variable, either from the problem input or specified by the
+      user. Depending on the input format, regular variable may start with '?'
+      (e.g. in SMT-LIB format, this is allowed).
+*)
 
-let cpt = ref 0
+let equal_repr v1 v2 =
+  match v1, v2 with
+  | Underscore, Underscore -> true
+  | Underscore, _ | _, Underscore -> false
+  | Local hs1, Local hs2
+  | Named hs1, Named hs2 -> Hstring.equal hs1 hs2
+  | Local _, Named _ | Named _, Local _ -> false
 
-let of_hstring hs =
-  incr cpt;
-  {hs ; id = !cpt}
+let pp_repr ppf = function
+  | Underscore -> Fmt.pf ppf "_"
+  | Local hs | Named hs -> Hstring.print ppf hs
 
-let of_string s =
-  incr cpt;
-  {hs = Hstring.make s; id = !cpt}
+type t = { repr : repr ; id : int }
 
-let view v = v
-
-let compare a b =
-  let c = a.id - b.id in
-  if c <> 0 then c
-  else begin
-    assert (Hstring.equal a.hs b.hs);
-    c
-  end
-
-let equal a b = compare a b = 0
-
-let hash { id; _ } = id
-
-let underscore = of_string "._"
-
-let to_string {hs ; id} =
-  Format.sprintf "%s~%d" (Hstring.view hs) id
-
-let print fmt v =
-  Format.fprintf fmt "%s" (to_string v)
-
-let save_cnt, reinit_cnt =
+let fresh, save_cnt, reinit_cnt =
+  let cpt = ref 0 in
+  let fresh repr = incr cpt; { repr ; id = !cpt } in
   let saved_cnt = ref 0 in
   let save_cnt () =
     saved_cnt := !cpt
@@ -75,10 +65,38 @@ let save_cnt, reinit_cnt =
   let reinit_cnt () =
     cpt := !saved_cnt
   in
-  save_cnt, reinit_cnt
+  fresh, save_cnt, reinit_cnt
 
+let of_hstring hs = fresh (Named hs)
 
-module Set = Set.Make(struct type t = view let compare = compare end)
+let of_string s = of_hstring (Hstring.make s)
+
+let local s =
+  assert (String.length s > 0 && Char.equal '?' s.[0]);
+  fresh (Local (Hstring.make s))
+
+let is_local { repr; _ } = match repr with Local _ -> true | _ -> false
+
+let compare a b =
+  let c = a.id - b.id in
+  if c <> 0 then c
+  else begin
+    assert (equal_repr a.repr b.repr);
+    c
+  end
+
+let equal a b = compare a b = 0
+
+let hash { id; _ } = id
+
+(* Note: there is a single [Underscore] variable, with id 1. *)
+let underscore = fresh Underscore
+
+let print ppf { repr; id } = Fmt.pf ppf "%a~%d" pp_repr repr id
+
+let to_string = Fmt.to_to_string print
+
+module Set = Set.Make(struct type nonrec t = t let compare = compare end)
 
 module Map : sig
   include Map.S with type key = t

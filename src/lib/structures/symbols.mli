@@ -75,7 +75,7 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = private
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }

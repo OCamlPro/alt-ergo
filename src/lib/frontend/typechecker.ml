@@ -600,7 +600,7 @@ let check_pattern_matching missing dead loc =
       List.rev_map
         (function
           | Constr { name; _ } -> name
-          | Var v -> (Var.view v).Var.hs
+          | Var v -> Var.to_string v |> Hstring.make
         ) dead
     in
     Printer.print_wrn "%a"
@@ -1043,7 +1043,14 @@ and type_bound env bnd ty ~is_open ~is_lower =
     | PPvar s ->
       assert (String.length s > 0);
       begin match s.[0] with
-        | '?' -> Symbols.VarBnd (Var.of_string s), ty
+        | '?' ->
+          let sy =
+            if String.length s = 1 then
+              Symbols.Unbounded
+            else
+              Symbols.VarBnd (Var.local s)
+          in
+          sy, ty
         | _ ->
           let vx, ty_x = type_var_desc env s bnd.pp_loc in
           let var_x =
