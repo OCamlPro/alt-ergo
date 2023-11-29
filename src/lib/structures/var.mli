@@ -54,6 +54,9 @@ val equal : t -> t -> bool
 
 val hash : t -> int
 
+val uid : t -> int
+(** Globally unique identifier for the variable. *)
+
 val underscore : t
 (** Unique special variable. Used to indicate fields that should be ignored in
     pattern matching and triggers. *)

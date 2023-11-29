@@ -32,7 +32,7 @@ module Sy = Symbols
 
 (** Data structures *)
 
-type binders = (Ty.t * int) Var.Map.t (*int tag in globally unique *)
+type binders = Ty.t Var.Map.t
 
 type t = term_view
 
@@ -159,10 +159,7 @@ let compare_let let1 let2 =
     if c <> 0 then c
     else compare let1.in_e let2.in_e
 
-let compare_binders b1 b2 =
-  Var.Map.compare (fun (ty1,i) (ty2,j) ->
-      let c = i - j in if c <> 0 then c else Ty.compare ty1 ty2)
-    b1 b2
+let compare_binders = Var.Map.compare Ty.compare
 
 let [@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
   try
@@ -310,7 +307,7 @@ module F_Htbl : Hashtbl.S with type key = t =
 (** pretty printing *)
 
 module SmtPrinter = struct
-  let pp_binder ppf (var, (ty, _)) =
+  let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
   let pp_binders = Fmt.(iter_bindings ~sep:sp Var.Map.iter pp_binder)
@@ -482,7 +479,7 @@ module SmtPrinter = struct
 end
 
 module AEPrinter = struct
-  let pp_binder ppf (var, (ty, _)) =
+  let pp_binder ppf (var, ty) =
     Fmt.pf ppf "%a:%a" Var.print var Ty.pp_smtlib ty
 
   let pp_binders ppf binders =
@@ -724,22 +721,11 @@ let [@inline always] symbol_info t = t.f
    | _ -> true (* bool vars are terms *)
 *)
 
-let mk_binders, reset_binders_cpt =
-  let cpt = ref 0 in
-  let mk_binders st =
-    TSet.fold
-      (fun t sym ->
-         incr cpt;
-         match t with
-         | { f = Sy.Var v; ty; _ } -> Var.Map.add v (ty, !cpt) sym
-         | _ -> assert false
-      ) st Var.Map.empty
-  in
-  let reset_binders_cpt () =
-    cpt := 0
-  in
-  mk_binders, reset_binders_cpt
-
+let mk_binders st = TSet.fold (fun t sym ->
+    match t with
+    | { f = Sy.Var v; ty; _ } -> Var.Map.add v ty sym
+    | _ -> assert false
+  ) st Var.Map.empty
 
 let merge_vars acc b =
   Var.Map.merge (fun v a b ->
@@ -1269,10 +1255,10 @@ let rec apply_subst_aux (s_t, s_ty) t =
         let trs = List.map (apply_subst_trigger s) trs in
         let binders =
           Var.Map.fold
-            (fun sy (ty,i) bders ->
+            (fun sy ty bders ->
                let ty' = Ty.apply_subst s_ty ty in
                if Ty.equal ty ty' then bders
-               else Var.Map.add sy (ty', i) bders
+               else Var.Map.add sy ty' bders
             )
             binders binders
         in
@@ -1294,7 +1280,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
       | Sy.Let, B_let {let_v; let_e; in_e ; let_sko; is_bool} ->
         assert (xs == []);
         (* TODO: implement case where variables capture happens *)
-        assert (no_capture_issue s_t (Var.Map.singleton let_v (let_e.ty, 0)));
+        assert (no_capture_issue s_t (Var.Map.singleton let_v let_e.ty));
         let let_e2 = apply_subst_aux s let_e in
         let let_sko2 = apply_subst_aux s let_sko in
         (* invariant: s_t only contains vars that are in free in t,
@@ -1454,7 +1440,7 @@ and find_particular_subst =
         assert (not (Var.Map.is_empty binders));
         let sbt =
           Var.Map.fold
-            (fun v (ty, _) sbt ->
+            (fun v ty sbt ->
                try
                  let f = apply_subst_aux (sbt, Ty.esubst) f in
                  find_subst v (mk_term (Sy.var v) [] ty) f;
@@ -1718,7 +1704,8 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   in
   let sbt =
     Var.Map.fold
-      (fun x (ty, i) m ->
+      (fun x ty m ->
+         let i = Var.uid x in
          let t = mk_term (mk_sym i "_sko") sko_v ty in
          let t = apply_subst (grounding_sbt, Ty.esubst) t in
          Var.Map.add x t m
@@ -2799,7 +2786,6 @@ let save_cache () =
   HC.save_cache ()
 
 let reinit_cache () =
-  reset_binders_cpt ();
   clear_subst_cache ();
   Labels.clear labels;
   HC.reinit_cache ()
