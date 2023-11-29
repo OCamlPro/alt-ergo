@@ -501,8 +501,6 @@ module Env = struct
 
   let find { var_map = m; _ } n = MString.find n m
 
-  let list_of { var_map = m; _ } = MString.fold (fun _ c acc -> c::acc) m []
-
   let add_type_decl ?(recursive=false) env vars id body loc =
     let ty, types = Types.add_decl ~recursive env.types vars id body loc in
     ty, { env with types = types; }
@@ -1312,7 +1310,6 @@ and type_form ?(in_theory=false) env f =
       let ty_triggers =
         List.map (fun (tr, b) -> type_trigger in_theory env' tr, b) triggers in
       let qf_hyp = List.map (fun h -> type_form env' h) hyp in
-      let upbvars = Env.list_of env in
       let bvars =
         List.fold_left
           (fun acc (v,_) ->
@@ -1320,7 +1317,6 @@ and type_form ?(in_theory=false) env f =
              ty :: acc) [] ty_vars
       in
       let qf_form = {
-        qf_upvars = upbvars ;
         qf_bvars = bvars ;
         qf_triggers = ty_triggers ;
         qf_hyp = qf_hyp;
@@ -1359,7 +1355,6 @@ and type_form ?(in_theory=false) env f =
              (sy, Var.of_string sy, xx, tty):: binders
           )[] binders
       in
-      let up = Env.list_of env in
       let env =
         List.fold_left
           (fun env (v, sv, _, ty) ->
@@ -1373,7 +1368,7 @@ and type_form ?(in_theory=false) env f =
           (fun binders (_,sv,e,_) -> (sv, e) :: binders)
           [] binders
       in
-      TFlet (up ,binders, f)
+      TFlet (binders, f)
 
     (* Remove labels : *)
     | PPforall_named (vs_tys, trs, hyp, f) ->
@@ -2151,7 +2146,6 @@ and monomorphize_form tf =
     | TFforall qf ->
       TFforall
         {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
-           qf_upvars = List.map monomorphize_var qf.qf_upvars;
            qf_hyp = List.map monomorphize_form qf.qf_hyp;
            qf_form = monomorphize_form qf.qf_form;
            qf_triggers =
@@ -2159,14 +2153,12 @@ and monomorphize_form tf =
     | TFexists qf ->
       TFexists
         {  qf_bvars = List.map monomorphize_var qf.qf_bvars;
-           qf_upvars = List.map monomorphize_var qf.qf_upvars;
            qf_hyp = List.map monomorphize_form qf.qf_hyp;
            qf_form = monomorphize_form qf.qf_form;
            qf_triggers =
              List.map (fun (l, b) -> List.map mono_term l, b) qf.qf_triggers}
 
-    | TFlet (l, binders, tf) ->
-      let l = List.map monomorphize_var l in
+    | TFlet (binders, tf) ->
       let binders =
         List.rev_map
           (fun (sy, e) ->
@@ -2175,7 +2167,7 @@ and monomorphize_form tf =
              | TletForm ff -> sy, TletForm (monomorphize_form ff)
           )(List.rev binders)
       in
-      TFlet(l, binders, monomorphize_form tf)
+      TFlet(binders, monomorphize_form tf)
 
     | TFnamed (hs,tf) ->
       TFnamed(hs, monomorphize_form tf)

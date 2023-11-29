@@ -110,7 +110,6 @@ and 'a tatom =
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
   qf_bvars : (Symbols.t * Ty.t) list ;
-  qf_upvars : (Symbols.t * Ty.t) list ;
   qf_triggers : ('a atterm list * bool) list ;
   qf_hyp : 'a atform list;
   qf_form : 'a atform
@@ -123,8 +122,7 @@ and 'a tform =
   | TFop of oplogic * ('a atform) list
   | TFforall of 'a quant_form
   | TFexists of 'a quant_form
-  | TFlet of (Symbols.t * Ty.t) list *
-             (Var.t * 'a tlet_kind) list * 'a atform
+  | TFlet of (Var.t * 'a tlet_kind) list * 'a atform
   | TFnamed of Hstring.t * 'a atform
   | TFmatch of 'a atterm * (pattern * 'a atform) list
 
@@ -329,7 +327,7 @@ and print_formula =
       fprintf fmt "forall %a [%a]. %a"
         print_binders l print_triggers t print_formula f
 
-    | TFlet (_, binders, f) ->
+    | TFlet (binders, f) ->
       List.iter
         (fun (sy, let_e) ->
            fprintf fmt " let %a = " Var.print sy;

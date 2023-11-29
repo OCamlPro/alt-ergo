@@ -180,8 +180,6 @@ and 'a tatom =
 and 'a quant_form = {
   qf_bvars : (Symbols.t * Ty.t) list;
   (** Variables that are quantified by this formula. *)
-  qf_upvars : (Symbols.t * Ty.t) list;
-  (** Free variables that occur in the formula. *)
   qf_triggers : ('a atterm list * bool) list;
   (** Triggers associated wiht the formula.
       For each trigger, the boolean specifies whether the trigger
@@ -206,11 +204,9 @@ and 'a tform =
   (** Universal quantification. *)
   | TFexists of 'a quant_form
   (** Existencial quantification. *)
-  | TFlet of (Symbols.t * Ty.t) list *
-             (Var.t * 'a tlet_kind) list *
+  | TFlet of (Var.t * 'a tlet_kind) list *
              'a atform
-  (** Let binding.
-      TODO: what is in the first list ? *)
+  (** Let binding. *)
   | TFnamed of Hstring.t * 'a atform
   (** Attach a name to a formula. *)
 
