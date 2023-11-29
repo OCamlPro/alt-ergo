@@ -56,8 +56,8 @@ module Value = struct
 
   let pp ppf v =
     match v with
-    | Minfinity -> Fmt.pf ppf "-oo"
-    | Pinfinity -> Fmt.pf ppf "+oo"
+    | Minfinity -> Fmt.pf ppf "(- oo)"
+    | Pinfinity -> Fmt.pf ppf "(+ oo)"
     | Value w -> Expr.print ppf w
     | Limit (Above, w) -> Fmt.pf ppf "(+ %a epsilon)" Expr.print w
     | Limit (Below, w) -> Fmt.pf ppf "(- %a epsilon)" Expr.print w
