@@ -421,9 +421,9 @@ module SmtPrinter = struct
 
     | Sy.False, [] -> Fmt.pf ppf "false"
 
-    | Sy.Name (n, _, _), [] -> Symbols.pp_name ppf (Hstring.view n)
+    | Sy.Name { hs = n; _ }, [] -> Symbols.pp_name ppf (Hstring.view n)
 
-    | Sy.Name (n, _, _), _ :: _ ->
+    | Sy.Name { hs = n; _ }, _ :: _ ->
       Fmt.pf ppf "@[<hv 2>(%a@ %a@])"
         Symbols.pp_name (Hstring.view n)
         Fmt.(list ~sep:sp pp) xs
@@ -2294,7 +2294,7 @@ module Triggers = struct
       | { f = Op _; _ } ->
         if eq exclude e then acc else e :: acc
 
-      | { f = Name (_, _, _); _ } ->
+      | { f = Name _; _ } ->
         if eq exclude e then acc else e :: acc
 
       | { f = ( True | False | Void | Int _ | Real _

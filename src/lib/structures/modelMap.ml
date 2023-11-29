@@ -100,7 +100,7 @@ let is_suspicious_symbol = function
           | Max_int | Max_real | Min_int | Min_real
           | Pow | Integer_log2 | Int2BV _ | BV2Nat
           | BVand | BVor | Integer_round) -> true
-  | Sy.Name (hs, _, _) when is_suspicious_name hs -> true
+  | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
 let add ((sy, _, _) as p) v { values; suspicious } =
@@ -114,7 +114,7 @@ let add ((sy, _, _) as p) v { values; suspicious } =
 let iter f { values; _ } =
   P.iter (fun ((sy, _, _) as key) value ->
       match sy with
-      | Sy.Name (_, _, true) ->
+      | Sy.Name { defined = true; _ } ->
         (* We don't print constants defined by the user. *)
         ()
       | _ -> f key value
