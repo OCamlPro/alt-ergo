@@ -65,7 +65,7 @@ module type SAT_ML = sig
     Satml_types.Atom.atom list list ->
     Expr.t ->
     cnumber : int ->
-    Satml_types.Atom.atom option Flat_Formula.Map.t -> dec_lvl:int ->
+    Flat_Formula.Set.t -> dec_lvl:int ->
     unit
 
   val boolean_model : t -> Satml_types.Atom.atom list

@@ -729,7 +729,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   type pending = {
     seen_f : SE.t;
-    activate : Atom.atom option FF.Map.t;
+    activate : FF.Set.t;
     new_vars : Atom.var list;
     unit : Atom.atom list list;
     nunit : Atom.atom list list;
@@ -756,7 +756,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           if SAT.exists_in_lazy_cnf env.satml ff then acc
           else
             {acc with
-             activate = FF.Map.add ff None acc.activate;
+             activate = FF.Set.add ff acc.activate;
              updated = true}
       with Not_found ->
         Debug.assume gf;
@@ -798,7 +798,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             if SAT.exists_in_lazy_cnf env.satml ff then acc
             else
               {acc with
-               activate = FF.Map.add ff None acc.activate;
+               activate = FF.Set.add ff acc.activate;
                updated = true}
           else
             let ff_abstr,new_proxies,proxies_mp, new_vars =
@@ -813,7 +813,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                new_vars;
                nunit;
                unit = [ff_abstr] :: acc.unit;
-               activate = FF.Map.add ff None acc.activate;
+               activate = FF.Set.add ff acc.activate;
                updated = true
               }
             in
@@ -830,7 +830,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     fprintf fmt "pending : updated = %b@." updated;
   *)
     if SE.is_empty seen_f then begin
-      assert (FF.Map.is_empty activate);
+      assert (FF.Set.is_empty activate);
       assert (new_vars == []);
       assert (unit == []);
       assert (nunit == []);
@@ -852,7 +852,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume_aux_bis ~dec_lvl env l : bool * Atom.atom list =
     let pending = {
-      seen_f = SE.empty; activate = FF.Map.empty;
+      seen_f = SE.empty; activate = FF.Set.empty;
       new_vars = []; unit = []; nunit = []; updated = false;
       new_abstr_vars = [];
     }
