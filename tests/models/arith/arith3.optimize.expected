@@ -6,7 +6,7 @@ unknown
   (define-fun z () Int 0)
 )
 (objectives 
-  (x +oo)
+  (x (+ oo))
   (y (interval (- oo) (+ oo)))
   (z (interval (- oo) (+ oo)))
 )
