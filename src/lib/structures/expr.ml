@@ -306,6 +306,12 @@ module F_Htbl : Hashtbl.S with type key = t =
 (** pretty printing *)
 
 module SmtPrinter = struct
+  let is_zero sy =
+    match sy with
+    | Sy.Int i when Z.(equal i zero) -> true
+    | Sy.Real q when Q.(equal q zero) -> true
+    | _ -> false
+
   let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
@@ -407,6 +413,9 @@ module SmtPrinter = struct
       end
 
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
+
+    | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
+      Fmt.pf ppf "@[<hv 2>(-@ %a@])" pp e2
 
     | Sy.Op op, _ :: _ ->
       Fmt.pf ppf "@[<hv 2>(%a@ %a@])"
