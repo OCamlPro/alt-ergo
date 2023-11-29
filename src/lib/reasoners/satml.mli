@@ -65,7 +65,7 @@ module type SAT_ML = sig
     Satml_types.Atom.atom list list ->
     Expr.t ->
     cnumber : int ->
-    Satml_types.Atom.atom option Flat_Formula.Map.t -> dec_lvl:int ->
+    Flat_Formula.Set.t -> dec_lvl:int ->
     unit
 
   val boolean_model : t -> Satml_types.Atom.atom list
@@ -78,11 +78,6 @@ module type SAT_ML = sig
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
-
-  val update_lazy_cnf :
-    t ->
-    do_bcp : bool ->
-    Satml_types.Atom.atom option Flat_Formula.Map.t -> dec_lvl:int -> unit
 
   val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
   val known_lazy_formulas : t -> int Flat_Formula.Map.t

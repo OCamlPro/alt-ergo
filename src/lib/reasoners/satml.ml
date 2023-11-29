@@ -69,7 +69,7 @@ module type SAT_ML = sig
     t ->
     Atom.atom list list -> Atom.atom list list -> E.t ->
     cnumber : int ->
-    Atom.atom option FF.Map.t -> dec_lvl:int ->
+    FF.Set.t -> dec_lvl:int ->
     unit
 
   val boolean_model : t -> Atom.atom list
@@ -83,10 +83,6 @@ module type SAT_ML = sig
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 
-  val update_lazy_cnf :
-    t ->
-    do_bcp : bool ->
-    Atom.atom option FF.Map.t -> dec_lvl:int -> unit
   val exists_in_lazy_cnf : t -> FF.t -> bool
 
   val known_lazy_formulas : t -> int FF.Map.t
@@ -1629,25 +1625,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       if Options.get_profiling() then Profiling.elim true
 
 
-  let update_lazy_cnf env ~do_bcp mff ~dec_lvl =
+  let update_lazy_cnf env ~do_bcp sff ~dec_lvl =
     if Options.get_cdcl_tableaux () && dec_lvl <= decision_level env then begin
       let s =
         try Util.MI.find dec_lvl env.lvl_ff
         with Not_found -> SFF.empty
       in
       let lz, s =
-        MFF.fold (fun ff lz_kd (l, s) ->
-            match lz_kd with
-            | None ->
-              assert (not (MFF.mem ff env.ff_lvl));
-              assert (not (SFF.mem ff s));
-              env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
-              add_form_to_lazy_cnf env l ff, SFF.add ff s
-            | Some _ ->
-              (* TODO for case 'Some a' *)
-              assert false
-
-          ) mff (env.lazy_cnf, s)
+        SFF.fold (fun ff (l, s) ->
+            assert (not (MFF.mem ff env.ff_lvl));
+            assert (not (SFF.mem ff s));
+            env.ff_lvl <- MFF.add ff dec_lvl env.ff_lvl;
+            add_form_to_lazy_cnf env l ff, SFF.add ff s
+          ) sff (env.lazy_cnf, s)
       in
       env.lazy_cnf <- lz;
       env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff;
@@ -1686,19 +1676,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.proxies <- proxies
 
   let try_to_backjump_further =
-    let rec better_bj env mf =
+    let rec better_bj env sf =
       let old_dlvl = decision_level env in
       let old_lazy = env.lazy_cnf in
       let old_relevants = env.relevants in
       let old_tenv = env.tenv in
       let fictive_lazy =
-        MFF.fold (fun ff _ acc -> add_form_to_lazy_cnf env acc ff)
-          mf old_lazy
+        SFF.fold (fun ff acc -> add_form_to_lazy_cnf env acc ff)
+          sf old_lazy
       in
       env.lazy_cnf <- fictive_lazy;
       propagate_and_stabilize env all_propagations (ref 0) Auto;
       let new_dlvl = decision_level env in
-      if old_dlvl > new_dlvl then better_bj env mf
+      if old_dlvl > new_dlvl then better_bj env sf
       else
         begin
           assert (old_dlvl == new_dlvl);
@@ -1707,12 +1697,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.tenv     <- old_tenv
         end
     in
-    fun env mff ->
+    fun env sff ->
       if Options.get_cdcl_tableaux () then
-        better_bj env mff
+        better_bj env sff
 
 
-  let assume env unit_cnf nunit_cnf f ~cnumber mff ~dec_lvl =
+  let assume env unit_cnf nunit_cnf f ~cnumber sff ~dec_lvl =
     begin
       match unit_cnf, nunit_cnf with
       | [], [] -> ()
@@ -1733,12 +1723,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             (Vec.size env.learnts);
     end;
     (* do it after add clause and before T-propagate, disable bcp*)
-    update_lazy_cnf env ~do_bcp:false mff ~dec_lvl;
+    update_lazy_cnf env ~do_bcp:false sff ~dec_lvl;
     (* do bcp globally *)
     propagate_and_stabilize env all_propagations (ref 0) Auto;
     if dec_lvl > decision_level env then
       (*dec_lvl <> 0 and a bj have been made*)
-      try_to_backjump_further env mff
+      try_to_backjump_further env sff
 
   let exists_in_lazy_cnf env f' =
     not (Options.get_cdcl_tableaux ()) ||
