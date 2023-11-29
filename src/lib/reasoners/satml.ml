@@ -28,6 +28,42 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(** This module implements a CDCL solver, as well as some extensions based on a
+    combination of CDCL with ideas from Tableaux solver (the solver using
+    Tableaux extensions is called CDCL-Tableaux).
+
+    The CDCL part of the solver is heavily inspired by the MiniSat design:
+    http://www.decision-procedures.org/handouts/MiniSat.pdf
+
+    The Tableaux extensions to the CDCL solver mostly relate to the integration
+    of a lazy CNF conversion into the CDCL solver (part of this happens in the
+    [Satml_types] module).  It is described in chapter 4 of Albin Coquereau's
+    PhD thesis (in French):
+    https://pastel.hal.science/tel-02504894
+
+    The lazy CNF is used in two ways:
+
+    - With the [get_cdcl_tableaux_inst ()] option, only atoms that are relevant
+       to the current state of the lazy CNF conversion are used for
+       instantiation. For instance, if the formula [a \/ (b /\ c)] has been
+       asserted, and we picked the left branch (i.e. [a]) in the formula, then
+       only the terms in [a] will be used for instantiation -- not the terms in
+       [b] or [c], even if they are decided to be [true] by the CDCL solver. Of
+       course, if [b] or [c] also appear in other formulas where they have been
+       "chosen", then they will be used for instantiation.contents.
+
+       In addition, there is an early stopping mechanism for satisfiable
+       problems: if all disjunctions have had one "side" successfully assigned
+       to [true], the solver will not try to assign truth values to the
+       remaining atoms ([b] and [c] in the example). This can lead to partial
+       boolean models.
+
+    - With the [get_cdcl_tableaux_th ()] option, atoms are only propagated to
+       the theories once they become relevant. For instance, in the above
+       scenario, only [a] (if it is a literal) will be propagated to the theory,
+       even if [b] or [c] are later asserted (again, unless they appear in other
+       formulas). *)
+
 module E = Expr
 module Atom = Satml_types.Atom
 module FF = Satml_types.Flat_Formula
@@ -45,6 +81,7 @@ type conflict_origin =
   | C_bool of Atom.clause
   | C_theory of Ex.t
 
+(* not even the final one *)
 let vraie_form = E.vrai
 
 
@@ -215,24 +252,128 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable tenv_queue : Th.t Vec.t;
 
       mutable tatoms_queue : Atom.atom Queue.t;
+      (** Queue of atoms that have been added to the [trail] through either
+          decision or boolean propagation, but have not been otherwise processed
+          yet (in particular, they have not been propagated to the theory).
+
+          In pure CDCL mode, all the atoms in [tatoms_queue] are propagated in
+          the theory.
+
+          In CDCL-Tableaux with the [get_cdcl_tableaux_th ()] option, the
+          [tatoms_queue] is only used for relevancy propagation (see
+          [relevancy_propagation]); instead, the [th_tableaux] field is used to
+          dictate theory propagations. *)
+
       mutable th_tableaux : Atom.atom Queue.t;
+      (** Queue of atoms to propagate to the theory when using CDCL-Tableaux
+          with the [get_cdcl_tableaux_th ()] option.
+
+          The atoms in [th_tableaux] correspond to the asserted components of
+          the [lazy_cnf] formulas. In particular, they always correspond to
+          [UNIT] flat formulas that have been asserted (or selected in a
+          disjunction).
+
+          This ensures that atoms are propagated to the theory according to the
+          structure of the formula. *)
 
       mutable cpt_current_propagations : int;
 
       mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
+      (** Map from flat formulas to proxy triples [p, l, is_and].
+
+          Only [AND] and [OR] flat formulas are present in the [proxies] map:
+          [UNIT] flat formulas do not need a proxy, as they are already atoms.
+
+          [p] is an atom that represents the flat formula (so that deciding on
+          [p] forces the flat formula to take the same truth value).
+
+          [l] is a list of atoms that represent the "components" of the flat
+          formula.  The meaning of [l] depends on the value of [is_and]: if
+          [is_and] is [true], then [p] is equivalent to [l_1 /\ ... /\ l_n]; if
+          [is_and] is [false], then [p] is equivalent to [l_1 \/ ... \/ l_n].
+
+          Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]),
+          then the corresponding [is_and] entry is [false] (resp. [true]), and
+          the list [l] contains the atoms or proxies for the values in [fl].
+
+          Note: the [proxies] map contains either a flat formula or its
+          negation: to look up into this map, use [FF.get_proxy_of] which
+          performs the appropriate negation if needed.
+
+          Note: the [Satml] module does not touch the proxies itself.
+          Appropriate proxies that cover all the flat formulas to be encountered
+          need to be pre-emptively given using [set_new_proxies]. *)
 
       mutable lazy_cnf :
         (FF.t list MFF.t * FF.t) Matoms.t;
+      (** Map from atoms [a] to pairs [parents, ff].
+
+          The [lazy_cnf] field is only used by the CDCL-Tableaux solver. It is
+          used in relevancy propagation (see [relevancy_propagation]) when the
+          [get_cdcl_tableaux_th ()] option is enabled, and to stop decisions as
+          soon as the *relevant* parts of the assertions have been decided if
+          the [get_cdcl_tableaux_inst ()] option is enabled.
+
+          It satisfies the following invariants:
+
+          - [ff] is the flat formula that the atom [a] represents (either
+             directly if [ff] is an UNIT formula, or indirectly as a proxy -- in
+             which case, [a] is the proxy associated with [ff] in [proxies]).
+
+          - [parents] is the set of _disjunctive_ flat formulas that contain
+             [ff] ([parents] is a map whose entries are always of the form
+             [FF.OR l -> l], where [ff] appears in [l]).
+
+          - The formulas in [parents] represent the disjunctions that have been
+             asserted but not yet proven (i.e. none of their components is
+             [true]).
+
+          - The atoms that appear as keys in [lazy_cnf] are not [true] (they
+             are either undecided or forced to [false]).  Once an atom in
+             [lazy_cnf] is forced to [true], it is removed from the [lazy_cnf]
+             and its parents are removed as parents of their other children (one
+             of their components is [true], so they no longer constrain the
+             problem). The corresponding flat formula is then added again, which
+             may introduce new entries to the [lazy_cnf] if it was itself a
+             disjunction or contained disjunctions (see
+             [relevancy_propagation]).
+
+          When [lazy_cnf] is empty, all the disjunctions have been decided, and
+          we have a (partial!) boolean model. If there are nested disjunctions
+          (for instance, if [a \/ (b /\ (c \/ d))] is asserted, and we decide or
+          propagate that [a] is true, [c] and [d] may stay undecided). *)
 
       lazy_cnf_queue :
         (FF.t list MFF.t * FF.t) Matoms.t Vec.t;
+      (** Checkpoint of the [lazy_cnf] field at each decision level. Only used
+          with the CDCL-Tableaux solver. *)
 
       mutable relevants : SFF.t;
+      (** Set of relevant flat formulas. These are the formulas that have been
+          added to the lazy CNF (i.e. asserted), including sub-formulas that are
+          true.
+
+          For instance, when asserting [a \/ (b /\ c)], the formula
+          [a \/ (b /\ c)] is added to the [relevants] set; when deciding to pick
+          the second branch of the disjunction, the formulas [b /\ c], [b] and
+          [c] are added to the [relevants] set (see [add_form_to_lazy_cnf]).
+
+          Used to extract relevant terms for instantiation when only option
+          [get_cdcl_tableaux_inst ()] (but not [get_cdcl_tableaux_th ()]) is
+          enabled. *)
+
       relevants_queue : SFF.t Vec.t;
+      (** Checkpoint of the [relevant] field at each decision level. Only used
+          with the CDCL-Tableaux solver. *)
 
       mutable ff_lvl : int MFF.t;
+      (** Map from flat formulas to the (earliest) decision level at which they
+          were asserted. Only used with the CDCL-Tableaux solver. *)
 
       mutable lvl_ff : SFF.t Util.MI.t;
+      (** Map from decision level to the set of flat formulas asserted at that
+          level. Set inverse of [ff_lvl]. Only used with the CDCL-Tableaux
+          solver. *)
 
       mutable increm_guards : Atom.atom Vec.t;
 
@@ -726,6 +867,24 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | None -> assert false
 
 
+  (* [add_form_to_lazy_cnf env lazy_cnf ff] updates [env] and [lazy_cnf] by
+     assuming the flat formula [ff].
+
+     More precisely:
+
+     - [ff] and any conjunctive component (i.e. if [ff = ff_1 /\ ff_2], [ff_1]
+        and [ff_2] are conjunctive components, recursively) are added to the
+        [relevant] field in [env];
+     - UNIT formulas (either [ff] or in a conjunctive component) are added to
+        the [th_tableaux] queue in [env] (NOTE: [th_tableaux] is only used if
+        the [get_cdcl_tableaux_th ()] option is enabled);
+     - Disjunctive formulas that contain a component already known to be true
+        are treated as that component (this is used by [relevancy_propagation]
+        which adds the decided children of disjunctive formulas -- it is also
+        necessary for soundness in case a child atom was propagated earlier than
+        expected e.g. due to clause learning);
+     - Disjunctive formulas that are still undecided are added to the
+        [lazy_cnf] (see documentation of the [lazy_cnf] field in [env]). *)
   let add_form_to_lazy_cnf =
     let open FF in
     let add_disj env ma f_a l =
@@ -763,6 +922,17 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     fun env ma f_a -> add_aux env ma f_a
 
 
+  (** [relevancy_propagation env lazy_cnf a] propagates the fact that atom [a]
+      is now true to [env] and the [lazy_cnf].
+
+      More precisely, if [a] was an atom in the [lazy_cnf] (i.e. if a formula of
+      the form [a_0 \/ ... \/ a \/ ... \/ a_n] must hold given the current
+      CNF unfolding), its parents are removed from the [lazy_cnf] and [a] is
+      added again to the [lazy_cnf]. This will either add [a] to the
+      [th_tableaux] field (if [a] corresponds to a [UNIT] flat formula that was
+      asserted), or otherwise perform one step of CNF unfolding and add the
+      formula that [a] was a proxy for to the [lazy_cnf] (see
+      [add_form_to_lazy_cnf]). *)
   let relevancy_propagation env ma a =
     try
       let parents, f_a = Matoms.find a ma in
@@ -789,6 +959,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     with Not_found -> ma
 
 
+  (* Note: although this seems to only update [env.lazy_cnf], the call to
+     [relevancy_propagation] in fact updates the [th_tableaux] queue, which is
+     the one used for theory propagation when [get_cdcl_tableaux_th ()] is
+     enabled.
+
+     When only [get_cdcl_tableaux_inst ()] is enabled, we still need to call
+     this, because the update of [lazy_cnf] is required for early stopping. *)
   let compute_facts_for_theory_propagate env =
     (*let a = SFF.cardinal env.relevants in*)
     env.lazy_cnf <-
