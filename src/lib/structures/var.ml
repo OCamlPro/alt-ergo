@@ -87,7 +87,9 @@ let compare a b =
 
 let equal a b = compare a b = 0
 
-let hash { id; _ } = id
+let uid { id; _ } = id
+
+let hash = uid
 
 (* Note: there is a single [Underscore] variable, with id 1. *)
 let underscore = fresh Underscore

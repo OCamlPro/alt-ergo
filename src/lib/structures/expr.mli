@@ -30,7 +30,7 @@
 
 (** Data structures *)
 
-type binders = (Ty.t * int) Var.Map.t (*int tag in globally unique *)
+type binders = Ty.t Var.Map.t
 
 type t
 
