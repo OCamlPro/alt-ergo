@@ -206,7 +206,7 @@ module Pp_smtlib_term = struct
     | Sy.In(lb, rb), [t] ->
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
-    | Sy.Name (n, _, _), l -> begin
+    | Sy.Name { hs = n; _ }, l -> begin
         let constraint_name =
           try let constraint_name,_,_ =
                 (MS.find (Hstring.view n) !constraints) in
@@ -444,7 +444,8 @@ module SmtlibCounterExample = struct
             because they could be record accessors that must be added to the
             `records` reference *)
          match f with
-         | Sy.Name (_, _, false) -> print_fun_def fmt f xs_ty_named ty rep
+         | Sy.Name { defined = false; _ } ->
+           print_fun_def fmt f xs_ty_named ty rep
          | _ -> ()
       ) fprofs;
     !records

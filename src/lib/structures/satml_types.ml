@@ -927,7 +927,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let mk_new_proxy n =
     let hs = Hs.make (".PROXY__" ^ (string_of_int n)) in
     (* TODO: we should use a smart constructor here. *)
-    let sy = Symbols.Name (hs, Symbols.Other, false) in
+    let sy = Symbols.Name { hs; kind = Symbols.Other; defined = false } in
     E.mk_term sy [] Ty.Tbool
 
   let get_proxy_of f proxies_mp =

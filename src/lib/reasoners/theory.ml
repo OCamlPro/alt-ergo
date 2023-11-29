@@ -125,7 +125,7 @@ module Main_Default : S = struct
       SE.fold
         (fun t mp ->
            match E.term_view t with
-           | { E.f = Sy.Name (hs, ((Sy.Ac | Sy.Other) as is_ac), _);
+           | { E.f = Sy.Name { hs; kind = ((Sy.Ac | Sy.Other) as is_ac); _ };
                xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =

@@ -84,7 +84,7 @@ type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind * bool
+  | Name of { hs : Hstring.t ; kind : name_kind ; defined : bool }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t

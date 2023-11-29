@@ -85,7 +85,7 @@ type t =
   | True
   | False
   | Void
-  | Name of Hstring.t * name_kind * bool
+  | Name of { hs : Hstring.t ; kind : name_kind ; defined : bool }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -100,7 +100,7 @@ type t =
 type s = t
 
 let name ?(kind=Other) ?(defined=false) s =
-  Name (Hstring.make s, kind, defined)
+  Name { hs = Hstring.make s ; kind ; defined }
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -127,12 +127,12 @@ let mk_in b1 b2 =
 let mk_maps_to x = MapsTo x
 
 let is_ac x = match x with
-  | Name(_, Ac, _) -> true
+  | Name { kind = Ac; _ } -> true
   | _           -> false
 
 let is_internal sy =
   match sy with
-  | Name (hs, _, _) ->
+  | Name { hs; _ } ->
     let s = Hstring.view hs in
     Stdcompat.String.starts_with ~prefix:"." s ||
     Stdcompat.String.starts_with ~prefix:"@" s
@@ -221,7 +221,7 @@ let compare s1 s2 =
       | Int z1, Int z2 -> Z.compare z1 z2
       | Real h1, Real h2 -> Q.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name (h1, k1, _), Name (h2, k2, _) ->
+      | Name { hs = h1; kind = k1; _ }, Name { hs = h2; kind = k2; _ } ->
         let c = Hstring.compare h1 h2 in
         if c <> 0 then c else compare_kinds k1 k2
       | Bitv (n1, s1), Bitv (n2, s2) ->
@@ -250,8 +250,8 @@ let hash x =
   | Let -> 3
   | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
-  | Name (n, Ac, _) -> 19 * Hstring.hash n + 5
-  | Name (n, Other, _) -> 19 * Hstring.hash n + 6
+  | Name { hs = n; kind = Ac; _ } -> 19 * Hstring.hash n + 5
+  | Name { hs = n; kind = Other; _ } -> 19 * Hstring.hash n + 6
   | Int z -> 19 * Z.hash z + 7
   | Real n -> 19 * Hashtbl.hash n + 7
   | Var v -> 19 * Var.hash v + 8
@@ -374,7 +374,7 @@ module AEPrinter = struct
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
     | Void -> Fmt.pf ppf "void"
-    | Name (n, _, _) -> pp_name ppf (Hstring.view n)
+    | Name { hs = n; _ } -> pp_name ppf (Hstring.view n)
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
 
@@ -504,11 +504,11 @@ let fresh_skolem_name base = name (fresh_skolem_string base)
 let make_as_fresh_skolem str = name (SkolemId.make_as_fresh str)
 
 let is_fresh_internal_name = function
-  | Name (hd, _, _) -> InternalId.is_id (Hstring.view hd)
+  | Name { hs = hd; _ } -> InternalId.is_id (Hstring.view hd)
   | _ -> false
 
 let is_fresh_skolem = function
-  | Name (hd, _, _) -> SkolemId.is_id (Hstring.view hd)
+  | Name { hs = hd; _ } -> SkolemId.is_id (Hstring.view hd)
   | _ -> false
 
 let is_get f = equal f (Op Get)
