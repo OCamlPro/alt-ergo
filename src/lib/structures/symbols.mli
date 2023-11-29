@@ -151,12 +151,6 @@ val is_fresh_skolem : t -> bool
 val is_get : t -> bool
 val is_set : t -> bool
 
-val fake_eq  : t
-val fake_neq : t
-val fake_lt  : t
-val fake_le  : t
-
-
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
 

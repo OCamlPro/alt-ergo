@@ -2369,21 +2369,18 @@ let new_facts_for_axiom
               ~function_name:"new_facts_for_axiom"
               "try to extend synt sbt %a of ax %a@ "
               (Var.Map.print E.print) sbs E.print orig;
-          match tr.E.guard with
-          | Some _ -> assert false (*guards not supported for TH axioms*)
-
-          | None when tr.E.semantic == [] && not do_syntactic_matching ->
+          if tr.E.semantic == [] && not do_syntactic_matching then
             (* pure syntactic insts already generated *)
             env, acc
 
-          | None when not (terms_linear_dep env torig) ->
+          else if not (terms_linear_dep env torig) then (
             if get_debug_fpa () >= 2 then
               Printer.print_dbg
                 ~header:false
                 "semantic matching failed(1)";
             env, acc
 
-          | None ->
+          ) else
             match semantic_matching lem_name tr s env uf optimized with
             | env, None ->
               if get_debug_fpa () >= 2 then

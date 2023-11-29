@@ -1702,63 +1702,13 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
   let mk_expr =
     mk_expr ~loc ~name_base ~decl_kind
   in
-  let content, guard =
-    match e with
-    | [{
-        term_descr = App ({
-            term_descr = Cst { builtin = B.Base; path; _ }; _
-          }, [], t1::t2::l); _
-      }] when Sy.equal (Sy.name (get_basename path)) (Sy.fake_eq) ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map mk_expr trs in
-      let t1' = mk_expr t1 in
-      let t2' = mk_expr t2 in
-      let lit = E.mk_eq ~iff:true t1' t2' in
-      trs, Some lit
-
-    | [{
-        term_descr = App ({
-            term_descr = Cst { builtin = B.Base; path; _ }; _
-          }, [], t1::t2::l); _
-      }] when Sy.equal (Sy.name (get_basename path)) (Sy.fake_neq) ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map mk_expr trs in
-      let lit = E.mk_distinct ~iff:true [mk_expr t1; mk_expr t2] in
-      trs, Some lit
-
-    | [{
-        term_descr = App ({
-            term_descr = Cst { builtin = B.Base; path; _ }; _
-          }, [], t1::t2::l); _
-      }] when Sy.equal (Sy.name (get_basename path)) (Sy.fake_le) ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map mk_expr trs in
-      let t1' = mk_expr t1 in
-      let t2' = mk_expr t2 in
-      let lit = E.mk_builtin ~is_pos:true Sy.LE [t1'; t2'] in
-      trs, Some lit
-
-    | [{
-        term_descr = App ({
-            term_descr = Cst { builtin = B.Base; path; _ }; _
-          }, [], t1::t2::l); _
-      }] when Sy.equal (Sy.name (get_basename path)) (Sy.fake_lt) ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map mk_expr trs in
-      let t1' = mk_expr t1 in
-      let t2' = mk_expr t2 in
-      let lit = E.mk_builtin ~is_pos:true Sy.LT [t1'; t2'] in
-      trs, Some lit
-
-    | lt -> List.map mk_expr lt, None
-
-  in
+  let content = List.map mk_expr e in
   let t_depth =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
   let trigger =
-    { E.content; guard; t_depth; semantic = []; (* will be set by theories *)
+    { E.content; t_depth; semantic = []; (* will be set by theories *)
       hyp; from_user; }
   in
   E.clean_trigger ~in_theory name trigger
