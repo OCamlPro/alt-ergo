@@ -74,6 +74,55 @@ type form =
 
 type name_kind = Ac | Other
 
+(** The [name_space] type discriminates the different types of names. The same
+    string in different name spaces is considered as different names.
+
+    Note that the names stored in the [Name] constructor below are mangled
+    during creation of the symbol: a special prefix is added depending on the
+    name space. *)
+type name_space =
+  | User
+  (** This symbol was defined by the user, and appears as is somewhere in a
+      source file.
+
+      As an exception, if the name we got from the user starts with either "."
+      or "@" (which are prefixes reserved for solver use in the SMT-LIB
+      standard), the name will be printed with an extra ".". So if the user
+      writes ".x" or "@x", it will be printed as "..x" and ".@x" instead.
+
+      Normally, this shouldn't occur, but we do this to ensure no confusion
+      even if invalid names ever sneak through. *)
+  | Internal
+  (** This symbol is an internal implementation detail of the solver, such as
+      a proxy formula or the abstracted counterpart of AC symbols.
+
+      Internal names are printed with a ".!" prefix. *)
+  | Fresh
+  (** This symbol is a "fresh" internal name. Fresh internal names play a
+      similar role as internal names, but they always represent a constant
+      that was introduced during solving as part of some kind of purification
+      or abstraction procedure. This is notably used by some parts of AC(X)
+      that check if terms contains fresh symbols (see [contains_a_fresh_alien]
+      in the [Arith] module for an example).
+
+      To ensure uniqueness, fresh names must always be generated using
+      [Id.Namespace.Internal.fresh ()].
+
+      In particular, fresh names are only used to denote constants, not
+      arbitrary functions. *)
+  | Skolem
+  (** This symbol has been introduced as part of skolemization, and represents
+      the (dependent) variable of an existential quantifier. Skolem names can
+      have arbitrary arity to depend on previous skolem names in binding order
+      (so if you have `(exists (x y) e)` then there will be a skolem variable
+      `sko_x` and a skolem function `(sko_y sko_x)`). *)
+  | Abstract
+  (** This symbol has been introduced as part of model generation, and
+      represents an abstract value.
+
+      To ensure uniqueness, abstract names must always be generated using
+      [Id.Namespace.Abstract.fresh ()]. *)
+
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = private
@@ -83,7 +132,12 @@ type t =
   | True
   | False
   | Void
-  | Name of { hs : Id.t ; kind : name_kind ; defined : bool }
+  | Name of
+      { hs : Id.t
+      (** Note: [hs] is prefixed according to [ns]. *)
+      ; kind : name_kind
+      ; defined : bool
+      ; ns : name_space }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -95,7 +149,16 @@ type t =
   | MapsTo of Var.t
   | Let
 
-val name : ?kind:name_kind -> ?defined:bool -> string -> t
+(** Create a new symbol with the given name.
+
+    By default, names are created in the [User] name space.
+
+    Note that names are pre-mangled: the [hs] field of the resulting name may
+    not be exactly the name that was passed to this function (however, calling
+    `name` with the same string but two different name spaces is guaranteed to
+    return two [Name]s with distinct [hs] fields). *)
+val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
+
 val var : Var.t -> t
 val int : string -> t
 val bitv : string -> t
@@ -125,7 +188,7 @@ val print : t Fmt.t
 val to_string_clean : t -> string
 val print_clean : t Fmt.t
 
-val pp_name : string Fmt.t
+val pp_name : (name_space * string) Fmt.t
 
 val pp_ae_operator : operator Fmt.t
 (* [pp_ae_operator ppf op] prints the operator symbol [op] on the
@@ -137,10 +200,7 @@ val pp_smtlib_operator : operator Fmt.t
 
 (*val dummy : t*)
 
-val fresh_internal_name : unit -> t
-val is_fresh_internal_name : t -> bool
-
-val fresh_skolem_string : string -> string
+val fresh_skolem_var : string -> Var.t
 val fresh_skolem_name : string -> t
 val is_fresh_skolem : t -> bool
 

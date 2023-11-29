@@ -169,12 +169,12 @@ module Make (X : Sig.X) = struct
     | None -> r, acc
     | Some _ -> match Expr.term_view t with
       | { Expr.f = Sy.Name { hs; kind = Sy.Ac; _ }; xs; ty; _ } ->
-        let aro_sy = Sy.name ("@" ^ (HS.view hs)) in
+        let aro_sy = Sy.name ~ns:Internal ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
       | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
-        let aro_sy = Sy.name "@*" in
+        let aro_sy = Sy.name ~ns:Internal "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc

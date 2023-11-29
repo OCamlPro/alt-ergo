@@ -1184,22 +1184,23 @@ let extract_concrete_model cache =
                 Expr.ArraysEx.store arr_val i v
               ) vals abstract
           in
-          let id =
+          let id, is_user =
             let Expr.{ f; _ } = Expr.term_view t in
             match f with
-            | Sy.Name { hs; _ } -> hs
+            | Sy.Name { hs; ns = User; _ } -> hs, true
+            | Sy.Name { hs; _ } -> hs, false
             | _ ->
               (* We only store array declarations as keys in the cache
                  [array_selects]. *)
               assert false
           in
           let mdl =
-            if not @@ Id.Namespace.Internal.is_id (Hstring.view id) then
+            if is_user then
               ModelMap.add (id, [], ty) [] arr_val mdl
             else
               (* Internal identifiers can occur here if we need to generate
                  a model term for an embedded array but this array isn't itself
-                 declared by the user. *)
+                 declared by the user -- see the [embedded-array] test . *)
               mdl
           in
           (* We need to update the model [mdl] in order to substitute all the

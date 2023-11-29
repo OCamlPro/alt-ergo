@@ -440,15 +440,14 @@ module SmtPrinter = struct
 
     | Sy.False, [] -> Fmt.pf ppf "false"
 
-    | Sy.Name { hs = n; _ }, []
-      when Id.Namespace.Abstract.is_id (Hstring.view n) ->
+    | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
       Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
 
-    | Sy.Name { hs = n; _ }, [] -> Symbols.pp_name ppf (Hstring.view n)
+    | Sy.Name { hs = n; _ }, [] -> Id.pp ppf n
 
     | Sy.Name { hs = n; _ }, _ :: _ ->
       Fmt.pf ppf "@[<2>(%a %a@])"
-        Symbols.pp_name (Hstring.view n)
+        Id.pp n
         Fmt.(list ~sep:sp pp |> box) xs
 
     | Sy.Var v, [] -> Var.print ppf v
@@ -905,15 +904,15 @@ let vrai =
 let faux = neg (vrai)
 let void = mk_term (Sy.Void) [] Ty.Tunit
 
-let fresh_name ty = mk_term (Sy.fresh_internal_name ()) [] ty
+let fresh_name ty =
+  mk_term (Sy.name ~ns:Fresh @@ Id.Namespace.Internal.fresh ()) [] ty
 
 let mk_abstract ty =
-  let id = Id.Namespace.Abstract.fresh () |> Hstring.make in
-  mk_term (Sy.Name { hs = id; defined = false; kind = Other }) [] ty
+  mk_term (Sy.name ~ns:Abstract @@ Id.Namespace.Abstract.fresh ()) [] ty
 
 let is_internal_name t =
   match t with
-  | { f; xs = []; _ } -> Sy.is_fresh_internal_name f
+  | { f = Name { ns = Fresh; _ }; xs = []; _ } -> true
   | _ -> false
 
 let is_internal_skolem t = Sy.is_fresh_skolem t.f
@@ -1722,7 +1721,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     Fmt.kstr
-      (fun str -> Sy.name (Id.Namespace.make_as_fresh_skolem str))
+      (fun str -> Sy.name ~ns:Skolem str)
       "%s%s!%d"
       s
       tyvars
@@ -2594,13 +2593,13 @@ module Purification = struct
         in_e, add_let let_v let_e lets
 
       | (Sy.Lit _ | Sy.Form _), _ ->
-        let fresh_var = Var.of_string @@ Sy.fresh_skolem_string "Pur-F" in
+        let fresh_var = Sy.fresh_skolem_var "Pur-F" in
         mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
       | _ -> (* detect ITEs *)
         match t.xs with
         | [_;_;_] when is_ite t.f ->
-          let fresh_var = Var.of_string @@ Sy.fresh_skolem_string "Pur-Ite" in
+          let fresh_var = Sy.fresh_skolem_var "Pur-Ite" in
           mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
         | _ ->

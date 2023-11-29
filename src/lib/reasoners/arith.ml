@@ -36,7 +36,7 @@ module Z = Numbers.Z
 module Q = Numbers.Q
 
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
-let mod_symb = Sy.name "@mod"
+let mod_symb = Sy.name ~ns:Internal "@mod"
 
 let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   (* d must be integral and if we work on integer exponentation,
@@ -243,7 +243,9 @@ module Shostak
       if Options.get_no_nla() && P.is_const p1 == None && P.is_const p2 == None
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~kind:Sy.Ac "@*") [t1; t2] ty in
+        let tau =
+          E.mk_term (Sy.name ~kind:Sy.Ac ~ns:Internal "@*") [t1; t2] ty
+        in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -256,7 +258,7 @@ module Shostak
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name "@/") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name ~ns:Internal "@/") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -283,7 +285,7 @@ module Shostak
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name "@%") [t1; t2] ty in
+        let tau = E.mk_term (Sy.name ~ns:Internal "@%") [t1; t2] ty in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else

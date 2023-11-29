@@ -74,6 +74,28 @@ type form =
 
 type name_kind = Ac | Other
 
+type name_space = User | Internal | Fresh | Skolem | Abstract
+
+let compare_name_space ns1 ns2 =
+  match ns1, ns2 with
+  | User, User -> 0
+  | User, _ -> -1
+  | _, User -> 1
+
+  | Internal, Internal -> 0
+  | Internal, _ -> -1
+  | _, Internal -> 1
+
+  | Fresh, Fresh -> 0
+  | Fresh, _ -> -1
+  | _, Fresh -> 1
+
+  | Skolem, Skolem -> 0
+  | Skolem, _ -> -1
+  | _, Skolem -> 1
+
+  | Abstract, Abstract -> 0
+
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
@@ -83,7 +105,11 @@ type t =
   | True
   | False
   | Void
-  | Name of { hs : Id.t ; kind : name_kind ; defined : bool }
+  | Name of
+      { hs : Id.t
+      ; kind : name_kind
+      ; defined : bool
+      ; ns : name_space }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -97,8 +123,20 @@ type t =
 
 type s = t
 
-let name ?(kind=Other) ?(defined=false) s =
-  Name { hs = Hstring.make s ; kind ; defined }
+let mangle ns s =
+  match ns with
+  | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
+  | User when String.length s > 0 && Char.equal '@' s.[0] -> ".@" ^ s
+  | User -> s
+  | Internal -> ".!" ^ s
+  | Fresh -> ".k" ^ s
+  | Skolem -> ".?__" ^ s
+  | Abstract -> "@a" ^ s
+
+(* NB: names are pre-mangled, which means that we don't need to take the
+   namespace into consideration when hashing or comparing. *)
+let name ?(kind=Other) ?(defined=false) ?(ns = User) s =
+  Name { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -130,10 +168,8 @@ let is_ac x = match x with
 
 let is_internal sy =
   match sy with
-  | Name { hs; _ } ->
-    let s = Hstring.view hs in
-    Stdcompat.String.starts_with ~prefix:"." s ||
-    Stdcompat.String.starts_with ~prefix:"@" s
+  | Name { ns = User; _ } -> false
+  | Name _ -> true
   | _ -> false
 
 let compare_kinds k1 k2 =
@@ -215,9 +251,12 @@ let compare s1 s2 =
       | Int z1, Int z2 -> Z.compare z1 z2
       | Real h1, Real h2 -> Q.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name { hs = h1; kind = k1; _ }, Name { hs = h2; kind = k2; _ } ->
+      | Name { ns = ns1; hs = h1; kind = k1; _ },
+        Name { ns = ns2; hs = h2; kind = k2; _ } ->
         let c = Hstring.compare h1 h2 in
-        if c <> 0 then c else compare_kinds k1 k2
+        if c <> 0 then c else
+          let c = compare_kinds k1 k2 in
+          if c <> 0 then c else compare_name_space ns1 ns2
       | Bitv (n1, s1), Bitv (n2, s2) ->
         let c = Int.compare n1 n2 in
         if c <> 0 then c else Z.compare s1 s2
@@ -244,6 +283,7 @@ let hash x =
   | Let -> 3
   | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
+  (* NB: No need to hash the namespace because names are pre-mangled *)
   | Name { hs = n; kind = Ac; _ } -> 19 * Hstring.hash n + 5
   | Name { hs = n; kind = Other; _ } -> 19 * Hstring.hash n + 6
   | Int z -> 19 * Z.hash z + 7
@@ -268,7 +308,8 @@ let string_of_bound b =
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
-let pp_name ppf s =
+let pp_name ppf (_ns, s) =
+  (* Names are pre-mangled *)
   Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
 
 module AEPrinter = struct
@@ -364,7 +405,7 @@ module AEPrinter = struct
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
     | Void -> Fmt.pf ppf "void"
-    | Name { hs = n; _ } -> pp_name ppf (Hstring.view n)
+    | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
 
@@ -452,18 +493,12 @@ let to_string_clean sy =
 let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
-
-let fresh_internal_name () = name (Id.Namespace.Internal.fresh ())
-
 let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
-let fresh_skolem_name base = name (fresh_skolem_string base)
-
-let is_fresh_internal_name = function
-  | Name { hs = hd; _ } -> Id.Namespace.Internal.is_id (Hstring.view hd)
-  | _ -> false
+let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
+let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
 
 let is_fresh_skolem = function
-  | Name { hs = hd; _ } -> Id.Namespace.Skolem.is_id (Hstring.view hd)
+  | Name { ns = Skolem; _ } -> true
   | _ -> false
 
 let is_get f = equal f (Op Get)
