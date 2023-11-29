@@ -2209,10 +2209,8 @@ let extend_with_domain_substitution =
   let aux idoms sbt =
     Var.Map.fold
       (fun v_hs (lv, uv, ty) sbt ->
-         let s = Hstring.view (Var.view v_hs).Var.hs in
-         match s.[0] with
-         | '?' -> sbt
-         | _ ->
+         if Var.is_local v_hs then sbt
+         else
            let lb_var = v_hs in
            let lb_val = match lv, uv with
              | None, None -> raise Exit

@@ -30,12 +30,23 @@
 
 type t
 
-type view = {hs : Hstring.t ; id : int}
-
 val of_hstring : Hstring.t -> t
-val of_string  : string -> t
+(** Create a *fresh* variable with the given name.
 
-val view : t -> view
+    Calling [of_hstring] twice with the same [Hstring.t] as argument will result
+    in *distinct* variables. *)
+
+val of_string  : string -> t
+(** Convenient alias for [of_hstring (Hstring.make s)]. *)
+
+val local : string -> t
+(** Create a new "local" variable. Local variables are variables used
+    exclusively in user-defined theories for semantic triggers, and are
+    implicitly bound at the level of the enclosing quantifier. *)
+
+val is_local : t -> bool
+(** Indicates whether the given variable is a local variable (see {!local} above
+    for details). *)
 
 val compare : t -> t -> int
 
@@ -44,6 +55,8 @@ val equal : t -> t -> bool
 val hash : t -> int
 
 val underscore : t
+(** Unique special variable. Used to indicate fields that should be ignored in
+    pattern matching and triggers. *)
 
 val print : Format.formatter -> t -> unit
 

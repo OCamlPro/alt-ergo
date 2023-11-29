@@ -75,7 +75,7 @@ type form =
 
 type name_kind = Ac | Other
 
-type bound_kind = VarBnd of Var.t | ValBnd of Numbers.Q.t
+type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
@@ -201,7 +201,7 @@ let compare_bounds_kind a b =
     (function
       | VarBnd h1, VarBnd h2 -> Var.compare h1 h2
       | ValBnd q1, ValBnd q2 -> Numbers.Q.compare q1 q2
-      | _, (VarBnd _ | ValBnd _) -> assert false
+      | _, (VarBnd _ | ValBnd _ | Unbounded) -> assert false
     )
 
 let compare_bounds a b =
@@ -261,6 +261,7 @@ let hash x =
   | Form x -> 19 * Hashtbl.hash x + 12
 
 let string_of_bound_kind x = match x with
+  | Unbounded -> "?"
   | VarBnd v -> Var.to_string v
   | ValBnd v -> Numbers.Q.to_string v
 
