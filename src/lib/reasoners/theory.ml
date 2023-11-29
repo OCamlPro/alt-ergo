@@ -377,9 +377,9 @@ module Main_Default : S = struct
         let new_choices =
           List.map add_explanations_to_split new_splits
         in
-        aux env sem_facts acc_choices ([], 0) new_choices
+        aux env sem_facts acc_choices new_choices
 
-    and optimizing_objective env sem_facts acc_choices (objs, order) obj =
+    and optimizing_objective env sem_facts acc_choices obj order =
       let opt_split =
         Option.get (CC_X.optimizing_objective env.gamma_finite obj)
       in
@@ -414,7 +414,7 @@ module Main_Default : S = struct
         (* We stop optimizing the objective function [obj] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
-          aux env sem_facts acc_choices ([], 0) []
+          aux env sem_facts acc_choices []
         else
           { env with choices = List.rev acc_choices }, sem_facts
 
@@ -423,8 +423,7 @@ module Main_Default : S = struct
           let new_choice =
             add_explanations_to_split ~order opt_split.case_split
           in
-          propagate_choices env sem_facts acc_choices
-            (objs, order + 1) [new_choice]
+          propagate_choices env sem_facts acc_choices [new_choice]
         end
 
     (* Propagates the choice made by case-splitting to the environment
@@ -434,10 +433,10 @@ module Main_Default : S = struct
        @raise [Inconsistent] if we detect an inconsistent with the choice
               on the top of [new_choices] but this choice doesn't
               participate to the inconsistency. *)
-    and propagate_choices env sem_facts acc_choices acc_objs new_choices =
+    and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
       match new_choices with
-      | [] -> aux env sem_facts acc_choices acc_objs new_choices
+      | [] -> aux env sem_facts acc_choices new_choices
 
       | ((c, lit_orig, CNeg, ex_c, _order) as a) :: new_choices ->
         let facts = CC_X.empty_facts () in
@@ -446,7 +445,7 @@ module Main_Default : S = struct
           CC_X.assume_literals env.gamma_finite sem_facts facts
         in
         let env = { env with gamma_finite = base_env } in
-        propagate_choices env sem_facts (a :: acc_choices) acc_objs new_choices
+        propagate_choices env sem_facts (a :: acc_choices) new_choices
 
       | ((c, lit_orig, CPos exp, ex_c_exp, order) as a) :: new_choices ->
         try
@@ -458,8 +457,7 @@ module Main_Default : S = struct
           in
           let env = { env with gamma_finite = base_env } in
           Options.tool_req 3 "TR-CCX-CS-Normal-Run";
-          propagate_choices env sem_facts (a :: acc_choices) acc_objs
-            new_choices
+          propagate_choices env sem_facts (a :: acc_choices) new_choices
 
         with Ex.Inconsistent (dep, classes) ->
         (* As we generate fresh explanation for each choice in
@@ -497,24 +495,23 @@ module Main_Default : S = struct
                 objectives = Objective.Model.reset_until env.objectives i }
             | None -> env
           in
-          propagate_choices env sem_facts acc_choices acc_objs
+          propagate_choices env sem_facts acc_choices
             [neg_c, lit_orig, CNeg, dep, order]
 
-    and aux env sem_facts acc_choices (objs, order) new_choices =
+    and aux env sem_facts acc_choices new_choices =
       Options.tool_req 3 "TR-CCX-CS-Case-Split";
       match new_choices with
       | [] ->
-        begin match objs with
-          | obj :: objs ->
-            optimizing_objective env sem_facts acc_choices (objs, order) obj
-          | [] ->
+        begin match Objective.Model.next_unknown env.objectives ~for_model with
+          | Some (obj, order) ->
+            optimizing_objective env sem_facts acc_choices obj order
+          | None ->
             generate_choices env sem_facts acc_choices
         end
       | _ ->
-        propagate_choices env sem_facts acc_choices (objs, order) new_choices
+        propagate_choices env sem_facts acc_choices new_choices
     in
-    aux env sem_facts (List.rev env.choices)
-      (Objective.Model.functions env.objectives, 0) new_choices
+    aux env sem_facts (List.rev env.choices) new_choices
 
   (* remove old choices involving fresh variables that are no longer in UF *)
   let filter_valid_choice uf (ra, _, _, _, _) =

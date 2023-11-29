@@ -109,6 +109,21 @@ module Model = struct
          | Value _ | Unknown -> true
       ) mdl
 
+  exception Found of Function.t * int
+
+  let next_unknown ~for_model mdl =
+    try
+      M.iter (fun { f; order } v ->
+          match (v : Value.t) with
+          | Value _ -> ()
+          | Limit _ | Pinfinity | Minfinity when for_model -> raise Exit
+          | _ -> raise (Found (f, order))
+        ) mdl;
+      None
+    with
+    | Found (f, order) -> Some (f, order)
+    | Exit -> None
+
   let reset_until mdl o =
     M.fold
       (fun { f; order } v acc ->
