@@ -100,7 +100,6 @@ and trigger = {
   hyp : t list;
   t_depth : int;
   from_user : bool;
-  guard : t option
 }
 
 type expr = t
@@ -1350,15 +1349,11 @@ let rec apply_subst_aux (s_t, s_ty) t =
       | _ ->
         mk_term f xs' ty'
 
-and apply_subst_trigger subst ({ content; guard; _ } as tr) =
+and apply_subst_trigger subst ({ content; _ } as tr) =
   {tr with
    content = List.map (apply_subst_aux subst) content;
    (* semantic_trigger = done on theory side *)
    (* hyp = done on theory side *)
-   guard =
-     match guard with
-     | None -> guard
-     | Some g -> Some (apply_subst_aux subst g)
   }
 
 (* *1* We should never subst formulas inside termes. We could allow to
@@ -1638,7 +1633,6 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
             semantic = [];
             t_depth = t.depth;
             from_user = false;
-            guard = None
           } ]
     | Dtheory -> []
     | Daxiom
@@ -1660,7 +1654,6 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
                semantic = [];
                t_depth = t.depth;
                from_user = false;
-               guard = None
              } :: acc
         )cand []
 
@@ -2255,7 +2248,6 @@ module Triggers = struct
            semantic = [];
            hyp = [];
            from_user = false;
-           guard = None;
            t_depth = List.fold_left (fun z t -> max z (depth t)) 0 content
          }
       ) l

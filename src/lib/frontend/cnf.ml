@@ -170,60 +170,13 @@ let rec make_term quant_basename t =
 
 
 and make_trigger ~in_theory name quant_basename hyp (e, from_user) =
-  let content, guard = match e with
-    | [({ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }
-        : (_ Typed.tterm, _) Typed.annoted)]
-      when Sy.equal s Sy.fake_eq ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term quant_basename) trs in
-      let lit =
-        E.mk_eq ~iff:true
-          (make_term quant_basename t1)
-          (make_term quant_basename t2)
-      in
-      trs, Some lit
-
-    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
-      when Sy.equal s Sy.fake_neq ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term quant_basename) trs in
-      let lit =
-        E.mk_distinct ~iff:true
-          [make_term quant_basename t1;
-           make_term quant_basename t2]
-      in
-      trs, Some lit
-
-    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
-      when Sy.equal s Sy.fake_le ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term quant_basename) trs in
-      let lit =
-        E.mk_builtin ~is_pos:true Sy.LE
-          [make_term quant_basename t1;
-           make_term quant_basename t2]
-      in
-      trs, Some lit
-
-    | [{ c = { tt_desc = TTapp(s, t1::t2::l); _ }; _ }]
-      when Sy.equal s Sy.fake_lt ->
-      let trs = List.filter (fun t -> not (List.mem t l)) [t1; t2] in
-      let trs = List.map (make_term quant_basename) trs in
-      let lit =
-        E.mk_builtin ~is_pos:true Sy.LT
-          [make_term quant_basename t1;
-           make_term quant_basename t2]
-      in
-      trs, Some lit
-
-    | lt -> List.map (make_term quant_basename) lt, None
-  in
+  let content = List.map (make_term quant_basename) e in
   let t_depth =
     List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
   let trigger =
-    { E.content ; guard ; t_depth; semantic = []; (* will be set by theories *)
+    { E.content ; t_depth; semantic = []; (* will be set by theories *)
       hyp; from_user;
     }
   in

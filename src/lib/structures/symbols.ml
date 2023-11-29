@@ -514,14 +514,6 @@ let is_fresh_skolem = function
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
 
-
-let fake_eq  =  name "@eq"
-let fake_neq =  name "@neq"
-let fake_lt  =  name "@lt"
-let fake_le  =  name "@le"
-
-
-
 module Labels = Hashtbl.Make(struct
     type t = s
     let equal = equal

@@ -270,7 +270,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     ME.add orig (mp_orig_ok, SE.add f mp_orig_ko) insts
 
 
-  let new_facts _env tbox selector substs =
+  let new_facts _env _tbox selector substs =
     List.fold_left
       (fun acc ({Matching_types.trigger_formula=f;
                  trigger_age=age; trigger_dep=dep; trigger_orig=orig;
@@ -288,43 +288,40 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
              s_lem_orig = lorig} ->
             incr cpt;
             let s = sbs, sty in
-            match tr.E.guard with
-            | Some a when X.query (Expr.apply_subst s a) tbox==None -> acc
-            | _ ->
-              let nf = E.apply_subst s f in
-              (* add the incrementaly guard to nf, if any *)
-              let nf = E.mk_imp trigger_increm_guard nf in
-              if inst_is_seen_during_this_round orig nf acc then acc
+            let nf = E.apply_subst s f in
+            (* add the incrementaly guard to nf, if any *)
+            let nf = E.mk_imp trigger_increm_guard nf in
+            if inst_is_seen_during_this_round orig nf acc then acc
+            else
+              let accepted = selector nf orig in
+              if not accepted then add_rejected_to_acc orig nf acc
               else
-                let accepted = selector nf orig in
-                if not accepted then add_rejected_to_acc orig nf acc
-                else
-                  let p =
-                    { Expr.ff = nf;
-                      origin_name = E.name_of_lemma lorig;
-                      gdist = -1;
-                      hdist = -1;
-                      trigger_depth = tr.Expr.t_depth;
-                      nb_reductions = 0;
-                      age = 1+(max g age);
-                      mf = true;
-                      gf = b;
-                      lem = Some lorig;
-                      from_terms = torig;
-                      theory_elim = true
-                    }
-                  in
-                  let dep =
-                    if not (Options.get_unsat_core() ||
-                            Options.get_profiling()) then
-                      dep
-                    else
-                      (* Dep lorig used to track conflicted instances
-                         in profiling mode *)
-                      Ex.union dep (Ex.singleton (Ex.Dep lorig))
-                  in
-                  incr kept;
-                  add_accepted_to_acc orig nf (p, dep, s, tr.E.content) acc
+                let p =
+                  { Expr.ff = nf;
+                    origin_name = E.name_of_lemma lorig;
+                    gdist = -1;
+                    hdist = -1;
+                    trigger_depth = tr.Expr.t_depth;
+                    nb_reductions = 0;
+                    age = 1+(max g age);
+                    mf = true;
+                    gf = b;
+                    lem = Some lorig;
+                    from_terms = torig;
+                    theory_elim = true
+                  }
+                in
+                let dep =
+                  if not (Options.get_unsat_core() ||
+                          Options.get_profiling()) then
+                    dep
+                  else
+                    (* Dep lorig used to track conflicted instances
+                       in profiling mode *)
+                    Ex.union dep (Ex.singleton (Ex.Dep lorig))
+                in
+                incr kept;
+                add_accepted_to_acc orig nf (p, dep, s, tr.E.content) acc
           ) acc subst_list
       ) ME.empty substs
 

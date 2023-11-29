@@ -98,7 +98,6 @@ and trigger = (*private*) {
   hyp : t list;
   t_depth : int;
   from_user : bool;
-  guard : t option
 }
 
 module Set : Set.S with type elt = t
