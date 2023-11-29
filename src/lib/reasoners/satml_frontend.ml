@@ -845,7 +845,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let nbv = FF.nb_made_vars env.ff_hcons_env in
         let unit, nunit = SAT.new_vars env.satml ~nbv new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
-        (*SAT.update_lazy_cnf activate ~dec_lvl;*)
         SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl;
       with
       | Satml.Unsat (lc) -> raise (IUnsat (env, make_explanation lc))
