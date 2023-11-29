@@ -350,6 +350,10 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
+  let suspicious_objectives : bool State.key =
+    State.create_key ~pipe:"" "suspicious_objective"
+  in
+
   let set_steps_bound i st =
     try DO.Steps.set i st with
       Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
@@ -511,6 +515,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
+    |> State.set suspicious_objectives false
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -677,8 +682,8 @@ let main () =
       unsupported_opt name; st
   in
 
-  let handle_optimize_stmt ~to_max loc id (term : DStd.Expr.Term.t) st =
-    let contents = `Optimize (term, to_max) in
+  let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
+    let contents = `Optimize (term, is_max) in
     let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
     let cnf =
       D_cnf.make (State.get State.logic_file st).loc
@@ -699,6 +704,11 @@ let main () =
           begin
             match objectives with
             | Some o ->
+              if not @@ Objective.Model.has_no_limit o then
+                warning "Some objectives cannot be fulfilled";
+              if State.get suspicious_objectives st then
+                warning "Optimization constraints in presence of push \
+                         and pop statements are not correctly processed.";
               Objective.Model.pp (Options.Output.get_fmt_regular ()) o
             | None ->
               recoverable_error "No objective generated"
@@ -717,10 +727,10 @@ let main () =
     match id, terms.ret with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
-      handle_optimize_stmt ~to_max:false loc id term st
+      handle_optimize_stmt ~is_max:false loc id term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
-      handle_optimize_stmt ~to_max:true loc id term st
+      handle_optimize_stmt ~is_max:true loc id term st
     | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
       handle_get_objectives terms st
@@ -976,7 +986,13 @@ let main () =
       | {contents = `Other (custom, args); loc; _} ->
         handle_custom_statement loc custom args st
 
-      | _ ->
+      | td ->
+        let st =
+          match td.contents with
+          | `Pop _ | `Push _ ->
+            State.set suspicious_objectives true st
+          | _ -> st
+        in
         (* TODO:
            - Separate statements that should be ignored from unsupported
              statements and throw exception or print a warning when an

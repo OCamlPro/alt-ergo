@@ -33,12 +33,12 @@ module Function : sig
     e : Expr.t;
     (** Term that represents the objective function. *)
 
-    to_max : bool;
+    is_max : bool;
     (** Determine if we want to maximize or minimize this objective function. *)
   }
   (** Type of an objective function. *)
 
-  val mk : to_max:bool -> Expr.t -> t
+  val mk : is_max:bool -> Expr.t -> t
 
   val pp : t Fmt.t
   (** [pp ppf o] prints the objective function [o] on the formatter [ppf]

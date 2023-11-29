@@ -237,11 +237,4 @@ module Q = struct
 
   let root_default = accurate_root_default
   let root_excess  = accurate_root_excess
-
-  let (~$$) = Q.(~$$)
-  let (~$) = Q.(~$)
-  let ( + ) = Q.(+)
-  let ( - ) = Q.(-)
-  let ( * ) = Q.( * )
-  let ( / ) = Q.( / )
 end

@@ -31,12 +31,13 @@
 module Function = struct
   type t = {
     e : Expr.t;
-    to_max : bool;
+    is_max : bool;
   }
 
-  let equal { e = e1; _ } { e = e2; _ } = Expr.equal e1 e2
+  let equal { e = e1; is_max = m1 } { e = e2; is_max = m2 } =
+    Bool.equal m1 m2 && Expr.equal e1 e2
 
-  let mk ~to_max e = { e; to_max }
+  let mk ~is_max e = { e; is_max }
 
   let pp ppf { e; _ } = Expr.print ppf e
 end

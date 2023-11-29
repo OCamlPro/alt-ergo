@@ -397,11 +397,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
-  let internal_optimize ?(loc = Loc.dummy) (f, to_max) env =
+  let internal_optimize ?(loc = Loc.dummy) (f, is_max) env =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
-      SAT.optimize env.sat_env ~to_max f
+      SAT.optimize env.sat_env ~is_max f
     | `Unsat -> ()
 
   (** Checks whether the env can be used before actually calling the
@@ -438,7 +438,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let th_assume = wrap_f internal_th_assume
 
-  let optimize = handle_sat_exn internal_optimize
+  let optimize = wrap_f internal_optimize
 
   let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
     try

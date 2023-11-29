@@ -2046,16 +2046,16 @@ let case_split env uf ~for_model =
   | _ -> res
 
 (* Helper function used in [optimizing_objective] to pick a value
-   for the polynomial [p] in its interval. We used this function in the case
+   for the polynomial [p] in its interval. We use this function in the case
    the value produced by the optimization procedure doesn't satisfy some
    constraints that involve strict inequalities or the problem is unbounded. *)
-let middle_value env ~to_max ty p bound =
+let middle_value env ~is_max ty p bound =
   let interval =
     match MP0.find_opt p env.polynomes, bound with
     | Some i, Some bound ->
       begin
         try
-          if to_max then
+          if is_max then
             Intervals.new_borne_sup Ex.empty bound ~is_le:false i
           else
             Intervals.new_borne_inf Ex.empty bound ~is_le:false i
@@ -2064,16 +2064,16 @@ let middle_value env ~to_max ty p bound =
     | Some i, None -> i
     | None, _ -> Intervals.point Q.zero ty Ex.empty
   in
-  let q = Option.get (Intervals.pick ~to_max interval) in
+  let q = Option.get (Intervals.pick ~is_max interval) in
   alien_of (P.create [] q ty)
 
-let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
+let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  let uf, _ = Uf.add uf e in
+  (*   let uf, _ = Uf.add uf e in *)
   let repr, _ = Uf.find uf e in
   let ty = E.type_info e in
-  let r1, _ = X.make e in (* instead of repr, which may be a constant *)
+  let r1 = Uf.make uf e in (* instead of repr, which may be a constant *)
   let p = poly_of repr in
   match P.is_const p with
   | Some optim ->
@@ -2094,7 +2094,7 @@ let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
   | None ->
     begin
       let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
-      let p = if to_max then p else P.mult_const Q.m_one p in
+      let p = if is_max then p else P.mult_const Q.m_one p in
       let l, c = P.to_list p in
       let l = List.rev_map (fun (x, y) -> y, x) (List.rev l) in
       let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
@@ -2115,7 +2115,7 @@ let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
 
       | Sim.Core.Unbounded _ ->
         let value =
-          if to_max then
+          if is_max then
             Objective.Value.Pinfinity
           else
             Objective.Value.Minfinity
@@ -2124,22 +2124,22 @@ let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
            objective function. In this case, we pick a value in the domain
            of the polynomial [p]. *)
         let case_split =
-          LR.mkv_eq r1 (middle_value env ~to_max ty p None), true, Th_util.CS
+          LR.mkv_eq r1 (middle_value env ~is_max ty p None), true, Th_util.CS
             (Th_util.Th_arith, Q.one)
         in
         Some Th_util.{ value; case_split }
 
       | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
-        let optim = if to_max then max_p else Q.mult Q.m_one max_p in
+        let optim = if is_max then max_p else Q.mult Q.m_one max_p in
         if Options.get_debug_optimize () then
           begin
             if is_le then
               Printer.print_dbg "%a has a %s: %a@." Expr.print e
-                (if to_max then "maximum" else "minimum") Q.print optim
+                (if is_max then "maximum" else "minimum") Q.print optim
             else
               Printer.print_dbg "%a is a %s bound of %a" Q.print optim
-                (if to_max then "upper" else "lower") Expr.print e
+                (if is_max then "upper" else "lower") Expr.print e
           end;
         let r2 = alien_of (P.create [] optim ty) in
         Debug.case_split r1 r2;
@@ -2149,7 +2149,7 @@ let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
             Objective.Value.Value t2
           else
             begin
-              if to_max then Objective.Value.Limit (Below, t2)
+              if is_max then Objective.Value.Limit (Below, t2)
               else Objective.Value.Limit (Above, t2)
             end
         in
@@ -2162,7 +2162,7 @@ let optimizing_objective env uf Objective.Function.{ e; to_max; _ } =
                in the domain of the polynomial [p]. But we propagate the new
                value [value] for this objective. Indeed, we want to be able
                to print it while using the statement [get-objective]. *)
-            middle_value env ~to_max ty p None
+            middle_value env ~is_max ty p None
         in
         let case_split =
           LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)

@@ -53,6 +53,14 @@ type t = {
   terms_values : (Shostak.Combine.r * string) Expr.Map.t
 }
 
+let empty = {
+  propositional = Expr.Set.empty;
+  constants = ModelMap.empty;
+  functions = ModelMap.empty;
+  arrays = ModelMap.empty;
+  terms_values = Expr.Map.empty;
+}
+
 module Pp_smtlib_term = struct
 
   let to_string_type t =
@@ -575,4 +583,4 @@ let output_concrete_model fmt m =
   (* Arrays *)
   (*     SmtlibCounterExample.output_arrays_counterexample fmt m.arrays; *)
 
-  Printer.print_fmt fmt "@]@,)";
+  Printer.print_fmt fmt "@]@,)"

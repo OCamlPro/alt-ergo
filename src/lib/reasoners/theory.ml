@@ -52,10 +52,7 @@ module type S = sig
     (E.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val optimize : t -> to_max:bool -> Expr.t -> t
-  (** [optimize env obj] *)
-  (* TODO: update this documentation. *)
-
+  val optimize : t -> is_max:bool -> Expr.t -> t
   val query : E.t -> t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
@@ -64,7 +61,7 @@ module type S = sig
   val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
-  val compute_concrete_model : t -> (Models.t Lazy.t * Objective.Model.t) option
+  val compute_concrete_model : t -> Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -719,17 +716,12 @@ module Main_Default : S = struct
       if Options.get_profiling() then Profiling.assume cpt;
       Debug.assumed t.assumed;
       assert (not ordered || is_ordered_list t.assumed);
-
       let gamma, _ = CC_X.assume_literals t.gamma [] facts in
-      (* update to optimize with the new gamma *)
-      (* let objectives, reset_cs_env =
-         update_objectives t.objectives assumed gamma in *)
       let new_terms = CC_X.new_terms gamma in
       let t =  {t with
                 gamma = gamma; terms = Expr.Set.union t.terms new_terms;
                }
       in
-      (*       let t = if reset_cs_env then reset_case_split_env t else t in *)
       t, new_terms, cpt
 
   let get_debug_theories_instances th_instances ilvl dlvl =
@@ -888,28 +880,31 @@ module Main_Default : S = struct
   let get_case_split_env t = t.gamma_finite
 
   let compute_concrete_model env =
-    if Options.get_interpretation () then
-      let { gamma_finite; assumed_set; objectives; _ }, _ =
-        do_case_split_aux env ~for_model:true
-      in
-      Some (lazy (
-          CC_X.extract_concrete_model
-            ~prop_model:assumed_set
-            gamma_finite
-        ), objectives)
-    else
-      None
+    let { gamma_finite; assumed_set; objectives; _ }, _ =
+      do_case_split_aux env ~for_model:true
+    in
+    lazy (
+      CC_X.extract_concrete_model
+        ~prop_model:assumed_set
+        gamma_finite
+    ), objectives
 
   let assume_th_elt t th_elt dep =
     { t with gamma = CC_X.assume_th_elt t.gamma th_elt dep }
 
   let get_assumed env = env.assumed_set
 
-  let optimize env ~to_max f =
-    let obj = Objective.Function.mk ~to_max f in
+  let optimize env ~is_max f =
+    (* We have to add the term [f] and its subterms as the MaxSMT
+       syntax allows to optimize expressions that aren't part of
+       the current context. *)
+    let env = add_term env ~add_in_cs:false f in
+    let obj = Objective.Function.mk ~is_max f in
     let objectives =
       Objective.Model.add obj Objective.Value.Unknown env.objectives
     in
+    (* As we may do casesplits after each `assume`, we may start
+       model generations before registering all the optimization constraints. *)
     let env = reset_case_split_env env in
     { env with objectives }
 
@@ -945,12 +940,12 @@ module Main_Empty : S = struct
   let get_case_split_env _ = CC_X.empty
   let do_case_split env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
-  let compute_concrete_model _env = None
+  let compute_concrete_model _env = lazy Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
-  let optimize env ~to_max:_ _fun_ = env
+  let optimize env ~is_max:_ _obj = env
   let reinit_cpt () = ()
 
   let get_objectives _env = Objective.Model.empty

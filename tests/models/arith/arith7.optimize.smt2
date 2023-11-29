@@ -1,5 +1,5 @@
-(set-logic ALL)
 (set-option :produce-models true)
+(set-logic ALL)
 (declare-const x Real)
 (push 1)
 (assert (< x 0.5))

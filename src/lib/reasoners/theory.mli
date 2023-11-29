@@ -41,8 +41,9 @@ module type S = sig
     (Expr.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val optimize : t -> to_max:bool -> Expr.t -> t
-  (** [optimize env obj] *)
+  val optimize : t -> is_max:bool -> Expr.t -> t
+  (** [optimize env ~is_max e] registers the expression [e] to be optimized
+      during the model generation. *)
 
   val query : Expr.t -> t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
@@ -53,7 +54,7 @@ module type S = sig
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
-  val compute_concrete_model : t -> (Models.t Lazy.t * Objective.Model.t) option
+  val compute_concrete_model : t -> Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :

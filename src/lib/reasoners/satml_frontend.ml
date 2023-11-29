@@ -987,14 +987,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if not (Options.get_first_interpretation ()) then compute
       else env.last_saved_model == None
     in
-    if compute then begin
+    if compute && Options.get_interpretation () then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        match Th.compute_concrete_model (SAT.current_tbox env.satml) with
-        | Some (model, objectives) ->
-          env.last_saved_model <- Some model;
-          env.last_saved_objectives <- Some objectives;
-        | None -> ()
+        let model, objectives =
+          Th.compute_concrete_model (SAT.current_tbox env.satml)
+        in
+        env.last_saved_model <- Some model;
+        env.last_saved_objectives <- Some objectives;
       with Ex.Inconsistent (_expl, _classes) as e ->
         raise e
     end
@@ -1064,14 +1064,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let acc =
       try
-        Objective.Model.fold (fun { e; to_max } value acc ->
+        Objective.Model.fold (fun { e; is_max } value acc ->
             match (value : Objective.Value.t) with
             | Pinfinity | Minfinity ->
               raise (Give_up acc)
             | Value v ->
-              (e, v, to_max, true) :: acc
+              (e, v, is_max, true) :: acc
             | Limit (_, v) ->
-              raise (Give_up ((e, v, to_max, false) :: acc))
+              raise (Give_up ((e, v, is_max, false) :: acc))
             | Unknown ->
               assert false
           ) objs []
@@ -1344,11 +1344,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep
 
-  let optimize env ~to_max obj = SAT.optimize env.satml ~to_max obj
+  let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
 
   let get_model env =
-    Option.bind env.last_saved_model @@
-    fun (lazy mdl) -> Some mdl
+    Option.map (fun (lazy mdl) -> mdl) env.last_saved_model
 
   let get_unknown_reason env = env.unknown_reason
 

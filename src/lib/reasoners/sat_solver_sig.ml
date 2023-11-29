@@ -97,9 +97,9 @@ module type S = sig
   (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
 
-  (* TODO: update this documentation. *)
-  (** [optimize env obj ~is_max ~order] *)
-  val optimize : t -> to_max:bool -> Expr.t -> unit
+  (** [optimize env ~is_max o] registers the expression [o]
+      as an objective function. *)
+  val optimize : t -> is_max:bool -> Expr.t -> unit
 
   (* [unsat env f size] checks the unsatisfiability of [f] in
      [env]. Raises I_dont_know when the proof tree's height reaches

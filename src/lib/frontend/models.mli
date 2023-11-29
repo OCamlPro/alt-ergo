@@ -40,6 +40,8 @@ type t = {
       representative of type X.r and as a string. *)
 }
 
+val empty : t
+
 val output_concrete_model : t Fmt.t
 (** [output_concrete_model ppf mdl] prints the model [mdl] on
     the formatter [ppf]. *)

@@ -1,5 +1,5 @@
-(set-logic ALL)
 (set-option :produce-models true)
+(set-logic ALL)
 (declare-const p1 Bool)
 (declare-const p2 Bool)
 (declare-const x Real)
