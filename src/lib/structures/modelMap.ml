@@ -98,8 +98,7 @@ let is_suspicious_symbol = function
           | Sqrt_real_default | Sqrt_real_excess
           | Real_of_int | Int_floor | Int_ceil
           | Max_int | Max_real | Min_int | Min_real
-          | Pow | Integer_log2 | Int2BV _ | BV2Nat
-          | BVand | BVor | Integer_round) -> true
+          | Pow | Integer_log2 | Integer_round) -> true
   | Sy.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 

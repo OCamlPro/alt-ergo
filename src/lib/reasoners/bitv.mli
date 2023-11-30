@@ -28,7 +28,31 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type 'a abstract
+type 'a alpha_term = {
+  bv : 'a;
+  sz : int;
+}
+
+val pp_alpha_term : 'a Fmt.t -> 'a alpha_term Fmt.t
+
+(** The ['a signed] type represents possibly negated values of type ['a]. It is
+    used for [bvnot] at the leaves ([Other] and [Ext] below). *)
+type 'a signed = { value : 'a ; negated : bool }
+
+type 'a simple_term_aux =
+  | Cte of Z.t
+  | Other of 'a signed
+  | Ext of 'a signed * int * int * int (*// id * size * i * j //*)
+
+type 'a simple_term = ('a simple_term_aux) alpha_term
+
+type 'a abstract = 'a simple_term list
+
+(** [extract size i j x] extracts [i..j] from a composition of size [size].
+
+    An element of size [sz] at the head of the composition contains the bits
+    [size - 1 .. size - sz] inclusive. *)
+val extract : int -> int -> int -> 'a abstract -> 'a abstract
 
 (** [to_Z_opt r] evaluates [r] to an integer if possible. *)
 val to_Z_opt : 'a abstract -> Z.t option

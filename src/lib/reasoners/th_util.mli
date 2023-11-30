@@ -35,6 +35,7 @@ type theory =
   | Th_sum
   | Th_adt
   | Th_arrays
+  | Th_bitv
   | Th_UF
 [@@deriving show]
 
