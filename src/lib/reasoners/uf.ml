@@ -1049,7 +1049,7 @@ module Cache = struct
      to ensure we don't generate twice an abstract value for a given symbol. *)
   let abstracts_cache = Hashtbl.create 17
 
-  let store_array_get (t : Expr.t) i v =
+  let store_array_get (t : Expr.t) (i : ModelMap.Value.t) v =
     match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v

@@ -181,7 +181,8 @@ let main () =
         begin
           let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
-            FE.print_model (Options.Output.get_fmt_models ()) partial_model
+            Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
+              FE.print_model partial_model
           end;
           Sat mdl
         end
@@ -193,7 +194,8 @@ let main () =
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
               Sat_solver_sig.pp_ae_unknown_reason_opt ur;
-            FE.print_model (Options.Output.get_fmt_models ()) partial_model
+            Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
+              FE.print_model partial_model
           end;
           Unknown (Some mdl)
         end
@@ -927,7 +929,8 @@ let main () =
           let () = match State.get partial_model_key st with
             | Some (Model ((module SAT), env)) ->
               let module FE = Frontend.Make (SAT) in
-              FE.print_model (Options.Output.get_fmt_regular ()) env
+              Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
+                FE.print_model env
             | None ->
               (* TODO: add the location of the statement. *)
               recoverable_error "No model produced."

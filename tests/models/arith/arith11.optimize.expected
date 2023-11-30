@@ -1,15 +1,9 @@
 
 unknown
 (
-<<<<<<< HEAD
-  (define-fun x () Real 2.0)
-||||||| parent of 69a28ecf (Clean-up printers)
-  (define-fun x () Real 2)
-=======
->>>>>>> 69a28ecf (Clean-up printers)
   (define-fun p1 () Bool false)
   (define-fun p2 () Bool true)
-  (define-fun x () Real 2)
+  (define-fun x () Real 2.0)
 )
 (objectives 
   (x 2.0)

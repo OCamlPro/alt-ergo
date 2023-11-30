@@ -162,22 +162,6 @@ type t = {
   suspicious : bool;
 }
 
-let is_suspicious_name hs =
-  match Hstring.view hs with
-  | "@/" | "@%" | "@*" -> true
-  | _ -> false
-
-(* The model generation is known to be imcomplete for FPA and Bitvector
-   theories. *)
-let is_suspicious_symbol = function
-  | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real
-          | Sqrt_real_default | Sqrt_real_excess
-          | Real_of_int | Int_floor | Int_ceil
-          | Max_int | Max_real | Min_int | Min_real
-          | Pow | Integer_log2 | Integer_round) -> true
-  | Sy.Name { hs; _ } when is_suspicious_name hs -> true
-  | _ -> false
-
 let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
