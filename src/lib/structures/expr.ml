@@ -320,27 +320,27 @@ module SmtPrinter = struct
   let rec pp_formula ppf form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<hv 2>(and %a@ %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(and %a %a@])" pp_silent f1 pp_silent f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      Fmt.pf ppf "@[<hv 2>(= %a@ %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(= %a %a@])" pp_silent f1 pp_silent f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      Fmt.pf ppf "@[<hv 2>(xor %a@ %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(xor %a %a@])" pp_silent f1 pp_silent f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<hv 2>(or %a@ %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(or %a %a@])" pp_silent f1 pp_silent f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<hv 2>(! @[<hv 2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
+        Fmt.pf ppf "@[<2>(! @[<2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
           pp_binders binders pp_silent main pp_triggers user_trs name
       else
         Fmt.string ppf name
 
     | Sy.F_Skolem, [], B_skolem { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<hv 2>(! @[<hv 2>(exists (%a) %a %a@])@ :named %s@])"
+        Fmt.pf ppf "@[<2>(! @[<2>(exists (%a) %a %a@])@ :named %s@])"
           pp_binders binders pp_silent main pp_triggers user_trs name
       else
         Fmt.string ppf name
@@ -354,28 +354,28 @@ module SmtPrinter = struct
         pp a (fun ppf -> List.iter (Fmt.pf ppf " %a" pp)) l
 
     | Sy.L_neg_eq, _ :: _ ->
-      Fmt.pf ppf "@[<hv 2>(distinct %a@])" Fmt.(list ~sep:sp pp) xs
+      Fmt.pf ppf "@[<2>(distinct %a@])" Fmt.(list ~sep:sp pp) xs
 
     | Sy.L_built Sy.LE, [a;b] ->
-      Fmt.pf ppf "@[<hv 2>(<= %a@ %a@])" pp a pp b
+      Fmt.pf ppf "@[<2>(<= %a %a@])" pp a pp b
 
     | Sy.L_built Sy.LT, [a;b] ->
-      Fmt.pf ppf "@[<hv 2>(< %a@ %a@])" pp a pp b
+      Fmt.pf ppf "@[<2>(< %a %a@])" pp a pp b
 
     | Sy.L_neg_built Sy.LE, [a; b] ->
-      Fmt.pf ppf "@[<hv 2>(> %a@ %a@])" pp a pp b
+      Fmt.pf ppf "@[<2>(> %a %a@])" pp a pp b
 
     | Sy.L_neg_built Sy.LT, [a; b] ->
-      Fmt.pf ppf "@[<hv 2>(>= %a@ %a@])" pp a pp b
+      Fmt.pf ppf "@[<2>(>= %a %a@])" pp a pp b
 
     | Sy.L_neg_pred, [a] ->
-      Fmt.pf ppf "@[<hv 2>(not@ %a@])" pp a
+      Fmt.pf ppf "@[<2>(not@ %a@])" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "@[<hv 2>((_ is %a)@ %a@])" Hstring.print hs pp e
+      Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" Hstring.print hs pp e
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "(not @[<hv 2>((_ is %a)@ %a@]))"
+      Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))"
         Hstring.print hs pp e
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
@@ -393,7 +393,7 @@ module SmtPrinter = struct
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
-      Fmt.pf ppf "@[<hv 2>(let@ ((%a %a))@ %a@])"
+      Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])"
         Var.print x.let_v
         pp x.let_e
         pp_silent x.in_e
@@ -403,9 +403,9 @@ module SmtPrinter = struct
         match ty with
         | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
           assert (List.compare_lengths xs lbs = 0);
-          Fmt.pf ppf "@[<hv 2>(%a@ %a@])"
+          Fmt.pf ppf "@[<2>(%a %a@])"
             Hstring.print record_constr
-            Fmt.(list ~sep:sp pp) xs
+            Fmt.(list ~sep:sp pp |> box) xs
 
         | _ ->
           (* Excluded by the typechecker. *)
@@ -415,12 +415,12 @@ module SmtPrinter = struct
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
 
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
-      Fmt.pf ppf "@[<hv 2>(-@ %a@])" pp e2
+      Fmt.pf ppf "@[<2>(- %a@])" pp e2
 
     | Sy.Op op, _ :: _ ->
-      Fmt.pf ppf "@[<hv 2>(%a@ %a@])"
+      Fmt.pf ppf "@[<2>(%a %a@])"
         Symbols.pp_smtlib_operator op
-        Fmt.(list ~sep:sp pp) xs
+        Fmt.(list ~sep:sp pp |> box) xs
 
     | Sy.True, [] -> Fmt.pf ppf "true"
 
@@ -429,9 +429,9 @@ module SmtPrinter = struct
     | Sy.Name { hs = n; _ }, [] -> Symbols.pp_name ppf (Hstring.view n)
 
     | Sy.Name { hs = n; _ }, _ :: _ ->
-      Fmt.pf ppf "@[<hv 2>(%a@ %a@])"
+      Fmt.pf ppf "@[<2>(%a %a@])"
         Symbols.pp_name (Hstring.view n)
-        Fmt.(list ~sep:sp pp) xs
+        Fmt.(list ~sep:sp pp |> box) xs
 
     | Sy.Var v, [] -> Var.print ppf v
 
@@ -455,7 +455,7 @@ module SmtPrinter = struct
       Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
 
     | Sy.MapsTo v, [t] ->
-      Fmt.pf ppf "(ae.mapsto %a %a)" Var.print v pp t
+      Fmt.pf ppf "@[<2>(ae.mapsto %a %a@])" Var.print v pp t
 
     | Sy.In (_lb, _rb), [_t] ->
       (* WARNING: we don't print the content of this semantic trigger as
@@ -472,7 +472,7 @@ module SmtPrinter = struct
       assert false
 
   and pp_trigger ppf { content; _ } =
-    Fmt.pf ppf ":pattern @[<hv 2>(%a@])" Fmt.(list ~sep:sp pp) content
+    Fmt.pf ppf ":pattern @[<2>(%a@])" Fmt.(list ~sep:sp pp) content
 
   and pp_triggers ppf trs =
     Fmt.pf ppf "@[%a@]" Fmt.(list ~sep:sp pp_trigger) trs
@@ -481,8 +481,8 @@ module SmtPrinter = struct
   and pp_verbose ppf t = pp_silent ppf t
 
   and pp ppf t =
-    if Options.get_debug () then pp_verbose ppf t
-    else pp_silent ppf t
+    if Options.get_debug () then Fmt.box ~indent:2 pp_verbose ppf t
+    else Fmt.box ~indent:2 pp_silent ppf t
 
 end
 
@@ -530,13 +530,13 @@ module AEPrinter = struct
   and pp_lit ppf lit xs =
     match lit, xs with
     | Sy.L_eq, _ :: _ ->
-      Fmt.pf ppf "@[<hv 2>(%a)@]" Fmt.(list ~sep:(any " =@, ") pp) xs
+      Fmt.pf ppf "@[<2>(%a)@]" Fmt.(list ~sep:(any " =@, ") pp) xs
 
     | Sy.L_neg_eq, [a; b] ->
       Fmt.pf ppf "(%a <> %a)" pp a pp b
 
     | Sy.L_neg_eq, _ :: _ ->
-      Fmt.pf ppf "@[<hv 2>distinct(%a)@]" Fmt.(list ~sep:comma pp) xs
+      Fmt.pf ppf "@[<2>distinct(%a)@]" Fmt.(list ~sep:comma pp) xs
 
     | Sy.L_built Sy.LE, [a;b] ->
       Fmt.pf ppf "(%a <= %a)" pp a pp b
@@ -575,7 +575,7 @@ module AEPrinter = struct
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
       Fmt.pf ppf
-        "@[<hv 2>(let%a %a =@ %a in@ %a@])"
+        "@[<2>(let%a %a =@ %a in@ %a@])"
         (fun ppf x -> if Options.get_verbose () then
             Fmt.pf ppf
               " [sko = %a]" pp x.let_sko) x
@@ -645,8 +645,8 @@ module AEPrinter = struct
     Fmt.pf ppf "(%a : %a)" pp_silent t Ty.print t.ty
 
   and pp fmt t =
-    if Options.get_debug () then print_verbose fmt t
-    else pp_silent fmt t
+    if Options.get_debug () then Fmt.box ~indent:2 print_verbose fmt t
+    else Fmt.box ~indent:2 pp_silent fmt t
 
 end
 
