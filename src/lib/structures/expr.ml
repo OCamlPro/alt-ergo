@@ -350,7 +350,7 @@ module SmtPrinter = struct
   and pp_lit ppf lit xs =
     match lit, xs with
     | Sy.L_eq, a::l ->
-      Fmt.pf ppf "(= %a %a)"
+      Fmt.pf ppf "@[<2>(= %a %a@])"
         pp a (fun ppf -> List.iter (Fmt.pf ppf " %a" pp)) l
 
     | Sy.L_neg_eq, _ :: _ ->
@@ -481,8 +481,8 @@ module SmtPrinter = struct
   and pp_verbose ppf t = pp_silent ppf t
 
   and pp ppf t =
-    if Options.get_debug () then Fmt.box ~indent:2 pp_verbose ppf t
-    else Fmt.box ~indent:2 pp_silent ppf t
+    if Options.get_debug () then pp_verbose ppf t
+    else pp_silent ppf t
 
 end
 
