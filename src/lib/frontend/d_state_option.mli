@@ -32,6 +32,14 @@
     an option that can be set, fetched et reset independently from the
     Options module, which is used as a static reference. *)
 
+(** A hook which is called when an option is updated. *)
+type 'a hook =
+  'a D_loop.State.key ->
+  old:'a ->
+  new_:'a ->
+  D_loop.Typer.state ->
+  D_loop.Typer.state
+
 module type Accessor = sig
   (** The data saved in the state. *)
   type t
@@ -51,8 +59,18 @@ module type S = sig
   val clear : D_loop.Typer.state -> D_loop.Typer.state
 end
 
+module type S_with_hooks = sig
+  include S
+
+  (** Resets all hooks, except the one registered at initialization. *)
+  val reset_hooks : unit -> unit
+
+  (** Adds a hook which is called during the update of the value. *)
+  val add_hook : t hook -> unit
+end
+
 (** The current mode of the solver. *)
-module Mode : S with type t = Util.mode
+module Mode : S_with_hooks with type t = Util.mode
 
 (** Options are divided in two categories:
     1. options that can be updated anytime;
@@ -71,9 +89,17 @@ module ProduceAssignment : S with type t = bool
 (** The Sat solver used. When set, updates the SatSolverModule defined below. *)
 module SatSolver : S with type t = Util.sat_solver
 
+module type Sat_solver_api = sig
+  module SAT : Sat_solver_sig.S
+
+  module FE : Frontend.S with type sat_env = SAT.t
+
+  val env : FE.env
+end
+
 (** The Sat solver module used for the calculation. This option's value depends
     on SatSolver: when SatSolver is updated, this one also is. *)
-module SatSolverModule : Accessor with type t = (module Sat_solver_sig.S)
+module SatSolverModule : Accessor with type t = (module Sat_solver_api)
 
 (** Option for setting the max number of steps. Interfaces with the toplevel
     Steps module.

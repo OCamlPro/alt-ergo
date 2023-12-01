@@ -104,7 +104,7 @@ let cmd_on_modes st modes cmd =
       Errors.forbidden_command curr_mode cmd
   end
 
-(* Dolmen util *)
+(* Dolmen helpers *)
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
 let add_if_named
@@ -121,13 +121,59 @@ let add_if_named
             names. *)
     acc
 
+(** Translates dolmen locs to Alt-Ergo's locs *)
+let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
+  DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
+
 (* We currently use the full state of the solver as model. *)
 type model = Model : 'a sat_module * 'a -> model
 
 type solve_res =
   | Sat of model
   | Unknown of model option
-  | Unsat
+  | Unsat of Explanation.t
+
+let check_sat_status () =
+  match Options.get_status () with
+  | Status_Unsat ->
+    recoverable_error
+      "This file is known to be Unsat but Alt-Ergo return Sat";
+  | _ -> ()
+
+let check_unsat_status () =
+  match Options.get_status () with
+  | Status_Unsat ->
+    recoverable_error
+      "This file is known to be Sat but Alt-Ergo return Unsat";
+  | _ -> ()
+
+let print_solve_res loc goal_name r =
+  let validity_mode =
+    match Options.get_output_format () with
+    | Smtlib2 -> false
+    | Native | Why3 | Unknown _ -> true
+  in
+  let time = O.Time.value () in
+  let steps = Steps.get_steps () in
+  match r with
+  | Sat _ ->
+    Printer.print_status_sat ~validity_mode
+      (Some loc) (Some time) (Some steps) (Some goal_name);
+    check_sat_status ();
+  | Unsat dep ->
+    Printer.print_status_unsat ~validity_mode
+      (Some loc) (Some time) (Some steps) (Some goal_name);
+    if O.get_unsat_core() &&
+       not (O.get_debug_unsat_core()) &&
+       not (O.get_save_used_context())
+    then
+      Printer.print_fmt (Options.Output.get_fmt_regular ())
+        "unsat-core:@,%a@."
+        (Explanation.print_unsat_core ~tab:true) dep;
+    check_unsat_status ()
+  | Unknown _ ->
+    Printer.print_status_unknown ~validity_mode
+      (Some loc) (Some time) (Some steps) (Some goal_name);
 
 exception StopProcessDecl
 
@@ -199,7 +245,7 @@ let main () =
           end;
           Unknown (Some mdl)
         end
-      | `Unsat -> Unsat
+      | `Unsat -> Unsat ftdn_env.expl
     with Util.Timeout ->
       (* It is still necessary to leave this catch here, because we may
          trigger this exception in between calls of the sat solver. *)
@@ -356,6 +402,41 @@ let main () =
     State.create_key ~pipe:"" "is_incremental"
   in
 
+  (* Set to true when a query is performed, states for the following SMT
+     instructions that they are working on an environment in which some formulae
+     have been decided and must be reverted back to the one before the check-sat
+     before starting to assert again. *)
+  let is_decision_env : bool State.key =
+    State.create_key ~pipe:"" "is_decision_env"
+  in
+
+  (* Before each query, we push the current environment. This allows to keep a
+     fresh one for the next assertions. *)
+  let internal_push st =
+    if State.get is_decision_env st then
+      (* We already performed a check-sat *)
+      st
+    else
+      begin
+        let module Api = (val (DO.SatSolverModule.get st)) in
+        Api.FE.push 1 Api.env;
+        State.set is_decision_env true st
+      end
+  in
+
+  (* The pop corresponding to the previous push. It is applied everytime the
+     mode goes from Sat/Unsat to Assert. *)
+  let internal_pop st =
+    if State.get is_decision_env st then
+      begin
+        let module Api = (val (DO.SatSolverModule.get st)) in
+        Api.FE.pop 1 Api.env;
+        State.set is_decision_env false st
+      end
+    else
+      st
+  in
+
   let set_steps_bound i st =
     try DO.Steps.set i st with
       Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
@@ -425,7 +506,7 @@ let main () =
   in
   let set_partial_model_and_mode solve_res st =
     match solve_res with
-    | Unsat ->
+    | Unsat _ ->
       set_mode Unsat st
     | Unknown None ->
       set_mode Sat st
@@ -520,6 +601,7 @@ let main () =
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
     |> State.set incremental_depth 0
+    |> State.set is_decision_env false
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -530,6 +612,20 @@ let main () =
     |> Typer_Pipe.init ~type_check
   in
 
+  (* Initializing hooks in the mode handler.
+     When we perform a check-sat, the environment we are working on is specific
+     to the Sat or Unsat mode we end up in. If we start asserting again, we must
+     do it in the previous environment.
+  *)
+  let () =
+    DO.Mode.reset_hooks ();
+    DO.Mode.add_hook
+      (fun _ ~old:_ ~new_ st ->
+         match new_ with
+         | Assert -> internal_pop st
+         | _ -> st
+      )
+  in
   let print_wrn_opt ~name loc ty value =
     warning
       "%a The option %s expects a %s, got %a"
@@ -688,61 +784,79 @@ let main () =
       unsupported_opt name; st
   in
 
-  let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
-    let contents = `Optimize (term, is_max) in
-    let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
-    let cnf =
-      D_cnf.make (State.get State.logic_file st).loc
-        (State.get solver_ctx_key st).ctx stmt
-    in
-    (* Using both optimization and incremental mode may be wrong if
-       some optimization constraints aren't at the toplevel.
-       See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
+  let handle_optimize_stmt ~is_max loc expr st =
+    let st = DO.Mode.set Assert st in
+    let module Api = (val (DO.SatSolverModule.get st)) in
     if State.get incremental_depth st > 0 then
       warning "Optimization constraints in presence of push \
                and pop statements are not correctly processed.";
-    State.set solver_ctx_key (
-      let solver_ctx = State.get solver_ctx_key st in
-      { solver_ctx with ctx = cnf }
-    ) st
+    let () =
+      if not @@ D_cnf.is_pure_term expr then
+        begin
+          recoverable_error
+            "the expression %a is not a valid objective function. \
+             Only terms without let bindings or ite subterms can be optimized."
+            Expr.print expr
+        end
+      else
+        Api.FE.optimize ~loc (expr, is_max) Api.env
+    in st
   in
 
   let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
-    let () =
-      if Options.get_interpretation () then
-        match State.get partial_model_key st with
-        | Some Model ((module SAT), partial_model) ->
-          let objectives = SAT.get_objectives partial_model in
-          begin
-            match objectives with
-            | Some o ->
-              if not @@ Objective.Model.has_no_limit o then
-                warning "Some objectives cannot be fulfilled";
-              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
-            | None ->
-              recoverable_error "No objective generated"
-          end
-        | None ->
-          recoverable_error
-            "Model generation is disabled (try --produce-models)"
-    in
-    st
+    if Options.get_interpretation () then
+      match State.get partial_model_key st with
+      | Some Model ((module SAT), partial_model) ->
+        let objectives = SAT.get_objectives partial_model in
+        begin
+          match objectives with
+          | Some o ->
+            if not @@ Objective.Model.has_no_limit o then
+              warning "Some objectives cannot be fulfilled";
+            Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+          | None ->
+            recoverable_error "No objective generated"
+        end
+      | None ->
+        recoverable_error
+          "Model generation is disabled (try --produce-models)"
   in
 
   let handle_custom_statement loc id args st =
     let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
     let logic_file = State.get State.logic_file st in
     let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
+    let loc =
+      let dloc_file = (State.get State.logic_file st).loc in
+      dl_to_ael dloc_file loc
+    in
     match id, terms.ret with
-    | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
+    | Dolmen.Std.Id.{name = Simple ("minimize" as name_base); _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
-      handle_optimize_stmt ~is_max:false loc id term st
-    | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
+      let expr =
+        D_cnf.mk_expr
+          ~loc
+          ~name_base
+          ~toplevel:true
+          ~decl_kind:Expr.Dobjective
+          term
+      in
+      handle_optimize_stmt ~is_max:false loc expr st
+    | Dolmen.Std.Id.{name = Simple ("maximize" as name_base); _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
-      handle_optimize_stmt ~is_max:true loc id term st
+      let expr =
+        D_cnf.mk_expr
+          ~loc
+          ~name_base
+          ~toplevel:true
+          ~decl_kind:Expr.Dobjective
+          term
+      in
+      handle_optimize_stmt ~is_max:true loc expr st
     | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
-      handle_get_objectives terms st
+      handle_get_objectives terms st;
+      st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
         "Statement %s only expects 1 argument (%i given)"
@@ -840,26 +954,247 @@ let main () =
       assignments
   in
 
-  let handle_stmt :
-    Frontend.used_context -> State.t ->
-    'a D_loop.Typer_Pipe.stmt -> State.t =
-    let goal_cnt = ref 0 in
-    fun all_context st td ->
+  (* Copied from D_cnf, this treats the `Hyp case. *)
+  let assume_axiom st name t loc attrs : unit =
+    let module Api = (val (DO.SatSolverModule.get st)) in
+    let dloc_file = (State.get State.logic_file st).loc in
+    let dloc = DStd.Loc.loc dloc_file loc in
+    let aloc = DStd.Loc.lexing_positions dloc in
+    (* Dolmen adds information about theory extensions and case splits in the
+       [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
+       where the information we care about is encoded as a [Colon]-list of
+       symbols.
+
+       The few helper functions below are used to extract the information from
+       the [attrs]. More specifically:
+
+       - "case split" statements have the [DStd.Id.case_split] symbol as an
+          attribute
+
+       - Theory elements have a 3-length list of symbols as an attribute, of
+          the form [theory_decl; name; extends], where [theory_decl] is the
+          symbol [DStd.Id.theory_decl] and [name] and [extends] are the theory
+          extension name and the base theory name, respectively.
+    *)
+    let rec symbols = function
+      | DStd.Term. { term = Colon ({ term = Symbol sy; _ }, xs); _ } ->
+        Option.bind (symbols xs) @@ fun sys ->
+        Some (sy :: sys)
+      | { term = Symbol sy; _ } -> Some [sy]
+      | _ -> None
+    in
+    let sy_attrs = List.filter_map symbols attrs in
+    let is_case_split =
+      let is_case_split = function
+        | [ sy ] when DStd.Id.(equal sy case_split) -> true
+        | _ -> false
+      in
+      List.exists is_case_split sy_attrs
+    in
+    let theory =
+      let theory =
+        let open DStd.Id in
+        function
+        | [ td; name; extends] when DStd.Id.(equal td theory_decl) ->
+          let name = match name.name with
+            | Simple name -> name
+            | _ ->
+              Fmt.failwith
+                "Internal error: invalid theory extension: %a"
+                print name
+          in
+          let extends = match extends.name with
+            | Simple name ->
+              begin match Util.th_ext_of_string name with
+                | Some extends -> extends
+                | None ->
+                  Errors.typing_error (ThExtError name) aloc
+              end
+            | _ ->
+              Fmt.failwith
+                "Internal error: invalid base theory name: %a"
+                print extends
+          in
+          Some (name, extends)
+        | _ -> None
+      in
+      match List.filter_map theory sy_attrs with
+      | [] -> None
+      | [name, extends] -> Some (name, extends)
+      | _ ->
+        Fmt.failwith
+          "%a: Internal error: multiple theories."
+          DStd.Loc.fmt dloc
+    in
+    let st_loc = dl_to_ael dloc_file loc in
+    match theory with
+    | Some (th_name, extends) ->
+      let axiom_kind =
+        if is_case_split then Util.Default else Util.Propagator
+      in
+      let e = D_cnf.make_form name t st_loc ~decl_kind:Expr.Dtheory in
+      let th_elt = {
+        Expr.th_name;
+        axiom_kind;
+        extends;
+        ax_form = e;
+        ax_name = name;
+      } in
+      Api.FE.th_assume ~loc:st_loc th_elt Api.env
+    | None ->
+      let e = D_cnf.make_form name t st_loc ~decl_kind:Expr.Daxiom in
+      Api.FE.assume ~loc:st_loc (name, e, true) Api.env
+  in
+
+  (* Push the current environment and performs the query.
+     If an assertion is performed, we have to pop it back. This is handled by
+     the hook on D_state_option.Mode. *)
+  let handle_query st id loc attrs contents =
+    let module Api = (val (DO.SatSolverModule.get st)) in
+    let st = internal_pop st in
+    (* Pushing the environment once. This allows to keep a trace of the old
+       environment in case we want to assert afterwards.
+       The `pop` instruction is handled by the hook on the mode: when we assert
+       anything, we must make sure to go back to `Assert` mode. *)
+    let st = internal_push st in
+    let st_loc =
       let file_loc = (State.get State.logic_file st).loc in
-      let solver_ctx = State.get solver_ctx_key st in
+      dl_to_ael file_loc loc
+    in
+    let name =
+      match id.DStd.Id.name with
+      | Simple name -> name
+      | Indexed _ | Qualified _ -> assert false
+    in
+    (* First, we check the environment if it already concluded. *)
+    let solve_res =
+      match Api.env.res with
+      | `Unsat -> Unsat Api.env.expl
+      | `Sat
+      | `Unknown ->
+        (* The environment did not conclude yet, or concluded with SAT. We
+           add additional constraints which may change this result. *)
+        begin
+          (* Preprocessing query. *)
+          let goal_sort =
+            match contents with
+            | `Goal _ -> Ty.Thm
+            | `Check _ -> Ty.Sat
+          in
+          let hyps, t =
+            match contents with
+            | `Goal t ->
+              D_cnf.pp_query t
+            | `Check hyps ->
+              D_cnf.pp_query ~hyps (DStd.Expr.Term.(of_cst Const._false))
+          in
+          let () =
+            List.iter (
+              fun t ->
+                let name = Ty.fresh_hypothesis_name goal_sort in
+                assume_axiom st name t loc attrs
+            ) hyps
+          in
+          let e = D_cnf.make_form "" t st_loc ~decl_kind:Expr.Dgoal in
+          (* Performing the query. *)
+          Api.FE.query ~loc:st_loc (name, e, goal_sort) Api.env;
+          (* Treatment of the result. *)
+          let partial_model = Api.env.sat_env in
+          (* If the status of the SAT environment is inconsistent,
+             we have to drop the partial model in order to prevent
+             printing wrong model. *)
+          match Api.env.res with
+          | `Sat ->
+            begin
+              let mdl = Model ((module Api.SAT), partial_model) in
+              let () =
+                if Options.(get_interpretation () && get_dump_models ()) then
+                  Api.FE.print_model
+                    (Options.Output.get_fmt_models ())
+                    partial_model
+              in
+              Sat mdl
+            end
+          | `Unknown ->
+            begin
+              let mdl = Model ((module Api.SAT), partial_model) in
+              if Options.(get_interpretation () && get_dump_models ()) then
+                begin
+                  let ur = Api.SAT.get_unknown_reason partial_model in
+                  Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
+                    "@[<v 0>Returned unknown reason = %a@]"
+                    Sat_solver_sig.pp_ae_unknown_reason_opt ur;
+                  Api.FE.print_model
+                    (Options.Output.get_fmt_models ())
+                    partial_model
+                end;
+              Unknown (Some mdl)
+            end
+          | `Unsat -> Unsat Api.env.expl
+        end
+    in
+    (* Prints the result. *)
+    print_solve_res st_loc name solve_res;
+    (* Updates the dolmen state. *)
+    set_partial_model_and_mode solve_res st
+  in
+
+  let handle_stmt :
+    Frontend.used_context ->
+    State.t ->
+    [< Typer_Pipe.typechecked | `Check of 'a ] D_loop.Typer_Pipe.stmt ->
+    State.t =
+    let goal_cnt = ref 0 in
+    fun _all_context st td ->
+      let file_loc = (State.get State.logic_file st).loc in
       match td with
+      (* Set logic *)
       | { contents = `Set_logic _; _} ->
         cmd_on_modes st [Start] "set-logic";
         DO.Mode.set Util.Assert st
+      (* Goal definition *)
+      | {
+        id; loc; attrs;
+        contents = (`Goal _) as contents;
+        implicit = _;
+      } ->
+        cmd_on_modes st [Assert; Sat; Unsat] "goal";
+        (* Setting the mode is done by handle_query. *)
+        handle_query st id loc attrs contents
+
+      (* Axiom definitions *)
+      | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
+          implicit=_ } ->
+        let st = DO.Mode.set Util.Assert st in
+        assume_axiom st name t loc attrs;
+        st
+
+      | { contents = `Defs defs; loc; _ } ->
+        let module Api = (val (DO.SatSolverModule.get st)) in
+        let st = DO.Mode.set Util.Assert st in
+        let loc = dl_to_ael file_loc loc in
+        let defs = D_cnf.make_defs defs loc in
+        let () =
+          List.iter
+            (function
+              | `Assume (name, e) -> Api.FE.assume ~loc (name, e, true) Api.env
+              | `PredDef (e, name) -> Api.FE.pred_def ~loc (name, e) Api.env
+            )
+            defs
+        in
+        st
+
+      | {contents = `Decls l; _} ->
+        let st = DO.Mode.set Util.Assert st in
+        D_cnf.cache_decls l;
+        st
+
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id; contents = (`Solve _ as contents); loc ; attrs; implicit } ->
-        cmd_on_modes st [Assert; Sat; Unsat] "solve";
-        let l =
-          solver_ctx.local @
-          solver_ctx.global @
-          solver_ctx.ctx
-        in
+      | { id; contents = (`Solve _ as contents); loc ; attrs; implicit=_ } ->
+        cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
+        (* Setting the mode is done by handle_query. *)
+        let module Api = (val DO.SatSolverModule.get st) in
         let id =
           match (State.get State.logic_file st).lang with
           | Some (Smtlib2 _) ->
@@ -867,52 +1202,17 @@ let main () =
             "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
           | _ -> id
         in
-        let name =
-          match id.name with
-          | Simple name -> name
-          | _ ->
-            let loc = DStd.Loc.loc file_loc loc in
-            Fmt.failwith "%a: internal error: goal name should be simple"
-              DStd.Loc.fmt loc
-        in
         let contents =
           match contents with
           | `Solve (hyps, []) -> `Check hyps
           | `Solve ([], [t]) -> `Goal t
           | _ ->
             let loc = DStd.Loc.loc file_loc loc in
-            Fmt.failwith "%a: internal error: unknown statement"
+            fatal_error "%a: internal error: unknown statement"
               DStd.Loc.fmt loc
         in
-        let stmt = { Typer_Pipe.id; contents; loc ; attrs; implicit } in
-        let cnf, is_thm =
-          match D_cnf.make (State.get State.logic_file st).loc l stmt with
-          | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
-            let is_thm =
-              match kind with Ty.Thm | Sat -> true | _ -> false
-            in
-            List.rev (cnf :: hyps), is_thm
-          | _ -> assert false
-        in
-        let solve_res =
-          solve
-            (DO.SatSolverModule.get st)
-            all_context
-            (cnf, name)
-        in
-        if is_thm
-        then
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with global = []; local = [] }
-          ) st
-          |> set_partial_model_and_mode solve_res
-        else
-          State.set solver_ctx_key (
-            let solver_ctx = State.get solver_ctx_key st in
-            { solver_ctx with local = [] }
-          ) st
-          |> set_partial_model_and_mode solve_res
+        (* Performing the query *)
+        handle_query st id loc attrs contents;
 
       | {contents = `Set_option
              { DStd.Term.term =
@@ -949,9 +1249,11 @@ let main () =
           end
 
       | {contents = `Reset; _} ->
+        let () = Steps.reset_steps () in
         st
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
+        |> State.set is_decision_env false
         |> DO.Mode.clear
         |> DO.Optimize.clear
         |> DO.ProduceAssignment.clear
@@ -996,32 +1298,26 @@ let main () =
       | {contents = `Other (custom, args); loc; _} ->
         handle_custom_statement loc custom args st
 
+      | {contents = `Pop n; loc; _} ->
+        let module Api = (val DO.SatSolverModule.get st) in
+        let dloc_file = (State.get State.logic_file st).loc in
+        Api.FE.pop ~loc:(dl_to_ael dloc_file loc) n Api.env;
+        st
+        |> State.set incremental_depth (State.get incremental_depth st - n)
+        |> set_mode Assert
+
+      | {contents = `Push n; loc; _} ->
+        let module Api = (val DO.SatSolverModule.get st) in
+        let dloc_file = (State.get State.logic_file st).loc in
+        Api.FE.push ~loc:(dl_to_ael dloc_file loc) n Api.env;
+        st
+        |> State.set incremental_depth (State.get incremental_depth st + n)
+        |> set_mode Assert
+
       | td ->
-        let st =
-          match td.contents with
-          | `Pop n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st - n)
-            |> set_mode Assert
-          | `Push n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st + n)
-            |> set_mode Assert
-          | _ -> st
-        in
-        (* TODO:
-           - Separate statements that should be ignored from unsupported
-             statements and throw exception or print a warning when an
-             unsupported statement is encountered.
-        *)
-        let cnf =
-          D_cnf.make (State.get State.logic_file st).loc
-            (State.get solver_ctx_key st).ctx td
-        in
-        State.set solver_ctx_key (
-          let solver_ctx = State.get solver_ctx_key st in
-          { solver_ctx with ctx = cnf }
-        ) st
+        Printer.print_dbg ~header:true
+          "Ignoring statement: %a" Typer_Pipe.print td;
+        st
   in
   let handle_stmts all_context st l =
     let rec aux named_map st = function

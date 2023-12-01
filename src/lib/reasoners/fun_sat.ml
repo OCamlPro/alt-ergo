@@ -168,6 +168,7 @@ module Make (Th : Theory.S) = struct
     plevel : int;
     ilevel : int;
     tbox : Th.t;
+    tbox_stack: Th.t Stack.t; (* Pushed theory envs (TODO: pure version) *)
     unit_tbox : Th.t; (* theory env of facts at level 0 *)
     inst : Inst.t;
     heuristics : Heuristics.t ref;
@@ -1625,13 +1626,15 @@ module Make (Th : Theory.S) = struct
     env
 
   let push env to_push =
-    if Options.get_tableaux_cdcl () then
-      Errors.run_error
-        (Errors.Unsupported_feature
-           "Incremental commands are not implemented in \
-            Tableaux(CDCL) solver ! \
-            Please use the Tableaux or CDLC SAT solvers instead"
-        );
+    (* It does not work with Tableaux(CDCL); right now it is (unsoundly)
+       handled by fun_sat_frontend but we should fix it. *)
+    (* if Options.get_tableaux_cdcl () then
+     *   Errors.run_error
+     *     (Errors.Unsupported_feature
+     *        "Incremental commands are not implemented in \
+     *         Tableaux(CDCL) solver ! \
+     *         Please use the Tableaux or CDLC SAT solvers instead"
+     *     ); *)
     Util.loop
       ~f:(fun _n () acc ->
           let new_guard = E.fresh_name Ty.Tbool in
@@ -1639,6 +1642,7 @@ module Make (Th : Theory.S) = struct
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)
               acc.guards.guards in
+          Stack.push env.tbox env.tbox_stack;
           Stack.push !(env.declare_top) env.declare_tail;
           {acc with guards =
                       { acc.guards with
@@ -1651,13 +1655,15 @@ module Make (Th : Theory.S) = struct
       ~init:env
 
   let pop env to_pop =
-    if Options.get_tableaux_cdcl () then
-      Errors.run_error
-        (Errors.Unsupported_feature
-           "Incremental commands are not implemented in \
-            Tableaux(CDCL) solver ! \
-            Please use the Tableaux or CDLC SAT solvers instead"
-        );
+    (* It does not work with Tableaux(CDCL); right now it is (unsoundly)
+       handled by fun_sat_frontend but we should fix it. *)
+    (* if Options.get_tableaux_cdcl () then
+     *   Errors.run_error
+     *     (Errors.Unsupported_feature
+     *        "Incremental commands are not implemented in \
+     *         Tableaux(CDCL) solver ! \
+     *         Please use the Tableaux or CDLC SAT solvers instead"
+     *     ); *)
     Util.loop
       ~f:(fun _n () acc ->
           let acc,guard_to_neg = restore_guards_and_refs acc in
@@ -1668,6 +1674,18 @@ module Make (Th : Theory.S) = struct
               (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
               acc.guards.guards
           in
+          let gamma =
+            (* If we made a check-sat and we want to work again on the
+               environment, we have to remove the guard from gamma. *)
+            match ME.find_opt guard_to_neg acc.gamma with
+            | None -> acc.gamma
+            | Some (_, _, dlvl, plvl) ->
+              ME.filter
+                (fun _ (_, _, dlvl', plvl') ->
+                   not (dlvl = dlvl' && plvl' >= plvl))
+                acc.gamma
+          in
+          let tbox = Stack.pop env.tbox_stack in
           acc.model_gen_phase := false;
           env.last_saved_model := None;
           let () =
@@ -1680,7 +1698,10 @@ module Make (Th : Theory.S) = struct
                       { acc.guards with
                         current_guard = new_current_guard;
                         guards = guards;
-                      }})
+                      };
+                    gamma;
+                    tbox;
+          })
       ~max:to_pop
       ~elt:()
       ~init:env
@@ -1832,6 +1853,7 @@ module Make (Th : Theory.S) = struct
       ilevel = 0;
       tbox = tbox;
       unit_tbox = tbox;
+      tbox_stack = Stack.create ();
       inst = inst;
       heuristics = ref (Heuristics.empty ());
       model_gen_phase = ref false;

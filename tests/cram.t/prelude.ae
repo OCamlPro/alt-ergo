@@ -10,5 +10,5 @@ logic f : real -> real
 
 theory F_theory extends FPA =
   axiom f_triggers :
-    forall x : real [ int_floor(x), x in ]0., ?] ]. my_leq(f(x), x)
+    forall x: real [ f(x), f(x) in ]0., ?] ]. my_leq(f(x), x)
 end

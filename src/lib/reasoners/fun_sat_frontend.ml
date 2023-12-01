@@ -35,33 +35,70 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   module FS = Fun_sat.Make(Th)
 
-  type t = FS.t ref
+  type t = {
+    mutable fs_env: FS.t;
+    fs_env_stack: FS.t Stack.t
+  }
 
-  let empty ?selector () = ref (FS.empty ?selector ())
+  let internal_empty fs_env = {
+    fs_env;
+    fs_env_stack = Stack.create ()
+  }
+
+  let empty ?selector () = internal_empty (FS.empty ?selector ())
 
   let exn_handler f env =
-    try f !env with
-    | FS.Sat e -> env := e; raise Sat
+    try f env with
+    | FS.Sat e -> env.fs_env <- e; raise Sat
     | FS.Unsat expl -> raise (Unsat expl)
-    | FS.I_dont_know e -> env := e; raise I_dont_know
+    | FS.I_dont_know e -> env.fs_env <- e; raise I_dont_know
+
 
   let declare t id =
-    t := FS.declare !t id
+    t.fs_env <- FS.declare t.fs_env id
 
-  let push t i = exn_handler (fun env -> t := FS.push env i) t
+  (* Push and pop are not implemented with get_tableaux_cdcl, so we have to
+     manually save and restore environments. *)
 
-  let pop t i = exn_handler (fun env -> t := FS.pop env i) t
+  let push_cdcl_tableaux t i =
+    assert (i > 0);
+    for _ = 1 to i do
+      Stack.push t.fs_env t.fs_env_stack
+    done
 
-  let assume t g expl = exn_handler (fun env -> t := FS.assume env g expl) t
+  let pop_cdcl_tableaux t i =
+    assert (i > 0);
+    let rec aux fs_env = function
+      | 1 -> t.fs_env <- fs_env
+      | i -> aux (Stack.pop t.fs_env_stack) (i - 1)
+    in
+    aux (Stack.pop t.fs_env_stack) i
+
+  let push t i = exn_handler (fun t ->
+      if Options.get_tableaux_cdcl () then
+        push_cdcl_tableaux t i
+      else
+        t.fs_env <- FS.push t.fs_env i
+    ) t
+
+  let pop t i = exn_handler (fun env ->
+      if Options.get_tableaux_cdcl () then
+        pop_cdcl_tableaux env i
+      else
+        t.fs_env <- FS.pop t.fs_env i
+    ) t
+
+  let assume t g expl =
+    exn_handler (fun t -> t.fs_env <- FS.assume t.fs_env g expl) t
 
   let assume_th_elt t th expl =
-    exn_handler (fun env -> t := FS.assume_th_elt env th expl) t
+    exn_handler (fun t -> t.fs_env <- FS.assume_th_elt t.fs_env th expl) t
 
   let pred_def t expr n expl loc =
-    exn_handler (fun env -> t := FS.pred_def env expr n expl loc) t
+    exn_handler (fun t -> t.fs_env <- FS.pred_def t.fs_env expr n expl loc) t
 
   let unsat t g =
-    exn_handler (fun env -> FS.unsat env g) t
+    exn_handler (fun t -> FS.unsat t.fs_env g) t
 
   let optimize _env ~is_max:_ _obj =
     raise (Util.Not_implemented "optimization is not supported by FunSAT.")
@@ -70,11 +107,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reinit_ctx = FS.reinit_ctx
 
-  let get_model t = FS.get_model !t
+  let get_model t = FS.get_model t.fs_env
 
-  let get_unknown_reason t = FS.get_unknown_reason !t
+  let get_unknown_reason t = FS.get_unknown_reason t.fs_env
 
-  let get_value t expr = FS.get_value !t expr
+  let get_value t expr = FS.get_value t.fs_env expr
 
   let get_objectives _env =
     raise (Util.Not_implemented "optimization is not supported by FunSAT.")

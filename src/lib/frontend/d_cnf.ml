@@ -176,6 +176,8 @@ type _ DStd.Builtin.t +=
   | Integer_round
   | Abs_real
   | Sqrt_real
+  | Int2BV of int
+  | BV2Nat of int
   | Sqrt_real_default
   | Sqrt_real_excess
   | Ceiling_to_int of [ `Real ]
@@ -211,11 +213,10 @@ let builtin_enum = function
     let add_cstrs map =
       List.fold_left (fun map ((c : DE.term_cst), _) ->
           let name = get_basename c.path in
-          DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term }
-            (fun env _ ->
-               builtin_term @@
-               Dolmen_type.Base.term_app_cst
-                 (module Dl.Typer.T) env c) map)
+          DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } (fun env _ ->
+              builtin_term @@
+              Dolmen_type.Base.term_app_cst
+                (module Dl.Typer.T) env c) map)
         map cstrs
     in
     Cache.store_ty (DE.Ty.Const.hash ty_cst) ty_;
@@ -233,18 +234,62 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
 module Const = struct
   open DE
 
+  let bv2nat =
+    with_cache (fun n ->
+        let name = "bv2nat" in
+        Id.mk ~name ~builtin:(BV2Nat n)
+          (DStd.Path.global name) Ty.(arrow [bitv n] int))
+  
+  let int2bv =
+    with_cache (fun n ->
+        let name = "int2bv" in
+        Id.mk ~name ~builtin:(Int2BV n)
+          (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
+
   let smt_round =
     with_cache (fun (n, m) ->
         let name = "ae.round" in
-        DE.Id.mk
+        Id.mk
           ~name
           ~builtin:(AERound (n, m))
           (DStd.Path.global name)
           Ty.(arrow [fpa_rounding_mode; real] real))
 end
 
+let bv2nat t =
+  let n =
+    match DT.view (DE.Term.ty t) with
+    | `Bitv n -> n
+    | _ -> raise (DE.Term.Wrong_type (t, DT.bitv 0))
+  in
+  DE.Term.apply_cst (Const.bv2nat n) [] [t]
+
+let int2bv n t =
+  DE.Term.apply_cst (Const.int2bv n) [] [t]
+
 let smt_round n m rm t =
   DE.Term.apply_cst (Const.smt_round (n, m)) [] [rm; t]
+
+let bv_builtins env s =
+  let term_app1 f =
+    Dl.Typer.T.builtin_term @@
+    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
+  in
+  match s with
+  | Dl.Typer.T.Id {
+      ns = Term  ;
+      name = Simple "bv2nat" } ->
+    term_app1 bv2nat
+  | Id {
+      ns = Term ;
+      name = Indexed {
+          basename = "int2bv" ;
+          indexes = [ n ] } } ->
+    begin match int_of_string n with
+      | n -> term_app1 (int2bv n)
+      | exception Failure _ -> `Not_found
+    end
+  | _ -> `Not_found
 
 (** Takes a dolmen identifier [id] and injects it in Alt-Ergo's registered
     identifiers.
@@ -447,16 +492,19 @@ let smt_fpa_builtins =
       end
     | _ -> `Not_found
 
+(** Concatenation of builtins handlers. *)
+let (++) bt1 bt2 =
+  fun a b ->
+  match bt1 a b with
+  | `Not_found -> bt2 a b
+  | res -> res
+
 let builtins =
   fun _st (lang : Typer.lang) ->
   match lang with
   | `Logic Alt_ergo -> ae_fpa_builtins
-  | `Logic (Smtlib2 _) -> smt_fpa_builtins
+  | `Logic (Smtlib2 _) -> bv_builtins ++ smt_fpa_builtins
   | _ -> fun _ _ -> `Not_found
-
-(** Translates dolmen locs to Alt-Ergo's locs *)
-let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
-  DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
 
 (** clears the cache in the [Cache] module. *)
 let clear_cache () = Cache.clear ()
@@ -649,14 +697,14 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   in
   Cache.store_sy tcst sy;
   (* Adding polymorphic types to the cache. *)
-  Cache.store_ty_vars id_ty;
-  let arg_tys, ret_ty =
-    match DT.view id_ty with
-    | `Arrow (arg_tys, ret_ty) ->
-      List.map dty_to_ty arg_tys, dty_to_ty ret_ty
-    | _ -> [], dty_to_ty id_ty
-  in
-  (Hstring.make name, arg_tys, ret_ty)
+  Cache.store_ty_vars id_ty(* ;
+   * let arg_tys, ret_ty =
+   *   match DT.view id_ty with
+   *   | `Arrow (arg_tys, ret_ty) ->
+   *     List.map dty_to_ty arg_tys, dty_to_ty ret_ty
+   *   | _ -> [], dty_to_ty id_ty
+   * in
+   * (Hstring.make name, arg_tys, ret_ty) *)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -1407,8 +1455,8 @@ let rec mk_expr
           | Integer_round, _ -> op Integer_round
           | Abs_real, _ -> op Abs_real
           | Sqrt_real, _ -> op Sqrt_real
-          | B.Bitv_of_int { n }, _ -> op (Int2BV n)
-          | B.Bitv_to_nat { n = _ }, _ -> op BV2Nat
+          | Int2BV n, _ -> op (Int2BV n)
+          | BV2Nat _, _ -> op BV2Nat
           | Sqrt_real_default, _ -> op Sqrt_real_default
           | Sqrt_real_excess, _ -> op Sqrt_real_excess
           | B.Abs, _ -> op Abs_int
@@ -1748,6 +1796,98 @@ let pp_query ?(hyps =[]) t =
   let axioms, goal = intro_hypothesis t in
   List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
+let make_defs defs loc =
+  (* For a mutually recursive definition, we have to add all the function
+     names in a row. *)
+  List.iter (fun (def : Typer_Pipe.def) ->
+      match def with
+      | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
+        let name_base = get_basename path in
+        let sy = Sy.name ~defined:true name_base in
+        Cache.store_sy tcst sy
+      | `Type_alias _ -> ()
+      | `Instanceof _ ->
+        (* These statements are only used in models when completing a
+           polymorphic partially-defined bulitin and should not end up
+           here. *)
+        assert false
+    ) defs;
+  List.filter_map (fun (def : Typer_Pipe.def) ->
+      match def with
+      | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
+        Cache.store_tyvl tyvars;
+        let name_base = get_basename path in
+        let binders_set, defn =
+          let rty = dty_to_ty body.term_ty in
+          let binders_set, rev_args =
+            List.fold_left (
+              fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
+                let ty = dty_to_ty id_ty in
+                let sy = Sy.var (Var.of_string (get_basename path)) in
+                Cache.store_sy tv sy;
+                let e = E.mk_term sy [] ty in
+                SE.add e binders_set, e :: acc
+            ) (SE.empty, []) terml
+          in
+          let sy = Cache.find_sy tcst in
+          let e = E.mk_term sy (List.rev rev_args) rty in
+          binders_set, e
+        in
+        begin match DStd.Tag.get tags DE.Tags.predicate with
+          | Some () ->
+            let decl_kind = E.Dpredicate defn in
+            let ff =
+              mk_expr ~loc ~name_base
+                ~toplevel:false ~decl_kind body
+            in
+            let qb = E.mk_eq ~iff:true defn ff in
+            let binders = E.mk_binders binders_set in
+            let ff =
+              E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                ~decl_kind
+            in
+            assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
+            let ff = E.purify_form ff in
+            let e =
+              if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+              else
+                E.mk_forall name_base loc
+                  Var.Map.empty [] ff ~toplevel:true ~decl_kind
+            in
+            Some (`PredDef (e, name_base))
+          | None ->
+            let decl_kind = E.Dfunction defn in
+            let ff =
+              mk_expr ~loc ~name_base
+                ~toplevel:false ~decl_kind body
+            in
+            let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
+            let qb = E.mk_eq ~iff defn ff in
+            let binders = E.mk_binders binders_set in
+            let ff =
+              E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                ~decl_kind
+            in
+            assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
+            let ff = E.purify_form ff in
+            let e =
+              if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+              else
+                E.mk_forall name_base loc
+                  Var.Map.empty [] ff ~toplevel:true ~decl_kind
+            in
+            if Options.get_verbose () then
+              Format.eprintf "defining term of %a@." DE.Term.print body;
+            Some (`Assume (name_base, e))
+        end
+      | `Type_alias _ -> None
+      | `Instanceof _ ->
+        (* These statements are only used in models when completing a
+           polymorphic partially-defined bulitin and should not end up
+           here. *)
+        assert false
+    ) defs
+
 let make_form name_base f loc ~decl_kind =
   let ff =
     mk_expr ~loc ~name_base ~toplevel:true ~decl_kind f
@@ -1758,6 +1898,42 @@ let make_form name_base f loc ~decl_kind =
   else
     E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
+let cache_decls = function
+  | [] -> assert false (* We could probably just return (). *)
+  | [td] ->
+    begin
+      match td with
+      | `Type_decl (td, _def) -> mk_ty_decl td
+      | `Term_decl td -> mk_term_decl td;
+    end
+  | dcl ->
+    let rec aux acc tdl =
+      (* for now, when acc has more than one element it is assumed that the
+         types are mutually recursive. Which is not necessarily the case.
+         But it doesn't affect the execution.
+      *)
+      match tdl with
+      | `Term_decl td :: tl ->
+        begin match acc with
+          | [] -> ()
+          | [otd] -> mk_ty_decl otd
+          | _ -> mk_mr_ty_decls (List.rev acc)
+        end;
+        mk_term_decl td;
+        aux [] tl
+
+      | `Type_decl (td, _def) :: tl ->
+        aux (td :: acc) tl
+
+      | [] ->
+        begin match acc with
+          | [] -> ()
+          | [otd] -> mk_ty_decl otd
+          | _ ->  mk_mr_ty_decls (List.rev acc)
+        end
+    in
+    aux [] dcl
+
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
 let rec is_pure_term t =
@@ -1766,333 +1942,3 @@ let rec is_pure_term t =
   | (Sy.Let | Lit _ | Form _) -> false
   | Sy.Op Tite -> false
   | _ -> List.for_all is_pure_term xs
-
-let make dloc_file acc stmt =
-  let rec aux acc (stmt: _ Typer_Pipe.stmt) =
-    match stmt with
-    (* Optimize terms *)
-    | { contents = `Optimize (t, is_max); loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
-      let e =
-        mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
-      in
-      if not @@ is_pure_term e then
-        begin
-          Printer.print_wrn
-            "the expression %a is not a valid objective function. \
-             Only terms without let bindings or ite subterms can be optimized."
-            E.print e;
-          acc
-        end
-      else
-        let st_decl = C.Optimize (e, is_max) in
-        C.{ st_decl; st_loc } :: acc
-
-    (* Push and Pop commands *)
-    | { contents = `Pop n; loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
-      let st_decl = C.Pop n in
-      C.{ st_decl; st_loc } :: acc
-
-    | { contents = `Push n; loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
-      let st_decl = C.Push n in
-      C.{ st_decl; st_loc } :: acc
-
-    (* Goal and check-sat definitions *)
-    | {
-      id; loc; attrs;
-      contents = (`Goal _ | `Check _) as contents;
-      implicit;
-    } ->
-      let name =
-        match id.name with
-        | Simple name -> name
-        | Indexed _ | Qualified _ -> assert false
-      in
-      let goal_sort =
-        match contents with
-        | `Goal _ -> Ty.Thm
-        | `Check _ -> Ty.Sat
-      in
-      let st_loc = dl_to_ael dloc_file loc in
-      let _hyps, t =
-        match contents with
-        | `Goal t ->
-          pp_query t
-        | `Check hyps ->
-          pp_query ~hyps (DStd.Expr.Term.(of_cst Const._false))
-      in
-      let rev_hyps_c =
-        List.fold_left (
-          fun acc t ->
-            let ns = DStd.Namespace.Decl in
-            let name = Ty.fresh_hypothesis_name goal_sort in
-            let decl: _ Typer_Pipe.stmt = {
-              id = DStd.Id.mk ns name;
-              contents = `Hyp t; loc; attrs; implicit
-            }
-            in
-            aux acc decl
-        ) [] _hyps
-      in
-      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
-      let st_decl = C.Query (name, e, goal_sort) in
-      C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
-
-    | { contents = `Solve _; _ } ->
-      (* Filtered out by the solving_loop *)
-      (* TODO: Remove them from the types *)
-      assert false
-
-    (* Axiom definitions *)
-    | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
-        implicit=_ } ->
-      let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
-      let aloc = DStd.Loc.lexing_positions dloc in
-      (* Dolmen adds information about theory extensions and case splits in the
-         [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
-         where the information we care about is encoded as a [Colon]-list of
-         symbols.
-
-         The few helper functions below are used to extract the information from
-         the [attrs]. More specifically:
-
-         - "case split" statements have the [DStd.Id.case_split] symbol as an
-            attribute
-
-         - Theory elements have a 3-length list of symbols as an attribute, of
-            the form [theory_decl; name; extends], where [theory_decl] is the
-            symbol [DStd.Id.theory_decl] and [name] and [extends] are the theory
-            extension name and the base theory name, respectively.
-      *)
-      let rec symbols = function
-        | DStd.Term. { term = Colon ({ term = Symbol sy; _ }, xs); _ } ->
-          Option.bind (symbols xs) @@ fun sys ->
-          Some (sy :: sys)
-        | { term = Symbol sy; _ } -> Some [sy]
-        | _ -> None
-      in
-      let sy_attrs = List.filter_map symbols attrs in
-      let is_case_split =
-        let is_case_split = function
-          | [ sy ] when DStd.Id.(equal sy case_split) -> true
-          | _ -> false
-        in
-        List.exists is_case_split sy_attrs
-      in
-      let theory =
-        let theory =
-          let open DStd.Id in
-          function
-          | [ td; name; extends] when DStd.Id.(equal td theory_decl) ->
-            let name = match name.name with
-              | Simple name -> name
-              | _ ->
-                Fmt.failwith
-                  "Internal error: invalid theory extension: %a"
-                  print name
-            in
-            let extends = match extends.name with
-              | Simple name ->
-                begin match Util.th_ext_of_string name with
-                  | Some extends -> extends
-                  | None ->
-                    Errors.typing_error (ThExtError name) aloc
-                end
-              | _ ->
-                Fmt.failwith
-                  "Internal error: invalid base theory name: %a"
-                  print extends
-            in
-            Some (name, extends)
-          | _ -> None
-        in
-        match List.filter_map theory sy_attrs with
-        | [] -> None
-        | [name, extends] -> Some (name, extends)
-        | _ ->
-          Fmt.failwith
-            "%a: Internal error: multiple theories."
-            DStd.Loc.fmt dloc
-      in
-      let decl_kind, assume =
-        match theory with
-        | Some (th_name, extends) ->
-          let axiom_kind =
-            if is_case_split then Util.Default else Util.Propagator
-          in
-          let th_assume name e =
-            let th_elt = {
-              Expr.th_name;
-              axiom_kind;
-              extends;
-              ax_form = e;
-              ax_name = name;
-            } in
-            C.ThAssume th_elt
-          in
-          E.Dtheory, th_assume
-        | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
-      in
-      let st_loc = dl_to_ael dloc_file loc in
-      let e = make_form name t st_loc ~decl_kind in
-      let st_decl = assume name e in
-      C.{ st_decl; st_loc } :: acc
-
-    (* Function and predicate definitions *)
-    | { contents = `Defs defs; loc; _ } ->
-      (* For a mutually recursive definition, we have to add all the function
-         names in a row. *)
-      List.iter (fun (def : Typer_Pipe.def) ->
-          match def with
-          | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
-            let name_base = get_basename path in
-            let sy = Sy.name ~defined:true name_base in
-            Cache.store_sy tcst sy
-          | `Type_alias _ -> ()
-          | `Instanceof _ ->
-            (* These statements are only used in models when completing a
-               polymorphic partially-defined bulitin and should not end up
-               here. *)
-            assert false
-        ) defs;
-      let append xs = List.append xs acc in
-      append @@
-      List.filter_map (fun (def : Typer_Pipe.def) ->
-          match def with
-          | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
-            Cache.store_tyvl tyvars;
-            let st_loc = dl_to_ael dloc_file loc in
-            let name_base = get_basename path in
-
-            let binders_set, defn =
-              let rty = dty_to_ty body.term_ty in
-              let binders_set, rev_args =
-                List.fold_left (
-                  fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
-                    let ty = dty_to_ty id_ty in
-                    let sy = Sy.var (Var.of_string (get_basename path)) in
-                    Cache.store_sy tv sy;
-                    let e = E.mk_term sy [] ty in
-                    SE.add e binders_set, e :: acc
-                ) (SE.empty, []) terml
-              in
-              let sy = Cache.find_sy tcst in
-              let e = E.mk_term sy (List.rev rev_args) rty in
-              binders_set, e
-            in
-
-            let loc = st_loc in
-
-            begin match DStd.Tag.get tags DE.Tags.predicate with
-              | Some () ->
-                let decl_kind = E.Dpredicate defn in
-                let ff =
-                  mk_expr ~loc ~name_base
-                    ~toplevel:false ~decl_kind body
-                in
-                let qb = E.mk_eq ~iff:true defn ff in
-                let binders = E.mk_binders binders_set in
-                let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
-                    ~decl_kind
-                in
-                assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
-                let ff = E.purify_form ff in
-                let e =
-                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-                  else
-                    E.mk_forall name_base loc
-                      Var.Map.empty [] ff ~toplevel:true ~decl_kind
-                in
-                Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
-              | None ->
-                let decl_kind = E.Dfunction defn in
-                let ff =
-                  mk_expr ~loc ~name_base
-                    ~toplevel:false ~decl_kind body
-                in
-                let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
-                let qb = E.mk_eq ~iff defn ff in
-                let binders = E.mk_binders binders_set in
-                let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
-                    ~decl_kind
-                in
-                assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
-                let ff = E.purify_form ff in
-                let e =
-                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
-                  else
-                    E.mk_forall name_base loc
-                      Var.Map.empty [] ff ~toplevel:true ~decl_kind
-                in
-                if Options.get_verbose () then
-                  Format.eprintf "defining term of %a@." DE.Term.print body;
-                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
-            end
-          | `Type_alias _ -> None
-          | `Instanceof _ ->
-            (* These statements are only used in models when completing a
-               polymorphic partially-defined bulitin and should not end up
-               here. *)
-            assert false
-        ) defs
-
-    | {contents = `Decls [td]; loc; _ } ->
-      begin match td with
-        | `Type_decl (td, _def) ->
-          mk_ty_decl td;
-          acc
-
-        | `Term_decl td ->
-          let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
-      end
-
-    | {contents = `Decls dcl; loc; _ } ->
-      let rec aux ty_decls tdl acc =
-        (* for now, when acc has more than one element it is assumed that the
-           types are mutually recursive. Which is not necessarily the case.
-           But it doesn't affect the execution.
-        *)
-        match tdl with
-        | `Term_decl td :: tl ->
-          begin match ty_decls with
-            | [] -> ()
-            | [otd] -> mk_ty_decl otd
-            | _ -> mk_mr_ty_decls (List.rev ty_decls)
-          end;
-          let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl acc
-
-        | `Type_decl (td, _def) :: tl ->
-          aux (td :: ty_decls) tl acc
-
-        | [] ->
-          begin
-            let () =
-              match ty_decls with
-              | [] -> ()
-              | [otd] -> mk_ty_decl otd
-              | _ ->  mk_mr_ty_decls (List.rev ty_decls)
-            in
-            acc
-          end
-      in
-      aux [] dcl acc
-
-    | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
-
-    | { contents = #Typer_Pipe.typechecked; _ } as stmt ->
-      (* TODO:
-         - Separate statements that should be ignored from unsupported
-           statements and throw exception or print a warning when an unsupported
-           statement is encountered.
-      *)
-      Printer.print_dbg ~header:true
-        "Ignoring statement: %a" Typer_Pipe.print stmt;
-      acc
-  in
-  aux acc stmt

@@ -239,6 +239,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       expl = Explanation.empty
     }
 
+  let set_result env res = env.res <- res
+
   let output_used_context g_name dep =
     if not (Options.get_js_mode ()) then begin
       let f = Options.get_used_context_file () in
@@ -322,7 +324,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         ~max:n ~elt:() ~init:(env.res, env.expl)
     in
     SAT.pop env.sat_env n;
-    env.res <- res;
+    set_result env res;
     env.expl <- expl
 
   let internal_assume
@@ -389,7 +391,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     in
     if get_debug_unsat_core () then check_produced_unsat_core expl;
     if get_save_used_context () then output_used_context n expl;
-    env.res <- `Unsat;
+    set_result env `Unsat;
     env.expl <- expl
 
   let internal_th_assume
@@ -420,12 +422,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let handle_sat_exn f ?loc x env =
     try f ?loc x env with
-    | SAT.Sat -> env.res <- `Sat
+    | SAT.Sat -> set_result env `Sat
     | SAT.Unsat expl ->
-      env.res <- `Unsat;
+      set_result env `Unsat;
       env.expl <- Ex.union expl env.expl
-    | SAT.I_dont_know ->
-      env.res <- `Unknown
+    | SAT.I_dont_know -> set_result env `Unknown
+    | Util.Step_limit_reached _ -> set_result env `Unknown
+  (* The SAT.Timeout exception is not catched. *)
 
   (* Wraps the function f to check if the step limit is reached (in which case,
      don't do anything), and then calls the function & catches the
@@ -485,7 +488,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       hook_on_status (Sat (d, env.sat_env)) (Steps.get_steps ());
-      env.res <- `Sat
+      set_result env `Sat
 
     | SAT.Unsat expl' ->
       (* This case should mainly occur when a new assumption results in an unsat
@@ -494,7 +497,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let expl = Ex.union env.expl expl' in
       if get_debug_unsat_core () then check_produced_unsat_core expl;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env.res <- `Unsat;
+      set_result env `Unsat;
       env.expl <- expl
 
     | SAT.I_dont_know ->
@@ -508,7 +511,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       hook_on_status status (Steps.get_steps ());
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env.res <- `Unknown
+      set_result env `Unknown
 
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status,

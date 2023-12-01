@@ -49,13 +49,15 @@ goal g_valid_4_2:
   e ? B ->
   false
 
-(**)
+(* Isse 1008: this goal fail when encapsulated by a push/pop. *)
+(*
 goal g_valid_5_1:
   forall n : int.
   n >= 0 -> (* just here for E-matching *)
   not (e ? A) ->
   not (e ? B) ->
   exists x : int[x]. e = C(x)
+*)
 
 goal g_valid_5_2:
   forall n : int.

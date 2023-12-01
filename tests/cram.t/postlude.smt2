@@ -22,8 +22,8 @@
   (assert (not (my_leq (f x) x)))
   (check-sat)
 
-  ; Now that x > 10 is known, the trigger should apply
-  (assert (> x 10))
+  ; Now that f x > 10 is known, the trigger should apply
+  (assert (> (f x) 10))
   (check-sat)
 
 (pop 1)
