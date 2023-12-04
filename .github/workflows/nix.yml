@@ -9,10 +9,11 @@ permissions: {}
 
 jobs:
   check:
-    matrix:
-      os:
-        - macos-latest
-        - ubuntu-22.04
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
 
