@@ -539,26 +539,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          with Not_found -> inst, acc
       ) (env.inst, acc) sa
 
-  let measure at =
-    Atom.level  at,
-    Atom.weight at,
-    Atom.index  at
-
-  (* smaller is more important *)
-  let cmp_tuples (l1, w1, i1) (l2,w2, i2) =
-    (* lower decision level is better *)
-    let res = compare l1 l2 in
-    if res <> 0 then res
-    else
-      (* higher weight is better hence compare w2 w1 *)
-      let res = Stdlib.compare w2 w1 in
-      if res <> 0 then res
-      else
-        (* lower index is better *)
-        compare i1 i2
-
-  let max a b = if cmp_tuples a b > 0 then a else b
-
   (* unused --
      let take_max aux l =
      let ((lvl, _, ind) ,_) as acc =
@@ -600,17 +580,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match FF.view f with
       | FF.UNIT at ->
         if not (Atom.is_true at) then None
-        else Some (measure at, [Atom.literal at])
+        else Some [Atom.literal at]
 
       | FF.AND l ->
         begin
           try
             let acc =
-              List.fold_left (fun (mz,lz) f ->
+              List.fold_left (fun lz f ->
                   match atoms_from_sat_branch f with
                   | None -> raise Exit
-                  | Some (m, l) -> max m mz, List.rev_append l lz
-                )((-1, -.1., -1), []) l
+                  | Some l -> List.rev_append l lz
+                ) [] l
             in
             Some acc
           with Exit -> None
@@ -625,7 +605,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
            Debug.atoms_from_sat_branch f;
            match atoms_from_sat_branch f with
            | None   -> assert false
-           | Some (_,l) -> List.fold_left (fun sa a -> SE.add a sa) sa l
+           | Some l -> List.fold_left (fun sa a -> SE.add a sa) sa l
         ) env.conj SE.empty
 
   module SA = Satml_types.Atom.Set

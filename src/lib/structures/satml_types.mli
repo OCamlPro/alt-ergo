@@ -82,7 +82,6 @@ module type ATOM = sig
   val vrai_atom  : atom
   val faux_atom  : atom
   val level : atom -> int
-  val index : atom -> int
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 

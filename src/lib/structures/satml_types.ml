@@ -85,7 +85,6 @@ module type ATOM = sig
   val vrai_atom  : atom
   val faux_atom  : atom
   val level : atom -> int
-  val index : atom -> int
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
@@ -281,7 +280,6 @@ module Atom : ATOM = struct
 
   let is_true a = a.is_true
   let level a = a.var.level
-  let index a = a.var.index
   let neg a = a.neg
 
   module HT = Hashtbl.Make(E)
