@@ -39,7 +39,6 @@ module type ATOM = sig
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
@@ -176,7 +175,6 @@ module Atom : ATOM = struct
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
@@ -218,7 +216,6 @@ module Atom : ATOM = struct
       index = -1;
       reason = None;
       weight = -1.;
-      sweight = 0;
       seen = false;
       vpremise = [] }
   and dummy_atom =
@@ -279,8 +276,6 @@ module Atom : ATOM = struct
     let is_pos = E.is_positive lit in
     (if is_pos then lit else E.neg lit), not is_pos
 
-  let max_depth a = E.depth a
-
   let literal a = a.lit
   let weight a = a.var.weight
 
@@ -308,7 +303,6 @@ module Atom : ATOM = struct
           index = -1;
           reason = None;
           weight = 0.;
-          sweight = max_depth lit;
           seen = false;
           vpremise = [];
         }

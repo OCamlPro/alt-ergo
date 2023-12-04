@@ -36,7 +36,6 @@ module type ATOM = sig
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
