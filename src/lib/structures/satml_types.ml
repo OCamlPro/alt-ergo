@@ -42,6 +42,7 @@ module type ATOM = sig
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
+       mutable hindex : int;
        mutable reason: reason;
        mutable vpremise : premise}
 
@@ -105,6 +106,8 @@ module type ATOM = sig
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
+
+  val cmp_var : var -> var -> int
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
@@ -177,6 +180,7 @@ module Atom : ATOM = struct
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
+       mutable hindex : int;
        mutable reason: reason;
        mutable vpremise : premise}
 
@@ -213,6 +217,7 @@ module Atom : ATOM = struct
       na = dummy_atom;
       level = -1;
       index = -1;
+      hindex = -1;
       reason = None;
       weight = -1.;
       seen = false;
@@ -299,6 +304,7 @@ module Atom : ATOM = struct
           na = na;
           level = -1;
           index = -1;
+          hindex = -1;
           reason = None;
           weight = 0.;
           seen = false;
@@ -381,8 +387,9 @@ module Atom : ATOM = struct
 
   let to_int f = int_of_float f
 
+  let cmp_var v1 v2 = v1.vid - v2.vid
+
   (* unused --
-     let cmp_var v1 v2 = v1.vid - v2.vid
      let eq_var v1 v2 = v1.vid - v2.vid = 0
      let tag_var v = v.vid
      let h_var v = v.vid

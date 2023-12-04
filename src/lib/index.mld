@@ -145,7 +145,7 @@ Stdlib extensions/replacements/wrappers:
 
 {!modules:
 AltErgoLib.Util
-AltErgoLib.Iheap
+AltErgoLib.Heap
 AltErgoLib.Emap
 AltErgoLib.Hstring
 AltErgoLib.Lists
