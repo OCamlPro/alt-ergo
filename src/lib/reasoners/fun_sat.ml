@@ -1850,7 +1850,7 @@ module Make (Th : Theory.S) = struct
 
   (** returns the latest model stored in the env if any *)
   let get_model env =
-    Option.map (fun (lazy mdl) -> mdl) !(env.last_saved_model)
+    Option.map Lazy.force !(env.last_saved_model)
 
   let get_unknown_reason env = env.unknown_reason
 

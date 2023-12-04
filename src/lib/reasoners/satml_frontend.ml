@@ -1345,7 +1345,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
 
   let get_model env =
-    Option.map (fun (lazy mdl) -> mdl) env.last_saved_model
+    Option.map Lazy.force env.last_saved_model
 
   let get_unknown_reason env = env.unknown_reason
 
