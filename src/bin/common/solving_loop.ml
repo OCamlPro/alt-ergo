@@ -350,7 +350,7 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let has_incremental : bool State.key =
+  let has_incremental : int State.key =
     State.create_key ~pipe:"" "is_incremental"
   in
 
@@ -515,7 +515,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set has_incremental false
+    |> State.set has_incremental 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -689,6 +689,11 @@ let main () =
       D_cnf.make (State.get State.logic_file st).loc
         (State.get solver_ctx_key st).ctx stmt
     in
+    (* Using both optimization and incremental mode is only dangerous if
+       some optimization constraints aren't at the toplevel. *)
+    if State.get has_incremental st > 0 then
+      warning "Optimization constraints in presence of push \
+               and pop statements are not correctly processed.";
     State.set solver_ctx_key (
       let solver_ctx = State.get solver_ctx_key st in
       { solver_ctx with ctx = cnf }
@@ -706,9 +711,6 @@ let main () =
             | Some o ->
               if not @@ Objective.Model.has_no_limit o then
                 warning "Some objectives cannot be fulfilled";
-              if State.get has_incremental st then
-                warning "Optimization constraints in presence of push \
-                         and pop statements are not correctly processed.";
               Objective.Model.pp (Options.Output.get_fmt_regular ()) o
             | None ->
               recoverable_error "No objective generated"
@@ -989,8 +991,10 @@ let main () =
       | td ->
         let st =
           match td.contents with
-          | `Pop _ | `Push _ ->
-            State.set has_incremental true st
+          | `Pop _ ->
+            State.set has_incremental (State.get has_incremental st - 1) st
+          | `Push _ ->
+            State.set has_incremental (State.get has_incremental st + 1) st
           | _ -> st
         in
         (* TODO:
