@@ -62,7 +62,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
-    mutable model_gen_phase : bool;
     mutable last_saved_model : Models.t Lazy.t option;
     mutable last_saved_objectives : Objective.Model.t option;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
@@ -95,7 +94,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       skolems = ME.empty;
       guards = init_guards ();
       add_inst = (fun _ -> true);
-      model_gen_phase = false;
       last_saved_model = None;
       last_saved_objectives = None;
       unknown_reason = None;
