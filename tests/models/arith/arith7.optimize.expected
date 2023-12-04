@@ -10,5 +10,5 @@ unknown
   (define-fun x () Real (/ (- 3) 2))
 )
 (objectives 
-  (x (- (- 0.0 (/ 1 2)) epsilon))
+  (x (- (- (/ 1 2)) epsilon))
 )
