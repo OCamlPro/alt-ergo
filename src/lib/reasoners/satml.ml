@@ -212,8 +212,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable tot_literals : int;
 
-      mutable nb_init_vars : int;
-
       mutable nb_init_clauses : int;
 
       mutable tenv : Th.t;
@@ -316,8 +314,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       max_literals = 0;
 
       tot_literals = 0;
-
-      nb_init_vars = 0;
 
       nb_init_clauses = 0;
 
@@ -795,7 +791,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if facts == [] then C_none
     else
       try
-        (*let full_model = nb_assigns() = env.nb_init_vars in*)
+        (*let full_model = nb_assigns() = nb_vars () in*)
         (* XXX what to do with the other results of Th.assume ? *)
         let t,_,cpt =
           Th.assume ~ordered:false
@@ -865,7 +861,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       if !facts == [] then C_none
       else
         try
-          (*let full_model = nb_assigns() = env.nb_init_vars in*)
+          (*let full_model = nb_assigns() = nb_vars () in*)
           (* XXX what to do with the other results of Th.assume ? *)
           let t,_,cpt =
             Th.assume ~ordered:(not (Options.get_cdcl_tableaux_th ()))
@@ -1416,7 +1412,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     while true do
       propagate_and_stabilize env all_propagations conflictC !strat;
 
-      if nb_assigns env = env.nb_init_vars ||
+      if nb_assigns env = nb_vars env ||
          (Options.get_cdcl_tableaux_inst () &&
           Matoms.is_empty env.lazy_cnf) then
         raise Sat;
@@ -1634,7 +1630,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                        if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
-      env.nb_init_vars <- nbv;
+      assert (nbv = Vec.size env.vars);
       accu
 
   let set_new_proxies env proxies =
