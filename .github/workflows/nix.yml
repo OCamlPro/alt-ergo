@@ -9,9 +9,13 @@ permissions: {}
 
 jobs:
   check:
-    runs-on:
-      - ubuntu-22.04
-      - macos-latest
+    matrix:
+      os:
+        - macos-latest
+        - ubuntu-22.04
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v3
         with:
