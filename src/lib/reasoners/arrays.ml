@@ -60,28 +60,12 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors _ _ = assert false
   let solve _ _ = assert false
   let assign_value r _ eq =
-    if List.exists (fun (t,_) -> Expr.const_term t) eq then None
+    if List.exists (fun (t,_) -> Expr.is_const_term t) eq then None
     else
       match X.term_extract r with
       | Some _, true ->
         Some (Expr.fresh_name (X.type_info r), false)
       | _ -> assert false
 
-  let choose_adequate_model _ _ l =
-    let acc =
-      List.fold_left
-        (fun acc (s, r) ->
-           if not (Expr.const_term s) then acc
-           else
-             match acc with
-             | Some(s', _) when Expr.compare s' s > 0 -> acc
-             | _ -> Some (s, r)
-        ) None l
-    in
-    match acc with
-    | Some (_, r) ->
-      r, Format.asprintf "%a" X.print r (* it's a EUF constant *)
-
-    | _ -> assert false
-
+  let to_const_term _r = assert false
 end

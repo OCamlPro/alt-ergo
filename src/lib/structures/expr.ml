@@ -313,6 +313,16 @@ module SmtPrinter = struct
     | Sy.Real q when Q.(equal q zero) -> true
     | _ -> false
 
+  let pp_rational ppf q =
+    if Z.equal (Q.den q) Z.one then
+      Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
+    else if Q.sign q = -1 then
+      Fmt.pf ppf "(/ (- %a) %a)"
+        Z.pp_print (Z.abs (Q.num q))
+        Z.pp_print (Q.den q)
+    else
+      Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+
   let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
@@ -415,6 +425,9 @@ module SmtPrinter = struct
 
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
 
+    | Sy.Op Minus, [e1; { f = Sy.Real q; _ }] when is_zero e1.f ->
+      pp_rational ppf (Q.neg q)
+
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
       Fmt.pf ppf "@[<2>(- %a@])" pp e2
 
@@ -443,14 +456,7 @@ module SmtPrinter = struct
         Fmt.pf ppf "%a" Z.pp_print i
 
     | Sy.Real q, [] ->
-      if Z.equal (Q.den q) Z.one then
-        Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
-      else if Q.sign q = -1 then
-        Fmt.pf ppf "(/ (- %a) %a)"
-          Z.pp_print (Z.abs (Q.num q))
-          Z.pp_print (Q.den q)
-      else
-        Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+      pp_rational ppf q
 
     | Sy.Bitv (n, s), [] ->
       Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
@@ -670,6 +676,8 @@ let print_list_sep sep =
     Fmt.list ~sep:Fmt.(const string sep) AEPrinter.pp
 
 let print_list ppf = print_list_sep "," ppf
+
+let pp_smtlib = SmtPrinter.pp
 
 let pp_binders ppf =
   if Options.get_output_smtlib ()
@@ -1015,14 +1023,24 @@ let mk_ite cond th el =
     if ty == Ty.Tbool then mk_if cond th el
     else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
-let [@inline always] const_term e =
-  (* we use this function because depth is currently not correct to
+let rec is_const_term e =
+  match e.f, e.xs with
+  | (Op Constr _ | Op Record), xs ->
+    List.for_all is_const_term xs
+  | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
+  | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
+  | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
+  | (True | False | Void | Name _ | Int _ | Real _ | Bitv _ | Var _), [] -> true
+  | _ -> false
+
+let[@inline always] const_term e =
+  (* We use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
-     some regression) *)
+     some regression). *)
   match e.f with
-  | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
-  | True | False | Void | Name _ | Int _ | Real _ | Bitv _
-  | Op _ | Var _ | In _ | MapsTo _ ->
+  | Sy.Form _ | Sy.Lit _ | Sy.Let -> false
+  | True | False | Void | Name _ | Int _ | Real _ | Bitv _ | Op _
+  | Var _ | In _ | MapsTo _ ->
     let res = (e.xs == []) in
     assert (res == (depth e <= 1));
     res
@@ -3111,4 +3129,21 @@ module BV = struct
          (bvule s t))
   let bvsgt s t = bvslt t s
   let bvsge s t = bvsle t s
+end
+
+(** Constructors from the smtlib theory of functional arrays with
+    extensionality logic.
+
+    https://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml *)
+module ArraysEx = struct
+  let select a i =
+    let rty =
+      match type_info a with
+      | Tfarray (_, rty) -> rty
+      | _ -> invalid_arg "[Expr.ArraysEx.select]"
+    in
+    mk_term Sy.(Op Get) [a; i] rty
+
+  let store a i v =
+    mk_term Sy.(Op Set) [a; i; v] (type_info a)
 end

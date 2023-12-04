@@ -35,7 +35,7 @@ module E = Expr
 type t = {
   propositional : Expr.Set.t;
   model : ModelMap.t;
-  terms_values : (Shostak.Combine.r * string) Expr.Map.t
+  terms_values : Expr.t Expr.Map.t
 }
 
 let empty = {

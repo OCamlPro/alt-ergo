@@ -30,6 +30,7 @@
 
 module Hs = Hstring
 module E = Expr
+module Sy = Symbols
 
 type 'a abstract =
   | Record of (Hs.t * 'a abstract) list * Ty.t
@@ -414,7 +415,7 @@ module Shostak (X : ALIEN) = struct
     | Access _ -> None
 
     | Record (_, ty) ->
-      if List.exists (fun (t,_) -> Expr.const_term t) eq
+      if List.exists (fun (t,_) -> Expr.is_const_term t) eq
       then None
       else Some (Expr.fresh_name ty, false)
 
@@ -426,20 +427,19 @@ module Shostak (X : ALIEN) = struct
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
-  let choose_adequate_model _ _ l =
-    let acc =
-      List.fold_left
-        (fun acc (s, r) ->
-           if not (Expr.const_term s) then acc
-           else
-             match acc with
-             | Some(s', _) when Expr.compare s' s > 0 -> acc
-             | _ -> Some (s, r)
-        ) None l
-    in
-    match acc with
-    | Some (_,r) ->
-      r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
-    | _ -> assert false
+  let to_const_term =
+    let rec to_const_term r =
+      match r with
+      | Record (fields, ty) ->
+        (* We can ignore the names of fields as they are inlined in the
+           type [ty] of the record. *)
+        let l =
+          Lists.try_map (fun (_name, rf) -> to_const_term rf) fields
+        in
+        Option.bind l @@ fun l ->
+        Some (E.mk_term Sy.(Op Record) l ty)
 
+      | Other (a, _) -> X.to_const_term a
+      | Access _ -> None
+    in fun r -> to_const_term (embed r)
 end

@@ -51,3 +51,11 @@ let apply_right f l =
       )([], true) l
   in
   (if same then l else List.rev res), same
+
+let rec try_map f l =
+  match l with
+  | [] -> Some []
+  | x :: xs ->
+    Option.bind (f x) @@ fun y ->
+    Option.bind (try_map f xs) @@ fun ys ->
+    Some (y :: ys)

@@ -1005,36 +1005,27 @@ let reinit_cache () =
   LX.reinit_cache ()
 
 (**** Counter examples functions ****)
-let is_a_good_model_value r =
-  match X.leaves r with
-    [] -> true
-  | [r'] -> X.equal r r'
-  | _ -> false
-
-let is_const_term r =
-  match X.term_extract r with
-  | Some t, _ ->
-    E.const_term t
-  | _ ->
-    (* Cannot test for theories which don't implement [term_extract]. *)
-    true
-
 let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
-    let rep,_ = try MapX.find mk env.repr with Not_found -> assert false in
+    let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
     let cls =
-      try SE.elements (MapX.find rep env.classes)
+      try
+        Expr.Set.elements (MapX.find rep env.classes)
+        |> List.map (fun t -> Expr.Map.find t env.make)
+        |> List.filter X.is_constant
       with Not_found -> assert false
     in
-    let cls =
-      try List.rev_map (fun s -> s, ME.find s env.make) cls
-      with Not_found -> assert false
+    let tt =
+      match cls with
+      | [] ->
+        X.to_const_term rep
+      | r :: _ -> X.to_const_term r
     in
-    let rep, string_repr = X.choose_adequate_model t rep cls in
-    assert (is_a_good_model_value rep && is_const_term rep);
-    (rep, string_repr), ME.add t (rep, string_repr) mrepr
+    match tt with
+    | Some tt -> tt, ME.add t tt mrepr
+    | None -> assert false
 
 (* Caches used during the computation of the model.
    All these caches are flushed before generating a new model. *)
@@ -1042,14 +1033,12 @@ module Cache = struct
   (* Stores all the get accesses to arrays. *)
   let arrays_cache = Hashtbl.create 17
 
-  (* Stores all the accesses to records. *)
-  let records_cache = Hashtbl.create 17
-
   (* Stores all the abstract values generated. This cache is necessary
      to ensure we don't generate twice an abstract value for a given symbol. *)
   let abstracts_cache = Hashtbl.create 17
 
-  let store_array_get (t : Expr.t) (i : ModelMap.Value.t) v =
+  let store_array_get (t : Expr.t) (i : ModelMap.Value.t)
+      (v : ModelMap.Value.t) =
     match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v
@@ -1058,21 +1047,7 @@ module Cache = struct
       Hashtbl.add values i v;
       Hashtbl.add arrays_cache t values
 
-  let store_record_decl (sy, args_ty, args) r =
-    match Hashtbl.find_opt records_cache r with
-    | Some _ -> ()
-    | None ->
-      let values = Hashtbl.create 17 in
-      Hashtbl.add records_cache r (sy, args_ty, args, values)
-
-  let store_record_access decl field v =
-    match Hashtbl.find_opt records_cache decl with
-    | Some (_sy, _args_ty, _args, values) ->
-      Hashtbl.replace values field v
-    | None ->
-      assert false
-
-  let get_abstract_for env t =
+  let get_abstract_for env (t : Expr.t) =
     let r, _ = find env t in
     match Hashtbl.find_opt abstracts_cache r with
     | Some abstract -> abstract
@@ -1083,19 +1058,12 @@ module Cache = struct
 
   let clear () =
     Hashtbl.clear arrays_cache;
-    Hashtbl.clear records_cache;
     Hashtbl.clear abstracts_cache
 end
 
-let is_forbidden_symbol f ty =
-  (* Keep record constructors because models.ml expects them to be there *)
-  (X.is_solvable_theory_symbol f ty
-   && not (Shostak.Records.is_mine_symb f ty))
-  || Sy.is_internal f
-
 let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
   let { E.f; xs; ty; _ } = E.term_view t in
-  if is_forbidden_symbol f ty
+  if X.is_solvable_theory_symbol f ty || Sy.is_internal f
   || E.is_internal_name t || E.is_internal_skolem t
   || E.equal t E.vrai || E.equal t E.faux
   then
@@ -1106,15 +1074,13 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
         List.fold_left
           (fun (arg_vals, arg_tys, mrepr) arg ->
              let rep_arg, mrepr = model_repr_of_term arg env mrepr in
-             assert (is_a_good_model_value (fst rep_arg));
-             rep_arg :: arg_vals,
+             ModelMap.Value.Constant rep_arg :: arg_vals,
              (Expr.type_info arg) :: arg_tys,
              mrepr
           )
           ([], [], mrepr) (List.rev xs)
       in
       let ret_rep, mrepr = model_repr_of_term t env mrepr in
-      assert (is_a_good_model_value (fst ret_rep));
       match f, arg_vals, ty with
       | Sy.Name _, [], Ty.Tfarray _ ->
         begin
@@ -1132,36 +1098,13 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
            never a user-defined array and has to be ignored. *)
         acc
 
-      | Sy.Op Sy.Get, [(a, _); (_, i)], _ ->
+      | Sy.Op Sy.Get, [Constant a; i], _ ->
         begin
-          match X.term_extract a with
-          | Some ta, true ->
-            let Expr.{ xs = xs_ta; _ } =
-              Expr.term_view ta
-            in
-            assert (xs_ta == []);
-            Cache.store_array_get ta ModelMap.Value.(Constant i) ModelMap.Value.(Constant (ret_rep |> snd));
-            acc
-          | _ ->
-            (* There is no semantic values for arrays, which means an array
-               is directly represented as a term. *)
-            assert false
+          Cache.store_array_get a i (Constant ret_rep);
+          acc
         end
 
-      | Sy.Name { hs = id; _ }, _, Ty.Trecord _ ->
-        let r, _ = find env t in
-        let arg_vals =
-          List.map
-            (fun arg_val -> ModelMap.Value.(Constant (arg_val |> snd))) arg_vals
-        in
-        Cache.store_record_decl (id, arg_tys, arg_vals) r;
-        acc
-
       | Sy.Name { hs = id; _ }, _, _ ->
-        let arg_vals =
-          List.map
-            (fun arg_val -> ModelMap.Value.(Constant (arg_val |> snd))) arg_vals
-        in
         let value =
           match ty with
           | Ty.Text _ ->
@@ -1169,24 +1112,16 @@ let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
                In this case, we produce an abstract value with the appropriate
                type. *)
             let abstract = Cache.get_abstract_for env t in
-            ModelMap.Value.(Abstract (abstract, arg_tys, ty))
-          | _ -> ModelMap.Value.(Constant (ret_rep |> snd))
+            ModelMap.Value.Abstract (abstract, ty)
+          | _ -> ModelMap.Value.Constant ret_rep
         in
         let mdl =
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
         in
         mdl, mrepr
 
-      | Sy.(Op Access field), [(r, _)], _ ->
-        begin
-          let r, _ = find_r env r in
-          Cache.store_record_access r (Hstring.view field) (ret_rep |> snd);
-          mdl, mrepr
-        end
-
       | _ ->
-        Fmt.pr "Unexpected term %a@." Expr.print t;
-        assert false
+        mdl, mrepr
     end
 
 (* A map of expressions / terms, ordered by depth first, and then by
@@ -1210,12 +1145,11 @@ let is_suspicious_name hs =
 (* The model generation is known to be imcomplete for FPA and Bitvector
    theories. *)
 let is_suspicious_symbol = function
-  | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real_default
+  | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real | Sqrt_real_default
           | Sqrt_real_excess | Real_of_int | Int_floor
           | Int_ceil | Max_int | Max_real | Min_int
           | Min_real | Integer_log2 | Integer_round) ->
     not (Options.get_theory_preludes () |> List.mem Theories.Fpa)
-  | Sy.Op (BVand | BVor) -> true
   | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
   | _ -> false
 
@@ -1235,9 +1169,32 @@ let terms env =
 let compute_concrete_model env =
   Cache.clear ();
   let terms, suspicious = terms env in
-  MED.fold
-    (fun t _mk acc -> compute_concrete_model_of_val env t acc
-    ) terms (ModelMap.empty ~suspicious, Expr.Map.empty)
+  let mdl, mrepr =
+    MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
+      terms (ModelMap.empty ~suspicious, ME.empty)
+  in
+  let mdl =
+    let open ModelMap.Value in
+    Hashtbl.fold (fun t vals mdl ->
+        (* We produce a fresh identifiant for abstract value in order to prevent
+           any capture. *)
+        let abstract = Cache.get_abstract_for env t in
+        let ty = Expr.type_info t in
+        let arr_val =
+          Hashtbl.fold (fun i v arr_val ->
+              Store (arr_val, i, v)
+            ) vals (Abstract (abstract, ty))
+        in
+        let id =
+          let Expr.{ f; _ } = Expr.term_view t in
+          match f with
+          | Sy.Name { hs; _ } -> hs
+          | _ -> assert false
+        in
+        ModelMap.add (id, [], ty) [] arr_val mdl
+      ) Cache.arrays_cache mdl
+  in
+  (mdl, mrepr)
 
 let extract_concrete_model ~prop_model env =
   let model, mrepr = compute_concrete_model env in

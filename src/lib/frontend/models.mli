@@ -33,7 +33,7 @@
 type t = {
   propositional : Expr.Set.t;
   model : ModelMap.t;
-  terms_values : (Shostak.Combine.r * string) Expr.Map.t
+  terms_values : Expr.t Expr.Map.t
   (** A map from terms to their values in the model (as a
       representative of type X.r and as a string. *)
 }

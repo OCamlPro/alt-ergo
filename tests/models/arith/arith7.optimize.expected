@@ -1,5 +1,7 @@
 
 unknown
+; This model is a best-effort. It includes symbols
+; for which model generation is known to be incomplete.
 (
   (define-fun x () Real (/ 7 20))
   (define-fun y () Real 1.0)

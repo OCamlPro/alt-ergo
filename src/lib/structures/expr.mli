@@ -151,6 +151,10 @@ val print_list : Format.formatter -> t list -> unit
 val print_list_sep : string -> Format.formatter -> t list -> unit
 val print_triggers : Format.formatter -> trigger list -> unit
 
+val pp_smtlib : t Fmt.t
+(** [pp_smtlib ppf e] prints the expression [e] on the formatter
+    [ppf] using the SMT-LIB standard. *)
+
 (** Comparison and hashing functions *)
 
 val compare : t -> t -> int
@@ -331,8 +335,13 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 
 val is_pure : t -> bool
 
-val const_term : t -> bool
-(** return true iff the given argument is a term without arguments *)
+val is_const_term : t -> bool
+(** [is_const_term e] checks if the expression [e] is a constant terms.
+    A constant term can be:
+    - A record definition involving only constant terms.
+    - A constructor application involving only constant terms,
+    - A literal of a basic type (integer, real, boolean, unit or bitvector),
+    - A variable or an application of function of arity [0]. *)
 
 val save_cache: unit -> unit
 (** Saves the modules cache *)
@@ -477,4 +486,13 @@ module BV : sig
   val bvshl : t -> t -> t
   val bvlshr : t -> t -> t
   val bvashr : t -> t -> t
+end
+
+(** Constructors from the smtlib theory of functional arrays with
+    extensionality logic.
+
+    https://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml *)
+module ArraysEx : sig
+  val select : t -> t -> t
+  val store : t -> t -> t -> t
 end

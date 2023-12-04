@@ -32,15 +32,12 @@ type sy = Id.t * Ty.t list * Ty.t
 (** Typed symbol of function. *)
 
 module Value : sig
-  type array =
-    | AbstractArray of Id.t * Ty.t * Ty.t
-    | Store of array * t * t
-
-  and t =
-    | Abstract of sy
-    | Constant of string
-    | Array of array
-    | Record of string * t list
+  type t =
+    | Abstract of Id.t * Ty.t
+    | Store of t * t * t
+    | Constant of Expr.t
+    (** [Constant e] represents a constant value [e]. The expression
+        [e] is always a constant according to [Expr.is_const_term]. *)
 
   val pp : t Fmt.t
   (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the

@@ -195,21 +195,9 @@ module Shostak (X : ALIEN) = struct
        Thus we don't need to guess new values here. *)
     None
 
-  let choose_adequate_model _ r l =
-    let l =
-      List.filter
-        (fun (_, r) -> match embed r with Cons _ -> true | _ -> false) l
-    in
-    let r = match l with
-      | (_,r)::l ->
-        List.iter (fun (_,x) -> assert (X.equal x r)) l;
-        r
-
-      | [] ->
-        (* We do this, because terms of some semantic values created
-           by CS are not created and added to UF *)
-        match embed r with Cons _ -> r | _ -> assert false
-    in
-    r, Format.asprintf "%a" X.print r  (* it's a EUF constant *)
-
+  let to_const_term r =
+    match embed r with
+    | Cons (hs, ty) ->
+      Some (E.mk_term Sy.(Op (Constr hs)) [] ty)
+    | Alien a -> X.to_const_term a
 end

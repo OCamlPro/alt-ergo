@@ -128,11 +128,7 @@ module type SHOSTAK = sig
      [Some (t, false)], then there must be no context in which
      [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
-  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
-
+  val to_const_term : r -> Expr.t option
 end
 
 module type X = sig
@@ -191,8 +187,5 @@ module type X = sig
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
-  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
+  val to_const_term : r -> Expr.t option
 end

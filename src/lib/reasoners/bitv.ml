@@ -1543,34 +1543,14 @@ module Shostak(X : ALIEN) = struct
         let bv = String.make sz '0' in
         Some (E.bitv bv (Ty.Tbitv sz), true)
 
-  let choose_adequate_model t r l =
-    if Options.get_debug_interpretation () then
-      Printer.print_dbg
-        ~module_name:"Bitv" ~function_name:"choose_adequate_model"
-        "choose_adequate_model for %a" E.print t;
-    let l = List.map (fun (t, r) -> (t, r, embed r)) l in
-    let l = List.filter (fun (_, _, a) -> is_cte_abstract a) l in
-    let r, a =
-      match l with
-      | [] ->
-        let a = embed r in
-        assert (is_cte_abstract a);
-        r, a
-      | (_, r, a) :: l ->
-        List.iter (fun (_, x, _) -> assert (X.equal x r)) l;
-        r, a
-    in
-    let s =
-      List.map (function
-          | { bv = Cte b; sz } ->
-            Z.format ("%0" ^ string_of_int sz ^ "b") b
-          | _ ->
-            (* Cannot happen because [a] must satisfy [is_cte_abstract] at this
-               point. *)
-            assert false
-        ) a
-      |> String.concat ""
-    in
-    r, "#b" ^ s
-
+  let to_const_term r =
+    match embed r with
+    | [{ bv = Cte b; sz }] ->
+      let s = Z.format ("%0" ^ string_of_int sz ^ "b") b in
+      Some (Expr.bitv s Ty.(Tbitv sz))
+    | _ :: _ ->
+      Fmt.pr "HERE@.";
+      None
+    | _ ->
+      None
 end

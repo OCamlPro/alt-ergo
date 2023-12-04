@@ -34,37 +34,21 @@ module Sy = Symbols
 type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
 module Value = struct
-  type array =
-    | AbstractArray of Id.t * Ty.t * Ty.t
-    | Store of array * t * t
-
-  and t =
-    | Abstract of sy
-    | Constant of string
-    | Array of array
-    | Record of string * t list
+  type t =
+    | Abstract of Id.t * Ty.t
+    | Store of t * t * t
+    | Constant of Expr.t
   [@@deriving ord]
 
-  let rec pp_array ppf arr =
-    match arr with
-    | AbstractArray (id, ty_key, ty_val) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib
-        (Ty.Tfarray (ty_key, ty_val))
+  let rec pp ppf v =
+    match v with
+    | Abstract (id, ty) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
     | Store (arr, i, v) ->
       Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
-        pp_array arr pp i pp v
-
-  and pp ppf v =
-    match v with
-    | Abstract (id, _, ty) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | Constant s ->
-      Fmt.string ppf s
-    | Array arr -> pp_array ppf arr
-    | Record (id, fields) ->
-      Fmt.pf ppf "(@[<hv>%s %a)@]"
-        (Util.quoted_string id)
-        Fmt.(list ~sep:sp pp) fields
+        pp arr pp i pp v
+    | Constant e ->
+      Expr.pp_smtlib ppf e
 
   module Map = Map.Make (struct
       type nonrec t = t

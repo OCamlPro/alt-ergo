@@ -270,6 +270,23 @@ struct
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
+  let to_const_term r =
+    let res =
+      match r.v with
+      | Arith _ -> ARITH.to_const_term r
+      | Records _ -> RECORDS.to_const_term r
+      | Bitv _ -> BITV.to_const_term r
+      | Arrays _ -> ARRAYS.to_const_term r
+      | Enum _ -> ENUM.to_const_term r
+      | Adt _ -> ADT.to_const_term r
+      | Ite _ -> ITE.to_const_term r
+      | Term t when Expr.is_const_term t -> Some t
+      | Ac _ | Term _ -> None
+    in
+    Option.bind res @@ fun t ->
+    assert (Expr.is_const_term t);
+    Some t
+
   let top () = term_embed Expr.vrai
   let bot () = term_embed Expr.faux
 
@@ -369,7 +386,14 @@ struct
     | Enum t -> ENUM.is_constant t
     | Adt t -> ADT.is_constant t
     | Ite t -> ITE.is_constant t
-    | Ac _ | Term _ -> false
+    | Term t ->
+      begin
+        let Expr.{ f; xs; _ } = Expr.term_view t in
+        match f, xs with
+        | Symbols.(True | False | Void), [] -> true
+        | _ -> false
+      end
+    | Ac _ -> false
 
   let subst p v r =
     if equal p v then r
@@ -646,8 +670,8 @@ struct
           end
 
       | Term t, ty      -> (* case disable_adts() handled here *)
-        if Expr.const_term t ||
-           List.exists (fun (t,_) -> Expr.const_term t) eq then None
+        if Expr.is_const_term t ||
+           List.exists (fun (t,_) -> Expr.is_const_term t) eq then None
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               ->
         (* There is no model-generation support for the AC symbols yet.
@@ -663,66 +687,6 @@ struct
          | None -> Format.asprintf "None"
          | Some(res, _is_cs) -> Format.asprintf "%a" Expr.print res);
     opt
-
-  let choose_adequate_model t rep l =
-    let r, pprint =
-      match Expr.type_info t with
-      | Ty.Tint
-      | Ty.Treal     -> ARITH.choose_adequate_model t rep l
-      | Ty.Tbitv _   -> BITV.choose_adequate_model t rep l
-      | Ty.Tsum _    -> ENUM.choose_adequate_model t rep l
-      | Ty.Tadt _    when not (Options.get_disable_adts()) ->
-        ADT.choose_adequate_model t rep l
-      | Ty.Trecord _ -> RECORDS.choose_adequate_model t rep l
-      | Ty.Tfarray _ -> ARRAYS.choose_adequate_model t rep l
-      | Ty.Tbool ->
-        (* case split is now supposed to be done for internal bools if
-           needed as well *)
-        assert (is_bool_const rep);
-        rep, Format.asprintf "%a" print rep
-      | _            ->
-        let acc =
-          List.fold_left
-            (fun acc (s, r) ->
-               if Expr.const_term s then
-                 match acc with
-                 | Some(s', _) when Expr.compare s' s > 0 -> acc
-                 | _ -> Some (s, r)
-               else
-                 acc
-            ) None l
-        in
-        let r =
-          match acc with
-          | Some (_,r) -> r
-          | None ->
-            match term_extract rep with
-            | Some t, true when Expr.const_term t -> rep
-            | _ ->
-              let print_aux fmt (t,r) =
-                Format.fprintf fmt "> impossible case: %a -- %a@ "
-                  Expr.print t
-                  print r
-              in
-              if Options.get_debug_interpretation () then
-                Printer.print_dbg
-                  ~module_name:"Shostak" ~function_name:"choose_adequate_model"
-                  "@[<v 2>What to choose for term %a with rep %a?\
-                   %a@]"
-                  Expr.print t
-                  print rep
-                  (Printer.pp_list_no_space print_aux) l;
-              assert false
-        in
-        r, Format.asprintf "%a" print r (* it's a EUF constant *)
-    in
-    if Options.get_debug_interpretation () then
-      Printer.print_dbg
-        ~module_name:"Shostak" ~function_name:"choose_adequate_model"
-        "%a selected as a model for %a"
-        print r Expr.print t;
-    r, pprint
-
 end
 
 and TARITH : Polynome.T
