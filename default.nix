@@ -24,6 +24,7 @@ let
       dolmen_loop
       camlzip
       ppx_deriving
+      stdcompat
     ];
   };
 
