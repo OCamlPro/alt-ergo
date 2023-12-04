@@ -350,8 +350,8 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let suspicious_objectives : bool State.key =
-    State.create_key ~pipe:"" "suspicious_objective"
+  let has_incremental : bool State.key =
+    State.create_key ~pipe:"" "is_incremental"
   in
 
   let set_steps_bound i st =
@@ -515,7 +515,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set suspicious_objectives false
+    |> State.set has_incremental false
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -706,7 +706,7 @@ let main () =
             | Some o ->
               if not @@ Objective.Model.has_no_limit o then
                 warning "Some objectives cannot be fulfilled";
-              if State.get suspicious_objectives st then
+              if State.get has_incremental st then
                 warning "Optimization constraints in presence of push \
                          and pop statements are not correctly processed.";
               Objective.Model.pp (Options.Output.get_fmt_regular ()) o
@@ -990,7 +990,7 @@ let main () =
         let st =
           match td.contents with
           | `Pop _ | `Push _ ->
-            State.set suspicious_objectives true st
+            State.set has_incremental true st
           | _ -> st
         in
         (* TODO:
