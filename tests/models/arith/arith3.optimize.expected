@@ -7,6 +7,6 @@ unknown
 )
 (objectives 
   (x (+ oo))
-  (y (interval (- oo) (+ oo)))
-  (z (interval (- oo) (+ oo)))
+  (y (+ oo))
+  (z (+ oo))
 )
