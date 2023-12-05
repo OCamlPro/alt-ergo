@@ -689,7 +689,7 @@ let main () =
       D_cnf.make (State.get State.logic_file st).loc
         (State.get solver_ctx_key st).ctx stmt
     in
-    (* Using both optimization and incremental mode is only dangerous if
+    (* Using both optimization and incremental mode may be wrong if
        some optimization constraints aren't at the toplevel. *)
     if State.get has_incremental st > 0 then
       warning "Optimization constraints in presence of push \
