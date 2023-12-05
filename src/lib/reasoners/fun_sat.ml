@@ -1119,7 +1119,7 @@ module Make (Th : Theory.S) = struct
       if not (Options.get_first_interpretation ()) then compute
       else !(env.last_saved_model) == None
     in
-    if not compute || not @@ Options.get_interpretation () then env
+    if not compute then env
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)

@@ -985,7 +985,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if not (Options.get_first_interpretation ()) then compute
       else env.last_saved_model == None
     in
-    if compute && Options.get_interpretation () then begin
+    if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
         let model, objectives =
