@@ -66,9 +66,3 @@ module MXH : Map.S with type key = Combine.r
 
 (** set of semantic values using Combine.hash_cmp *)
 module SXH : Set.S with type elt = Combine.r
-
-(** map of semantic values using structural compare Combine.str_cmp *)
-module MXS : Map.S with type key = Combine.r
-
-(** set of semantic values using structural compare Combine.str_cmp *)
-module SXS : Set.S with type elt = Combine.r
