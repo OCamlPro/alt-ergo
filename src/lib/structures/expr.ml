@@ -320,28 +320,28 @@ module SmtPrinter = struct
   let rec pp_formula ppf form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(and %a %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(and %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(= %a %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(= %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(xor %a %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(xor %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(or %a %a@])" pp_silent f1 pp_silent f2
+      Fmt.pf ppf "@[<2>(or %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
         Fmt.pf ppf "@[<2>(! @[<2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
-          pp_binders binders pp_silent main pp_triggers user_trs name
+          pp_binders binders pp_boxed main pp_triggers user_trs name
       else
         Fmt.string ppf name
 
     | Sy.F_Skolem, [], B_skolem { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
         Fmt.pf ppf "@[<2>(! @[<2>(exists (%a) %a %a@])@ :named %s@])"
-          pp_binders binders pp_silent main pp_triggers user_trs name
+          pp_binders binders pp_boxed main pp_triggers user_trs name
       else
         Fmt.string ppf name
 
@@ -396,7 +396,7 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])"
         Var.print x.let_v
         pp x.let_e
-        pp_silent x.in_e
+        pp_boxed x.in_e
 
     | Sy.(Op Record), _ ->
       begin
@@ -477,12 +477,14 @@ module SmtPrinter = struct
   and pp_triggers ppf trs =
     Fmt.pf ppf "@[%a@]" Fmt.(list ~sep:sp pp_trigger) trs
 
+  and pp_boxed ppf = Fmt.box pp_silent ppf
+
   (* Not displaying types when int SMT format *)
-  and pp_verbose ppf t = pp_silent ppf t
+  and pp_verbose ppf t = pp_boxed ppf t
 
   and pp ppf t =
     if Options.get_debug () then pp_verbose ppf t
-    else pp_silent ppf t
+    else pp_boxed ppf t
 
 end
 
