@@ -1,7 +1,7 @@
 
 unknown
 (
-  (define-fun x () Real 0.0)
+  (define-fun x () Real 1.0)
   (define-fun y () Real 10.0)
 )
 (objectives 

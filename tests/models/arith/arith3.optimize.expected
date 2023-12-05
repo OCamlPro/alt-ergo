@@ -7,6 +7,6 @@ unknown
 )
 (objectives 
   (x (+ oo))
-  (y (+ oo))
-  (z (+ oo))
+  (y 0)
+  (z 0)
 )

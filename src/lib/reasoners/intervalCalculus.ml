@@ -2162,7 +2162,12 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
                in the domain of the polynomial [p]. But we propagate the new
                value [value] for this objective. Indeed, we want to be able
                to print it while using the statement [get-objective]. *)
-            middle_value env ~is_max ty p None
+            let q =
+              match P.is_const (poly_of r2) with
+              | Some q -> q
+              | None -> assert false
+            in
+            middle_value env ~is_max ty p (Some q)
         in
         let case_split =
           LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
