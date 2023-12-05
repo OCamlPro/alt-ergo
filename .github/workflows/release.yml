@@ -1,9 +1,7 @@
 name: Release
 
 on:
-  push:
-      branches:
-      - 'v*.*.x'
+  workflow_dispatch
 
 env:
   OCAML_DEFAULT_VERSION: 5.0.0
