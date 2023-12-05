@@ -37,7 +37,8 @@ type theory =
   | Th_arrays
   | Th_bitv
   | Th_UF
-[@@deriving show]
+
+val pp_theory : Format.formatter -> theory -> unit
 
 type limit_kind =
   | Above

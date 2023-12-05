@@ -26,8 +26,6 @@
     fmt
     stdcompat
   )
-  (preprocess (pps ppx_blob ppx_deriving.show ppx_deriving.enum ppx_deriving.fold))
-  (preprocessor_deps (glob_files ../preludes/*.ae))
 
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types sig sig_rel)

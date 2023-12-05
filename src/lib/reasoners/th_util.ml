@@ -37,7 +37,13 @@ type theory =
   | Th_arrays
   | Th_bitv
   | Th_UF
-[@@deriving show]
+
+let pp_theory fmt t = Fmt.string fmt @@ match t with
+  | Th_arith -> "Th_arith"
+  | Th_sum -> "Th_sum"
+  | Th_adt -> "Th_adt"
+  | Th_arrays -> "Th_arrays"
+  | Th_UF -> "Th_UF"
 
 type limit_kind =
   | Above
