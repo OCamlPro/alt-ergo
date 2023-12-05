@@ -304,8 +304,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
       ~max:n ~elt:(env.res, env.expl) ~init:();
-    Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n);
-    SAT.push env.sat_env n
+    Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n)
 
   let internal_pop ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
