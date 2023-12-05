@@ -1804,6 +1804,15 @@ let make_form name_base f loc ~decl_kind =
   else
     E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
+(* Helper function used to check if the expression defining an objective
+   function is a pure term. *)
+let rec is_pure_term t =
+  let E.{ f; xs; _ } = E.term_view t in
+  match f with
+  | (Sy.Let | Lit _ | Form _) -> false
+  | Sy.Op Tite -> false
+  | _ -> List.for_all is_pure_term xs
+
 let make dloc_file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
     match stmt with
@@ -1813,8 +1822,17 @@ let make dloc_file acc stmt =
       let e =
         mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
       in
-      let st_decl = C.Optimize (e, is_max) in
-      C. { st_decl; st_loc } :: acc
+      if not @@ is_pure_term e then
+        begin
+          Printer.print_wrn
+            "the expression %a is not a valid objective function. \
+             Only terms without let bindings or ite subterms can be optimized."
+            E.print e;
+          acc
+        end
+      else
+        let st_decl = C.Optimize (e, is_max) in
+        C.{ st_decl; st_loc } :: acc
 
     (* Push and Pop commands *)
     | { contents = `Pop n; loc; _ } ->
