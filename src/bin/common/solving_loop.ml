@@ -350,7 +350,7 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let has_incremental : int State.key =
+  let incremental_depth : int State.key =
     State.create_key ~pipe:"" "is_incremental"
   in
 
@@ -515,7 +515,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set has_incremental 0
+    |> State.set incremental_depth 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -692,7 +692,7 @@ let main () =
     (* Using both optimization and incremental mode may be wrong if
        some optimization constraints aren't at the toplevel.
        See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
-    if State.get has_incremental st > 0 then
+    if State.get incremental_depth st > 0 then
       warning "Optimization constraints in presence of push \
                and pop statements are not correctly processed.";
     State.set solver_ctx_key (
@@ -993,9 +993,9 @@ let main () =
         let st =
           match td.contents with
           | `Pop n ->
-            State.set has_incremental (State.get has_incremental st - n) st
+            State.set incremental_depth (State.get incremental_depth st - n) st
           | `Push n ->
-            State.set has_incremental (State.get has_incremental st + n) st
+            State.set incremental_depth (State.get incremental_depth st + n) st
           | _ -> st
         in
         (* TODO:
