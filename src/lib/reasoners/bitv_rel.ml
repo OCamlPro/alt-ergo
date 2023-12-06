@@ -33,7 +33,6 @@ module Ex = Explanation
 module Sy = Symbols
 module X = Shostak.Combine
 module L = Xliteral
-module Congruence = Rel_utils.Congruence
 
 (* Currently we only compute, but in the future we may want to perform the same
    simplifications as in [Bitv.make]. We currently don't, because we don't
@@ -280,8 +279,7 @@ module type Constraint = sig
 
       The explanation [ex] justifies the equality [p = v]. *)
 
-  val fold_deps : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold_deps f c acc] accumulates [f] over the arguments of [c]. *)
+  val fold_leaves : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
 
   type domain
 
@@ -381,25 +379,25 @@ end = struct
 
   let subst_repr rr nrr = function
     | Band (x, y, z) ->
-      let x = if X.equal x rr then nrr else x
-      and y = if X.equal y rr then nrr else y
-      and z = if X.equal z rr then nrr else z in
+      let x = X.subst rr nrr x
+      and y = X.subst rr nrr y
+      and z = X.subst rr nrr z in
       Band (x, y, z)
     | Bor (x, y, z) ->
-      let x = if X.equal x rr then nrr else x
-      and y = if X.equal y rr then nrr else y
-      and z = if X.equal z rr then nrr else z in
+      let x = X.subst rr nrr x
+      and y = X.subst rr nrr y
+      and z = X.subst rr nrr z in
       Bor (x, y, z)
     | Bxor xs ->
       Bxor (
         SX.fold (fun r xs ->
-            let r = if X.equal r rr then nrr else r in
+            let r = X.subst rr nrr r in
             if SX.mem r xs then SX.remove r xs else SX.add r xs
           ) xs SX.empty
       )
     | Bnot (x, y) ->
-      let x = if X.equal x rr then nrr else x
-      and y = if X.equal y rr then nrr else y in
+      let x = X.subst rr nrr x
+      and y = X.subst rr nrr y in
       Bnot (x, y)
 
   (* The explanation justifies why the constraint holds. *)
@@ -425,6 +423,11 @@ end = struct
       let acc = f x acc in
       let acc = f y acc in
       acc
+
+  let fold_leaves f c acc =
+    fold_deps (fun r acc ->
+        List.fold_left (fun acc r -> f r acc) acc (X.leaves r)
+      ) c acc
 
   type domain = Domains.t
 
@@ -595,13 +598,13 @@ end = struct
         CS.fold (fun cs (cs_map, cs_set, fresh) ->
             let fresh = CS.remove cs fresh in
             let cs_set = CS.remove cs cs_set in
-            let cs_map = Constraint.fold_deps (cs_remove cs) cs cs_map in
+            let cs_map = Constraint.fold_leaves (cs_remove cs) cs cs_map in
             let cs' = Constraint.subst ex rr nrr cs in
             if CS.mem cs' cs_set then
               cs_map, cs_set, fresh
             else
               let cs_set = CS.add cs' cs_set in
-              let cs_map = Constraint.fold_deps (cs_add cs') cs' cs_map in
+              let cs_map = Constraint.fold_leaves (cs_add cs') cs' cs_map in
               (cs_map, cs_set, CS.add cs' fresh)
           ) ids (bcs.cs_map, bcs.cs_set, bcs.fresh)
       in
@@ -614,9 +617,7 @@ end = struct
       bcs
     else
       let cs_set = CS.add c bcs.cs_set in
-      let cs_map =
-        Constraint.fold_deps (cs_add c) c bcs.cs_map
-      in
+      let cs_map = Constraint.fold_leaves (cs_add c) c bcs.cs_map in
       let fresh = CS.add c bcs.fresh in
       { cs_set ; cs_map ; fresh }
 
@@ -633,32 +634,26 @@ end = struct
     | exception Not_found -> dom
 end
 
-(* Add one constraint and register its arguments as relevant for congruence *)
-let add_constraint (bcs, cgr) c =
-  let bcs = Constraints.add bcs c in
-  let cgr = Constraint.fold_deps Congruence.add c cgr in
-  (bcs, cgr)
-
-let extract_constraints (bcs, cgr) uf r t =
+let extract_constraints bcs uf r t =
   match E.term_view t with
   (* BVnot is already internalized in the Shostak but we want to know about it
      without needing a round-trip through Uf *)
   | { f = Op BVnot; xs = [ x ] ; _ } ->
     let rx, exx = Uf.find uf x in
-    add_constraint (bcs, cgr) @@ Constraint.bvnot ~ex:exx r rx
+    Constraints.add bcs @@ Constraint.bvnot ~ex:exx r rx
   | { f = Op BVand; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    add_constraint (bcs, cgr) @@ Constraint.bvand ~ex:(Ex.union exx exy) r rx ry
+    Constraints.add bcs @@ Constraint.bvand ~ex:(Ex.union exx exy) r rx ry
   | { f = Op BVor; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    add_constraint (bcs, cgr) @@ Constraint.bvor ~ex:(Ex.union exx exy) r rx ry
+    Constraints.add bcs @@ Constraint.bvor ~ex:(Ex.union exx exy) r rx ry
   | { f = Op BVxor; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    add_constraint (bcs, cgr) @@ Constraint.bvxor ~ex:(Ex.union exx exy) r rx ry
-  | _ -> (bcs, cgr)
+    Constraints.add bcs @@ Constraint.bvxor ~ex:(Ex.union exx exy) r rx ry
+  | _ -> bcs
 
 let rec mk_eq ex lhs w z =
   match lhs with
@@ -713,13 +708,12 @@ let add_eqs =
       includes constraints that changed due to substitutions)
    - The constraints involving variables whose domain changed since the last
       propagation *)
-let propagate cgr =
+let propagate =
   let rec propagate changed bcs dom =
     match Domains.choose_changed dom with
-    | r, dom -> (
-        propagate (SX.add r changed) bcs @@
-        Congruence.fold_parents (Constraints.propagate bcs) cgr r dom
-      )
+    | r, dom ->
+      propagate (SX.add r changed) bcs @@
+      Constraints.propagate bcs r dom
     | exception Not_found -> changed, dom
   in
   fun bcs dom ->
@@ -735,22 +729,20 @@ type t =
   { delayed : Rel_utils.Delayed.t
   ; domain : Domains.t
   ; constraints : Constraints.t
-  ; congruence : Congruence.t
   ; size_splits : Q.t }
 
 let empty _ =
   { delayed = Rel_utils.Delayed.create dispatch
   ; domain = Domains.empty
   ; constraints = Constraints.empty
-  ; congruence = Congruence.empty
   ; size_splits = Q.one }
 
 let assume env uf la =
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
-  let (congruence, domain, constraints, eqs, size_splits) =
+  let (domain, constraints, eqs, size_splits) =
     try
-      let (congruence, (constraints, domain), size_splits) =
-        List.fold_left (fun (cgr, (bcs, dom), ss) (a, _root, ex, orig) ->
+      let ((constraints, domain), size_splits) =
+        List.fold_left (fun ((bcs, dom), ss) (a, _root, ex, orig) ->
             let ss =
               match orig with
               | Th_util.CS (Th_bitv, n) -> Q.(ss * n)
@@ -764,10 +756,8 @@ let assume env uf la =
             match a, orig with
             | L.Eq (rr, nrr), Subst when is_bv_r rr ->
               let dom = Domains.subst ex rr nrr dom in
-              let cgr, bcs =
-                Congruence.subst rr nrr cgr (Constraints.subst ex) bcs
-              in
-              (cgr, (bcs, dom), ss)
+              let bcs = Constraints.subst ex rr nrr bcs in
+              ((bcs, dom), ss)
             | L.Distinct (false, [rr; nrr]), _ when is_1bit rr ->
               (* We don't (yet) support [distinct] in general, but we must
                  support it for case splits to avoid looping.
@@ -780,16 +770,16 @@ let assume env uf la =
               let rr, exrr = Uf.find_r uf rr in
               let nrr, exnrr = Uf.find_r uf nrr in
               let ex = Ex.union ex (Ex.union exrr exnrr) in
-              let bcs, cgr =
-                add_constraint (bcs, cgr) @@ Constraint.bvnot ~ex rr nrr
+              let bcs =
+                Constraints.add bcs @@ Constraint.bvnot ~ex rr nrr
               in
-              (cgr, (bcs, dom), ss)
-            | _ -> (cgr, (bcs, dom), ss)
+              ((bcs, dom), ss)
+            | _ -> ((bcs, dom), ss)
           )
-          (env.congruence, (env.constraints, env.domain), env.size_splits)
+          ((env.constraints, env.domain), env.size_splits)
           la
       in
-      let eqs, constraints, domain = propagate congruence constraints domain in
+      let eqs, constraints, domain = propagate constraints domain in
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
@@ -798,7 +788,7 @@ let assume env uf la =
           ~module_name:"Bitv_rel" ~function_name:"assume"
           "bitlist constraints: @[%a@]" Constraints.pp constraints;
       );
-      (congruence, domain, constraints, eqs, size_splits)
+      (domain, constraints, eqs, size_splits)
     with Bitlist.Inconsistent ex ->
       raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
   in
@@ -808,7 +798,7 @@ let assume env uf la =
   let result =
     { result with assume = List.rev_append assume result.assume }
   in
-  { delayed ; constraints ; domain ; congruence ; size_splits }, result
+  { delayed ; constraints ; domain ; size_splits }, result
 
 let query _ _ _ = None
 
@@ -879,11 +869,9 @@ let add env uf r t =
         try
           let dr = Bitlist.unknown n Ex.empty in
           let dom = Domains.update Ex.empty r env.domain dr in
-          let (bcs, congruence) =
-            extract_constraints (env.constraints, env.congruence) uf r t
-          in
-          let eqs', bcs, dom = propagate congruence bcs dom in
-          { env with congruence ; constraints = bcs ; domain = dom },
+          let bcs = extract_constraints env.constraints uf r t in
+          let eqs', bcs, dom = propagate bcs dom in
+          { env with constraints = bcs ; domain = dom },
           List.rev_append eqs' eqs
         with Bitlist.Inconsistent ex ->
           raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
