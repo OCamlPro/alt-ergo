@@ -188,4 +188,8 @@ module type X = sig
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
   val to_const_term : r -> Expr.t option
+  (* [to_const_term r] creates a constant term if [r] is a constant
+     semantic value. The returned value always satisfies the predicate
+     [Expr.is_const_term]. See its documentation for more details about
+     constant terms. *)
 end

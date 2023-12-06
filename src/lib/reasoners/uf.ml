@@ -1020,6 +1020,8 @@ let model_repr_of_term t env mrepr =
     let tt =
       match cls with
       | [] ->
+        (* We do this because terms of some semantic values created by CS
+           aren't created and added to the union-find. *)
         X.to_const_term rep
       | r :: _ -> X.to_const_term r
     in
@@ -1064,8 +1066,8 @@ end
 let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
   let { E.f; xs; ty; _ } = E.term_view t in
   if X.is_solvable_theory_symbol f ty || Sy.is_internal f
-  || E.is_internal_name t || E.is_internal_skolem t
-  || E.equal t E.vrai || E.equal t E.faux
+     || E.is_internal_name t || E.is_internal_skolem t
+     || E.equal t E.vrai || E.equal t E.faux
   then
     acc
   else

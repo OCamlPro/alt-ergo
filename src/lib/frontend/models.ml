@@ -45,11 +45,11 @@ let empty = {
 }
 
 (* module Pp_smtlib_term = struct
-  open Format
-  let to_string_type t =
+   open Format
+   let to_string_type t =
     asprintf "%a" Ty.pp_smtlib t
 
-  let rec print fmt t =
+   let rec print fmt t =
     let {Expr.f;xs;ty; _} = Expr.term_view t in
     match f, xs with
 
@@ -219,14 +219,14 @@ let empty = {
       else
         fprintf fmt "%a(%a)" Sy.print f print_list xs
 
-  and print_list_sep sep fmt = function
+   and print_list_sep sep fmt = function
     | [] -> ()
     | [t] -> print fmt t
     | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
 
-  and print_list fmt = print_list_sep "," fmt
+   and print_list fmt = print_list_sep "," fmt
 
-end *)
+   end *)
 
 (* of module SmtlibCounterExample *)
 (*
