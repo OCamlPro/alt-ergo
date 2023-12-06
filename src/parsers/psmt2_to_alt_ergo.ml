@@ -404,17 +404,12 @@ module Translate = struct
     mk_goal loc gname e
 
   let translate_optimize =
-    let cpt = ref 0 in
     fun ~is_maximize pos term ->
-      Printer.print_wrn
-        "optimize commands only work if the file contains check-sat@.";
-      assert (name_of_assert term == None);
-      incr cpt;
-      let e = translate_term [] term in
-      let func = if is_maximize then mk_maximize else mk_minimize in
-      let e = func pos e (string_of_int !cpt) in
-      let name = Format.sprintf "unamed__assert__%d" !cpt in
-      mk_generic_axiom pos name e
+    Printer.print_wrn
+      "optimize commands only work if the file contains check-sat@.";
+    assert (name_of_assert term == None);
+    let e = translate_term [] term in
+    mk_optimize pos e is_maximize
 
   let translate_command acc command =
     match command.c with

@@ -4,3 +4,7 @@ unknown
   (define-fun x () Int 4)
   (define-fun y () Int 4)
 )
+(objectives 
+  (x 4)
+  (y 4)
+)

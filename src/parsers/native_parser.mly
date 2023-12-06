@@ -54,7 +54,6 @@
 %token RIGHTPAR RIGHTSQ RIGHTBR
 %token SLASH POW POWDOT
 %token THEN TIMES TRUE TYPE
-%token MAXIMIZE MINIMIZE
 
 /* Precedences */
 
@@ -379,12 +378,6 @@ lexpr:
 /* match */
 | MATCH e = lexpr WITH cases = list1_match_cases END
     { mk_match ($startpos, $endpos) e (List.rev cases) }
-
-| MAXIMIZE LEFTPAR simple_expr COMMA INTEGER RIGHTPAR
-    { mk_maximize ($startpos, $endpos) $3 $5 }
-
-| MINIMIZE LEFTPAR simple_expr COMMA INTEGER RIGHTPAR
-    { mk_minimize ($startpos, $endpos) $3 $5 }
 
 list1_match_cases:
 |     p = simple_pattern RIGHTARROW e = lexpr { [p, e]}

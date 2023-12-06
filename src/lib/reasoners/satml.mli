@@ -92,6 +92,7 @@ module type SAT_ML = sig
   val push : t -> Satml_types.Atom.atom -> unit
   val pop : t -> unit
 
+  val optimize : t -> is_max:bool -> Expr.t -> unit
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

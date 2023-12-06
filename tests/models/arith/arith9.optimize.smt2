@@ -1,7 +1,7 @@
 ; This test checks if the optimization doesn't stop after trying to
 ; optimize a strict bound.
-(set-logic ALL)
 (set-option :produce-models true)
+(set-logic ALL)
 (declare-const x Real)
 (declare-const y Real)
 ; If the SAT solver explores first the right branch of the following OR gate, it
@@ -15,3 +15,4 @@
 (maximize y)
 (check-sat)
 (get-model)
+(get-objectives)

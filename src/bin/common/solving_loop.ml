@@ -350,6 +350,10 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
+  let incremental_depth : int State.key =
+    State.create_key ~pipe:"" "is_incremental"
+  in
+
   let set_steps_bound i st =
     try DO.Steps.set i st with
       Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
@@ -511,6 +515,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
+    |> State.set incremental_depth 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -677,35 +682,61 @@ let main () =
       unsupported_opt name; st
   in
 
-  let handle_minimize_term (_term : DStd.Term.t) st =
-    warning "Unsupported minimize.";
+  let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
+    let contents = `Optimize (term, is_max) in
+    let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
+    let cnf =
+      D_cnf.make (State.get State.logic_file st).loc
+        (State.get solver_ctx_key st).ctx stmt
+    in
+    (* Using both optimization and incremental mode may be wrong if
+       some optimization constraints aren't at the toplevel.
+       See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
+    if State.get incremental_depth st > 0 then
+      warning "Optimization constraints in presence of push \
+               and pop statements are not correctly processed.";
+    State.set solver_ctx_key (
+      let solver_ctx = State.get solver_ctx_key st in
+      { solver_ctx with ctx = cnf }
+    ) st
+  in
+
+  let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
+    let () =
+      if Options.get_interpretation () then
+        match State.get partial_model_key st with
+        | Some Model ((module SAT), partial_model) ->
+          let objectives = SAT.get_objectives partial_model in
+          begin
+            match objectives with
+            | Some o ->
+              if not @@ Objective.Model.has_no_limit o then
+                warning "Some objectives cannot be fulfilled";
+              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+            | None ->
+              recoverable_error "No objective generated"
+          end
+        | None ->
+          recoverable_error
+            "Model generation is disabled (try --produce-models)"
+    in
     st
   in
-  (* TODO: implement when optimae is merged *)
 
-  let handle_maximize_term (_term : DStd.Term.t) st =
-    warning "Unsupported maximize.";
-    st
-  in
-  (* TODO: implement when optimae is merged *)
-
-  let handle_get_objectives (_args : DStd.Term.t list) st =
-    warning "Unsupported get-objectives.";
-    st
-  in
-  (* TODO: implement when optimae is merged *)
-
-  let handle_custom_statement id args st =
-    match id, args with
+  let handle_custom_statement loc id args st =
+    let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
+    let logic_file = State.get State.logic_file st in
+    let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
+    match id, terms.ret with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
-      handle_minimize_term term st
+      handle_optimize_stmt ~is_max:false loc id term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
-      handle_maximize_term term st
-    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, args ->
+      handle_optimize_stmt ~is_max:true loc id term st
+    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
-      handle_get_objectives args st
+      handle_get_objectives terms st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
         "Statement %s only expects 1 argument (%i given)"
@@ -955,10 +986,18 @@ let main () =
             st
         end
 
-      | {contents = `Other (custom, args); _} ->
-        handle_custom_statement custom args st
+      | {contents = `Other (custom, args); loc; _} ->
+        handle_custom_statement loc custom args st
 
-      | _ ->
+      | td ->
+        let st =
+          match td.contents with
+          | `Pop n ->
+            State.set incremental_depth (State.get incremental_depth st - n) st
+          | `Push n ->
+            State.set incremental_depth (State.get incremental_depth st + n) st
+          | _ -> st
+        in
         (* TODO:
            - Separate statements that should be ignored from unsupported
              statements and throw exception or print a warning when an

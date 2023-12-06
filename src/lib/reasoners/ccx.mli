@@ -59,8 +59,8 @@ module type S = sig
     t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
   val case_split : t -> for_model:bool -> Th_util.case_split list * t
-  val optimizing_split :
-    t -> Th_util.optimized_split -> Th_util.optimized_split option
+  val optimizing_objective :
+    t -> Objective.Function.t -> Th_util.optimized_split option
 
   val query :  t -> Expr.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
@@ -77,11 +77,8 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
-  val extract_concrete_model :
-    prop_model:Expr.Set.t ->
-    optimized_splits:Th_util.optimized_split Util.MI.t ->
-    t ->
-    Models.t Lazy.t option
+  val extract_concrete_model : prop_model:Expr.Set.t -> t -> Models.t
+
 end
 
 module Main : S

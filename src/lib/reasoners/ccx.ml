@@ -67,8 +67,8 @@ module type S = sig
     t * (r Sig_rel.literal * Explanation.t * Th_util.lit_origin) list
 
   val case_split : t -> for_model:bool -> Th_util.case_split list * t
-  val optimizing_split :
-    t -> Th_util.optimized_split -> Th_util.optimized_split option
+  val optimizing_objective :
+    t -> Objective.Function.t -> Th_util.optimized_split option
 
   val query :  t -> E.t -> Th_util.answer
   val new_terms : t -> Expr.Set.t
@@ -86,11 +86,7 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
-  val extract_concrete_model :
-    prop_model:Expr.Set.t ->
-    optimized_splits:Th_util.optimized_split Util.MI.t ->
-    t ->
-    Models.t Lazy.t option
+  val extract_concrete_model : prop_model:Expr.Set.t -> t -> Models.t
 
 end
 
@@ -708,8 +704,8 @@ module Main : S = struct
       l, {env with uf}
     | _ -> cs, env
 
-  let optimizing_split env opt_split =
-    Rel.optimizing_split env.relation env.uf opt_split
+  let optimizing_objective env o =
+    Rel.optimizing_objective env.relation env.uf o
 
   let query env a =
     let ra, ex_ra = term_canonical_view env a Ex.empty in
@@ -752,6 +748,6 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let extract_concrete_model ~prop_model ~optimized_splits env =
-    Uf.extract_concrete_model ~prop_model ~optimized_splits env.uf
+  let extract_concrete_model ~prop_model env =
+    Uf.extract_concrete_model ~prop_model env.uf
 end

@@ -40,6 +40,7 @@ type decl_kind =
   | Dgoal
   | Dpredicate of t
   | Dfunction of t
+  | Dobjective
 
 type term_view = private {
   f: Symbols.t;

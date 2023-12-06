@@ -100,7 +100,6 @@ and pp_desc =
   | PPmatch of lexpr * (pattern * lexpr) list
   | PPisConstr of lexpr * string
   | PPproject of bool * lexpr * string
-  | PPoptimize of { expr : lexpr; order : string; is_max : bool }
 
 val pp_lexpr : Format.formatter -> lexpr -> unit
 val pp_lexpr_list : Format.formatter -> lexpr list -> unit
@@ -140,5 +139,6 @@ type decl =
   | Pop of Loc.t * int
   | Reset of Loc.t
   | Exit of Loc.t
+  | Optimize of Loc.t * lexpr * bool
 
 type file = decl list

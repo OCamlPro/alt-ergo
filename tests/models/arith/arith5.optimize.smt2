@@ -1,5 +1,5 @@
-(set-logic ALL)
 (set-option :produce-models true)
+(set-logic ALL)
 (declare-const x Real)
 (declare-const y Real)
 (declare-const z Real)
@@ -10,3 +10,4 @@
 (maximize x)
 (check-sat)
 (get-model)
+(get-objectives)

@@ -152,14 +152,14 @@ let rec optimizing_dispatcher s l =
       | None -> optimizing_dispatcher s l
     end
 
-let optimizing_split env uf opt_split =
+let optimizing_objective env uf o =
   Options.exec_thread_yield ();
-  optimizing_dispatcher opt_split [
-    Rel1.optimizing_split env.r1 uf;
-    Rel2.optimizing_split env.r2 uf;
-    Rel3.optimizing_split env.r3 uf;
-    Rel4.optimizing_split env.r4 uf;
-    Rel5.optimizing_split env.r5 uf
+  optimizing_dispatcher o [
+    Rel1.optimizing_objective env.r1 uf;
+    Rel2.optimizing_objective env.r2 uf;
+    Rel3.optimizing_objective env.r3 uf;
+    Rel4.optimizing_objective env.r4 uf;
+    Rel5.optimizing_objective env.r5 uf
   ]
 
 let add env uf r t =

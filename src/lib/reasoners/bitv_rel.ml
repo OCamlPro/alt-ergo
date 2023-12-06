@@ -826,7 +826,7 @@ let add env uf r t =
   in
   { env with delayed }, eqs
 
-let optimizing_split _env _uf _opt_split = None
+let optimizing_objective _env _uf _o = None
 
 let new_terms _ = Expr.Set.empty
 

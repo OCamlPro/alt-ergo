@@ -5,3 +5,8 @@ unknown
   (define-fun y () Int 0)
   (define-fun z () Int 0)
 )
+(objectives 
+  (x (+ oo))
+  (y 0)
+  (z 0)
+)

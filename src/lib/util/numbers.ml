@@ -235,7 +235,6 @@ module Q = struct
       if not (is_zero s) then Some (div q s)
       else accurate_root_excess q 2
 
-
   let root_default = accurate_root_default
   let root_excess  = accurate_root_excess
 end

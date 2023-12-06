@@ -173,6 +173,7 @@ and 'a tdecl =
   | TPop of Loc.t * int
   | TReset of Loc.t
   | TExit of Loc.t
+  | TOptimize of Loc.t * 'a atterm * bool
 
 (*****)
 
@@ -361,5 +362,8 @@ let rec print_tdecl fmt = function
   | TTypeDecl _ -> Format.fprintf fmt "type decl"
   | TReset _ -> Format.fprintf fmt "reset"
   | TExit _ -> Format.fprintf fmt "exit"
+  | TOptimize (_loc, obj, is_max) ->
+    let s = if is_max then "maximize" else "minimize" in
+    Format.fprintf fmt "%s %a" s print_term obj
 
 and print_atdecl fmt a = print_tdecl fmt a.c

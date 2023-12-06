@@ -281,6 +281,11 @@ and 'a tdecl =
   | TExit of Loc.t
   (** Exits the solver. *)
 
+  | TOptimize of Loc.t * 'a atterm * bool
+  (** Optimization declaration.
+      [TOptimize (loc, obj, is_max)] declares an objective function [obj]. The
+      flag [is_max] determines if we try to maximize of minimize [obj]. *)
+
 (** Typed declarations. *)
 (* TODO: wrap this in a record to factorize away
    the location and name of the declaration ? *)

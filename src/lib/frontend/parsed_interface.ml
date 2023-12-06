@@ -120,6 +120,11 @@ let mk_push loc n =
 let mk_pop loc n =
   Pop (loc, n)
 
+(** Declaration of optimization of objective functions. *)
+
+let mk_optimize loc expr is_max =
+  Optimize (loc, expr, is_max)
+
 (** Making pure and logic types *)
 
 let int_type = PPTint
@@ -334,9 +339,3 @@ let mk_algebraic_test loc expr cstr =
 
 let mk_algebraic_project loc ~guarded expr cstr =
   mk_localized loc (PPproject (guarded, expr, cstr))
-
-let mk_maximize loc expr order =
-  mk_localized loc (PPoptimize {order; expr; is_max = true})
-
-let mk_minimize loc expr order =
-  mk_localized loc (PPoptimize {order; expr; is_max = false})

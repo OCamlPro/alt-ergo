@@ -5,3 +5,6 @@ unknown
   (define-fun y () Real (/ (- 1) 36))
   (define-fun z () Real (/ (- 7) 9))
 )
+(objectives 
+  (x (- (/ 1 18)))
+)

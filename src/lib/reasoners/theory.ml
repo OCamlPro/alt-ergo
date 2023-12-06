@@ -52,16 +52,16 @@ module type S = sig
     (E.t * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
+  val optimize : t -> is_max:bool -> Expr.t -> t
   val query : E.t -> t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
   val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
+
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
-  val compute_concrete_model :
-    t ->
-    Models.t Lazy.t option
+  val compute_concrete_model : t -> Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -72,7 +72,7 @@ module type S = sig
 
   val get_assumed : t -> E.Set.t
   val reinit_cpt : unit -> unit
-  val get_objectives : t -> Th_util.optimized_split Util.MI.t
+  val get_objectives : t -> Objective.Model.t
 end
 
 module Main_Default : S = struct
@@ -348,78 +348,17 @@ module Main_Default : S = struct
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
     choices : choice list;
-    objectives : Th_util.optimized_split Util.MI.t;
+    objectives : Objective.Model.t;
   }
 
-  let add_explanations_to_split (c, is_cs, size) =
+  let add_explanations_to_split ?order (c, is_cs, size) =
     Steps.incr_cs_steps ();
     let exp = Ex.fresh_exp () in
     let ex_c_exp =
       if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
     in
     (* A new explanation in order to track the choice *)
-    (c, size, CPos exp, ex_c_exp, None)
-
-  let register_optimized_split objectives u =
-    try
-      let x = Util.MI.find u.Th_util.order objectives in
-      assert (E.equal x.Th_util.e u.Th_util.e);
-      (* and its Value ... *)
-      Util.MI.add u.Th_util.order u objectives
-    with Not_found ->
-      assert false
-
-  exception Found of Th_util.optimized_split
-
-  (* TODO: this function could be optimized if "objectives" structure
-     is coded differently *)
-  let next_optimization ~for_model env =
-    try
-      Util.MI.iter (fun _ x ->
-          match x.Th_util.value with
-          | Value _ ->
-            (* This split is already optimized. *)
-            ()
-          | Pinfinity | Minfinity | Limit _ ->
-            (* We should block case-split at infinite values.
-                  Otherwise, we may have soundness issues. We
-                  may think an objective is unbounded, but some late
-                  constraints may make it bounded.
-
-                  An alternative is to only allow further splits when we
-                  know that no extra assumptions will be propagated to
-                  the env. Hence the test 'if for_model' *)
-            if for_model then ()
-            else
-              raise (Found { x with Th_util.value = Unknown })
-
-          | Unknown ->
-            raise (Found { x with Th_util.value = Unknown })
-
-        ) env.objectives;
-      None
-    with
-    | Found x -> Some x
-
-  (* TODO: this function could be optimized if "objectives" structure
-     is coded differently *)
-  let partial_objectives_reset objectives order =
-    match order with
-    | None -> objectives
-    | Some opt_ord ->
-      Util.MI.fold
-        (fun ord v acc ->
-           if ord < opt_ord then
-             (*don't change older optims that are still valid splits*)
-             acc
-           else
-             match v.Th_util.value with
-             | Th_util.Unknown -> acc (* not optimized yet *)
-             | Value _ ->
-               Util.MI.add ord {v with value = Unknown} acc
-             | Pinfinity | Minfinity | Limit _ ->
-               assert false (* may happen? *)
-        ) objectives objectives
+    (c, size, CPos exp, ex_c_exp, order)
 
   let look_for_sat ~for_model env sem_facts new_choices =
     let rec generate_choices env sem_facts acc_choices =
@@ -440,21 +379,20 @@ module Main_Default : S = struct
         in
         aux env sem_facts acc_choices new_choices
 
-    and optimizing_split env sem_facts acc_choices opt_split =
+    and optimizing_objective env sem_facts acc_choices obj order =
       let opt_split =
-        Option.get (CC_X.optimizing_split env.gamma_finite opt_split)
+        Option.get (CC_X.optimizing_objective env.gamma_finite obj)
       in
       let objectives =
-        register_optimized_split env.objectives opt_split
+        Objective.Model.add obj opt_split.value env.objectives
       in
       let env = { env with objectives } in
       match opt_split.value with
       | Unknown ->
         (* In the current implementation of optimization, the function
-           [CC_X.optimizing_split] cannot fail to optimize the split
-           [opt_split]. First of all, the legacy parser only accepts
+           [CC_X.optimizing_objective] cannot fail to optimize the objective
+           function [obj]. First of all, the legacy parser only accepts
            optimization clauses on expressions of type [Real] or [Int].
-
            For the [Real] or [Int] expressions, we have two cases:
            - If the objective function is a linear functions of variables, the
              decision procedure implemented in Ocplib-simplex cannot fail to
@@ -463,7 +401,6 @@ module Main_Default : S = struct
                5 * x + 2 * y + 3 where x and y are real variables,
              the procedure will success to produce the upper bound of [x] and
              [y] modulo the other constraints on it.
-
            - If the objective function isn't linear, the nonlinear part of the
              expression have seen as uninterpreted term of the arithemic theory.
              Let's imagine we try to maximize the expression:
@@ -474,20 +411,22 @@ module Main_Default : S = struct
         assert false
 
       | Pinfinity | Minfinity | Limit _ ->
-        (* We stop optimizing the split [opt_split] in this case, but
+        (* We stop optimizing the objective function [obj] in this case, but
            we continue to produce a model if the flag [for_model] is up. *)
         if for_model then
-          aux env sem_facts acc_choices []
+          let new_choice =
+            add_explanations_to_split ~order opt_split.case_split
+          in
+          propagate_choices env sem_facts acc_choices [new_choice]
         else
           { env with choices = List.rev acc_choices }, sem_facts
 
       | Value _ ->
         begin
-          match opt_split.case_split with
-          | Some cs ->
-            let new_choice = add_explanations_to_split cs in
-            propagate_choices env sem_facts acc_choices [new_choice]
-          | None -> assert false
+          let new_choice =
+            add_explanations_to_split ~order opt_split.case_split
+          in
+          propagate_choices env sem_facts acc_choices [new_choice]
         end
 
     (* Propagates the choice made by case-splitting to the environment
@@ -552,8 +491,13 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
-          let objectives = partial_objectives_reset env.objectives order in
-          let env = { env with objectives } in
+          let env =
+            match order with
+            | Some i ->
+              { env with
+                objectives = Objective.Model.reset_until env.objectives i }
+            | None -> env
+          in
           propagate_choices env sem_facts acc_choices
             [neg_c, lit_orig, CNeg, dep, order]
 
@@ -561,10 +505,11 @@ module Main_Default : S = struct
       Options.tool_req 3 "TR-CCX-CS-Case-Split";
       match new_choices with
       | [] ->
-        begin match next_optimization ~for_model env with
-          | Some opt_split ->
-            optimizing_split env sem_facts acc_choices opt_split
-          | None -> generate_choices env sem_facts acc_choices
+        begin match Objective.Model.next_unknown env.objectives ~for_model with
+          | Some (obj, order) ->
+            optimizing_objective env sem_facts acc_choices obj order
+          | None ->
+            generate_choices env sem_facts acc_choices
         end
       | _ ->
         propagate_choices env sem_facts acc_choices new_choices
@@ -618,27 +563,15 @@ module Main_Default : S = struct
            false
       ) candidates_to_keep
 
-
-  let reset_objectives objectives =
-    Util.MI.map (fun x -> Th_util.({ x with value = Unknown }) ) objectives
-
   let reset_case_split_env t =
     { t with
-      objectives = reset_objectives t.objectives;
+      objectives = Objective.Model.reset_until t.objectives 0;
       cs_pending_facts = []; (* be sure it's always correct when this
                                 function is called *)
       gamma_finite = t.gamma; (* we'll take gamma directly *)
       choices = []; (* we'll not be able to attempt to replay
                        choices. We're not in try-it *)
     }
-
-  let has_no_limit objectives =
-    Util.MI.for_all
-      (fun _ {Th_util.value; _} ->
-         match value with
-         | Pinfinity | Minfinity | Limit _ -> false
-         | Value _ | Unknown -> true
-      ) objectives
 
   (* This function attempts to produce a first-order model by case-splitting.
      To do so, the function tries two successive strategies:
@@ -657,34 +590,37 @@ module Main_Default : S = struct
           let t = reset_case_split_env t in
           look_for_sat ~for_model t [] []
         else
-          try
-            (* We attempt to replay all the facts learnt by the SAT solver
-               since the last call to [do_case_split]. *)
-            let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
-            let t = { t with gamma_finite = base_env } in
-            look_for_sat ~for_model t ch []
-          with Ex.Inconsistent _ ->
-            (* The inconsistency here doesn't mean there is no first-order model
-               of the problem in the current branch of the SAT solver. For sake
-               of soundness, we have to try to produce a model from the current
-               state of the SAT solver (using the environment [gamma]). *)
-            Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
-            (* We replay the conflict in look_for_sat, so we can
-               safely ignore the explanation which is not useful. *)
-            let uf =  CC_X.get_union_find t.gamma in
-            let filt_choices = filter_choices uf t.choices in
-            let filt_choices =
-              if Util.MI.is_empty t.objectives ||
-                 has_no_limit t.objectives
-                 (* otherwise, we may be unsound because infty optims
-                    are not propagated *)
-              then filt_choices
-              else []
-            in
-            Debug.split_sat_contradicts_cs filt_choices;
-            let t = reset_case_split_env t in
-            look_for_sat ~for_model
-              { t with choices = [] } [] filt_choices
+          begin
+            try
+              (* We attempt to replay all the facts learnt by the SAT solver
+                 since the last call to [do_case_split]. *)
+              let base_env, ch = CC_X.assume_literals t.gamma_finite [] facts in
+              let t = { t with gamma_finite = base_env } in
+              look_for_sat ~for_model t ch []
+            with Ex.Inconsistent _ ->
+              (* The inconsistency here doesn't mean there is no first-order
+                 model of the problem in the current branch of the SAT solver.
+                 For sake of soundness, we have to try to produce a model from
+                 the current state of the SAT solver (using the environment
+                 [gamma]). *)
+              Options.tool_req 3 "TR-CCX-CS-Case-Split-Erase-Choices";
+              (* We replay the conflict in look_for_sat, so we can
+                 safely ignore the explanation which is not useful. *)
+              let uf =  CC_X.get_union_find t.gamma in
+              let filt_choices = filter_choices uf t.choices in
+              let filt_choices =
+                if  Objective.Model.is_empty t.objectives ||
+                    Objective.Model.has_no_limit t.objectives
+                    (* otherwise, we may be unsound because infty optims
+                       are not propagated *)
+                then filt_choices
+                else []
+              in
+              Debug.split_sat_contradicts_cs filt_choices;
+              let t = reset_case_split_env t in
+              look_for_sat ~for_model
+                { t with choices = [] } [] filt_choices
+          end
       with Ex.Inconsistent (dep, classes) ->
         Debug.end_case_split t.choices;
         Options.tool_req 3 "TR-CCX-CS-Conflict";
@@ -756,53 +692,6 @@ module Main_Default : S = struct
     else
       t, SE.empty
 
-  let update_objectives objectives assumed gamma =
-    let uf = CC_X.get_union_find gamma in
-    let reset_cs_env = ref false in
-    let res =
-      List.fold_left
-        (fun objectives (a, _, _) ->
-           match E.term_view a with
-           | {E.f = Sy.Op Sy.Optimize {order;is_max}; xs = [e]; _} ->
-             let r =
-               try Uf.make uf e
-               with Not_found ->
-                 (* gamma is already initialized with fresh terms *)
-                 assert false
-             in
-             let x =
-               Th_util.{
-                 r;
-                 e;
-                 value = Unknown;
-                 is_max;
-                 order;
-                 case_split = None
-               } in
-             begin
-               try
-                 let y = Util.MI.find order objectives in
-                 if not (X.equal r y.Th_util.r) then begin
-                   Printer.print_fmt ~flushed:true
-                     (Options.Output.get_fmt_diagnostic ())
-                     "Optimization problem illformed. %a and %a have \
-                      the same order %d@."
-                     X.print r X.print y.Th_util.r order;
-                   assert false
-                 end;
-                 objectives
-               with Not_found ->
-                 reset_cs_env := true;
-                 Util.MI.add order x objectives
-             end
-           | {E.f = Sy.Op Sy.Optimize _; xs = _; _} -> assert false
-           | _ -> objectives
-           (* | Not_a_term {is_lit = true} -> objectives
-              | Not_a_term {is_lit = false} -> assert false *)
-        ) objectives assumed
-    in
-    res, !reset_cs_env
-
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
     let facts = CC_X.empty_facts () in
@@ -827,17 +716,12 @@ module Main_Default : S = struct
       if Options.get_profiling() then Profiling.assume cpt;
       Debug.assumed t.assumed;
       assert (not ordered || is_ordered_list t.assumed);
-
       let gamma, _ = CC_X.assume_literals t.gamma [] facts in
-      (* update to optimize with the new gamma *)
-      let objectives, reset_cs_env =
-        update_objectives t.objectives assumed gamma in
       let new_terms = CC_X.new_terms gamma in
       let t =  {t with
                 gamma = gamma; terms = Expr.Set.union t.terms new_terms;
-                objectives }
+               }
       in
-      let t = if reset_cs_env then reset_case_split_env t else t in
       t, new_terms, cpt
 
   let get_debug_theories_instances th_instances ilvl dlvl =
@@ -957,7 +841,7 @@ module Main_Default : S = struct
         assumed = [];
         cs_pending_facts = [];
         terms = Expr.Set.empty;
-        objectives = Util.MI.empty;
+        objectives = Objective.Model.empty;
       }
     in
     let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
@@ -997,21 +881,37 @@ module Main_Default : S = struct
 
   let compute_concrete_model env =
     let { gamma_finite; assumed_set; objectives; _ }, _ =
-      do_case_split_aux env ~for_model:true in
-    CC_X.extract_concrete_model
-      ~prop_model:assumed_set
-      ~optimized_splits:objectives
-      gamma_finite
+      do_case_split_aux env ~for_model:true
+    in
+    lazy (
+      CC_X.extract_concrete_model
+        ~prop_model:assumed_set
+        gamma_finite
+    ), objectives
 
   let assume_th_elt t th_elt dep =
     { t with gamma = CC_X.assume_th_elt t.gamma th_elt dep }
 
   let get_assumed env = env.assumed_set
 
-  let reinit_cpt () =
-    Debug.reinit_cpt ()
+  let optimize env ~is_max f =
+    (* We have to add the term [f] and its subterms as the MaxSMT
+       syntax allows to optimize expressions that aren't part of
+       the current context. *)
+    let env = add_term env ~add_in_cs:false f in
+    let obj = Objective.Function.mk ~is_max f in
+    let objectives =
+      Objective.Model.add obj Objective.Value.Unknown env.objectives
+    in
+    (* As we may do casesplits after each `assume`, we may start
+       model generations before registering all the optimization constraints. *)
+    let env = reset_case_split_env env in
+    { env with objectives }
 
   let get_objectives env = env.objectives
+
+  let reinit_cpt () =
+    Debug.reinit_cpt ()
 end
 
 module Main_Empty : S = struct
@@ -1040,13 +940,13 @@ module Main_Empty : S = struct
   let get_case_split_env _ = CC_X.empty
   let do_case_split env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
-  let compute_concrete_model _env = None
+  let compute_concrete_model _env = lazy Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
-
+  let optimize env ~is_max:_ _obj = env
   let reinit_cpt () = ()
 
-  let get_objectives _env = Util.MI.empty
+  let get_objectives _env = Objective.Model.empty
 end

@@ -79,6 +79,10 @@ module type S = sig
   (** [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
 
+  (** [optimize env ~is_max o] registers the expression [o]
+      as an objective function. *)
+  val optimize : t -> is_max:bool -> Expr.t -> unit
+
   (** [unsat env f size] checks the unsatisfiability of [f] in
       [env]. Raises I_dont_know when the proof tree's height reaches
       [size]. Raises Sat if [f] is satisfiable in [env] *)
@@ -92,7 +96,7 @@ module type S = sig
   val reinit_ctx : unit -> unit
 
   (** [get_model t] produces the current model. *)
-  val get_model: t -> Models.t Lazy.t option
+  val get_model: t -> Models.t option
 
   (** [get_unknown_reason t] returns the reason Alt-Ergo raised
       [I_dont_know] if it did. If it did not, returns None. *)
@@ -101,6 +105,8 @@ module type S = sig
   (** [get_value t e] returns the value of [e] as a constant expression
       in the current model generated. Returns [None] if can't decide. *)
   val get_value : t -> Expr.t -> Expr.t option
+
+  val get_objectives : t -> Objective.Model.t option
 end
 
 

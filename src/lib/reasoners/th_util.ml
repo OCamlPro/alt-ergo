@@ -39,17 +39,6 @@ type theory =
   | Th_UF
 [@@deriving show]
 
-type limit_kind =
-  | Above
-  | Below
-
-type 'a optimized_split_value =
-  | Minfinity
-  | Pinfinity
-  | Value of 'a
-  | Limit of limit_kind * 'a
-  | Unknown
-
 type lit_origin =
   | Subst
   | CS of theory * Numbers.Q.t
@@ -60,13 +49,6 @@ type lit_origin =
 type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
 type optimized_split = {
-  r : Shostak.Combine.r;
-  e : Expr.t;
-  value : Expr.t optimized_split_value;
-  case_split : case_split option;
-  is_max : bool;
-  (** For linear arithmetic: is_max <-> (opt = maximize). *)
-
-  order : int
-  (** Ordering assigned by the user for this variable. *)
+  value : Objective.Value.t;
+  case_split : case_split;
 }

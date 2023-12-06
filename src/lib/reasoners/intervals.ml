@@ -28,8 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Q = Numbers.Q
-
 module Ex = Explanation
 
 type borne =
@@ -176,22 +174,24 @@ let add_expl_zero i expl =
 let int_of_borne_inf b =
   match b with
   | Minfty | Pinfty -> b
-  | Large (v, e) -> Large ((if Q.is_int v then v else Q.ceiling v), e)
+  | Large (v, e) ->
+    Large ((if Numbers.Q.is_int v then v else Numbers.Q.ceiling v), e)
   | Strict (v, e) ->
-    if Q.is_int v then Large (Q.add v Q.one, e)
+    if Numbers.Q.is_int v then Large (Q.add v Q.one, e)
     else
-      let v' = Q.ceiling v in
+      let v' = Numbers.Q.ceiling v in
       assert (Q.compare v' v > 0);
       Large (v', e)
 
 let int_of_borne_sup b =
   match b with
   | Minfty | Pinfty -> b
-  | Large (v, e) -> Large ((if Q.is_int v then v else Q.floor v), e)
+  | Large (v, e) ->
+    Large ((if Numbers.Q.is_int v then v else Numbers.Q.floor v), e)
   | Strict (v, e) ->
-    if Q.is_int v then Large (Q.sub v Q.one, e)
+    if Numbers.Q.is_int v then Large (Q.sub v Q.one, e)
     else
-      let v' = Q.floor v in
+      let v' = Numbers.Q.floor v in
       assert (Q.compare v' v < 0);
       Large (v', e)
 
@@ -222,7 +222,7 @@ let compare_bounds b1 ~is_low1 b2 ~is_low2 =
 
 let zero_endpoint b =
   match b with
-  | Large (v, _) -> Q.is_zero v
+  | Large (v, _) -> Numbers.Q.is_zero v
   | _ -> false
 
 let min_of_lower_bounds b1 b2 =
@@ -404,8 +404,8 @@ let union_intervals uints =
 let minus_borne = function
   | Minfty -> Pinfty
   | Pinfty -> Minfty
-  | Large (v, e) -> Large (Q.minus v, e)
-  | Strict (v, e) -> Strict (Q.minus v, e)
+  | Large (v, e) -> Large (Numbers.Q.minus v, e)
+  | Strict (v, e) -> Strict (Numbers.Q.minus v, e)
 
 let rev_normalize_int_bounds rl ex n =
   let l =
@@ -478,15 +478,15 @@ let scale_borne_non_zero n b =
   assert (Q.sign n > 0);
   match b with
   | Pinfty | Minfty -> b
-  | Large (v, e) -> Large (Q.mult n v, e)
-  | Strict (v, e) -> Strict (Q.mult n v, e)
+  | Large (v, e) -> Large (Numbers.Q.mult n v, e)
+  | Strict (v, e) -> Strict (Numbers.Q.mult n v, e)
 
 let scale_interval_pos n (b1, b2) =
   scale_borne_non_zero n b1, scale_borne_non_zero n b2
 
 let scale_interval_neg n (b1, b2) =
-  minus_borne (scale_borne_non_zero (Q.minus n) b2),
-  minus_borne (scale_borne_non_zero (Q.minus n) b1)
+  minus_borne (scale_borne_non_zero (Numbers.Q.minus n) b2),
+  minus_borne (scale_borne_non_zero (Numbers.Q.minus n) b1)
 
 
 let affine_scale ~const ~coef uints =
@@ -535,7 +535,7 @@ let add {ints = l1; is_int = is_int; expl = e1} { ints = l2; expl = e2; _ } =
   assert (res.ints != []);
   res
 
-let sub i1 i2 = add i1 (scale Q.m_one i2)
+let sub i1 i2 = add i1 (scale Numbers.Q.m_one i2)
 
 let merge i1 i2 =
   union_intervals
@@ -599,10 +599,10 @@ let is_positive { ints; expl; _ } =
   | (lb,_)::_ -> if pos_borne lb then Some (expl, []) else None
 
 let root_default_num v n =
-  if n = 2 then Q.sqrt_default v else Q.root_default v n
+  if n = 2 then Numbers.Q.sqrt_default v else Numbers.Q.root_default v n
 
 let root_exces_num v n =
-  if n = 2 then Q.sqrt_excess v else Q.root_excess v n
+  if n = 2 then Numbers.Q.sqrt_excess v else Numbers.Q.root_excess v n
 
 (* should be removed and replaced with compare_bounds, with makes distinction
    between lower and upper bounds *)
@@ -673,14 +673,14 @@ let mult_borne b1 b2 =
     else if pos_borne b then Pinfty
     else Minfty
   | Strict (_, e1), Large (v, e2)
-  | Large (v, e1), Strict (_, e2) when Q.is_zero v ->
+  | Large (v, e1), Strict (_, e2) when Numbers.Q.is_zero v ->
     Large (Q.zero, Ex.union e1 e2)
 
   | Strict (v1, e1), Strict (v2, e2) | Strict (v1, e1), Large (v2, e2)
   | Large (v1, e1), Strict (v2, e2) ->
-    Strict (Q.mult v1 v2, Ex.union e1 e2)
+    Strict (Numbers.Q.mult v1 v2, Ex.union e1 e2)
   | Large (v1, e1), Large (v2, e2) ->
-    Large (Q.mult v1 v2, Ex.union e1 e2)
+    Large (Numbers.Q.mult v1 v2, Ex.union e1 e2)
 
 let mult_borne_inf b1 b2 =
   match b1,b2 with
@@ -766,11 +766,11 @@ let int_div_of_borne_inf min_f b =
   match b with
   | Minfty | Pinfty -> b
   | Large (v, e) ->
-    Large ((if Q.is_int v then v else (*Q.floor*) min_f v), e)
+    Large ((if Numbers.Q.is_int v then v else (*Q.floor*) min_f v), e)
 
   | Strict (v, e) ->
     (* this case really happens ?? *)
-    if Q.is_int v then Large (Q.add v Q.one, e)
+    if Numbers.Q.is_int v then Large (Q.add v Q.one, e)
     else
       let v' = (*Q.floor*) min_f v in (* correct ? *)
       assert (Q.compare v' v > 0);
@@ -780,11 +780,11 @@ let int_div_of_borne_sup max_f b =
   match b with
   | Minfty | Pinfty -> b
   | Large (v, e) ->
-    Large ((if Q.is_int v then v else (*Q.floor*) max_f v), e)
+    Large ((if Numbers.Q.is_int v then v else (*Q.floor*) max_f v), e)
 
   | Strict (v, e) ->
     (* this case really happens ?? *)
-    if Q.is_int v then Large (Q.sub v Q.one, e)
+    if Numbers.Q.is_int v then Large (Q.sub v Q.one, e)
     else
       let v' = (*Q.floor*) max_f v in (* correct ? *)
       assert (Q.compare v' v < 0);
@@ -828,15 +828,15 @@ let root_default_borne is_int x n =
   | Large (v, e) | Strict (v, e) ->
     let sign, s =
       if Q.sign v >= 0 then (fun q -> q), root_default_num v n
-      else Q.minus, root_exces_num (Q.minus v) n
+      else Numbers.Q.minus, root_exces_num (Numbers.Q.minus v) n
     in
     match s with
     | None -> Minfty
     | Some s ->
       let s = sign s in
       if is_int then
-        let cs = Q.ceiling s in
-        let cs2 = Q.power cs n in
+        let cs = Numbers.Q.ceiling s in
+        let cs2 = Numbers.Q.power cs n in
         if Q.compare v cs2 <= 0 then Large (cs, e)
         else Large (Q.add cs Q.one, e)
       else Large (s, e)
@@ -848,15 +848,15 @@ let root_exces_borne is_int x n =
   | Large (v, e) | Strict (v, e) ->
     let sign, s =
       if Q.sign v >= 0 then (fun d -> d), root_exces_num v n
-      else Q.minus, root_default_num (Q.minus v) n
+      else Numbers.Q.minus, root_default_num (Numbers.Q.minus v) n
     in
     match s with
     | None -> Pinfty
     | Some s ->
       let s = sign s in
       if is_int then
-        let cs = Q.floor s in
-        let cs2 = Q.power cs n in
+        let cs = Numbers.Q.floor s in
+        let cs2 = Numbers.Q.power cs n in
         if Q.compare v cs2 >= 0 then Large (cs, e)
         else Large (Q.sub cs Q.one, e)
       else Large (s, e)
@@ -952,7 +952,7 @@ let sign_of_interval { ints; _ } =
     | Large(v,_), Large(v',_)  ->
       if Q.compare v Q.zero > 0 then Pos
       else if Q.compare v' Q.zero < 0 then Neg
-      else if Q.is_zero v && Q.is_zero v' then Zero
+      else if Numbers.Q.is_zero v && Numbers.Q.is_zero v' then Zero
       else Mixed
 
     | (Strict(v,_) | Large(v,_)), (Strict(v',_) | Large(v',_))  ->
@@ -985,9 +985,9 @@ let div i1 i2 =
       let min_f, max_f =
         match sign_of_interval i2 with
         | Zero -> assert false (* inv_i2 is not undefined *)
-        | Pos -> Q.floor, Q.floor
-        | Neg -> Q.ceiling, Q.ceiling
-        | Mixed -> Q.floor, Q.ceiling
+        | Pos -> Numbers.Q.floor, Numbers.Q.floor
+        | Neg -> Numbers.Q.ceiling, Numbers.Q.ceiling
+        | Mixed -> Numbers.Q.floor, Numbers.Q.ceiling
       in
       let rl = List.rev_map (fun (l,u) -> int_div_bornes min_f max_f l u) l in
       union_intervals { i with ints = List.rev rl }
@@ -1002,7 +1002,7 @@ let abs =
   in
   fun i ->
     let xx = if i.is_int then zero_inf_i else zero_inf_r in
-    intersect (merge i (scale Q.m_one i)) xx
+    intersect (merge i (scale Numbers.Q.m_one i)) xx
 
 let mk_closed l u llarge ularge lexp uexp ty =
   let lb = if llarge then Large(l, lexp) else Strict (l, lexp) in
@@ -1017,7 +1017,8 @@ let bnd_of_borne b ex0 low =
   | Minfty when low -> None, ex0
   | Pinfty | Minfty -> assert false
   | Large (c, ex)   -> Some (c, Q.zero), Ex.union ex0 ex
-  | Strict (c, ex)  -> Some (c, if low then Q.one else Q.m_one), Ex.union ex0 ex
+  | Strict (c, ex)  ->
+    Some (c, if low then Q.one else Numbers.Q.m_one), Ex.union ex0 ex
 
 let bounds_of env =
   let ex = env.expl in
@@ -1159,11 +1160,41 @@ let match_interval_lower {Sy.sort; is_open; kind; is_lower} i imatch =
     let c = Q.compare v vl in
     if c < 0 || c = 0 && is_open then raise Exit;
     imatch
-
 let match_interval lb ub i accu =
   try Some (match_interval_upper ub i (match_interval_lower lb i accu))
   with Exit -> None
 
+(* Assumes: the input set of intervals is normalized. *)
+let pick ~is_max { ints; is_int; _ } =
+  let ints = if is_max then List.rev ints else ints in
+  match ints with
+  | [] -> None
+  | (Minfty, Pinfty) :: _ -> Some Q.zero
+  | (_, Large (q, _)) :: _ when is_max -> Some q
+  | (_, Strict(q, _)) :: _ when is_max && is_int ->
+    (* By normalization, an integer interval of the form |p, q) has to
+       contain at least one integer and thus [q-1] is an element of this
+       interval. *)
+    Some Q.(q - ~$1)
+
+  | (Large (q, _), _) :: _ when not is_max -> Some q
+  | (Strict (q, _), _) :: _ when not is_max && is_int ->
+    (* By normalization, an integer interval of the form (q, p| has to
+       contain at least one integer and thus [q+1] is an element of this
+       interval. *)
+    Some Q.(q + ~$1)
+
+  | (Minfty, (Strict (q, _) | Large (q, _))) :: _ -> Some Q.(q - ~$1)
+  | ((Strict (q, _) | Large (q, _)), Pinfty) :: _ -> Some Q.(q + ~$1)
+  | ((Strict (q1, _) | Large (q1, _)), (Strict (q2, _) | Large (q2, _))) :: _ ->
+    begin
+      assert (not is_int);
+      Some Q.((q1 + q2) / ~$2)
+    end
+  | (_, Minfty) :: _ | (Pinfty, _) :: _ ->
+    (* As the set of intervals is normalized, it cannot contain
+       empty intervals. *)
+    assert false
 
 (*****************)
 

@@ -55,6 +55,7 @@ val make :
   D_loop.DStd.Loc.file ->
   Commands.sat_tdecl list ->
   [< D_loop.Typer_Pipe.typechecked
+  | `Optimize of Dolmen.Std.Expr.term * bool
   | `Goal  of Dolmen.Std.Expr.term
   | `Check of Dolmen.Std.Expr.term list
          > `Hyp ] D_loop.Typer_Pipe.stmt ->

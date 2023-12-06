@@ -7,3 +7,4 @@
 (maximize x)
 (check-sat)
 (get-model)
+(get-objectives)

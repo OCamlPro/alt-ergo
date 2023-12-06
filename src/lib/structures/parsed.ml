@@ -167,7 +167,6 @@ and pp_desc =
   | PPmatch of lexpr * (pattern * lexpr) list
   | PPisConstr of lexpr * string
   | PPproject of bool * lexpr * string
-  | PPoptimize of { expr : lexpr; order : string; is_max : bool }
 
 let rec pp_lexpr fmt {pp_desc; _} =
   let open Format in
@@ -233,10 +232,6 @@ let rec pp_lexpr fmt {pp_desc; _} =
   | PPmatch (_le, _plel) -> fprintf fmt "match"
   | PPisConstr (le, s) -> fprintf fmt "isConstr: %a %s" pp_lexpr le s
   | PPproject (b, le, s) -> fprintf fmt "project: %b %a %s" b pp_lexpr le s
-  | PPoptimize {expr; order; is_max=true} ->
-    fprintf fmt "maximize(%a, %s)" pp_lexpr expr order
-  | PPoptimize {expr; order; is_max=false} ->
-    fprintf fmt "minimize(%a, %s)" pp_lexpr expr order
 
 and pp_lexpr_list fmt tl =
   Format.fprintf fmt "@[<h>%a@]"
@@ -283,5 +278,6 @@ type decl =
   | Pop of Loc.t * int
   | Reset of Loc.t
   | Exit of Loc.t
+  | Optimize of Loc.t * lexpr * bool
 
 type file = decl list

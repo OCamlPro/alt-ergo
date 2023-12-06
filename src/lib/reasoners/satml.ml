@@ -99,6 +99,8 @@ module type SAT_ML = sig
   val push : t -> Satml_types.Atom.atom -> unit
   val pop : t -> unit
 
+  val optimize : t -> is_max:bool -> Expr.t -> unit
+
 end
 
 module MFF = FF.Map
@@ -1842,4 +1844,5 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       end;
     enqueue env g.neg 0 None
 
+  let optimize env ~is_max obj = env.tenv <- Th.optimize env.tenv ~is_max obj
 end

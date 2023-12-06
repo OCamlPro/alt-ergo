@@ -54,7 +54,6 @@ type operator =
   | Int_floor | Int_ceil | Integer_log2
   | Max_real | Max_int | Min_real | Min_int
   | Not_theory_constant | Is_theory_constant | Linear_dependency
-  | Optimize of {order : int; is_max : bool}
 
 type lit =
   (* literals *)
@@ -155,10 +154,6 @@ let compare_operators op1 op2 =
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
       | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
-      | Optimize {order=o1; is_max=b1}, Optimize {order=o2; is_max=b2} ->
-        let c = o1 - o2 in
-        if c <> 0 then c
-        else Stdlib.compare b1 b2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
             | Concat | Extract _ | Get | Set | Float
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
@@ -167,7 +162,7 @@ let compare_operators op1 op2 =
             | Integer_log2 | Pow | Integer_round
             | BVnot | BVand | BVor | BVxor | Int2BV _ | BV2Nat
             | Not_theory_constant | Is_theory_constant | Linear_dependency
-            | Constr _ | Destruct _ | Tite | Optimize _) -> assert false
+            | Constr _ | Destruct _ | Tite) -> assert false
     )
 
 let compare_builtin b1 b2 =
@@ -336,11 +331,6 @@ module AEPrinter = struct
     | Is_theory_constant -> Fmt.pf ppf "is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "linear_dependency"
 
-    | Optimize {order; is_max=true} ->
-      Fmt.pf ppf "maximize(-,%d)" order
-    | Optimize {order; is_max=false} ->
-      Fmt.pf ppf "minimize(-,%d)" order
-
   let pp_lit ppf lit =
     match lit with
     | L_eq -> Fmt.pf ppf "="
@@ -448,10 +438,6 @@ module SmtPrinter = struct
     | Integer_log2 -> Fmt.pf ppf "ae.integer_log2"
     | Integer_round -> Fmt.pf ppf "ae.integer_round"
     | Pow -> Fmt.pf ppf "ae.pow"
-
-    | Optimize _ ->
-      (* TODO: this case will be removed in the PR #921. *)
-      assert false
 
 end
 
