@@ -1029,103 +1029,6 @@ let model_repr_of_term t env mrepr =
     | Some tt -> tt, ME.add t tt mrepr
     | None -> assert false
 
-(* Caches used during the computation of the model.
-   All these caches are flushed before generating a new model. *)
-module Cache = struct
-  (* Stores all the get accesses to arrays. *)
-  let arrays_cache = Hashtbl.create 17
-
-  (* Stores all the abstract values generated. This cache is necessary
-     to ensure we don't generate twice an abstract value for a given symbol. *)
-  let abstracts_cache = Hashtbl.create 17
-
-  let store_array_get (t : Expr.t) (i : ModelMap.Value.t)
-      (v : ModelMap.Value.t) =
-    match Hashtbl.find_opt arrays_cache t with
-    | Some values ->
-      Hashtbl.replace values i v
-    | None ->
-      let values = Hashtbl.create 17 in
-      Hashtbl.add values i v;
-      Hashtbl.add arrays_cache t values
-
-  let get_abstract_for env (t : Expr.t) =
-    let r, _ = find env t in
-    match Hashtbl.find_opt abstracts_cache r with
-    | Some abstract -> abstract
-    | None ->
-      let abstract = Id.Namespace.Abstract.fresh () |> Hstring.make in
-      Hashtbl.add abstracts_cache r abstract;
-      abstract
-
-  let clear () =
-    Hashtbl.clear arrays_cache;
-    Hashtbl.clear abstracts_cache
-end
-
-let compute_concrete_model_of_val env t ((mdl, mrepr) as acc) =
-  let { E.f; xs; ty; _ } = E.term_view t in
-  if X.is_solvable_theory_symbol f ty || Sy.is_internal f
-     || E.is_internal_name t || E.is_internal_skolem t
-     || E.equal t E.vrai || E.equal t E.faux
-  then
-    acc
-  else
-    begin
-      let arg_vals, arg_tys, mrepr =
-        List.fold_left
-          (fun (arg_vals, arg_tys, mrepr) arg ->
-             let rep_arg, mrepr = model_repr_of_term arg env mrepr in
-             ModelMap.Value.Constant rep_arg :: arg_vals,
-             (Expr.type_info arg) :: arg_tys,
-             mrepr
-          )
-          ([], [], mrepr) (List.rev xs)
-      in
-      let ret_rep, mrepr = model_repr_of_term t env mrepr in
-      match f, arg_vals, ty with
-      | Sy.Name _, [], Ty.Tfarray _ ->
-        begin
-          match Hashtbl.find_opt Cache.arrays_cache t with
-          | Some _ -> acc
-          | None ->
-            (* We have to add an abstract array in case there is no
-               constraint on its values. *)
-            Hashtbl.add Cache.arrays_cache t (Hashtbl.create 17);
-            acc
-        end
-
-      | Sy.Op Sy.Set, _, _ ->
-        (* As arrays are immutable, the result of the set operator is
-           never a user-defined array and has to be ignored. *)
-        acc
-
-      | Sy.Op Sy.Get, [Constant a; i], _ ->
-        begin
-          Cache.store_array_get a i (Constant ret_rep);
-          acc
-        end
-
-      | Sy.Name { hs = id; _ }, _, _ ->
-        let value =
-          match ty with
-          | Ty.Text _ ->
-            (* We cannot produce a concrete value as the type is abstract.
-               In this case, we produce an abstract value with the appropriate
-               type. *)
-            let abstract = Cache.get_abstract_for env t in
-            ModelMap.Value.Abstract (abstract, ty)
-          | _ -> ModelMap.Value.Constant ret_rep
-        in
-        let mdl =
-          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
-        in
-        mdl, mrepr
-
-      | _ ->
-        mdl, mrepr
-    end
-
 (* A map of expressions / terms, ordered by depth first, and then by
    Expr.compare for expressions with same depth. This structure will
    be used to build a model, by starting with the inner/smaller terms
@@ -1168,36 +1071,142 @@ let terms env =
          MED.add t r terms, suspicious
     ) env.make (MED.empty, false)
 
-let compute_concrete_model env =
-  Cache.clear ();
-  let terms, suspicious = terms env in
-  let mdl, mrepr =
-    MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-      terms (ModelMap.empty ~suspicious, ME.empty)
-  in
-  let mdl =
-    let open ModelMap.Value in
-    Hashtbl.fold (fun t vals mdl ->
-        (* We produce a fresh identifiant for abstract value in order to prevent
-           any capture. *)
-        let abstract = Cache.get_abstract_for env t in
-        let ty = Expr.type_info t in
-        let arr_val =
-          Hashtbl.fold (fun i v arr_val ->
-              Store (arr_val, i, v)
-            ) vals (Abstract (abstract, ty))
-        in
-        let id =
-          let Expr.{ f; _ } = Expr.term_view t in
-          match f with
-          | Sy.Name { hs; _ } -> hs
-          | _ -> assert false
-        in
-        ModelMap.add (id, [], ty) [] arr_val mdl
-      ) Cache.arrays_cache mdl
-  in
-  (mdl, mrepr)
+(* Helper functions used by the caches during the computation of the model. *)
+module Cache = struct
+  let store_array_get arrays_cache (t : Expr.t) (i : ModelMap.Value.t)
+      (v : ModelMap.Value.t) =
+    match Hashtbl.find_opt arrays_cache t with
+    | Some values ->
+      Hashtbl.replace values i v
+    | None ->
+      let values = Hashtbl.create 17 in
+      Hashtbl.add values i v;
+      Hashtbl.add arrays_cache t values
 
-let extract_concrete_model ~prop_model env =
-  let model, mrepr = compute_concrete_model env in
-  { Models.propositional = prop_model; model; terms_values = mrepr }
+  let get_abstract_for abstracts_cache env (t : Expr.t) =
+    let r, _ = find env t in
+    match Hashtbl.find_opt abstracts_cache r with
+    | Some abstract -> abstract
+    | None ->
+      let abstract = Id.Namespace.Abstract.fresh () |> Hstring.make in
+      Hashtbl.add abstracts_cache r abstract;
+      abstract
+end
+
+type cache = {
+  array_selects: (Expr.t, (ModelMap.Value.t, ModelMap.Value.t) Hashtbl.t)
+      Hashtbl.t;
+  (** Stores all the get accesses to arrays. *)
+
+  abstracts: (r, Id.t) Hashtbl.t;
+  (** Stores all the abstract values generated. This cache is necessary
+      to ensure we don't generate twice an abstract value for a given symbol. *)
+}
+
+let compute_concrete_model_of_val cache =
+  let store_array_select = Cache.store_array_get cache.array_selects
+  and get_abstract_for = Cache.get_abstract_for cache.abstracts
+  in fun env t ((mdl, mrepr) as acc) ->
+    let { E.f; xs; ty; _ } = E.term_view t in
+    if X.is_solvable_theory_symbol f ty || Sy.is_internal f
+       || E.is_internal_name t || E.is_internal_skolem t
+       || E.equal t E.vrai || E.equal t E.faux
+    then
+      acc
+    else
+      begin
+        let arg_vals, arg_tys, mrepr =
+          List.fold_left
+            (fun (arg_vals, arg_tys, mrepr) arg ->
+               let rep_arg, mrepr = model_repr_of_term arg env mrepr in
+               ModelMap.Value.Constant rep_arg :: arg_vals,
+               (Expr.type_info arg) :: arg_tys,
+               mrepr
+            )
+            ([], [], mrepr) (List.rev xs)
+        in
+        let ret_rep, mrepr = model_repr_of_term t env mrepr in
+        match f, arg_vals, ty with
+        | Sy.Name _, [], Ty.Tfarray _ ->
+          begin
+            match Hashtbl.find_opt cache.array_selects t with
+            | Some _ -> acc
+            | None ->
+              (* We have to add an abstract array in case there is no
+                 constraint on its values. *)
+              Hashtbl.add cache.array_selects t (Hashtbl.create 17);
+              acc
+          end
+
+        | Sy.Op Sy.Set, _, _ ->
+          (* As arrays are immutable, the result of the set operator is
+             never a user-defined array and has to be ignored. *)
+          acc
+
+        | Sy.Op Sy.Get, [Constant a; i], _ ->
+          begin
+            store_array_select a i (Constant ret_rep);
+            acc
+          end
+
+        | Sy.Name { hs = id; _ }, _, _ ->
+          let value =
+            match ty with
+            | Ty.Text _ ->
+              (* We cannot produce a concrete value as the type is abstract.
+                 In this case, we produce an abstract value with the appropriate
+                 type. *)
+              let abstract = get_abstract_for env t in
+              ModelMap.Value.Abstract (abstract, ty)
+            | _ -> ModelMap.Value.Constant ret_rep
+          in
+          let mdl =
+            ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
+          in
+          mdl, mrepr
+
+        | _ ->
+          mdl, mrepr
+      end
+
+let extract_concrete_model cache =
+  let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
+  let get_abstract_for = Cache.get_abstract_for cache.abstracts
+  in fun ~prop_model env ->
+    let terms, suspicious = terms env in
+    let model, mrepr =
+      MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
+        terms (ModelMap.empty ~suspicious, ME.empty)
+    in
+    let model =
+      let open ModelMap.Value in
+      Hashtbl.fold (fun t vals mdl ->
+          (* We produce a fresh identifiant for abstract value in order to prevent
+             any capture. *)
+          let abstract = get_abstract_for env t in
+          let ty = Expr.type_info t in
+          let arr_val =
+            Hashtbl.fold (fun i v arr_val ->
+                Store (arr_val, i, v)
+              ) vals (Abstract (abstract, ty))
+          in
+          let id =
+            let Expr.{ f; _ } = Expr.term_view t in
+            match f with
+            | Sy.Name { hs; _ } -> hs
+            | _ ->
+              (* We only store array declarations as keys in the cache
+                 [array_selects]. *)
+              assert false
+          in
+          ModelMap.add (id, [], ty) [] arr_val mdl
+        ) cache.array_selects model
+    in
+    { Models.propositional = prop_model; model; terms_values = mrepr }
+
+let extract_concrete_model ~prop_model =
+  let cache : cache = {
+    array_selects = Hashtbl.create 17;
+    abstracts = Hashtbl.create 17;
+  }
+  in fun env -> extract_concrete_model cache ~prop_model env
