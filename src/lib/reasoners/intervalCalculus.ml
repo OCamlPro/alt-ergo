@@ -2070,7 +2070,6 @@ let middle_value env ~is_max ty p bound =
 let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
-  (*   let uf, _ = Uf.add uf e in *)
   let repr, _ = Uf.find uf e in
   let ty = E.type_info e in
   let r1 = Uf.make uf e in (* instead of repr, which may be a constant *)
