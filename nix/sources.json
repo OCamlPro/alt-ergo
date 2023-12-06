@@ -1,6 +1,6 @@
 {
     "dolmen": {
-        "branch": "master",
+        "branch": "b14eb8a2400c3dd2c34cded212c2135bbce1a57c",
         "description": "Dolmen provides a library and a binary to parse, typecheck, and evaluate languages used in automated deduction",
         "homepage": "",
         "owner": "Gbury",
@@ -13,15 +13,15 @@
         "version": "dev"
     },
     "nixpkgs": {
-        "branch": "release-23.05",
+        "branch": "release-23.11",
         "description": "Nix Packages collection",
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "4ee5b576ac2861a818950aea99f609d7a6fc02a3",
-        "sha256": "0jpnc718q3xgwx6l17qwkxgc5ya5zvbsy45p4rygk7riwn0y0qlx",
+        "rev": "544b36d1b4815fd5f187ed00ff7a59fd0323317c",
+        "sha256": "0jh67yjfkv9sj4xldlv9p6whljg0rh96hy7x082061ghsb3kg6q4",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/4ee5b576ac2861a818950aea99f609d7a6fc02a3.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/544b36d1b4815fd5f187ed00ff7a59fd0323317c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "ocplib-simplex": {
