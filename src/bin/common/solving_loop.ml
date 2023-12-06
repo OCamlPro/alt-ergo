@@ -690,7 +690,8 @@ let main () =
         (State.get solver_ctx_key st).ctx stmt
     in
     (* Using both optimization and incremental mode may be wrong if
-       some optimization constraints aren't at the toplevel. *)
+       some optimization constraints aren't at the toplevel.
+       See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
     if State.get has_incremental st > 0 then
       warning "Optimization constraints in presence of push \
                and pop statements are not correctly processed.";
