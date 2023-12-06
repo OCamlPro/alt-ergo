@@ -4,7 +4,7 @@ on:
   workflow_dispatch
 
 env:
-  OCAML_DEFAULT_VERSION: 5.0.0
+  OCAML_DEFAULT_VERSION: 4.14.1
   OPAMYES: true
 
 jobs:
