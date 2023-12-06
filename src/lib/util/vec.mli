@@ -51,7 +51,7 @@ val to_array : 'a t -> 'a array
 val of_list : 'a list -> dummy:'a -> 'a t
 
 val clear : 'a t -> unit
-(** Set size to zero, doesn't free elements. *)
+(** [clear vec] sets the size of [vec] to zero and free the elements. *)
 
 val shrink : 'a t -> int -> unit
 (** [shrink vec sz] resets size of [vec] to [sz] and frees its elements.
@@ -112,7 +112,7 @@ val iteri : (int -> 'a -> unit) -> 'a t -> unit
 (** Iterate on elements with their index. Ignore dummy elements. *)
 
 val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
-(** Fold over elements. Ignore dummy elements. Ignore dummy elements. *)
+(** Fold over elements. Ignore dummy elements. *)
 
 val exists : ('a -> bool) -> 'a t -> bool
 (** Does there exist a non-dummy element that satisfies the predicate? *)
@@ -120,9 +120,6 @@ val exists : ('a -> bool) -> 'a t -> bool
 val for_all : ('a -> bool) -> 'a t -> bool
 (** Do all non-dummy elements satisfy the predicate? *)
 
-val pp :
-  ?sep:string ->
-  (Format.formatter -> 'a -> unit) ->
-  Format.formatter -> 'a t -> unit
-(** [pp ~sep pp_elt fmt vec] prints on the formatter [fmt]
-    all the elements of [vec] using the printer [pp_elt] for each element. *)
+val pp : 'a Fmt.t -> 'a t Fmt.t
+(** [pp pp_elt ppf vec] prints on the formatter [ppf] all the elements of [vec]
+    using the printer [pp_elt]. Dummy values are also printed. *)

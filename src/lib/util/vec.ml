@@ -163,6 +163,10 @@ let sort vec f : unit =
   Array.fast_sort f arr;
   vec.data <- arr
 
-let pp ?(sep=", ") pp fmt a =
-  let pp_sep fmt () = Format.fprintf fmt "%s@," sep in
-  Format.pp_print_list ~pp_sep pp fmt (to_list a)
+let internal_iter f vec =
+  for i = 0 to size vec - 1 do
+    f (Array.unsafe_get vec.data i)
+  done
+
+let pp pp_elt =
+  Fmt.iter ~sep:Fmt.comma internal_iter pp_elt |> Fmt.box

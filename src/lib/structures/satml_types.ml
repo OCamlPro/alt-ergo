@@ -265,7 +265,7 @@ module Atom : ATOM = struct
         (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
-    let atoms_vec = Vec.pp ~sep:";" atom
+    let atoms_vec = Vec.pp atom
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
       Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
