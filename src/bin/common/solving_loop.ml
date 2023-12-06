@@ -991,10 +991,10 @@ let main () =
       | td ->
         let st =
           match td.contents with
-          | `Pop _ ->
-            State.set has_incremental (State.get has_incremental st - 1) st
-          | `Push _ ->
-            State.set has_incremental (State.get has_incremental st + 1) st
+          | `Pop n ->
+            State.set has_incremental (State.get has_incremental st - n) st
+          | `Push n ->
+            State.set has_incremental (State.get has_incremental st + n) st
           | _ -> st
         in
         (* TODO:
