@@ -244,29 +244,13 @@ end = struct
 end
 
 module Constraint : sig
-  type repr =
-    | Band of X.r * X.r * X.r
-    (** [Band (x, y, z)] represents [x = y & z] *)
-    | Bor of X.r * X.r * X.r
-    (** [Bor (x, y, z)] represents [x = y | z] *)
-    | Bxor of SX.t
-    (** [Bxor {x1, ..., xn}] represents [x1 ^ ... ^ xn = 0] *)
-    | Bnot of X.r * X.r
-    (** [Bnot (x, y)] represents [x = not y] *)
-
-  type tagged_repr
-
-  val hcons : repr -> tagged_repr
-  (** Internalize the constraint representation.
-
-      This uses hash-consing and some simple normalization to de-duplicate
-      constraints. *)
-
-  val tag : tagged_repr -> int
-  (** Returns the unique tag associated with the tagged repr. *)
-
-  type t = { repr : tagged_repr ; ex : Ex.t }
+  type t
   (** The type of bit-vector constraints.
+
+      Constraints are associated with a justification as to why they are
+      currently valid. The justification is only used to update domains,
+      identical constraints with different justifications will otherwise behave
+      identically (and, notably, will compare equal).
 
       Bit-vector constraints contains semantic values / term representatives of
       type [X.r]. We maintain the invariant that the semantic values used inside
@@ -276,6 +260,17 @@ module Constraint : sig
 
   val pp : t Fmt.t
   (** Pretty-printer for constraints. *)
+
+  val compare : t -> t -> int
+  (** Comparison function for constraints.
+
+      The comparison only depends on the constraint representation: two
+      constraints with identical representations but different explanations will
+      compare equal.
+
+      {b Note}: The comparison function is arbitrary and has no semantic
+      meaning. You should not depend on any of its properties, other than it
+      defines an (arbitrary) total order on constraint representations. *)
 
   val subst : Ex.t -> X.r -> X.r -> t -> t
   (** [subst ex p v cs] replaces all the instaces of [p] with [v] in the
@@ -291,12 +286,28 @@ module Constraint : sig
   val propagate : t -> Domains.t -> Domains.t
   (** [propagate c dom] propagates the constraints [c] in [d] and returns the
       new domains. *)
+
+  val bvand : ex:Ex.t -> X.r -> X.r -> X.r -> t
+  (** [bvand ~ex x y z] is the constraint [x = y & z] *)
+
+  val bvor : ex:Ex.t -> X.r -> X.r -> X.r -> t
+  (** [bvor ~ex x y z] is the constraint [x = y | z] *)
+
+  val bvxor : ex:Ex.t -> X.r -> X.r -> X.r -> t
+  (** [bvxor ~ex x y z] is the constraint [x ^ y ^ z = 0] *)
+
+  val bvnot : ex:Ex.t -> X.r -> X.r -> t
+  (** [bvnot ~ex x y] is the constraint [x = not y] *)
 end = struct
   type repr =
     | Band of X.r * X.r * X.r
+    (** [Band (x, y, z)] represents [x = y & z] *)
     | Bor of X.r * X.r * X.r
+    (** [Bor (x, y, z)] represents [x = y | z] *)
     | Bxor of SX.t
+    (** [Bxor {x1, ..., xn}] represents [x1 ^ ... ^ xn = 0] *)
     | Bnot of X.r * X.r
+    (** [Bnot (x, y)] represents [x = not y] *)
 
   let normalize_repr = function
     | Band (x, y, z) when X.hash_cmp y z > 0 -> Band (x, z, y)
@@ -345,8 +356,6 @@ end = struct
       );
       tagged
 
-  let tag { tag; _ } = tag
-
   let pp_repr ppf = function
     | Band (x, y, z) ->
       Fmt.pf ppf "%a & %a = %a" X.print y X.print z X.print x
@@ -390,6 +399,9 @@ end = struct
   type t = { repr : tagged_repr ; ex : Ex.t }
 
   let pp ppf { repr; _ } = pp_repr ppf repr.repr
+
+  let compare { repr = r1; _ } { repr = r2; _ } =
+    Int.compare r1.tag r2.tag
 
   let subst ex rr nrr c =
     { repr = hcons @@ subst_repr rr nrr c.repr.repr ; ex = Ex.union ex c.ex }
@@ -468,6 +480,17 @@ end = struct
       let dom = Domains.update ex x dom @@ Bitlist.lognot dy in
       let dom = Domains.update ex y dom @@ Bitlist.lognot dx in
       dom
+
+  let make ?(ex = Ex.empty) repr = { repr = hcons repr ; ex }
+
+  let bvand ~ex x y z = make ~ex @@ Band (x, y, z)
+  let bvor ~ex x y z = make ~ex @@ Bor (x, y, z)
+  let bvxor ~ex x y z =
+    let xs = SX.singleton x in
+    let xs = if SX.mem y xs then SX.remove y xs else SX.add y xs in
+    let xs = if SX.mem z xs then SX.remove z xs else SX.add z xs in
+    make ~ex @@ Bxor xs
+  let bvnot ~ex x y = make ~ex @@ Bnot (x, y)
 end
 
 module Constraints : sig
@@ -516,12 +539,7 @@ module Constraints : sig
 end = struct
   module IM = Util.MI
 
-  module CS = Set.Make(struct
-      type t = Constraint.t
-
-      let compare t1 t2 =
-        Int.compare Constraint.(tag t1.repr) Constraint.(tag t2.repr)
-    end)
+  module CS = Set.Make(Constraint)
 
   type t = {
     cs_set : CS.t ;
@@ -618,26 +636,19 @@ let extract_constraints (bcs, cgr) uf r t =
      without needing a round-trip through Uf *)
   | { f = Op BVnot; xs = [ x ] ; _ } ->
     let rx, exx = Uf.find uf x in
-    add_constraint (bcs, cgr) @@
-    { repr = Constraint.hcons @@ Bnot (r, rx) ; ex = exx }
+    add_constraint (bcs, cgr) @@ Constraint.bvnot ~ex:exx r rx
   | { f = Op BVand; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    add_constraint (bcs, cgr) @@
-    { repr = Constraint.hcons @@ Band (r, rx, ry) ; ex = Ex.union exx exy }
+    add_constraint (bcs, cgr) @@ Constraint.bvand ~ex:(Ex.union exx exy) r rx ry
   | { f = Op BVor; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    add_constraint (bcs, cgr) @@
-    { repr = Constraint.hcons @@ Bor (r, rx, ry) ; ex = Ex.union exx exy }
+    add_constraint (bcs, cgr) @@ Constraint.bvor ~ex:(Ex.union exx exy) r rx ry
   | { f = Op BVxor; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
-    let xs = SX.singleton r in
-    let xs = if SX.mem rx xs then SX.remove rx xs else SX.add rx xs in
-    let xs = if SX.mem ry xs then SX.remove ry xs else SX.add ry xs in
-    add_constraint (bcs, cgr) @@
-    { repr = Constraint.hcons @@ Bxor xs ; ex = Ex.union exx exy }
+    add_constraint (bcs, cgr) @@ Constraint.bvxor ~ex:(Ex.union exx exy) r rx ry
   | _ -> (bcs, cgr)
 
 let rec mk_eq ex lhs w z =
@@ -761,8 +772,7 @@ let assume env uf la =
               let nrr, exnrr = Uf.find_r uf nrr in
               let ex = Ex.union ex (Ex.union exrr exnrr) in
               let bcs, cgr =
-                add_constraint (bcs, cgr) @@
-                { repr = Constraint.hcons @@ Bnot (rr, nrr)  ; ex }
+                add_constraint (bcs, cgr) @@ Constraint.bvnot ~ex rr nrr
               in
               (cgr, (bcs, dom), ss)
             | _ -> (cgr, (bcs, dom), ss)
