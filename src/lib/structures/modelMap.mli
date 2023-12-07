@@ -29,7 +29,10 @@
 (**************************************************************************)
 
 type sy = Id.t * Ty.t list * Ty.t
-(** Typed symbol of function. *)
+(** Typed symbol of function defined in the model. In order:
+    - The identifier of the symbol.
+    - The types of its arguments.
+    - The returned type. *)
 
 module Value : sig
   type t =
