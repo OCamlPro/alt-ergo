@@ -1004,7 +1004,10 @@ let save_cache () =
 let reinit_cache () =
   LX.reinit_cache ()
 
-(**** Counter examples functions ****)
+(****************************************************************************)
+(*                      Model generation functions                          *)
+(****************************************************************************)
+
 let model_repr_of_term t env mrepr =
   try ME.find t mrepr, mrepr
   with Not_found ->
@@ -1029,8 +1032,8 @@ let model_repr_of_term t env mrepr =
     | Some tt -> tt, ME.add t tt mrepr
     | None -> assert false
 
-(* A map of expressions / terms, ordered by depth first, and then by
-   Expr.compare for expressions with same depth. This structure will
+(* A map of expressions to terms, ordered by depth first, and then by
+   [Expr.compare] for expressions with same depth. This structure will
    be used to build a model, by starting with the inner/smaller terms
    first. The values associated to the key will be their make *)
 module MED = Map.Make
@@ -1047,8 +1050,7 @@ let is_suspicious_name hs =
   | "@/" | "@%" | "@*" -> true
   | _ -> false
 
-(* The model generation is known to be imcomplete for FPA and Bitvector
-   theories. *)
+(* The model generation is known to be imcomplete for FPA theory. *)
 let is_suspicious_symbol = function
   | Sy.Op (Float | Abs_int | Abs_real | Sqrt_real | Sqrt_real_default
           | Sqrt_real_excess | Real_of_int | Int_floor
@@ -1103,15 +1105,30 @@ type cache = {
       to ensure we don't generate twice an abstract value for a given symbol. *)
 }
 
+(* The environment of the union-find contains almost a first-order model.
+   There are two situations that requires some computations to retrieve an
+   appropriate model value:
+   - As our array theory has no semantic values, there are no value
+     which represents an array in the union-find state. Instead, the union-find
+     stores the collection of all the access to the array. This function
+     retrieves all these accesses in order to build an expression which defines
+     the approriate array.
+   - If the problem involves an abstract type, Alt-Ergo cannot produces a
+     constant value for it. This function creates a new abstract value in this
+     case. *)
 let compute_concrete_model_of_val cache =
   let store_array_select = Cache.store_array_get cache.array_selects
   and get_abstract_for = Cache.get_abstract_for cache.abstracts
   in fun env t ((mdl, mrepr) as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
-    if X.is_solvable_theory_symbol f ty || Sy.is_internal f
-       || E.is_internal_name t || E.is_internal_skolem t
-       || E.equal t E.vrai || E.equal t E.faux
+    if X.is_solvable_theory_symbol f ty
+    || Sy.equal f Sy.(Op BVand) || Sy.equal f Sy.(Op BVor)
+    || Sy.equal f Sy.(Op BVxor)
+    || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
+    || E.equal t E.vrai || E.equal t E.faux
     then
+      (* These terms are built-in interpreted ones and we don't have
+         to produce a definition for them. *)
       acc
     else
       begin
@@ -1138,10 +1155,7 @@ let compute_concrete_model_of_val cache =
               acc
           end
 
-        | Sy.Op Sy.Set, _, _ ->
-          (* As arrays are immutable, the result of the set operator is
-             never a user-defined array and has to be ignored. *)
-          acc
+        | Sy.Op Sy.Set, _, _ -> acc
 
         | Sy.Op Sy.Get, [Constant a; i], _ ->
           begin
@@ -1160,13 +1174,13 @@ let compute_concrete_model_of_val cache =
               ModelMap.Value.Abstract (abstract, ty)
             | _ -> ModelMap.Value.Constant ret_rep
           in
-          let mdl =
-            ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
-          in
-          mdl, mrepr
+          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
 
         | _ ->
-          mdl, mrepr
+          Printer.print_err
+            "Expect a uninterpreted term declared by the user, got %a"
+            E.print t;
+          assert false
       end
 
 let extract_concrete_model cache =
@@ -1181,8 +1195,8 @@ let extract_concrete_model cache =
     let model =
       let open ModelMap.Value in
       Hashtbl.fold (fun t vals mdl ->
-          (* We produce a fresh identifiant for abstract value in order to prevent
-             any capture. *)
+          (* We produce a fresh identifiant for abstract value in order to
+             prevent any capture. *)
           let abstract = get_abstract_for env t in
           let ty = Expr.type_info t in
           let arr_val =
