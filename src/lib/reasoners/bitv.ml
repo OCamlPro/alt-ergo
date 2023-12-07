@@ -1544,13 +1544,17 @@ module Shostak(X : ALIEN) = struct
         Some (E.bitv bv (Ty.Tbitv sz), true)
 
   let to_const_term r =
-    match embed r with
-    | [{ bv = Cte b; sz }] ->
-      let s = Z.format ("%0" ^ string_of_int sz ^ "b") b in
+    try
+      let (s, sz) =
+        List.fold_left
+          (fun (s, sz) r ->
+             match r with
+             | { bv = Cte b; sz = sz' } ->
+               let s' = Z.format ("%0" ^ string_of_int sz' ^ "b") b in
+               (s ^ s', sz + sz')
+             | _ -> raise Exit
+          ) ("", 0) (embed r)
+      in
       Some (Expr.bitv s Ty.(Tbitv sz))
-    | _ :: _ ->
-      Fmt.pr "HERE@.";
-      None
-    | _ ->
-      None
+    with Exit -> None
 end
