@@ -1106,22 +1106,27 @@ type cache = {
 }
 
 (* The environment of the union-find contains almost a first-order model.
-   There are two situations that requires some computations to retrieve an
+   There are two situations that require some computations to retrieve an
    appropriate model value:
    - As our array theory has no semantic values, there are no value
-     which represents an array in the union-find state. Instead, the union-find
-     stores the collection of all the access to the array. This function
-     retrieves all these accesses in order to build an expression which defines
-     the approriate array.
-   - If the problem involves an abstract type, Alt-Ergo cannot produces a
-     constant value for it. This function creates a new abstract value in this
-     case. *)
+     which represents an array in the union-find environment. Instead, the
+     union-find stores the collection of all the access to the array. This
+     function retrieves all these accesses in order to build an expression
+     which defines the approriate array.
+   - If the problem involves declared terms whose the type is abstract,
+     Alt-Ergo cannot produces a constant value for them. This function creates
+     a new abstract value in this case. *)
 let compute_concrete_model_of_val cache =
   let store_array_select = Cache.store_array_get cache.array_selects
   and get_abstract_for = Cache.get_abstract_for cache.abstracts
   in fun env t ((mdl, mrepr) as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
     if X.is_solvable_theory_symbol f ty
+    (* TODO: BVand, BVor and BVxor are not symbols of the Shostak theory
+       of bitvectors as the solve function of this theory cannot support them.
+       Still these symbols will appear in the union-find.
+       We should use a different predicate to discriminate appropriate terms
+       here. *)
     || Sy.equal f Sy.(Op BVand) || Sy.equal f Sy.(Op BVor)
     || Sy.equal f Sy.(Op BVxor)
     || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
