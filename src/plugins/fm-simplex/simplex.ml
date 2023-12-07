@@ -384,7 +384,7 @@ module Simplex (C : Coef_Type) = struct
           subst_in_p (snd (Vec.get sbt j)) (Vec.get sbt i)
         done;
       done;
-      Vec.to_list zsbt, Vec.to_list sbt
+      Vec.to_rev_list zsbt, Vec.to_rev_list sbt
 
     let sbt = Vec.make 107 ~dummy:((0,0),{a=[||]; c=Q.zero, Q.zero})
     let zsbt = Vec.make 107 ~dummy:(-2)

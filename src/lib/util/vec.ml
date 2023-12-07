@@ -148,7 +148,14 @@ let fold f acc vec =
   !acc
 
 let to_array a = Array.sub a.data 0 a.sz
-let to_list a = Array.to_seq (to_array a) |> List.of_seq
+let to_list vec = Array.to_seq (to_array vec) |> List.of_seq
+
+let to_rev_list { data; sz; _ } =
+  let l = ref [] in
+  for i = 0 to sz - 1 do
+    l := Array.unsafe_get data i :: !l
+  done;
+  !l
 
 let of_list l ~dummy : _ t =
   match l with

@@ -46,6 +46,9 @@ val create : dummy:'a -> 'a t
 val to_list : 'a t -> 'a list
 (** Returns the list of elements of the vector. *)
 
+val to_rev_list : 'a t -> 'a list
+(** Returns the list of elements of the vector in reversed order. *)
+
 val to_array : 'a t -> 'a array
 
 val of_list : 'a list -> dummy:'a -> 'a t
