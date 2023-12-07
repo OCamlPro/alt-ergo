@@ -31,6 +31,9 @@
 module Sy = Symbols
 module X = Shostak.Combine
 module E = Expr
+module MS = Map.Make(String)
+
+let constraints = ref MS.empty
 
 type t = {
   propositional : Expr.Set.t;
@@ -44,12 +47,12 @@ let empty = {
   terms_values = Expr.Map.empty;
 }
 
-(* module Pp_smtlib_term = struct
-   open Format
-   let to_string_type t =
+module Pp_smtlib_term = struct
+  open Format
+  let to_string_type t =
     asprintf "%a" Ty.pp_smtlib t
 
-   let rec print fmt t =
+  let rec print fmt t =
     let {Expr.f;xs;ty; _} = Expr.term_view t in
     match f, xs with
 
@@ -219,23 +222,28 @@ let empty = {
       else
         fprintf fmt "%a(%a)" Sy.print f print_list xs
 
-   and print_list_sep sep fmt = function
+  and print_list_sep sep fmt = function
     | [] -> ()
     | [t] -> print fmt t
     | t::l -> Format.fprintf fmt "%a%s%a" print t sep (print_list_sep sep) l
 
-   and print_list fmt = print_list_sep "," fmt
+  and print_list fmt = print_list_sep "," fmt
 
-   end *)
+end
 
 (* of module SmtlibCounterExample *)
-(*
+
 module Why3CounterExample = struct
+  let pp_term fmt t =
+    if Options.get_output_format () == Why3 then
+      Pp_smtlib_term.print fmt t
+    else
+      E.print fmt t
 
   let output_constraints fmt prop_model =
-    let assertions = SE.fold (fun e acc ->
-        (dprintf "%t(assert %a)@ " acc SmtlibCounterExample.pp_term e)
-      ) prop_model (dprintf "") in
+    let assertions = Expr.Set.fold (fun e acc ->
+        (Format.dprintf "%t(assert %a)@ " acc pp_term e)
+      ) prop_model (Format.dprintf "") in
     Format.fprintf fmt "@ ; constraints@ ";
     MS.iter (fun _ (name,ty,args_ty) ->
         match args_ty with
@@ -251,7 +259,11 @@ module Why3CounterExample = struct
     Format.fprintf fmt "@ ; assertions@ ";
     Format.fprintf fmt "%t" assertions
 
-end *)
+end
 (* of module Why3CounterExample *)
 
-let pp ppf { model; _ } = ModelMap.pp ppf model
+let pp ppf { model; propositional; _ } =
+  if Options.get_model_type_constraints () then begin
+    Why3CounterExample.output_constraints ppf propositional
+  end;
+  ModelMap.pp ppf model
