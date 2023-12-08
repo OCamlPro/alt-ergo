@@ -132,7 +132,8 @@ let is_internal sy =
   match sy with
   | Name { hs; _ } ->
     let s = Hstring.view hs in
-    Id.Namespace.Internal.is_id s || Id.Namespace.Skolem.is_id s
+    Stdcompat.String.starts_with ~prefix:"." s ||
+    Stdcompat.String.starts_with ~prefix:"@" s
   | _ -> false
 
 let compare_kinds k1 k2 =
