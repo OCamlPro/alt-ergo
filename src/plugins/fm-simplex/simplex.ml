@@ -372,29 +372,22 @@ module Simplex (C : Coef_Type) = struct
     let z_subst_in_p p s = p.a.(s) <- s, C.zero
 
     let normalize_poly p sbt zsbt =
-      for i = 0 to Vec.size sbt - 1 do subst_in_p p (Vec.get sbt i) done;
-      for i = 0 to Vec.size zsbt - 1 do z_subst_in_p p (Vec.get zsbt i) done
+      Vec.iter (subst_in_p p) sbt;
+      Vec.iter (z_subst_in_p p) zsbt
 
     let normalize_sbt sbt zsbt =
-      for i = 0 to Vec.size sbt - 1 do
-        for j = 0 to Vec.size zsbt - 1 do
-          z_subst_in_p (snd (Vec.get sbt i)) (Vec.get zsbt j)
-        done;
-      done;
+      Vec.iter (fun elt ->
+          Vec.iter (z_subst_in_p (snd elt)) zsbt
+        ) sbt;
       for i = Vec.size sbt - 1 downto 1 do
         for j = i - 1 downto 0 do
           subst_in_p (snd (Vec.get sbt j)) (Vec.get sbt i)
         done;
       done;
-      let l1 = ref [] in
-      let l2 = ref [] in
-      for i = 0 to Vec.size sbt - 1  do l1 := (Vec.get sbt i)  :: !l1 done;
-      for i = 0 to Vec.size zsbt - 1 do l2 := (Vec.get zsbt i) :: !l2 done;
-      !l2, !l1
+      Vec.to_rev_list zsbt, Vec.to_rev_list sbt
 
-
-    let sbt = Vec.make 107 ((0,0),{a=[||]; c=Q.zero, Q.zero})
-    let zsbt = Vec.make 107 (-2)
+    let sbt = Vec.make 107 ~dummy:((0,0),{a=[||]; c=Q.zero, Q.zero})
+    let zsbt = Vec.make 107 ~dummy:(-2)
 
     let solve_zero_arr zsbt zsbt_inv a =
       Array.iter

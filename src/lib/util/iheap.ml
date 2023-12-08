@@ -33,8 +33,9 @@ type t = {heap : int Vec.t; indices : int Vec.t }
 let dummy = -100
 
 let init sz =
-  { heap    =  Vec.init sz (fun i -> i) dummy;
-    indices =  Vec.init sz (fun i -> i) dummy}
+  let lst = List.init sz (fun i -> i) in
+  { heap    =  Vec.of_list lst ~dummy;
+    indices =  Vec.of_list lst ~dummy}
 
 let left i   = (i lsl 1) + 1 (* i*2 + 1 *)
 let right i  = (i + 1) lsl 1 (* (i+1)*2 *)
@@ -97,16 +98,17 @@ let increase cmp s n =
 
 let filter s filt cmp =
   let j = ref 0 in
-  let lim = Vec.size s.heap in
-  for i = 0 to lim - 1 do
-    if filt (Vec.get s.heap i) then begin
-      Vec.set s.heap !j (Vec.get s.heap i);
-      Vec.set s.indices (Vec.get s.heap i) !j;
-      incr j;
+  for i = 0 to Vec.size s.heap - 1 do
+    let elt = Vec.get s.heap i in
+    if filt elt then begin
+      Vec.set s.heap !j elt;
+      Vec.set s.indices elt !j;
+      incr j
     end
-    else Vec.set s.indices (Vec.get s.heap i) (-1);
+    else Vec.set s.indices elt (-1)
   done;
-  Vec.shrink s.heap (lim - !j) true;
+  let lim = Vec.size s.heap in
+  Vec.shrink s.heap (lim - !j);
   for i = (lim / 2) - 1 downto 0 do
     percolate_down cmp s i
   done
@@ -146,6 +148,6 @@ let remove_min cmp ({heap=heap; indices=indices} as s) =
   Vec.set heap 0 (Vec.last heap); (*heap.last()*)
   Vec.set indices (Vec.get heap 0) 0;
   Vec.set indices x (-1);
-  Vec.pop s.heap;
+  ignore(Vec.pop s.heap);
   if Vec.size s.heap > 1 then percolate_down cmp s 0;
   x

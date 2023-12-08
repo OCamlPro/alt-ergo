@@ -103,7 +103,7 @@ module type ATOM = sig
 
   val fresh_dname : unit -> string
 
-  val make_clause : string -> atom list -> E.t -> int -> bool ->
+  val make_clause : string -> atom list -> E.t -> bool ->
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
@@ -265,11 +265,7 @@ module Atom : ATOM = struct
         (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
         premise a.var.vpremise
 
-
-    let atoms_vec fmt vec =
-      for i = 0 to Vec.size vec - 1 do
-        Format.fprintf fmt "%a ; " atom (Vec.get vec i)
-      done
+    let atoms_vec = Vec.pp atom
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
       Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
@@ -319,7 +315,7 @@ module Atom : ATOM = struct
       and pa =
         { var = var;
           lit = lit;
-          watched = Vec.make 10 dummy_clause;
+          watched = Vec.make 10 ~dummy:dummy_clause;
           neg = na;
           is_true = false;
           is_guard = false;
@@ -328,7 +324,7 @@ module Atom : ATOM = struct
       and na =
         { var = var;
           lit = E.neg lit;
-          watched = Vec.make 10 dummy_clause;
+          watched = Vec.make 10 ~dummy:dummy_clause;
           neg = pa;
           is_true = false;
           is_guard = false;
@@ -366,8 +362,8 @@ module Atom : ATOM = struct
     try (HT.find hcons.tbl (E.neg lit)).na
     with Not_found -> assert false
 
-  let make_clause name ali f sz_ali is_learnt premise =
-    let atoms = Vec.from_list ali sz_ali dummy_atom in
+  let make_clause name ali f is_learnt premise =
+    let atoms = Vec.of_list ali ~dummy:dummy_atom in
     { name  = name;
       atoms = atoms;
       removed = false;
@@ -414,11 +410,12 @@ module Atom : ATOM = struct
     | Some c ->
       let cpt = ref 0 in
       let l = ref [] in
-      for i = 0 to Vec.size c.atoms - 1 do
-        let b = Vec.get c.atoms i in
-        if eq_atom a b then incr cpt
-        else l := b :: !l
-      done;
+      Vec.iter (fun (atom : atom) ->
+          if eq_atom a atom then
+            incr cpt
+          else
+            l := atom :: !l
+        ) c.atoms;
       if !cpt <> 1 then begin
         Printer.print_err
           "cpt = %d@ a = %a@ c = %a"
