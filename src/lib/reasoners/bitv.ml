@@ -1544,17 +1544,13 @@ module Shostak(X : ALIEN) = struct
         Some (E.bitv bv (Ty.Tbitv sz), true)
 
   let to_const_term r =
-    try
-      let (s, sz) =
-        List.fold_left
-          (fun (s, sz) r ->
-             match r with
-             | { bv = Cte b; sz = sz' } ->
-               let s' = Z.format ("%0" ^ string_of_int sz' ^ "b") b in
-               (s ^ s', sz + sz')
-             | _ -> raise Exit
-          ) ("", 0) (embed r)
-      in
+    match (embed r) with
+    | [{ bv = Cte b; sz }] ->
+      let s = Z.format ("%0" ^ string_of_int sz ^ "b") b in
       Some (Expr.bitv s Ty.(Tbitv sz))
-    with Exit -> None
+    | _ ->
+      (* A constant semantic value cannot be a concatenation of constant
+         simple term as the canonizer merges consecutive constant simple
+         terms. *)
+      None
 end
