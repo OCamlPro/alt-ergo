@@ -270,16 +270,16 @@ struct
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
-  let to_const_term r =
+  let to_model_term r =
     let res =
       match r.v with
-      | Arith _ -> ARITH.to_const_term r
-      | Records _ -> RECORDS.to_const_term r
-      | Bitv _ -> BITV.to_const_term r
-      | Arrays _ -> ARRAYS.to_const_term r
-      | Enum _ -> ENUM.to_const_term r
-      | Adt _ -> ADT.to_const_term r
-      | Ite _ -> ITE.to_const_term r
+      | Arith _ -> ARITH.to_model_term r
+      | Records _ -> RECORDS.to_model_term r
+      | Bitv _ -> BITV.to_model_term r
+      | Arrays _ -> ARRAYS.to_model_term r
+      | Enum _ -> ENUM.to_model_term r
+      | Adt _ -> ADT.to_model_term r
+      | Ite _ -> ITE.to_model_term r
       | Term t when Expr.is_model_term t -> Some t
       | Ac _ | Term _ -> None
     in

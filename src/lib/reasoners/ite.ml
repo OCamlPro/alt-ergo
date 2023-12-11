@@ -60,5 +60,5 @@ module Shostak (X : ALIEN) = struct
   let abstract_selectors _ _ = assert false
   let solve _ _ = assert false
   let assign_value _ _ _ = assert false
-  let to_const_term _r = assert false
+  let to_model_term _r = assert false
 end

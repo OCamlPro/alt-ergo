@@ -67,5 +67,5 @@ module Shostak (X : ALIEN) = struct
         Some (Expr.fresh_name (X.type_info r), false)
       | _ -> assert false
 
-  let to_const_term _r = assert false
+  let to_model_term _r = assert false
 end

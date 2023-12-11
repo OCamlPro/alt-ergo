@@ -128,7 +128,14 @@ module type SHOSTAK = sig
      [Some (t, false)], then there must be no context in which
      [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
 
-  val to_const_term : r -> Expr.t option
+  val to_model_term : r -> Expr.t option
+  (** [to_model_term r] creates a model term if [r] is constant.
+      The function cannot fail if [r] is a constant (that is statisfied the
+      predicate [X.is_constant]).
+
+      The returned value always satisfies the predicate
+      [Expr.is_model_term]. See its documentation for more details about
+      model terms. *)
 end
 
 module type X = sig
@@ -187,9 +194,12 @@ module type X = sig
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
-  val to_const_term : r -> Expr.t option
-  (* [to_const_term r] creates a constant term if [r] is a constant
-     semantic value. The returned value always satisfies the predicate
-     [Expr.is_model_term]. See its documentation for more details about
-     constant terms. *)
+  val to_model_term : r -> Expr.t option
+  (** [to_model_term r] creates a model term if [r] is constant.
+      The function cannot fail if [r] is a constant (that is statisfied the
+      predicate [X.is_constant]).
+
+      The returned value always satisfies the predicate
+      [Expr.is_model_term]. See its documentation for more details about
+      model terms. *)
 end

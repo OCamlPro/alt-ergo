@@ -427,19 +427,19 @@ module Shostak (X : ALIEN) = struct
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
-  let to_const_term =
-    let rec to_const_term r =
+  let to_model_term =
+    let rec to_model_term r =
       match r with
       | Record (fields, ty) ->
         (* We can ignore the names of fields as they are inlined in the
            type [ty] of the record. *)
         let l =
-          Lists.try_map (fun (_name, rf) -> to_const_term rf) fields
+          Lists.try_map (fun (_name, rf) -> to_model_term rf) fields
         in
         Option.bind l @@ fun l ->
         Some (E.mk_term Sy.(Op Record) l ty)
 
-      | Other (a, _) -> X.to_const_term a
+      | Other (a, _) -> X.to_model_term a
       | Access _ -> None
-    in fun r -> to_const_term (embed r)
+    in fun r -> to_model_term (embed r)
 end

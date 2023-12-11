@@ -195,9 +195,9 @@ module Shostak (X : ALIEN) = struct
        Thus we don't need to guess new values here. *)
     None
 
-  let to_const_term r =
+  let to_model_term r =
     match embed r with
     | Cons (hs, ty) ->
       Some (E.mk_term Sy.(Op (Constr hs)) [] ty)
-    | Alien a -> X.to_const_term a
+    | Alien a -> X.to_model_term a
 end

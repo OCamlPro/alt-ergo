@@ -1016,10 +1016,10 @@ let model_repr_of_term t env mrepr =
     (* We call this function during the model generation only. At this time,
        we are sure that representatives are constant semantic values. *)
     assert (X.is_constant rep);
-    match X.to_const_term rep with
+    match X.to_model_term rep with
     | Some v -> v, ME.add t v mrepr
     | None ->
-      (* [X.to_const_term] cannot fail on constant semantic values. *)
+      (* [X.to_model_term] cannot fail on constant semantic values. *)
       assert false
 
 (* A map of expressions to terms, ordered by depth first, and then by
