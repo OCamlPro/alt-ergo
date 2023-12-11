@@ -30,9 +30,11 @@
 
 type t = Hstring.t [@@deriving ord]
 
-let show hs = Util.quoted_string @@ Hstring.view hs
+let pp ppf id =
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf
+    (Dolmen.Std.Name.simple (Hstring.view id))
 
-let pp ppf id = Fmt.pf ppf "%s" (show id)
+let show id = Fmt.str "%a" pp id
 
 module Namespace = struct
   module type S = sig

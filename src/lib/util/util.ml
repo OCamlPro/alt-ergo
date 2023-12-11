@@ -212,25 +212,3 @@ let rec print_list_pp ~sep ~pp fmt = function
 
 let internal_error msg =
   Format.kasprintf (fun s -> raise (Internal_error s)) msg
-
-(* TODO: we have to update the way we manage quoted symbols after
-   the merge of https://github.com/Gbury/dolmen/pull/198 *)
-let quoted_string =
-  let no_need_to_quote s =
-    String.length s > 0 &&
-    (match s.[0] with | '0'..'9' -> false | _ -> true) &&
-    try
-      String.iter
-        (function
-          | 'a' .. 'z'
-          | 'A' .. 'Z'
-          | '0' .. '9'
-          | '~' | '!' | '@' | '$' | '%' | '^' | '&'
-          | '*' | '_' | '-' | '+' | '=' | '<' | '>'
-          | '.' | '?' | '/' -> ()
-          | _ -> raise Exit
-        ) s;
-      true
-    with Exit -> false
-  in
-  fun s -> if no_need_to_quote s then s else Fmt.str "|%s|" s
