@@ -175,7 +175,7 @@ val t_adt :
   ?body: ((string * (string * t) list) list) option ->
   string -> t list ->
   t
-(** Crearte and algebraic datatype. The body is a list of
+(** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
     then no definition will be registered for this type. The second
