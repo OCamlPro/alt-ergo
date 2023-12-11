@@ -46,11 +46,11 @@ module rec CX : sig
   val extract3 : r -> BITV.t option
   val embed3 : BITV.t -> r
 
-  val extract5 : r -> ENUM.t option
-  val embed5 : ENUM.t -> r
+  val extract4 : r -> ENUM.t option
+  val embed4 : ENUM.t -> r
 
-  val extract6 : r -> ADT.t option
-  val embed6 : ADT.t -> r
+  val extract5 : r -> ADT.t option
+  val embed5 : ADT.t -> r
 
 end =
 struct
@@ -211,8 +211,8 @@ struct
   let embed1 x = hcons {v = Arith x; id = -1000 (* dummy *)}
   let embed2 x = hcons {v = Records x; id = -1000 (* dummy *)}
   let embed3 x = hcons {v = Bitv x; id = -1000 (* dummy *)}
-  let embed5 x = hcons {v = Enum x; id = -1000 (* dummy *)}
-  let embed6 x = hcons {v = Adt x; id = -1000 (* dummy *)}
+  let embed4 x = hcons {v = Enum x; id = -1000 (* dummy *)}
+  let embed5 x = hcons {v = Adt x; id = -1000 (* dummy *)}
 
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
@@ -229,8 +229,8 @@ struct
   let extract1 = function { v=Arith r; _ } -> Some r | _ -> None
   let extract2 = function { v=Records r; _ } -> Some r | _ -> None
   let extract3 = function { v=Bitv r; _ } -> Some r | _ -> None
-  let extract5 = function { v=Enum r; _ } -> Some r | _ -> None
-  let extract6 = function { v=Adt r; _ } -> Some r | _ -> None
+  let extract4 = function { v=Enum r; _ } -> Some r | _ -> None
+  let extract5 = function { v=Adt r; _ } -> Some r | _ -> None
 
   let ac_extract = function
     | { v = Ac t; _ }   -> Some t
@@ -677,8 +677,8 @@ and ENUM : Sig.SHOSTAK
   Enum.Shostak
     (struct
       include CX
-      let extract = extract5
-      let embed = embed5
+      let extract = extract4
+      let embed = embed4
     end)
 
 and ADT : Sig.SHOSTAK
@@ -687,8 +687,8 @@ and ADT : Sig.SHOSTAK
   Adt.Shostak
     (struct
       include CX
-      let extract = extract6
-      let embed = embed6
+      let extract = extract5
+      let embed = embed5
     end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
