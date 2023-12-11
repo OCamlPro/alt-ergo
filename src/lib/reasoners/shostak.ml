@@ -389,6 +389,10 @@ struct
     | Term t ->
       begin
         let Expr.{ f; xs; _ } = Expr.term_view t in
+        (* We don't use [Expr.is_model_term] here to ensure that [t] is a
+           constant term because most of model terms are represented by
+           semantic values of builtin theories. Only constant terms of
+           type bool or void aren't managed by a builtin theory. *)
         match f, xs with
         | Symbols.(True | False | Void), [] -> true
         | _ -> false
