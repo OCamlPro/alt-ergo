@@ -3139,7 +3139,7 @@ module ArraysEx = struct
     let rty =
       match type_info a with
       | Tfarray (_, rty) -> rty
-      | _ -> invalid_arg "[Expr.ArraysEx.select]"
+      | _ -> invalid_arg "Expr.ArraysEx.select"
     in
     mk_term Sy.(Op Get) [a; i] rty
 
