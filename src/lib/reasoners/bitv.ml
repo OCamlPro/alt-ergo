@@ -345,7 +345,9 @@ module Shostak(X : ALIEN) = struct
 
   let is_mine_symb sy _ =
     match sy with
-    | Sy.Bitv _ | Sy.Op (Concat | Extract _ | BV2Nat | BVnot)  -> true
+    | Sy.Bitv _
+    | Op (Concat | Extract _ | BV2Nat | BVnot | BVand | BVor | BVxor)
+      -> true
     | _ -> false
 
   let embed r =
@@ -398,7 +400,12 @@ module Shostak(X : ALIEN) = struct
     let (and+) = (and*)
 
     let other ~neg t _sz ctx =
-      let r, ctx' = X.make t in
+      let r, ctx' =
+        match E.term_view t with
+        | { f = Op (BVand | BVor | BVxor); _ } ->
+          X.term_embed t, []
+        | _ -> X.make t
+      in
       let ctx = List.rev_append ctx' ctx in
       let bv = embed r in
       if neg then negate_abstract bv, ctx else bv, ctx
