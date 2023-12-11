@@ -439,7 +439,8 @@ module Shostak (X : ALIEN) = struct
         Option.bind l @@ fun l ->
         Some (E.mk_term Sy.(Op Record) l ty)
 
-      | Other (a, _) -> X.to_model_term a
+      | Other (a, _) ->
+        X.to_model_term a
       | Access _ -> None
     in fun r -> to_model_term (embed r)
 end

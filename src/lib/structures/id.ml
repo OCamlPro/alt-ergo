@@ -30,6 +30,8 @@
 
 type t = Hstring.t [@@deriving ord]
 
+let equal = Hstring.equal
+
 let pp ppf id =
   Dolmen.Smtlib2.Script.Poly.Print.id ppf
     (Dolmen.Std.Name.simple (Hstring.view id))

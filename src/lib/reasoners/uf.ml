@@ -1065,8 +1065,7 @@ let terms env =
 
 (* Helper functions used by the caches during the computation of the model. *)
 module Cache = struct
-  let store_array_get arrays_cache (t : Expr.t) (i : ModelMap.Value.t)
-      (v : ModelMap.Value.t) =
+  let store_array_get arrays_cache (t : Expr.t) (i : Expr.t) (v : Expr.t) =
     match Hashtbl.find_opt arrays_cache t with
     | Some values ->
       Hashtbl.replace values i v
@@ -1080,17 +1079,17 @@ module Cache = struct
     match Hashtbl.find_opt abstracts_cache r with
     | Some abstract -> abstract
     | None ->
-      let abstract = Id.Namespace.Abstract.fresh () |> Hstring.make in
+      let abstract = Expr.mk_abstract (Expr.type_info t) in
       Hashtbl.add abstracts_cache r abstract;
       abstract
 end
 
 type cache = {
-  array_selects: (Expr.t, (ModelMap.Value.t, ModelMap.Value.t) Hashtbl.t)
+  array_selects: (Expr.t, (Expr.t, Expr.t) Hashtbl.t)
       Hashtbl.t;
   (** Stores all the get accesses to arrays. *)
 
-  abstracts: (r, Id.t) Hashtbl.t;
+  abstracts: (r, Expr.t) Hashtbl.t;
   (** Stores all the abstract values generated. This cache is necessary
       to ensure we don't generate twice an abstract value for a given symbol. *)
 }
@@ -1131,7 +1130,7 @@ let compute_concrete_model_of_val cache =
           List.fold_left
             (fun (arg_vals, arg_tys, mrepr) arg ->
                let rep_arg, mrepr = model_repr_of_term arg env mrepr in
-               ModelMap.Value.Constant rep_arg :: arg_vals,
+               rep_arg :: arg_vals,
                (Expr.type_info arg) :: arg_tys,
                mrepr
             )
@@ -1152,9 +1151,9 @@ let compute_concrete_model_of_val cache =
 
         | Sy.Op Sy.Set, _, _ -> acc
 
-        | Sy.Op Sy.Get, [Constant a; i], _ ->
+        | Sy.Op Sy.Get, [a; i], _ ->
           begin
-            store_array_select a i (Constant ret_rep);
+            store_array_select a i ret_rep;
             acc
           end
 
@@ -1165,9 +1164,8 @@ let compute_concrete_model_of_val cache =
               (* We cannot produce a concrete value as the type is abstract.
                  In this case, we produce an abstract value with the appropriate
                  type. *)
-              let abstract = get_abstract_for env t in
-              ModelMap.Value.Abstract (abstract, ty)
-            | _ -> ModelMap.Value.Constant ret_rep
+              get_abstract_for env t
+            | _ -> ret_rep
           in
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
 
@@ -1188,7 +1186,6 @@ let extract_concrete_model cache =
         terms (ModelMap.empty ~suspicious, ME.empty)
     in
     let model =
-      let open ModelMap.Value in
       Hashtbl.fold (fun t vals mdl ->
           (* We produce a fresh identifiant for abstract value in order to
              prevent any capture. *)
@@ -1196,8 +1193,8 @@ let extract_concrete_model cache =
           let ty = Expr.type_info t in
           let arr_val =
             Hashtbl.fold (fun i v arr_val ->
-                Store (arr_val, i, v)
-              ) vals (Abstract (abstract, ty))
+                Expr.ArraysEx.store arr_val i v
+              ) vals abstract
           in
           let id =
             let Expr.{ f; _ } = Expr.term_view t in
@@ -1208,7 +1205,21 @@ let extract_concrete_model cache =
                  [array_selects]. *)
               assert false
           in
-          ModelMap.add (id, [], ty) [] arr_val mdl
+          let mdl =
+            if not @@ Id.Namespace.Internal.is_id (Hstring.view id) then
+              ModelMap.add (id, [], ty) [] arr_val mdl
+            else
+              (* Internal identifiers can occur here if we need to generate
+                 a model term for an embedded array but this array isn't itself
+                 declared by the user. *)
+              mdl
+          in
+          (* We need to update the model [mdl] in order to substitute all the
+             occurrences of the array identifier [id] by an appropriate model
+             term. This cannot be performed while computing the model with
+             `compute_concrete_model_of_val` because we need to first iterate
+             on all the union-find environment to collect array values. *)
+          ModelMap.subst id arr_val mdl
         ) cache.array_selects model
     in
     { Models.propositional = prop_model; model; term_values = mrepr }

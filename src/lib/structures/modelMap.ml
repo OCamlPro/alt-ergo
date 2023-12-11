@@ -33,40 +33,17 @@ module Sy = Symbols
 
 type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
 
-module Value = struct
-  type t =
-    | Abstract of Id.t * Ty.t
-    | Store of t * t * t
-    | Constant of Expr.t
-  [@@deriving ord]
-
-  let rec pp ppf v =
-    match v with
-    | Abstract (id, ty) ->
-      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
-    | Store (arr, i, v) ->
-      Fmt.pf ppf "(@[<hv>store@ %a@ %a %a)@]"
-        pp arr pp i pp v
-    | Constant e ->
-      Expr.pp_smtlib ppf e
-
-  module Map = Map.Make (struct
-      type nonrec t = t
-
-      let compare = compare
-    end)
-end
-
 module Graph = struct
   module M = Map.Make
       (struct
-        type t = Value.t list [@@deriving ord]
+        type t = Expr.t list [@@deriving ord]
       end)
 
-  type t = Value.t M.t
+  type t = Expr.t M.t
 
   let empty = M.empty
   let add = M.add
+  let map = M.map
 
   (* A fiber of the function [f] over a value [v] is the set of all the values
      in the domain of [f] whose the image by [f] is [v].
@@ -75,11 +52,11 @@ module Graph = struct
      non-empty fibers of the function represented by its graph. *)
   module Fiber = struct
     include Set.Make (struct
-        type t = Value.t list [@@deriving ord]
+        type t = Expr.t list [@@deriving ord]
       end)
 
     let pp_arg ppf (ctr, arg) =
-      Fmt.pf ppf "(= arg_%i %a)" ctr Value.pp arg
+      Fmt.pf ppf "(= arg_%i %a)" ctr Expr.pp_smtlib arg
 
     (* For an argument (x_1, ..., x_n) of the function represented by the graph,
        prints the SMT-LIB formula:
@@ -112,26 +89,26 @@ module Graph = struct
   (* Compute all the fibers of the function represented by the graph. *)
   let inverse graph =
     M.fold (fun arg_vals ret_val acc ->
-        match Value.Map.find_opt ret_val acc with
+        match Expr.Map.find_opt ret_val acc with
         | Some fib ->
-          Value.Map.add ret_val (Fiber.add arg_vals fib) acc
+          Expr.Map.add ret_val (Fiber.add arg_vals fib) acc
         | None ->
-          Value.Map.add ret_val (Fiber.of_list [arg_vals]) acc
-      ) graph Value.Map.empty
+          Expr.Map.add ret_val (Fiber.of_list [arg_vals]) acc
+      ) graph Expr.Map.empty
 
   let pp_inverse ppf rel =
     let rec aux ppf seq =
       match seq () with
       | Seq.Nil -> ()
       | Cons ((ret_val, _), seq) when Stdcompat.Seq.is_empty seq ->
-        Fmt.pf ppf "%a" Value.pp ret_val
+        Fmt.pf ppf "%a" Expr.pp_smtlib ret_val
       | Cons ((ret_val, fiber), seq) ->
         Fmt.pf ppf "(@[<hv>ite %a@ %a@ %a)@]"
           Fiber.pp fiber
-          Value.pp ret_val
+          Expr.pp_smtlib ret_val
           aux seq
     in
-    aux ppf (Value.Map.to_seq rel)
+    aux ppf (Expr.Map.to_seq rel)
 end
 
 module P = Map.Make
@@ -157,13 +134,33 @@ let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
 
 let empty ~suspicious = { values = P.empty; suspicious }
 
+let rec subst_in_term id e c =
+  let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
+  match f, xs with
+  | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
+    let ty = Expr.type_info e in
+    if not @@ Ty.equal ty ty' then
+      raise (Errors.Error (Model_error (Subst_type_clash (id, ty', ty))));
+    e
+  | _ ->
+    begin
+      let xs = List.map (subst_in_term id e) xs in
+      Expr.mk_term f xs ty'
+    end
+
+let subst id e { values; suspicious } =
+  if not @@ Expr.is_model_term e then
+    raise (Errors.Error (Model_error (Subst_not_model_term e)));
+  let values = P.map (Graph.map (subst_in_term id e)) values in
+  { values; suspicious }
+
 let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
   let pp_unused ppf unused = if unused then Fmt.pf ppf "_" else () in
   Fmt.pf ppf "(%aarg_%i %a)" pp_unused unused arg_name Ty.pp_smtlib arg_ty
 
 let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
   let inverse_rel = Graph.inverse graph in
-  let is_constant = Value.Map.cardinal inverse_rel = 1 in
+  let is_constant = Expr.Map.cardinal inverse_rel = 1 in
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
     Id.pp id

@@ -89,6 +89,10 @@ type mode_error =
   | Invalid_set_option of string
   | Forbidden_command of string
 
+type model_error =
+  | Subst_type_clash of Id.t * Ty.t * Ty.t
+  | Subst_not_model_term of Expr.t
+
 type error =
   | Parser_error of string
   | Lexical_error of Loc.t * string
@@ -98,6 +102,7 @@ type error =
   | Warning_as_error
   | Dolmen_error of (int * string)
   | Mode_error of Util.mode * mode_error
+  | Model_error of model_error
 
 exception Error of error
 
@@ -252,6 +257,18 @@ let report_mode_error fmt = function
   | Forbidden_command s ->
     fprintf fmt "Command %s" s
 
+let report_model_error ppf = function
+  | Subst_type_clash (id, ty1, ty2) ->
+    Fmt.pf ppf
+      "Cannot substitute the identifier %a of type %a by an expression of \
+       type %a"
+      Id.pp id
+      Ty.pp_smtlib ty1
+      Ty.pp_smtlib ty2
+
+  | Subst_not_model_term e ->
+    Fmt.pf ppf "The expression %a is not a model term" Expr.print e
+
 let report fmt = function
   | Parser_error s ->
     Format.fprintf fmt "Parser Error: %s" s;
@@ -277,3 +294,4 @@ let report fmt = function
       "Invalid action during %a mode: %a"
       Util.pp_mode mode
       report_mode_error merr;
+  | Model_error err -> report_model_error fmt err

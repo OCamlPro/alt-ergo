@@ -440,6 +440,10 @@ module SmtPrinter = struct
 
     | Sy.False, [] -> Fmt.pf ppf "false"
 
+    | Sy.Name { hs = n; _ }, []
+      when Id.Namespace.Abstract.is_id (Hstring.view n) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
+
     | Sy.Name { hs = n; _ }, [] -> Symbols.pp_name ppf (Hstring.view n)
 
     | Sy.Name { hs = n; _ }, _ :: _ ->
@@ -903,6 +907,10 @@ let void = mk_term (Sy.Void) [] Ty.Tunit
 
 let fresh_name ty = mk_term (Sy.fresh_internal_name ()) [] ty
 
+let mk_abstract ty =
+  let id = Id.Namespace.Abstract.fresh () |> Hstring.make in
+  mk_term (Sy.Name { hs = id; defined = false; kind = Other }) [] ty
+
 let is_internal_name t =
   match t with
   | { f; xs = []; _ } -> Sy.is_fresh_internal_name f
@@ -1025,7 +1033,7 @@ let mk_ite cond th el =
 
 let rec is_model_term e =
   match e.f, e.xs with
-  | (Op Constr _ | Op Record), xs -> List.for_all is_model_term xs
+  | (Op Constr _ | Op Record | Op Set), xs -> List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero

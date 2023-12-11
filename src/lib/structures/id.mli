@@ -30,6 +30,7 @@
 
 type t = Hstring.t [@@deriving ord]
 
+val equal : t -> t -> bool
 val show : t -> string
 val pp : t Fmt.t
 

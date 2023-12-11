@@ -34,23 +34,10 @@ type sy = Id.t * Ty.t list * Ty.t
     - The types of its arguments.
     - The returned type. *)
 
-module Value : sig
-  type t =
-    | Abstract of Id.t * Ty.t
-    | Store of t * t * t
-    | Constant of Expr.t
-    (** [Constant e] represents a constant value [e]. The expression
-        [e] is always a constant according to [Expr.is_model_term]. *)
-
-  val pp : t Fmt.t
-  (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the
-      SMT-LIB format. *)
-end
-
 type t
 (** Type of model. *)
 
-val add : sy -> Value.t list -> Value.t -> t -> t
+val add : sy -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
 
@@ -58,6 +45,13 @@ val empty : suspicious:bool -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
+
+val subst : Id.t -> Expr.t -> t -> t
+(** [subst id e mdl] substitutes all the occurrences of the identifier [id]
+    in the model [mdl] by the model term [e].
+
+    @Raise Error if the expression [e] is not a model term or the type of
+           [e] doesn't agree with some occurrence of [id] in the model. *)
 
 val pp : t Fmt.t
 (** [pp ppf mdl] prints the model [mdl] on the formatter [ppf] using the

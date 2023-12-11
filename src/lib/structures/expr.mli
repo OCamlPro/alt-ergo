@@ -202,6 +202,11 @@ val int : string -> t
 val real : string -> t
 val bitv : string -> Ty.t -> t
 val fresh_name : Ty.t -> t
+
+val mk_abstract : Ty.t -> t
+(** [mk_abstract ty] creates an abstract model term of type [ty].
+    This function is intended to be used only in models. *)
+
 val pred : t -> t
 
 (** smart constructors for literals *)
