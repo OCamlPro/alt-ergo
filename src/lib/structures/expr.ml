@@ -1023,17 +1023,16 @@ let mk_ite cond th el =
     if ty == Ty.Tbool then mk_if cond th el
     else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
-let rec is_const_term e =
+let rec is_model_term e =
   match e.f, e.xs with
-  | (Op Constr _ | Op Record), xs ->
-    List.for_all is_const_term xs
+  | (Op Constr _ | Op Record), xs -> List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
-  | (True | False | Void | Name _ | Int _ | Real _ | Bitv _ | Var _), [] -> true
+  | (True | False | Void | Name _ | Int _ | Real _ | Bitv _), [] -> true
   | _ -> false
 
-let[@inline always] const_term e =
+let[@inline always] is_value_term e =
   (* We use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
      some regression). *)
@@ -1386,7 +1385,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
     let _, nb_occ = Var.Map.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal (Sy.var let_v) in_e.f) ||
-       const_term let_e then (* inline in these situations *)
+       is_value_term let_e then (* inline in these situations *)
       apply_subst_aux (Var.Map.singleton let_v let_e, Ty.esubst) in_e
     else
       let ty = type_info in_e in

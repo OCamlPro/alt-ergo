@@ -40,7 +40,7 @@ module Value : sig
     | Store of t * t * t
     | Constant of Expr.t
     (** [Constant e] represents a constant value [e]. The expression
-        [e] is always a constant according to [Expr.is_const_term]. *)
+        [e] is always a constant according to [Expr.is_model_term]. *)
 
   val pp : t Fmt.t
   (** [pp ppf v] prints the model value [v] on the formatter [ppf] using the

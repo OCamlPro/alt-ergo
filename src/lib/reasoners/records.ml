@@ -415,7 +415,7 @@ module Shostak (X : ALIEN) = struct
     | Access _ -> None
 
     | Record (_, ty) ->
-      if List.exists (fun (t,_) -> Expr.is_const_term t) eq
+      if List.exists (fun (t,_) -> Expr.is_model_term t) eq
       then None
       else Some (Expr.fresh_name ty, false)
 

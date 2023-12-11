@@ -335,13 +335,13 @@ val print_th_elt : Format.formatter -> th_elt -> unit
 
 val is_pure : t -> bool
 
-val is_const_term : t -> bool
-(** [is_const_term e] checks if the expression [e] is a constant terms.
-    A constant term can be:
-    - A record definition involving only constant terms.
-    - A constructor application involving only constant terms,
+val is_model_term : t -> bool
+(** [is_model_term e] checks if the expression [e] is a model terms.
+    A model term can be:
+    - A record definition involving only model terms.
+    - A constructor application involving only model terms,
     - A literal of a basic type (integer, real, boolean, unit or bitvector),
-    - A variable or an application of function of arity [0]. *)
+    - An application of function of arity [0]. *)
 
 val save_cache: unit -> unit
 (** Saves the modules cache *)

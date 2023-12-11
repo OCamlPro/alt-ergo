@@ -325,7 +325,7 @@ module Make (X : Sig.X) = struct
     let module SX = Set.Make(struct type t=r let compare = X.hash_cmp end) in
     let exception Found of Expr.t in
     fun r distincts eq ->
-      if List.exists (fun (t,(_:r)) -> Expr.is_const_term t) eq then
+      if List.exists (fun (t,(_:r)) -> Expr.is_model_term t) eq then
         None
       else
         (*match X.ac_extract r with

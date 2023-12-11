@@ -280,11 +280,11 @@ struct
       | Enum _ -> ENUM.to_const_term r
       | Adt _ -> ADT.to_const_term r
       | Ite _ -> ITE.to_const_term r
-      | Term t when Expr.is_const_term t -> Some t
+      | Term t when Expr.is_model_term t -> Some t
       | Ac _ | Term _ -> None
     in
     Option.bind res @@ fun t ->
-    assert (Expr.is_const_term t);
+    assert (Expr.is_model_term t);
     Some t
 
   let top () = term_embed Expr.vrai
@@ -670,8 +670,8 @@ struct
           end
 
       | Term t, ty      -> (* case disable_adts() handled here *)
-        if Expr.is_const_term t ||
-           List.exists (fun (t,_) -> Expr.is_const_term t) eq then None
+        if Expr.is_model_term t ||
+           List.exists (fun (t,_) -> Expr.is_model_term t) eq then None
         else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
       | _               ->
         (* There is no model-generation support for the AC symbols yet.
