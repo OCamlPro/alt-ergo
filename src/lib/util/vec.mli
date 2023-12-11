@@ -86,8 +86,7 @@ val push : 'a t -> 'a -> unit
 
 val get : 'a t -> int -> 'a
 (** Get the element at the given index, or
-    @raise Invalid_argument if the index is not valid.
-    @raise Not_found if the retrieved value is dummy. *)
+    @raise Invalid_argument if the index is not valid. *)
 
 val set : 'a t -> int -> 'a -> unit
 (** Set the element at the given index, either already set or the first
@@ -109,19 +108,19 @@ val sort : 'a t -> ('a -> 'a -> int) -> unit
 (** Sort in place the vector. *)
 
 val iter : ('a -> unit) -> 'a t -> unit
-(** Iterate on elements. Ignore dummy elements. *)
+(** Iterate on elements. *)
 
 val iteri : (int -> 'a -> unit) -> 'a t -> unit
-(** Iterate on elements with their index. Ignore dummy elements. *)
+(** Iterate on elements with their index. *)
 
 val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b
-(** Fold over elements. Ignore dummy elements. *)
+(** Fold over elements. *)
 
 val exists : ('a -> bool) -> 'a t -> bool
-(** Does there exist a non-dummy element that satisfies the predicate? *)
+(** Does there exist an element that satisfies the predicate? *)
 
 val for_all : ('a -> bool) -> 'a t -> bool
-(** Do all non-dummy elements satisfy the predicate? *)
+(** Do all elements satisfy the predicate? *)
 
 val pp : 'a Fmt.t -> 'a t Fmt.t
 (** [pp pp_elt ppf vec] prints on the formatter [ppf] all the elements of [vec]
