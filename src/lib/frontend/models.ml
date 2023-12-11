@@ -231,8 +231,6 @@ module Pp_smtlib_term = struct
 
 end
 
-(* of module SmtlibCounterExample *)
-
 module Why3CounterExample = struct
   let pp_term fmt t =
     if Options.get_output_format () == Why3 then
