@@ -391,10 +391,12 @@ struct
         let Expr.{ f; xs; _ } = Expr.term_view t in
         (* We don't use [Expr.is_model_term] here to ensure that [t] is a
            constant term because most of model terms are represented by
-           semantic values of builtin theories. Only constant terms of
-           type bool or void aren't managed by a builtin theory. *)
+           semantic values of builtin theories. Constant terms not managed by
+           builtin theories have to be considered as constant semantic
+           values. In particular, this code enforces the invariant:
+             [e] is a model term ==> [X.make e] is a constant semantic value. *)
         match f, xs with
-        | Symbols.(True | False | Void), [] -> true
+        | Symbols.(True | False | Void | Name _), [] -> true
         | _ -> false
       end
     | Ac _ -> false

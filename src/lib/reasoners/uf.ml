@@ -1013,24 +1013,14 @@ let model_repr_of_term t env mrepr =
   with Not_found ->
     let mk = try ME.find t env.make with Not_found -> assert false in
     let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
-    let cls =
-      try
-        Expr.Set.elements (MapX.find rep env.classes)
-        |> List.map (fun t -> Expr.Map.find t env.make)
-        |> List.filter X.is_constant
-      with Not_found -> assert false
-    in
-    let tt =
-      match cls with
-      | [] ->
-        (* We do this because terms of some semantic values created by CS
-           aren't created and added to the union-find. *)
-        X.to_const_term rep
-      | r :: _ -> X.to_const_term r
-    in
-    match tt with
-    | Some tt -> tt, ME.add t tt mrepr
-    | None -> assert false
+    (* We call this function during the model generation only. At this time,
+       we are sure that representatives are constant semantic values. *)
+    assert (X.is_constant rep);
+    match X.to_const_term rep with
+    | Some v -> v, ME.add t v mrepr
+    | None ->
+      (* [X.to_const_term] cannot fail on constant semantic values. *)
+      assert false
 
 (* A map of expressions to terms, ordered by depth first, and then by
    [Expr.compare] for expressions with same depth. This structure will
