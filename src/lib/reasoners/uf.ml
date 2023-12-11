@@ -1221,7 +1221,7 @@ let extract_concrete_model cache =
           ModelMap.add (id, [], ty) [] arr_val mdl
         ) cache.array_selects model
     in
-    { Models.propositional = prop_model; model; terms_values = mrepr }
+    { Models.propositional = prop_model; model; term_values = mrepr }
 
 let extract_concrete_model ~prop_model =
   let cache : cache = {

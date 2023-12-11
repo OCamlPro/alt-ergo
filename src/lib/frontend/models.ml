@@ -38,13 +38,13 @@ let constraints = ref MS.empty
 type t = {
   propositional : Expr.Set.t;
   model : ModelMap.t;
-  terms_values : Expr.t Expr.Map.t
+  term_values : Expr.t Expr.Map.t
 }
 
 let empty = {
   propositional = Expr.Set.empty;
   model = ModelMap.empty ~suspicious:false;
-  terms_values = Expr.Map.empty;
+  term_values = Expr.Map.empty;
 }
 
 module Pp_smtlib_term = struct
