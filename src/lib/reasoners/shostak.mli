@@ -47,17 +47,11 @@ module Records : Sig.SHOSTAK
 module Bitv : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Bitv.abstract
 
-module Arrays : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Arrays.abstract
-
 module Enum : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Enum.abstract
 
 module Adt : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Adt.abstract
-
-module Ite : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Ite.abstract
 
 module Ac : Ac.S with type r = Combine.r and type t = Combine.r Sig.ac
 

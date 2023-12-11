@@ -47,9 +47,9 @@
     Cnf D_cnf D_loop D_state_option Input Frontend Parsed_interface Typechecker
     Models
     ; reasoners
-    Ac Arith Arrays Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel
+    Ac Arith Arrays_rel Bitv Ccx Shostak Relation Enum Enum_rel
     Fun_sat Fun_sat_frontend Inequalities Bitv_rel Th_util Adt Adt_rel
-    Instances IntervalCalculus Intervals Ite_rel Ite Matching Matching_types
+    Instances IntervalCalculus Intervals Ite_rel Matching Matching_types
     Polynome Records Records_rel Satml_frontend_hybrid Satml_frontend Satml
     Sat_solver Sat_solver_sig Sig Sig_rel Theory Uf Use Rel_utils Bitlist
     ; structures

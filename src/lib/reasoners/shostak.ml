@@ -46,17 +46,11 @@ module rec CX : sig
   val extract3 : r -> BITV.t option
   val embed3 : BITV.t -> r
 
-  val extract4 : r -> ARRAYS.t option
-  val embed4 : ARRAYS.t -> r
-
   val extract5 : r -> ENUM.t option
   val embed5 : ENUM.t -> r
 
   val extract6 : r -> ADT.t option
   val embed6 : ADT.t -> r
-
-  val extract7 : r -> ITE.t option
-  val embed7 : ITE.t -> r
 
 end =
 struct
@@ -67,10 +61,8 @@ struct
     | Arith of ARITH.t
     | Records of RECORDS.t
     | Bitv of BITV.t
-    | Arrays of ARRAYS.t
     | Enum of ENUM.t
     | Adt of ADT.t
-    | Ite of ITE.t
 
   type r = {v : rview ; id : int}
 
@@ -85,10 +77,8 @@ struct
         | Arith t -> fprintf fmt "%a" ARITH.print t
         | Records t -> fprintf fmt "%a" RECORDS.print t
         | Bitv t -> fprintf fmt "%a" BITV.print t
-        | Arrays t -> fprintf fmt "%a" ARRAYS.print t
         | Enum t -> fprintf fmt "%a" ENUM.print t
         | Adt t -> fprintf fmt "%a" ADT.print t
-        | Ite t -> fprintf fmt "%a" ITE.print t
         | Term t -> fprintf fmt "%a" Expr.print t
         | Ac t -> fprintf fmt "%a" AC.print t
       end
@@ -100,14 +90,10 @@ struct
           fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
         | Bitv t ->
           fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
-        | Arrays t ->
-          fprintf fmt "Arrays(%s):[%a]" ARRAYS.name ARRAYS.print t
         | Enum t ->
           fprintf fmt "Enum(%s):[%a]" ENUM.name ENUM.print t
         | Adt t ->
           fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
-        | Ite t ->
-          fprintf fmt "Ite(%s):[%a]" ITE.name ITE.print t
         | Term t ->
           fprintf fmt "FT:[%a]" Expr.print t
         | Ac t ->
@@ -186,10 +172,8 @@ struct
         | Arith x -> 1 + 10 * ARITH.hash x
         | Records x -> 2 + 10 * RECORDS.hash x
         | Bitv x -> 3 + 10 * BITV.hash x
-        | Arrays x -> 4 + 10 * ARRAYS.hash x
         | Enum x -> 5 + 10 * ENUM.hash x
         | Adt x -> 6 + 10 * ADT.hash x
-        | Ite x -> 7 + 10 * ITE.hash x
         | Ac ac -> 9 + 10 * AC.hash ac
         | Term t -> 8 + 10 * Expr.hash t
       in
@@ -200,10 +184,8 @@ struct
       | Arith x, Arith y -> ARITH.equal x y
       | Records x, Records y -> RECORDS.equal x y
       | Bitv x, Bitv y -> BITV.equal x y
-      | Arrays x, Arrays y -> ARRAYS.equal x y
       | Enum x, Enum y -> ENUM.equal x y
       | Adt x, Adt y -> ADT.equal x y
-      | Ite x, Ite y -> ITE.equal x y
       | Term x, Term y -> Expr.equal x y
       | Ac x, Ac y -> AC.equal x y
       | _ -> false
@@ -229,10 +211,8 @@ struct
   let embed1 x = hcons {v = Arith x; id = -1000 (* dummy *)}
   let embed2 x = hcons {v = Records x; id = -1000 (* dummy *)}
   let embed3 x = hcons {v = Bitv x; id = -1000 (* dummy *)}
-  let embed4 x = hcons {v = Arrays x; id = -1000 (* dummy *)}
   let embed5 x = hcons {v = Enum x; id = -1000 (* dummy *)}
   let embed6 x = hcons {v = Adt x; id = -1000 (* dummy *)}
-  let embed7 x = hcons {v = Ite x; id = -1000 (* dummy *)}
 
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
@@ -249,10 +229,8 @@ struct
   let extract1 = function { v=Arith r; _ } -> Some r | _ -> None
   let extract2 = function { v=Records r; _ } -> Some r | _ -> None
   let extract3 = function { v=Bitv r; _ } -> Some r | _ -> None
-  let extract4 = function { v=Arrays r; _ } -> Some r | _ -> None
   let extract5 = function { v=Enum r; _ } -> Some r | _ -> None
   let extract6 = function { v=Adt r; _ } -> Some r | _ -> None
-  let extract7 = function { v=Ite r; _ } -> Some r | _ -> None
 
   let ac_extract = function
     | { v = Ac t; _ }   -> Some t
@@ -263,10 +241,8 @@ struct
     | Arith _ -> ARITH.term_extract r
     | Records _ -> RECORDS.term_extract r
     | Bitv _ -> BITV.term_extract r
-    | Arrays _ -> ARRAYS.term_extract r
     | Enum _ -> ENUM.term_extract r
     | Adt _ -> ADT.term_extract r
-    | Ite _ -> ITE.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -276,10 +252,8 @@ struct
       | Arith _ -> ARITH.to_model_term r
       | Records _ -> RECORDS.to_model_term r
       | Bitv _ -> BITV.to_model_term r
-      | Arrays _ -> ARRAYS.to_model_term r
       | Enum _ -> ENUM.to_model_term r
       | Adt _ -> ADT.to_model_term r
-      | Ite _ -> ITE.to_model_term r
       | Term t when Expr.is_model_term t -> Some t
       | Ac _ | Term _ -> None
     in
@@ -294,10 +268,8 @@ struct
     | { v = Arith t; _ } -> ARITH.type_info t
     | { v = Records t; _ } -> RECORDS.type_info t
     | { v = Bitv t; _ } -> BITV.type_info t
-    | { v = Arrays t; _ } -> ARRAYS.type_info t
     | { v = Enum t; _ } -> ENUM.type_info t
     | { v = Adt t; _ } -> ADT.type_info t
-    | { v = Ite t; _ } -> ITE.type_info t
     | { v = Ac x; _ } -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
 
@@ -309,10 +281,8 @@ struct
     | Arith _ -> -3
     | Records _ -> -4
     | Bitv _ -> -5
-    | Arrays _ -> -6
     | Enum _ -> -7
     | Adt _ -> -8
-    | Ite _ -> -9
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -323,10 +293,8 @@ struct
       | Arith _, Arith _ -> ARITH.compare a b
       | Records _, Records _ -> RECORDS.compare a b
       | Bitv _, Bitv _ -> BITV.compare a b
-      | Arrays _, Arrays _ -> ARRAYS.compare a b
       | Enum _, Enum _ -> ENUM.compare a b
       | Adt _, Adt _ -> ADT.compare a b
-      | Ite _, Ite _ -> ITE.compare a b
       | Term x, Term y -> Expr.compare x y
       | Ac x, Ac y -> AC.compare x y
       | va, vb -> compare_tag va vb
@@ -370,10 +338,8 @@ struct
     | Arith t -> ARITH.leaves t
     | Records t -> RECORDS.leaves t
     | Bitv t -> BITV.leaves t
-    | Arrays t -> ARRAYS.leaves t
     | Enum t -> ENUM.leaves t
     | Adt t -> ADT.leaves t
-    | Ite t -> ITE.leaves t
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
@@ -382,10 +348,8 @@ struct
     | Arith t -> ARITH.is_constant t
     | Records t -> RECORDS.is_constant t
     | Bitv t -> BITV.is_constant t
-    | Arrays t -> ARRAYS.is_constant t
     | Enum t -> ENUM.is_constant t
     | Adt t -> ADT.is_constant t
-    | Ite t -> ITE.is_constant t
     | Term t ->
       begin
         let Expr.{ f; xs; _ } = Expr.term_view t in
@@ -402,10 +366,8 @@ struct
       | Arith t -> ARITH.subst p v t
       | Records t -> RECORDS.subst p v t
       | Bitv t -> BITV.subst p v t
-      | Arrays t -> ARRAYS.subst p v t
       | Enum t -> ENUM.subst p v t
       | Adt t -> ADT.subst p v t
-      | Ite t -> ITE.subst p v t
       | Ac t -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
@@ -416,29 +378,23 @@ struct
       ARITH.is_mine_symb sb ty,
       not_restricted && RECORDS.is_mine_symb sb ty,
       not_restricted && BITV.is_mine_symb sb ty,
-      not_restricted && ARRAYS.is_mine_symb sb ty,
       not_restricted && ENUM.is_mine_symb sb ty,
       not_restricted && ADT.is_mine_symb sb ty,
-      not_restricted && ITE.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false , false, false, false, false, false ->
+    | true  , false , false, false, false, false ->
       ARITH.make t
-    | false , true  , false , false, false, false, false, false ->
+    | false , true  , false, false, false, false ->
       RECORDS.make t
-    | false , false , true  , false, false, false, false, false ->
+    | false , false , true  , false, false, false ->
       BITV.make t
-    | false , false , false , true , false, false, false, false ->
-      ARRAYS.make t
-    | false , false , false , false, true , false, false, false ->
+    | false , false , false , true , false, false ->
       ENUM.make t
-    | false , false , false , false, false, true , false, false ->
+    | false , false , false , false, true , false ->
       ADT.make t
-    | false , false , false , false, false, false, true , false ->
-      ITE.make t
-    | false , false , false , false, false, false, false, true  ->
+    | false , false , false , false, false, true  ->
       AC.make t
-    | false , false , false , false, false, false, false, false ->
+    | false , false , false , false, false, false ->
       term_embed t, []
     | _ -> assert false
 
@@ -448,29 +404,23 @@ struct
       ARITH.is_mine_symb sb ty,
       not_restricted && RECORDS.is_mine_symb sb ty,
       not_restricted && BITV.is_mine_symb sb ty,
-      not_restricted && ARRAYS.is_mine_symb sb ty,
       not_restricted && ENUM.is_mine_symb sb ty,
       not_restricted && ADT.is_mine_symb sb ty,
-      not_restricted && ITE.is_mine_symb sb ty,
       AC.is_mine_symb sb ty
     with
-    | true  , false , false , false, false, false, false, false ->
+    | true  , false , false, false, false, false ->
       ARITH.fully_interpreted sb
-    | false , true  , false , false, false, false, false, false ->
+    | false , true  , false, false, false, false ->
       RECORDS.fully_interpreted sb
-    | false , false , true  , false, false, false, false, false ->
+    | false , false , true  , false, false, false ->
       BITV.fully_interpreted sb
-    | false , false , false , true , false, false, false, false ->
-      ARRAYS.fully_interpreted sb
-    | false , false , false , false, true , false, false, false ->
+    | false , false , false , true , false, false ->
       ENUM.fully_interpreted sb
-    | false , false , false , false, false, true , false, false ->
+    | false , false , false , false, true, false ->
       ADT.fully_interpreted sb
-    | false , false , false , false, false, false, true , false ->
-      ITE.fully_interpreted sb
-    | false , false , false , false, false, false, false, true  ->
+    | false , false , false , false, false, true  ->
       AC.fully_interpreted sb
-    | false , false , false , false, false, false, false, false ->
+    | false , false , false , false, false, false ->
       false
     | _ -> assert false
 
@@ -479,9 +429,7 @@ struct
     not (Options.get_restricted ()) &&
     (RECORDS.is_mine_symb sb ty ||
      BITV.is_mine_symb sb ty ||
-     ARRAYS.is_mine_symb sb ty ||
      ENUM.is_mine_symb sb ty)
-
 
   let is_a_leaf r = match r.v with
     | Term _ | Ac _ -> true
@@ -497,26 +445,20 @@ struct
         ARITH.is_mine_symb ac.Sig.h ty,
         RECORDS.is_mine_symb ac.Sig.h ty,
         BITV.is_mine_symb ac.Sig.h ty,
-        ARRAYS.is_mine_symb ac.Sig.h ty,
         ENUM.is_mine_symb ac.Sig.h ty,
         ADT.is_mine_symb ac.Sig.h ty,
-        ITE.is_mine_symb ac.Sig.h ty,
         AC.is_mine_symb ac.Sig.h ty with
       (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
-      | true  , false , false , false, false, false, false, false ->
+      | true , false, false, false, false, false ->
         ARITH.color ac
-      | false , true  , false , false, false, false, false, false ->
+      | false , true  , false, false, false, false ->
         RECORDS.color ac
-      | false , false , true  , false, false, false, false, false ->
+      | false , false , true  , false, false, false ->
         BITV.color ac
-      | false , false , false , true , false, false, false, false ->
-        ARRAYS.color ac
-      | false , false , false , false, true , false, false, false ->
+      | false , false , false , true , false, false ->
         ENUM.color ac
-      | false , false , false , false, false, true , false, false ->
+      | false , false , false , false, true, false ->
         ADT.color ac
-      | false , false , false , false, false, false, true , false ->
-        ITE.color ac
       | _  -> ac_embed ac
 
   let abstract_selectors a acc =
@@ -525,10 +467,8 @@ struct
     | Arith a -> ARITH.abstract_selectors a acc
     | Records a -> RECORDS.abstract_selectors a acc
     | Bitv a -> BITV.abstract_selectors a acc
-    | Arrays a -> ARRAYS.abstract_selectors a acc
     | Enum a -> ENUM.abstract_selectors a acc
     | Adt a -> ADT.abstract_selectors a acc
-    | Ite a -> ITE.abstract_selectors a acc
     | Term _ -> a, acc
     | Ac a -> AC.abstract_selectors a acc
 
@@ -647,7 +587,13 @@ struct
       | _, Ty.Treal     -> ARITH.assign_value r distincts eq
       | _, Ty.Trecord _ -> RECORDS.assign_value r distincts eq
       | _, Ty.Tbitv _   -> BITV.assign_value r distincts eq
-      | _, Ty.Tfarray _ -> ARRAYS.assign_value r distincts eq
+      | Term t, Ty.Tfarray _ ->
+        begin
+          if List.exists (fun (t,_) -> Expr.is_model_term t) eq then None
+          else
+            Some (Expr.fresh_name (Expr.type_info t), false)
+        end
+
       | _, Ty.Tsum _    -> ENUM.assign_value r distincts eq
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         ADT.assign_value r distincts eq
@@ -725,16 +671,6 @@ and BITV : Sig.SHOSTAK
       let embed = embed3
     end)
 
-and ARRAYS : Sig.SHOSTAK
-  with type r = CX.r
-   and type t = CX.r Arrays.abstract =
-  Arrays.Shostak
-    (struct
-      include CX
-      let extract = extract4
-      let embed = embed4
-    end)
-
 and ENUM : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Enum.abstract =
@@ -753,16 +689,6 @@ and ADT : Sig.SHOSTAK
       include CX
       let extract = extract6
       let embed = embed6
-    end)
-
-and ITE : Sig.SHOSTAK
-  with type r = CX.r
-   and type t = CX.r Ite.abstract =
-  Ite.Shostak
-    (struct
-      include CX
-      let extract = extract7
-      let embed = embed7
     end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
@@ -803,10 +729,8 @@ end
 module Arith = ARITH
 module Records = RECORDS
 module Bitv = BITV
-module Arrays = ARRAYS
 module Enum = ENUM
 module Adt = ADT
-module Ite = ITE
 module Polynome = TARITH
 module Ac = AC
 
