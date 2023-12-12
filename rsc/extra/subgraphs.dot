@@ -223,7 +223,7 @@ subgraph cluster_lib {
                 "Version";
                 "Util";
                 "Vec";
-                "Iheap";
+                "Heap";
                 "Lists";
                 "Loc";
                 "Hconsing";

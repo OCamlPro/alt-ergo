@@ -102,12 +102,9 @@ let[@inline] push vec x : unit =
 
 let[@inline] get vec i =
   assert (0 <= i && i < vec.sz);
-  let res = Array.unsafe_get vec.data i  in
-  if res == vec.dummy then raise Not_found;
-  res
+  Array.unsafe_get vec.data i
 
 let[@inline] set vec i elt =
-  assert (not (elt == vec.dummy));
   vec.data.(i) <- elt;
   vec.sz <- max vec.sz (i+1)
 
@@ -125,9 +122,7 @@ let filter_in_place f vec =
 
 let[@inline] iteri f vec =
   for i = 0 to size vec - 1 do
-    let elt = Array.unsafe_get vec.data i in
-    if not (elt == vec.dummy) then
-      f i elt
+    f i @@ Array.unsafe_get vec.data i
   done
 
 let[@inline] iter f = iteri (fun _ elt -> f elt)
@@ -170,10 +165,5 @@ let sort vec f : unit =
   Array.fast_sort f arr;
   vec.data <- arr
 
-let internal_iter f vec =
-  for i = 0 to size vec - 1 do
-    f (Array.unsafe_get vec.data i)
-  done
-
 let pp pp_elt =
-  Fmt.iter ~sep:Fmt.comma internal_iter pp_elt |> Fmt.box
+  Fmt.iter ~sep:Fmt.comma iter pp_elt |> Fmt.box

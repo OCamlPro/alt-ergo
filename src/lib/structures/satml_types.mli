@@ -36,10 +36,10 @@ module type ATOM = sig
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
-       mutable level : int;
-       mutable index : int;
+       mutable level : int; (* decision level *)
+       mutable index : int; (* position in the trail, debug only *)
+       mutable hindex : int; (* index in heap *)
        mutable reason: reason;
        mutable vpremise : premise}
 
@@ -83,7 +83,6 @@ module type ATOM = sig
   val vrai_atom  : atom
   val faux_atom  : atom
   val level : atom -> int
-  val index : atom -> int
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
@@ -104,6 +103,8 @@ module type ATOM = sig
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
+
+  val cmp_var : var -> var -> int
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool

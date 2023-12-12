@@ -39,10 +39,10 @@ module type ATOM = sig
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
+       mutable hindex : int;
        mutable reason: reason;
        mutable vpremise : premise}
 
@@ -86,7 +86,6 @@ module type ATOM = sig
   val vrai_atom  : atom
   val faux_atom  : atom
   val level : atom -> int
-  val index : atom -> int
   val reason : atom -> reason
   val reason_atoms : atom -> atom list
 
@@ -107,6 +106,8 @@ module type ATOM = sig
     premise-> clause
 
   (*val made_vars_info : unit -> int * var list*)
+
+  val cmp_var : var -> var -> int
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
@@ -176,10 +177,10 @@ module Atom : ATOM = struct
        pa : atom;
        na : atom;
        mutable weight : float;
-       mutable sweight : int;
        mutable seen : bool;
        mutable level : int;
        mutable index : int;
+       mutable hindex : int;
        mutable reason: reason;
        mutable vpremise : premise}
 
@@ -216,9 +217,9 @@ module Atom : ATOM = struct
       na = dummy_atom;
       level = -1;
       index = -1;
+      hindex = -1;
       reason = None;
       weight = -1.;
-      sweight = 0;
       seen = false;
       vpremise = [] }
   and dummy_atom =
@@ -279,14 +280,11 @@ module Atom : ATOM = struct
     let is_pos = E.is_positive lit in
     (if is_pos then lit else E.neg lit), not is_pos
 
-  let max_depth a = E.depth a
-
   let literal a = a.lit
   let weight a = a.var.weight
 
   let is_true a = a.is_true
   let level a = a.var.level
-  let index a = a.var.index
   let neg a = a.neg
 
   module HT = Hashtbl.Make(E)
@@ -306,9 +304,9 @@ module Atom : ATOM = struct
           na = na;
           level = -1;
           index = -1;
+          hindex = -1;
           reason = None;
           weight = 0.;
-          sweight = max_depth lit;
           seen = false;
           vpremise = [];
         }
@@ -389,8 +387,9 @@ module Atom : ATOM = struct
 
   let to_int f = int_of_float f
 
+  let cmp_var v1 v2 = v1.vid - v2.vid
+
   (* unused --
-     let cmp_var v1 v2 = v1.vid - v2.vid
      let eq_var v1 v2 = v1.vid - v2.vid = 0
      let tag_var v = v.vid
      let h_var v = v.vid

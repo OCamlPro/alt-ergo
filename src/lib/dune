@@ -57,7 +57,7 @@
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral ModelMap Objective
     ; util
-    Emap Gc_debug Hconsing Hstring Iheap Lists Loc
+    Emap Gc_debug Hconsing Hstring Heap Lists Loc
     MyUnix Numbers
     Options Timers Util Vec Version Steps Printer My_zip
     Theories

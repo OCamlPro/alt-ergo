@@ -106,6 +106,18 @@ end
 module MFF = FF.Map
 module SFF = FF.Set
 
+module Vheap = Heap.Make(struct
+    type t = Atom.var
+
+    let index (a : t) = a.hindex
+
+    let set_index (a : t) index = a.hindex <- index
+
+    (* Note: comparison is flipped because we want maximum weight first and
+       [Heap] is a min-heap. *)
+    let compare (a : t) (b : t) = Stdlib.compare b.weight a.weight
+  end)
+
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   module Matoms = Atom.Map
@@ -152,7 +164,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable simpDB_props : int;
 
       (* Un tas ordone en fonction de l'activite des variables *)
-      mutable order : Iheap.t;
+      mutable order : Vheap.t;
 
       (* estimation de progressions, mis a jour par 'search()' *)
       mutable progress_estimate : float;
@@ -201,8 +213,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable max_literals : int;
 
       mutable tot_literals : int;
-
-      mutable nb_init_vars : int;
 
       mutable nb_init_clauses : int;
 
@@ -269,7 +279,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       simpDB_props = 0;
 
-      order = Iheap.init 0; (* sera mis a jour dans solve *)
+      order = Vheap.make 0 Atom.dummy_var; (* sera mis a jour dans solve *)
 
       progress_estimate = 0.;
 
@@ -307,8 +317,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       tot_literals = 0;
 
-      nb_init_vars = 0;
-
       nb_init_clauses = 0;
 
       tenv = Th.empty();
@@ -343,46 +351,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       next_dec_guard = 0;
     }
 
-
-(*
-  module SA = Set.Make
-  (struct
-  type t = Atom.atom
-  let compare a b = a.Atom.aid - b.Atom.aid
-  end)
-
-  module SSA = Set.Make(SA)
-
-
-  let ssa = ref SSA.empty
-
-  let clause_exists atoms =
-  try
-(*List.iter
-  (fun a -> if a.is_true then raise Exit) atoms;*)
-  let sa = List.fold_left (fun s e -> SA.add e s) SA.empty atoms in
-  if SSA.mem sa !ssa then true
-  else begin
-  ssa := SSA.add sa !ssa;
-  false
-  end
-  with Exit -> true
-
-  let f_weight i j =
-  let vj = Vec.get env.vars j in
-  let vi = Vec.get env.vars i in
-(*if vi.sweight <> vj.sweight then vi.sweight < vj.sweight
-  else*) vj.weight < vi.weight
-*)
-
-  let f_weight env i j =
-    (Stdlib.compare
-       (Vec.get env.vars j).weight (Vec.get env.vars i).weight) < 0
-
-  (* unused -- let f_filter env i = (Vec.get env.vars i).level < 0 *)
-
   let insert_var_order env (v : Atom.var) =
-    Iheap.insert (f_weight env) env.order v.vid
+    Vheap.insert env.order v
 
   let var_decay_activity env = env.var_inc <- env.var_inc *. env.var_decay
 
@@ -398,8 +368,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         ) env.vars;
       env.var_inc <- env.var_inc *. 1e-100;
     end;
-    if Iheap.in_heap env.order v.vid then
-      Iheap.decrease (f_weight env) env.order v.vid
+    if Vheap.in_heap v then
+      Vheap.decrease env.order v
 
 
   let clause_bump_activity env (c : Atom.clause) =
@@ -549,9 +519,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     List.iter (enqueue_assigned env) !repush
 
   let rec pick_branch_var env =
-    if Iheap.size env.order = 0 then raise Sat;
-    let max = Iheap.remove_min (f_weight env) env.order in
-    let v = Vec.get env.vars max in
+    if Vheap.size env.order = 0 then raise Sat;
+    let v = Vheap.remove_min env.order in
     if v.level>= 0 then begin
       assert (v.pa.is_true || v.na.is_true);
       pick_branch_var env
@@ -824,7 +793,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if facts == [] then C_none
     else
       try
-        (*let full_model = nb_assigns() = env.nb_init_vars in*)
+        (*let full_model = nb_assigns() = nb_vars () in*)
         (* XXX what to do with the other results of Th.assume ? *)
         let t,_,cpt =
           Th.assume ~ordered:false
@@ -894,7 +863,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       if !facts == [] then C_none
       else
         try
-          (*let full_model = nb_assigns() = env.nb_init_vars in*)
+          (*let full_model = nb_assigns() = nb_vars () in*)
           (* XXX what to do with the other results of Th.assume ? *)
           let t,_,cpt =
             Th.assume ~ordered:(not (Options.get_cdcl_tableaux_th ()))
@@ -1445,7 +1414,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     while true do
       propagate_and_stabilize env all_propagations conflictC !strat;
 
-      if nb_assigns env = env.nb_init_vars ||
+      if nb_assigns env = nb_vars env ||
          (Options.get_cdcl_tableaux_inst () &&
           Matoms.is_empty env.lazy_cnf) then
         raise Sat;
@@ -1565,8 +1534,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                  end
                  else a::atoms, init
               ) ([], init0) atoms in
-          List.fast_sort (fun (a : Atom.atom) (b : Atom.atom) ->
-              a.var.vid - b.var.vid) atoms, init
+          List.fast_sort (fun a b ->
+              Atom.cmp_var a.Atom.var b.Atom.var
+            ) atoms, init
         else partition atoms init0
       in
       match atoms with
@@ -1645,11 +1615,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | _ ->
       let tenv0 = env.unit_tenv in
       Vec.grow_to_by_double env.vars nbv;
-      Iheap.grow_to_by_double env.order nbv;
+      Vheap.grow_to_by_double env.order nbv;
       let accu =
         List.fold_left
           (fun ((unit_cnf, nunit_cnf) as accu) (v : Atom.var) ->
-             Vec.set env.vars v.vid v;
+             Vec.push env.vars v;
              insert_var_order env v;
              match th_entailed tenv0 v.pa with
              | None -> accu
@@ -1662,7 +1632,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                        if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
-      env.nb_init_vars <- nbv;
+      assert (nbv = Vec.size env.vars);
       accu
 
   let set_new_proxies env proxies =
@@ -1826,7 +1796,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         cancel_until env (g.var.level - 1); (* undo its decision *)
         (* all previous guards are decided *)
         env.next_dec_guard <- Vec.size env.increm_guards
-      end;
+      end
+    else (assert (env.next_dec_guard = 0));
     enqueue env g.neg 0 None
 
   let optimize env ~is_max obj = env.tenv <- Th.optimize env.tenv ~is_max obj

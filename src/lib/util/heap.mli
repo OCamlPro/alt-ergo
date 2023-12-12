@@ -28,48 +28,81 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Integer heaps
+(** Heaps.
 
-    This modules define priority heaps over integers.
+    This modules define intrusive priority heaps (i.e. priority heaps where the
+    index of a given element in the map is stored on the element itself).
 *)
 
-(** {2 Integer heaps} *)
+(** {2 Ranked types}
 
-type t
-(** The type of heaps. *)
+    Elements that are put in a heap must implement the {!RankedType} interface.
+    This requires providing a (loose) comparison function, and allows to get and
+    set an `index` field on the element (to map back the element to its current
+    position in the heap).
 
-val init : int -> t
-(** Create a heap with the given initial size. *)
+    Note that this implies that each element can only be in a single heap at a
+    time. *)
 
-val in_heap : t -> int -> bool
-(** Heap membership function. *)
+module type RankedType = sig
+  type t
+  (** The type of the heap elements. *)
 
-val decrease : (int -> int -> bool) -> t -> int -> unit
-(** Decrease activity of the given integer.
-    TODO: document the comparison function ! *)
+  val index : t -> int
+  (** Index of the element in the heap. Returns -1 if the element is not in
+      the heap. *)
 
-val increase : (int -> int -> bool) -> t -> int -> unit
-(** Increase activity of the given integer.
-    TODO: document the comparison function ! *)
+  val set_index : t -> int -> unit
+  (** Update the element's index in the heap. *)
 
-val size : t -> int
-(** Returns the current size of the heap. *)
+  val compare : t -> t -> int
+  (** A total ordering function over the set elements.
+      This is a two-argument function [f] such that
+      [f e1 e2] is zero if the elements [e1] and [e2] are equal,
+      [f e1 e2] is strictly negative if [e1] is smaller than [e2],
+      and [f e1 e2] is strictly positive if [e1] is greater than [e2]. *)
+end
 
-val is_empty : t -> bool
-(** Is the heap empty ? *)
+(** {2 Priority heaps} *)
 
-val insert : (int -> int -> bool) -> t -> int -> unit
-(** Inset a new element in the heap.
-    TODO: document comparison function. *)
+module type S = sig
+  type elt
 
-val grow_to_by_double: t -> int -> unit
-(** Grow the size of the heap by multiplying it by 2
-    until it is at least the size specified. *)
+  type t
+  (** The type of heaps. *)
 
-val remove_min : (int -> int -> bool) -> t -> int
-(** Remove the minimum element from the heap and return it. *)
+  val make : int -> elt -> t
+  (** Create a heap with the given initial size and dummy element. *)
 
-val filter : t -> (int -> bool) -> (int -> int -> bool) -> unit
-(** Filter elements in the heap.
-    TODO: document comparison function ! *)
+  val in_heap : elt -> bool
+  (** Heap membership function. *)
 
+  val decrease : t -> elt -> unit
+  (** Decrease activity of the given element. *)
+
+  val increase : t -> elt -> unit
+  (** Increase activity of the given element. *)
+
+  val size : t -> int
+  (** Returns the current size of the heap. *)
+
+  val is_empty : t -> bool
+  (** Is the heap empty ? *)
+
+  val insert : t -> elt -> unit
+  (** Inset a new element in the heap. *)
+
+  val grow_to_by_double: t -> int -> unit
+  (** Grow the size of the heap by multiplying it by 2
+      until it is at least the size specified. *)
+
+  val remove_min : t -> elt
+  (** Remove the minimum element from the heap and return it.
+
+      @raise Not_found if the heap is empty. *)
+
+  val filter : t -> (elt -> bool) -> unit
+  (** Filter elements in the heap. *)
+end
+
+module Make(Rank : RankedType) : S with type elt = Rank.t
