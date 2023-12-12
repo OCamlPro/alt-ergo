@@ -243,7 +243,7 @@ end = struct
   let fold f t = MX.fold f t.bitlists
 end
 
-module Constraint : sig
+module type Constraint = sig
   type t
   (** The type of bit-vector constraints.
 
@@ -283,9 +283,16 @@ module Constraint : sig
   val fold_deps : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold_deps f c acc] accumulates [f] over the arguments of [c]. *)
 
-  val propagate : t -> Domains.t -> Domains.t
+  type domain
+
+  val propagate : t -> domain -> domain
   (** [propagate c dom] propagates the constraints [c] in [d] and returns the
       new domains. *)
+
+end
+
+module Constraint : sig
+  include Constraint with type domain = Domains.t
 
   val bvand : ex:Ex.t -> X.r -> X.r -> X.r -> t
   (** [bvand ~ex x y z] is the constraint [x = y & z] *)
@@ -418,6 +425,8 @@ end = struct
       let acc = f x acc in
       let acc = f y acc in
       acc
+
+  type domain = Domains.t
 
   let propagate { repr; ex } dom =
     Steps.incr CP;
