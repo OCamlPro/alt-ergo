@@ -384,6 +384,7 @@ end = struct
       acc
 
   let propagate { repr; ex } dom =
+    Steps.incr CP;
     match repr.repr with
     | Band (x, y, z) ->
       let dx = Domains.get x dom

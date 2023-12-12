@@ -36,6 +36,7 @@ type incr_kind =
   | Omega              (* Arith : number of omega procedure on  Real and Int *)
   | Uf                 (* UF step increment *)
   | Ac                 (* AC step reasoning *)
+  | CP                 (* Constraint propagation *)
   | Th_assumed of int  (* Increment the counter for each term assumed in the
                           theories environment *)
 
@@ -49,18 +50,20 @@ let mult_s = ref 0
 let mult_uf = ref 0
 let mult_b = ref 0
 let mult_a = ref 0
+let mult_cp = ref 0
 
 let all_steps = Stack.create ()
 
 let push_steps () =
   Stack.push
     (!naive_steps,!steps,!mult_f,!mult_m,
-     !mult_s,!mult_uf,!mult_b,!mult_a)
+     !mult_s,!mult_uf,!mult_b,!mult_a,!mult_cp)
     all_steps
 
 let pop_steps () =
   let p_naive_steps,p_steps, p_mult_f, p_mult_m,
-      p_mult_s, p_mult_uf, p_mult_b, p_mult_a =
+      p_mult_s, p_mult_uf, p_mult_b, p_mult_a,
+      p_mult_cp =
     Stack.pop all_steps in
   naive_steps := p_naive_steps;
   steps := p_steps;
@@ -69,7 +72,8 @@ let pop_steps () =
   mult_s := p_mult_s;
   mult_uf := p_mult_uf;
   mult_b := p_mult_b;
-  mult_a := p_mult_a
+  mult_a := p_mult_a;
+  mult_cp := p_mult_cp
 
 (* Multipliers are here to homogeneize the global step counter *)
 let incr k =
@@ -99,6 +103,10 @@ let incr k =
       if !mult_f = 40 then
         (steps := !steps + 1;
          mult_f := 0);
+    | CP -> mult_cp := !mult_cp + 1;
+      if !mult_cp = 100 then
+        (steps := !steps + 1;
+         mult_cp := 0);
     | Th_assumed n ->
       (* Since n refers to the number of terms sent to the theories no
        * multiplier is needed here *)
@@ -127,7 +135,8 @@ let reset_steps () =
   mult_s := 0;
   mult_uf := 0;
   mult_b := 0;
-  mult_a := 0
+  mult_a := 0;
+  mult_cp := 0
 
 let save_steps, reinit_steps =
   let saved_mult_uf = ref 0 in
@@ -144,7 +153,8 @@ let save_steps, reinit_steps =
     mult_s := 0;
     mult_uf := !saved_mult_uf;
     mult_b := 0;
-    mult_a := 0
+    mult_a := 0;
+    mult_cp := 0
   in
   save_steps, reinit_steps
 
