@@ -242,55 +242,8 @@ end = struct
   let fold f t = MX.fold f t.bitlists
 end
 
-module type Constraint = sig
-  type t
-  (** The type of bit-vector constraints.
-
-      Constraints are associated with a justification as to why they are
-      currently valid. The justification is only used to update domains,
-      identical constraints with different justifications will otherwise behave
-      identically (and, notably, will compare equal).
-
-      Bit-vector constraints contains semantic values / term representatives of
-      type [X.r]. We maintain the invariant that the semantic values used inside
-      the constraints are *class representatives* i.e. normal forms wrt the `Uf`
-      module, i.e. constraints have a normalized representation. Use `subst` to
-      ensure normalization. *)
-
-  val pp : t Fmt.t
-  (** Pretty-printer for constraints. *)
-
-  val compare : t -> t -> int
-  (** Comparison function for constraints.
-
-      The comparison only depends on the constraint representation: two
-      constraints with identical representations but different explanations will
-      compare equal.
-
-      {b Note}: The comparison function is arbitrary and has no semantic
-      meaning. You should not depend on any of its properties, other than it
-      defines an (arbitrary) total order on constraint representations. *)
-
-  val subst : Ex.t -> X.r -> X.r -> t -> t
-  (** [subst ex p v cs] replaces all the instaces of [p] with [v] in the
-      constraint.
-
-      Use this to ensure that the representation is always normalized.
-
-      The explanation [ex] justifies the equality [p = v]. *)
-
-  val fold_leaves : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-
-  type domain
-
-  val propagate : t -> domain -> domain
-  (** [propagate c dom] propagates the constraints [c] in [d] and returns the
-      new domains. *)
-
-end
-
 module Constraint : sig
-  include Constraint with type domain = Domains.t
+  include Rel_utils.Constraint with type domain = Domains.t
 
   val bvand : ex:Ex.t -> X.r -> X.r -> X.r -> t
   (** [bvand ~ex x y z] is the constraint [x = y & z] *)
@@ -505,134 +458,7 @@ end = struct
   let bvnot ~ex x y = make ~ex @@ Bnot (x, y)
 end
 
-module Constraints : sig
-  type t
-  (** The type of constraint sets. A constraint sets records a set of
-      constraints that applies to semantic values, and remembers which
-      constraints are associated with each semantic values.
-
-      It is used to only propagate constraints involving semantic values whose
-      associated domain has changed.
-
-      The constraint sets are expected to keep track of *class representatives*,
-      i.e.  normal forms wrt the `Uf` module, in which case we say the
-      constraint set is *normalized*. Use `subst` to ensure normalization. *)
-
-  val pp : t Fmt.t
-  (** Pretty-printer for constraint sets. *)
-
-  val empty : t
-  (** Returns an empty constraint set. *)
-
-  val subst : Ex.t -> X.r -> X.r -> t -> t
-  (** [subst ex p v cs] replaces all the instances of [p] with [v] in the
-      constraints.
-
-      Use this to ensure that the representation is always normalized.
-
-      The explanation [ex] justifies the equality [p = v]. *)
-
-  val add : t -> Constraint.t -> t
-  (** [add c cs] adds the constraint [c] to [cs]. *)
-
-  val fold_fresh : (Constraint.t -> 'a -> 'a) -> t -> 'a -> t * 'a
-  (** [fold_fresh f cs acc] folds [f] over the fresh constraints in [cs].
-
-      Fresh constraints are constraints that were never propagated yet. *)
-
-  val fold_r : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold_r f cs acc] folds [f] over any representative [r] that is currently
-      associated with a constraint (i.e. at least one constraint currently
-      applies to [r]). *)
-
-  val propagate : t -> X.r -> Domains.t -> Domains.t
-  (** [propagate cs r dom] propagates the constraints associated with [r] in the
-      constraint set [cs] and returns the new domain map after propagation. *)
-end = struct
-  module IM = Util.MI
-
-  module CS = Set.Make(Constraint)
-
-  type t = {
-    cs_set : CS.t ;
-    (*** All the constraints currently active *)
-    cs_map : CS.t MX.t ;
-    (*** Mapping from semantic values to the constraints that involves them *)
-    fresh : CS.t ;
-    (*** Fresh constraints that have never been propagated *)
-  }
-
-  let pp ppf { cs_set; cs_map = _ ; fresh = _ } =
-    Fmt.(
-      braces @@ hvbox @@
-      iter ~sep:semi CS.iter @@
-      box ~indent:2 @@ braces @@
-      Constraint.pp
-    ) ppf cs_set
-
-  let empty =
-    { cs_set = CS.empty
-    ; cs_map = MX.empty
-    ; fresh = CS.empty }
-
-  let cs_add cs r cs_map =
-    MX.update r (function
-        | Some css -> Some (CS.add cs css)
-        | None -> Some (CS.singleton cs)
-      ) cs_map
-
-  let cs_remove cs r cs_map =
-    MX.update r (function
-        | Some css ->
-          let css = CS.remove cs css in
-          if CS.is_empty css then None else Some css
-        | None ->
-          (* Can happen if the same argument is repeated *)
-          None
-      ) cs_map
-
-  let subst ex rr nrr bcs =
-    match MX.find rr bcs.cs_map with
-    | ids ->
-      let cs_map, cs_set, fresh =
-        CS.fold (fun cs (cs_map, cs_set, fresh) ->
-            let fresh = CS.remove cs fresh in
-            let cs_set = CS.remove cs cs_set in
-            let cs_map = Constraint.fold_leaves (cs_remove cs) cs cs_map in
-            let cs' = Constraint.subst ex rr nrr cs in
-            if CS.mem cs' cs_set then
-              cs_map, cs_set, fresh
-            else
-              let cs_set = CS.add cs' cs_set in
-              let cs_map = Constraint.fold_leaves (cs_add cs') cs' cs_map in
-              (cs_map, cs_set, CS.add cs' fresh)
-          ) ids (bcs.cs_map, bcs.cs_set, bcs.fresh)
-      in
-      assert (not (MX.mem rr cs_map));
-      { cs_set ; cs_map ; fresh }
-    | exception Not_found -> bcs
-
-  let add bcs c =
-    if CS.mem c bcs.cs_set then
-      bcs
-    else
-      let cs_set = CS.add c bcs.cs_set in
-      let cs_map = Constraint.fold_leaves (cs_add c) c bcs.cs_map in
-      let fresh = CS.add c bcs.fresh in
-      { cs_set ; cs_map ; fresh }
-
-  let fold_fresh f bcs acc =
-    let acc = CS.fold f bcs.fresh acc in
-    { bcs with fresh = CS.empty }, acc
-
-  let fold_r f bcs acc =
-    MX.fold (fun r _ acc -> f r acc) bcs.cs_map acc
-
-  let propagate bcs r dom =
-    match MX.find r bcs.cs_map with
-    | cs -> CS.fold Constraint.propagate cs dom
-    | exception Not_found -> dom
-end
+module Constraints = Rel_utils.Constraints_Make(Constraint)
 
 let extract_constraints bcs uf r t =
   match E.term_view t with
@@ -717,9 +543,7 @@ let propagate =
     | exception Not_found -> changed, dom
   in
   fun bcs dom ->
-    let bcs, dom =
-      Constraints.fold_fresh Constraint.propagate bcs dom
-    in
+    let bcs, dom = Constraints.propagate_fresh bcs dom in
     let changed, dom = propagate SX.empty bcs dom in
     SX.fold (fun r acc ->
         add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
