@@ -1081,18 +1081,19 @@ let rec mk_expr
 
           | B.Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
-              | Some (Adt { cases; record; _ }) ->
+              | Some (Adt { cases;  _ }) ->
                 begin match cases.(case).dstrs.(field) with
                   | Some { path; _ } ->
                     let name = get_basename path in
                     let ty = dty_to_ty term_ty in
                     let e = aux_mk_expr x in
                     let sy =
-                      if record || Array.length cases = 1
-                      then
+                      match Cache.find_ty (DE.Ty.Const.hash adt) with
+                      | Trecord _ ->
                         Sy.Op (Sy.Access (Hstring.make name))
-                      else
+                      | Tadt _ ->
                         Sy.destruct ~guarded:true name
+                      | _ -> assert false
                     in
                     E.mk_term sy [e] ty
                   | _ ->
