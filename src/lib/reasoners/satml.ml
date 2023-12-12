@@ -113,7 +113,9 @@ module Vheap = Heap.Make(struct
 
     let set_index (a : t) index = a.hindex <- index
 
-    let compare (a : t) (b : t) = Stdlib.compare a.weight b.weight
+    (* Note: comparison is flipped because we want maximum weight first and
+       [Heap] is a min-heap. *)
+    let compare (a : t) (b : t) = Stdlib.compare b.weight a.weight
   end)
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
