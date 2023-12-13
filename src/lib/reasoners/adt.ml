@@ -34,9 +34,18 @@ module Hs = Hstring
 
 type 'a abstract =
   | Constr of { c_name : Hs.t ; c_ty : Ty.t ; c_args : (Hs.t * 'a) list }
+  (* [Cons { c_name; c_ty; c_args }] reprensents the application of the
+     constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
+
   | Select of { d_name : Hs.t ; d_ty : Ty.t ; d_arg : 'a }
-  | Tester of { t_name : Hs.t ; t_arg : 'a } (* tester is currently not used *)
+  (* [Select { d_name; d_ty; d_arg }] represents the destructor [d_name] of
+     the ADT [d_ty] on the ADT value [d_arg]. *)
+
+  | Tester of { t_name : Hs.t ; t_arg : 'a }
+  (* Tester is currently not used. *)
+
   | Alien of 'a
+  (* [Alien r] represents a uninterpreted ADT semantic value. *)
 
 module type ALIEN = sig
   include Sig.X
@@ -53,15 +62,14 @@ let constr_of_destr ty dest =
       "ty = %a" Ty.print ty;
   match ty with
   | Ty.Tadt (s, params) ->
-    let bdy = Ty.type_body s params in
-    begin match bdy with
-      | Ty.Adt cases ->
-        try
-          List.find
-            (fun { Ty.destrs; _ } ->
-               List.exists (fun (d, _) -> Hstring.equal dest d) destrs
-            )cases
-        with Not_found -> assert false (* invariant *)
+    begin
+      let Ty.Adt cases = Ty.type_body s params in
+      try
+        List.find
+          (fun { Ty.destrs; _ } ->
+             List.exists (fun (d, _) -> Hstring.equal dest d) destrs
+          ) cases
+      with Not_found -> assert false (* invariant *)
     end
   | _ -> assert false
 
@@ -81,7 +89,12 @@ module Shostak (X : ALIEN) = struct
     not (Options.get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_,guarded), _ -> not guarded
+    | Sy.Op Sy.Destruct (_, guarded), _ ->
+      (* A guarded destructor isn't interpreted by the ADT theory.
+         If we assume the tester of the constructor associated with
+         this destructor, we produce release the guard. See the
+         documentation of [env.selectors] in [Adt_rel]. *)
+      not guarded
     | _ -> false
 
   let embed r =
@@ -89,27 +102,23 @@ module Shostak (X : ALIEN) = struct
     | Some c -> c
     | None -> Alien r
 
-  let print fmt = function
+  let pp_field ppf (lbl, v) =
+    Fmt.pf ppf "%a : %a" Hstring.print lbl X.print v
+
+  let print ppf = function
     | Alien x ->
-      Format.fprintf fmt "%a" X.print x
+      X.print ppf x
 
     | Constr { c_name; c_args; _ } ->
-      Format.fprintf fmt "%a" Hs.print c_name;
-      begin
-        match c_args with
-          [] -> ()
-        | (lbl, v) :: l ->
-          Format.fprintf fmt "(%a : %a " Hs.print lbl X.print v;
-          List.iter
-            (fun (lbl, v) ->
-               Format.fprintf fmt "; %a : %a" Hs.print lbl X.print v) l;
-          Format.fprintf fmt ")"
-      end
+      Fmt.pf ppf "%a@[(%a@])"
+        Hs.print c_name
+        Fmt.(list ~sep:semi pp_field) c_args
 
     | Select d ->
-      Format.fprintf fmt "%a#!!%a" X.print d.d_arg Hs.print d.d_name
+      Fmt.pf ppf "%a#!!%a" X.print d.d_arg Hs.print d.d_name
+
     | Tester t ->
-      Format.fprintf fmt "(%a ? %a)" X.print t.t_arg Hs.print t.t_name
+      Fmt.pf ppf "(%a ? %a)" X.print t.t_arg Hs.print t.t_name
 
 
   let is_mine u =
@@ -142,7 +151,7 @@ module Shostak (X : ALIEN) = struct
             (fun (hs1, v1) (hs2, v2) ->
                assert (Hs.equal hs1 hs2);
                if not (X.equal v1 v2) then raise Exit
-            )c1.c_args c2.c_args;
+            ) c1.c_args c2.c_args;
           true
         with
         | Exit -> false
@@ -177,10 +186,7 @@ module Shostak (X : ALIEN) = struct
     let xs = List.rev sx in
     match f, xs, ty with
     | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
-      let cases =
-        match Ty.type_body name params with
-        | Ty.Adt cases -> cases
-      in
+      let Ty.Adt cases = Ty.type_body name params in
       let case_hs =
         try Ty.assoc_destrs hs cases with Not_found -> assert false
       in
@@ -224,26 +230,25 @@ module Shostak (X : ALIEN) = struct
       Hstring.hash t_name * 13 + X.hash t_arg
 
   let leaves r =
-    let l = match r with
-      | Alien r -> [Hs.empty, r]
-      | Constr { c_args ; _ } ->  c_args
-      | Select { d_arg  ; _ } -> [Hs.empty, d_arg]
-      | Tester { t_arg  ; _ } -> [Hs.empty, t_arg]
-    in
-    SX.elements @@
-    List.fold_left
-      (fun sx (_, r) ->
-         List.fold_left (fun sx x -> SX.add x sx) sx (X.leaves r)
-      )SX.empty l
+    match r with
+    | Alien r | Select { d_arg = r; _ } | Tester { t_arg = r; _ } ->
+      X.leaves r
+
+    | Constr { c_args; _ } ->
+      SX.elements @@
+      List.fold_left
+        (fun sx (_, r) ->
+           List.fold_left (fun sx x -> SX.add x sx) sx (X.leaves r)
+        )
+        SX.empty c_args
 
   let is_constant r =
-    let l = match r with
-      | Alien r -> [Hs.empty, r]
-      | Constr { c_args ; _ } ->  c_args
-      | Select { d_arg  ; _ } -> [Hs.empty, d_arg]
-      | Tester { t_arg  ; _ } -> [Hs.empty, t_arg]
-    in
-    List.for_all (fun (_, r) -> X.is_constant r) l
+    match r with
+    | Alien r | Select { d_arg = r; _ } | Tester { t_arg = r; _ } ->
+      X.is_constant r
+
+    | Constr { c_args; _ } ->
+      List.for_all (fun (_, r) -> X.is_constant r) c_args
 
   [@@ocaml.ppwarning "TODO: not sure"]
   let fully_interpreted _ =

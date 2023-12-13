@@ -114,8 +114,9 @@ module Set : Set.S with type elt = t
 
 
 val assoc_destrs : Hstring.t -> adt_constr list -> (Hstring.t * t) list
-(** returns the list of destructors associated with the given consturctor.
-    raises Not_found if the constructor is not in the given list *)
+(** [assoc_destrs cons cases] returns the list of destructors associated with
+    the consturctor [cons] and the body [cases].
+    @raises Not_found if the constructor is not in the given list. *)
 
 val type_body : Hstring.t -> t list -> type_body
 

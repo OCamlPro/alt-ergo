@@ -47,9 +47,10 @@ module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
 module LR = Uf.LX
 
 type t = {
+  (* TODO: rename the field domains to be consistent with the ADT theory. *)
   mx : (HSS.t * Ex.t) MX.t;
   (* Map of uninterpreted enum semantic values to domains of their possible
-     values. The explanation justifies that any value assigns to the semantic
+     values. The explanation justifies that any value assigned to the semantic
      value has to lie in the domain. *)
 
   classes : Expr.Set.t list;

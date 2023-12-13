@@ -55,17 +55,83 @@ type t =
        inconsistency. *)
 
     domains : (HSS.t * Explanation.t) MX.t;
+    (* Map of the uninterpreted semantic values to domains of their possible
+       constructors. The explanation justifies that any value assigned to
+       the semantic value has to use a constructor lying in the domain. *)
+
+    (* TODO: rename this field. *)
     seen_destr : SE.t;
+    (* Set of all the guarded destructors known by the theory. A guarded
+       destructor isn't interpreted by the ADT theory.
+
+       This field is used to prevent transforming twice a guarded
+       destructor to its non-guarded version and for debugging purposes. *)
+
+    (* TODO: rename this field. *)
     seen_access : SE.t;
+    (* Set of all the non-guarded destructors known by the theory. Contrary
+       to a guarded destructor, a non-guarded destructor is interpreted
+       by the ADT theory. *)
+
     seen_testers : HSS.t MX.t;
     [@ocaml.ppwarning "selectors should be improved. only representatives \
                        in it. No true or false _is"]
+    (* TODO: This code is outdated. It seems that the theory doesn't need
+       to register all the testers in [add_aux]. Now this field is only
+       read to remember we have already forced a constructor because we have
+       assumed its associated tester. *)
 
     selectors : (E.t * Ex.t) list MHs.t MX.t;
+    (* Map of pending destructor equations. A destructor equation on an
+       ADT term [t] is an equation of the form:
+         d t = d' t
+       where [d] is a guarded destructor and [d'] its non-guarded version.
+
+       More precisely, this map matches a representative [r] with
+       all the destructor equations on terms of the class of [r]. These
+       destructor equations are classified by their corresponding
+       constructor.
+
+       Consider [d] a guarded destructor and [c] its associated constructor.
+
+       - When we register the destructor application [d t] in [add_aux], we
+         produce an equation [d t = d' t] where [d'] is the non-guarded
+         version of [d]. If we don't already know that the value of [t] has
+         to use the constructor [c], we put the equation [d t = d' t] in this
+         map. Otherwise we propagate the equation to CC(X).
+
+       - When we assume a tester on [c] (see [assume_is_constr]), we retrieve
+         and propagate to CC(X) all the pending destructor equations
+         associated with the constructor [c].
+
+       - *)
+
     size_splits : Numbers.Q.t;
+    (* Product of the size of all the facts learnt by CS assumed in
+       the theory.
+
+       Currently this field is unused. *)
+
     new_terms : SE.t;
+    (* Set of all the constructor applications built by the theory.
+       See the function [deduce_is_constr]. *)
+
+    (* TODO: rename this field. *)
     pending_deds :
       (r Sig_rel.literal * Ex.t * Th_util.lit_origin) list
+      (* Pending queue of facts discovered by the theory. Facts are pending
+         in the following situations:
+
+         - The domain of a uninterpreted semantic value becomes a singleton.
+           In this case, we deduce the constructor of the semantic value and
+           we add this equation to the pending queue using [deduce_is_constr].
+
+         - When we add a guarded destructor for the first time, we add a new
+           equation to the queue between this destructor and its unguarded
+           version.
+
+         This pending queue is flushed at the end of [assume] and its
+         content is propagated to the environment of CC(X). *)
   }
 
 let empty classes = {
@@ -93,50 +159,43 @@ module Debug = struct
         ~function_name:"assume"
         " we assume %a" LR.print (LR.make a)
 
+  let pp_testers ppf (r, ts) =
+    let pp_tester ppf hs =
+      Fmt.pf ppf "@[(%a is %a@])" X.print r Hstring.print hs
+    in
+    Fmt.(iter ~sep:cut HSS.iter pp_tester) ppf ts
+
+  let pp_domain ppf (r, (hss, _ex)) =
+    Fmt.pf ppf "@[The domain of %a is {%a@]}"
+      X.print r
+      Fmt.(iter ~sep:(const string "|") HSS.iter Hstring.print) hss
+
+  let pp_selectors ppf (r, mhs) =
+    let pp_selector ppf (hs, l) =
+      let pp ppf (a, _) =
+        Fmt.pf ppf "(%a is %a) ==> %a"
+          X.print r
+          Hstring.print hs
+          E.print a
+      in
+      Fmt.(list ~sep:sp pp) ppf l
+    in
+    Fmt.iter_bindings MHs.iter pp_selector ppf mhs
+
   let print_env loc env =
     if Options.get_debug_adt () then begin
       print_dbg ~flushed:false ~module_name:"Adt_rel" ~function_name:"print_env"
         "@ @[<v 2>--ADT env %s ---------------------------------@ " loc;
-      MX.iter
-        (fun r (hss, ex) ->
-           print_dbg ~flushed:false ~header:false
-             "%a 's domain is " X.print r;
-           begin
-             match HSS.elements hss with
-               []      -> ()
-             | hs :: l ->
-               print_dbg ~flushed:false ~header:false
-                 "{ %s" (Hs.view hs);
-               List.iter (fun hs ->
-                   print_dbg ~flushed:false ~header:false
-                     " | %s" (Hs.view hs)) l
-           end;
-           print_dbg ~flushed:false ~header:false " } %a@ " Ex.print ex;
-
-        ) env.domains;
+      print_dbg ~flushed:false ~header:false "@[%a@]"
+        Fmt.(iter_bindings ~sep:cut MX.iter pp_domain) env.domains;
       print_dbg ~flushed:false ~header:false
         "@]@ @[<v 2>-- seen testers ---------------------------@ ";
-      MX.iter
-        (fun r hss ->
-           HSS.iter
-             (fun hs ->
-                print_dbg ~flushed:false ~header:false
-                  "(%a is %a)@ " X.print r Hs.print hs
-             )hss
-        )env.seen_testers;
+      print_dbg ~flushed:false ~header:false "@[%a@]"
+        Fmt.(iter_bindings ~sep:cut MX.iter pp_testers) env.seen_testers;
       print_dbg ~flushed:false ~header:false
         "@]@ @[<v 2>-- selectors ------------------------------@ ";
-      MX.iter
-        (fun r mhs ->
-           MHs.iter
-             (fun hs l ->
-                List.iter (fun (a, _) ->
-                    print_dbg ~flushed:false ~header:false
-                      "(%a is %a) ==> %a@ "
-                      X.print r Hs.print hs E.print a
-                  ) l
-             )mhs
-        )env.selectors;
+      print_dbg ~flushed:false ~header:false "@[%a@]"
+        Fmt.(iter_bindings ~sep:cut MX.iter pp_selectors) env.selectors;
       print_dbg ~header:false
         "@]@ -------------------------------------------";
     end
@@ -167,7 +226,7 @@ end
 (* ################################################################ *)
 
 
-let new_terms env = env.new_terms
+let[@inline always] new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t th_elt _ =
@@ -180,7 +239,17 @@ let seen_tester r hs env =
   try HSS.mem hs (MX.find r env.seen_testers)
   with Not_found -> false
 
+(* For a uninterpreted semantic value [r] and [h] a constructor of the form:
+     (cons (d1 ty1) ... (dn tyn))
+   this function adds the new equation to [eqs]:
+     [t = cons x1 ... xn]
+   where x1, ..., xn are fresh names of type respectively ty1, ..., tyn
+   and [t] is the term associated with the uninterpreted semantic value [r].
 
+   If the tester [(_ cons) t] hasn't been already seen, we also add it to
+   the equations [eqs].
+
+   Assume that [r] is a semantic value of type [Ty.Adt]. *)
 let deduce_is_constr uf r h eqs env ex =
   let r, ex' = try Uf.find_r uf r with Not_found -> assert false in
   let ex = Ex.union ex ex' in
@@ -191,7 +260,7 @@ let deduce_is_constr uf r h eqs env ex =
         let eqs =
           if seen_tester r h env then eqs
           else
-            let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr h) [t] in
+            let is_c = E.mk_tester (Hstring.view h) t in
             if Options.get_debug_adt () then
               Printer.print_dbg
                 ~module_name:"Adt_rel"
@@ -201,24 +270,19 @@ let deduce_is_constr uf r h eqs env ex =
         in
         begin
           match E.term_view t with
-          | { E.ty = Ty.Tadt (name,params) as ty; _ } ->
+          | { E.ty = Ty.Tadt (name, params) as ty; _ } ->
             (* Only do this deduction for finite types ??
                  may not terminate in some cases otherwise.
                  eg. type t = A of t
                  goal g: forall e,e' :t. e = C(e') -> false
                  + should not be guareded by "seen_tester"
             *)
-            let cases = match Ty.type_body name params with
-              | Ty.Adt cases -> cases
-            in
-            let {Ty.destrs; _} =
-              try List.find (
-                  fun { Ty.constr = c; _ } -> Hstring.equal h c
-                ) cases
-              with Not_found -> assert false
+            let Ty.Adt cases = Ty.type_body name params in
+            let destrs =
+              try Ty.assoc_destrs h cases with Not_found -> assert false
             in
             let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
-            let cons = E.mk_term (Sy.constr (Hs.view h)) xs ty in
+            let cons = E.mk_constr (Hstring.view h) xs ty in
             let env = {env with new_terms = SE.add cons env.new_terms} in
             let eq = E.mk_eq t cons ~iff:false in
             if Options.get_debug_adt () then
@@ -234,16 +298,16 @@ let deduce_is_constr uf r h eqs env ex =
         Printer.print_err "%a" X.print r;
         assert false
     end
-  | _ -> env,eqs
+  | Constr _ | Tester _ | Select _ -> env, eqs
 
+(* Collect all the constructors of the ADT type [ty]. *)
 let values_of ty =
   match ty with
   | Ty.Tadt (name,params) ->
-    let l = match Ty.type_body name params with
-      | Ty.Adt cases -> cases
-    in
+    let Ty.Adt cases = Ty.type_body name params in
     Some
-      (List.fold_left (fun st {Ty.constr; _} -> HSS.add constr st) HSS.empty l)
+      (List.fold_left (fun st {Ty.constr; _} -> HSS.add constr st)
+         HSS.empty cases)
   | _ -> None
 
 let add_adt env uf t r sy ty =
@@ -264,7 +328,11 @@ let add_adt env uf t r sy ty =
           ~module_name:"Adt_rel" ~function_name:"add_adt"
           "new ADT expr: %a" E.print t;
       let constrs =
-        match values_of ty with None -> assert false | Some s -> s
+        match values_of ty with
+        | None ->
+          (* The type [ty] is an ADT type. *)
+          assert false
+        | Some s -> s
       in
       let env =
         { env with domains = MX.add r (constrs, Ex.empty) env.domains }
@@ -280,10 +348,12 @@ let add_adt env uf t r sy ty =
 
     | _ -> env
 
+(* Add the tester `((_ is hs) r)` to the environment [env]. *)
 let update_tester r hs env =
   let old = try MX.find r env.seen_testers with Not_found -> HSS.empty in
   {env with seen_testers = MX.add r (HSS.add hs old) env.seen_testers}
 
+(* Check if [((_ is hs) r)] is [true]. *)
 let trivial_tester r hs =
   match Th.embed r with (* can filter further/better *)
   | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
@@ -325,7 +395,7 @@ let add_guarded_destr env uf t hs e t_ty =
      This may/will introduce bugs when instantiating
      let env = {env with new_terms = SE.add access env.new_terms} in
   *)
-  let is_c = E.mk_builtin ~is_pos:true (Sy.IsConstr c) [e] in
+  let is_c = E.mk_tester (Hstring.view c) e in
   let eq = E.mk_eq access t ~iff:false in
   if Options.get_debug_adt () then
     Printer.print_dbg ~header:false
@@ -334,11 +404,7 @@ let add_guarded_destr env uf t hs e t_ty =
       E.print is_c
       E.print eq;
   let r_e, ex_e = try Uf.find uf e with Not_found -> assert false in
-  if trivial_tester r_e c then
-    {env with pending_deds =
-                (Sig_rel.LTerm eq, ex_e, Th_util.Other) :: env.pending_deds}
-  else
-  if seen_tester r_e c env then
+  if trivial_tester r_e c || seen_tester r_e c env then
     {env with pending_deds =
                 (Sig_rel.LTerm eq, ex_e, Th_util.Other) :: env.pending_deds}
   else
@@ -356,7 +422,8 @@ let add_aux env (uf:uf) (r:r) t =
     let { E.f = sy; xs; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
     match sy, xs with
-    | Sy.Op Sy.Destruct (hs, true), [e] -> (* guarded *)
+    | Sy.Op Sy.Destruct (hs, true), [e] ->
+      (* guarded *)
       if Options.get_debug_adt () then
         Printer.print_dbg
           ~module_name:"Adt_rel" ~function_name:"add_aux"
@@ -373,20 +440,15 @@ let add_aux env (uf:uf) (r:r) t =
       { env with seen_access = SE.add t env.seen_access }
 
     | Sy.Op Sy.Destruct _, _ ->
-      assert false (* not possible *)
+      (* This case is excluded by the parser. *)
+      assert false
 
-    (*| Sy.Op Sy.IsConstr _, _ ->
-      if get_debug_adt () then
-      Printer.print_dbg
-      "new Tester: %a" E.print t;
-       { env with seen_testers = SE.add t env.seen_testers }
-    *)
     | _ -> env
 
 let add env (uf:uf) (r:r) t =
   add_aux env (uf:uf) (r:r) t, []
 
-
+(* Update the counter of case-split size in [env]. *)
 let count_splits env la =
   let nb =
     List.fold_left
@@ -398,45 +460,84 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the disequality [sm1 <> sm2>]. More precisely, if one of the semantic
+   values is an application of a constructor [cons], we remove [cons] from
+   the domain of the other one.
+
+   In any case, we produce an equality if the domain of one of these semantic
+   values becomes a singleton.
+
+   @raise Ex.Inconsistent if the disequality is inconsistent with the
+   current environment [env]. *)
 let add_diseq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Adt.Alien r , Adt.Constr { c_name = h; c_args = []; _ }
   | Adt.Constr { c_name = h; c_args = []; _ }, Adt.Alien r  ->
-    (* not correct with args *)
-    let enum, ex =
+    let dom, ex =
       try MX.find r env.domains with Not_found -> hss, Ex.empty
     in
-    let enum = HSS.remove h enum in
+    let dom = HSS.remove h dom in
     let ex = Ex.union ex dep in
-    if HSS.is_empty enum then raise (Ex.Inconsistent (ex, env.classes))
+    if HSS.is_empty dom then raise (Ex.Inconsistent (ex, env.classes))
     else
-      let env = { env with domains = MX.add r (enum, ex) env.domains } in
-      if HSS.cardinal enum = 1 then
-        let h' = HSS.choose enum in
+      let env = { env with domains = MX.add r (dom, ex) env.domains } in
+      if HSS.cardinal dom = 1 then
+        let h' = HSS.choose dom in
         let env, eqs = deduce_is_constr uf r h' eqs env ex in
         env, eqs
       else env, eqs
 
-  | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _  ->
+  | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _
+  | Adt.Constr _, Adt.Constr _ ->
+    (* Let's imagine that [sm1] is alien and [sm2] is the constructor
+       application`cons1 (d1 x1) ... (dn xn)`. In this situation, we would like
+       to propagate the clause:
+        (_ is cons1 sm1) =>
+          (or (distinct (d1 sm1) x1) ... (distinct (dn sm1) xn))
+
+       But we can only propagate literals to CC(X) with our current
+       implementation. Thus, we ignore silently disequalities in this case.
+
+       In particular, our implementation of the ADT theory is incomplete
+       For instance, Alt-Ergo answers `Unknown` on this input file:
+       ```
+        (set-logic ALL)
+        (declare-datatype Data (
+          (cons1 (d1 Bool))
+          (cons2)
+        ))
+        (declare-const x Data)
+        (declare-const y Data)
+        (declare-const z Data)
+        (assert ((_ is cons1) x))
+        (assert ((_ is cons1) y))
+        (assert ((_ is cons1) z))
+        (assert (distinct x y z))
+        (check-sat)
+       ```
+       The expected answer is `unsat`. If we remove the second constructor
+       [cons2], Alt-Ergo will promote the ADT `Data` to a record and we got the
+       correct answer. *)
     env, eqs
 
   | Adt.Alien r1, Adt.Alien r2 ->
-    let enum1,ex1=
-      try MX.find r1 env.domains with Not_found -> hss,Ex.empty in
-    let enum2,ex2=
-      try MX.find r2 env.domains with Not_found -> hss,Ex.empty in
+    let dom1, ex1=
+      try MX.find r1 env.domains with Not_found -> hss, Ex.empty in
+    let dom2, ex2=
+      try MX.find r2 env.domains with Not_found -> hss, Ex.empty in
 
     let env, eqs =
-      if HSS.cardinal enum1 = 1 then
+      if HSS.cardinal dom1 = 1 then
         let ex = Ex.union dep ex1 in
-        let h' = HSS.choose enum1 in
+        let h' = HSS.choose dom1 in
         deduce_is_constr uf r1 h' eqs env ex
       else env, eqs
     in
     let env, eqs =
-      if HSS.cardinal enum2 = 1 then
+      if HSS.cardinal dom2 = 1 then
         let ex = Ex.union dep ex2 in
-        let h' = HSS.choose enum2 in
+        let h' = HSS.choose dom2 in
         deduce_is_constr uf r2 h' eqs env ex
       else env, eqs
     in
@@ -444,23 +545,46 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
+(* Helper function used in [assume_is_constr] and [assume_not_is_constr].
+   Retrieve the pending destructor equations associated with the semantic
+   value [r] and the constructor [hs]. This function removes also these
+   equations from [env.selectors]. *)
 let assoc_and_remove_selector hs r env =
   try
     let mhs = MX.find r env.selectors in
     let deds = MHs.find hs mhs in
     let mhs = MHs.remove hs mhs in
-    deds,
-    (if MHs.is_empty mhs then {env with selectors = MX.remove r env.selectors}
-     else {env with selectors = MX.add r mhs env.selectors})
+    let env =
+      if MHs.is_empty mhs then
+        { env with selectors = MX.remove r env.selectors }
+      else
+        { env with selectors = MX.add r mhs env.selectors }
+    in
+    deds, env
 
   with Not_found ->
     [], env
 
+(* Assume the tester `((_ is hs) r)` where [r] can be a constructor
+   application or a uninterpreted semantic value.
+
+   We add the destructor equations associated with [r] and [hs] to [eqs].
+   We also add the tester to [env.seen_testers].
+
+   @raise Ex.Inconsistent if we already know that the value of [r]
+          cannot be an application of the constructor [hs]. *)
 let assume_is_constr uf hs r dep env eqs =
   match Th.embed r with
-  | Adt.Constr{ c_name; _ } when not (Hs.equal c_name hs) ->
+  | Adt.Constr { c_name; _ } when not (Hs.equal c_name hs) ->
     raise (Ex.Inconsistent (dep, env.classes));
-  | _ ->
+
+  | Adt.Constr _ -> env, eqs
+
+  | Adt.Tester _ | Adt.Select _ ->
+    (* We never call this function on such semantic values. *)
+    assert false
+
+  | Adt.Alien _ ->
     if Options.get_debug_adt () then
       Printer.print_dbg
         ~module_name:"Adt_rel" ~function_name:"assume_is_constr"
@@ -477,7 +601,7 @@ let assume_is_constr uf hs r dep env eqs =
       in
       let env = update_tester r hs env in
 
-      let enum, ex =
+      let dom, ex =
         try MX.find r env.domains
         with Not_found ->
         (*Cannot just put assert false !
@@ -487,10 +611,17 @@ let assume_is_constr uf hs r dep env eqs =
         | Some s -> s, Ex.empty
       in
       let ex = Ex.union ex dep in
-      if not (HSS.mem hs enum) then raise (Ex.Inconsistent (ex, env.classes));
+      if not (HSS.mem hs dom) then raise (Ex.Inconsistent (ex, env.classes));
       let env, eqs = deduce_is_constr uf r hs eqs env ex in
-      {env with domains = MX.add r (HSS.singleton hs, ex) env.domains} , eqs
+      {env with domains = MX.add r (HSS.singleton hs, ex) env.domains}, eqs
 
+(* Assume `(not ((_ is hs) r))` where [r] can be a constructor application
+   or a uninterpreted semantic value.
+
+   We remove the destructor equations associated with [r] and [hs].
+
+   @raise Ex.Inconsistent if we already know that the value of [r] has to
+          be an application of the constructor [hs]. *)
 let assume_not_is_constr uf hs r dep env eqs =
   match Th.embed r with
   | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
@@ -498,7 +629,7 @@ let assume_not_is_constr uf hs r dep env eqs =
   | _ ->
 
     let _, env = assoc_and_remove_selector hs r env in
-    let enum, ex =
+    let dom, ex =
       try MX.find r env.domains with
         Not_found ->
         (* semantic values may be not inited with function add *)
@@ -506,22 +637,27 @@ let assume_not_is_constr uf hs r dep env eqs =
         | Some s -> s, Ex.empty
         | None -> assert false
     in
-    if not (HSS.mem hs enum) then env, eqs
+    if not (HSS.mem hs dom) then env, eqs
     else
-      let enum = HSS.remove hs enum in
+      let dom = HSS.remove hs dom in
       let ex = Ex.union ex dep in
-      if HSS.is_empty enum then raise (Ex.Inconsistent (ex, env.classes))
+      if HSS.is_empty dom then raise (Ex.Inconsistent (ex, env.classes))
       else
-        let env = { env with domains = MX.add r (enum, ex) env.domains } in
-        if HSS.cardinal enum = 1 then
-          let h' = HSS.choose enum in
+        let env = { env with domains = MX.add r (dom, ex) env.domains } in
+        if HSS.cardinal dom = 1 then
+          let h' = HSS.choose dom in
           let env, eqs = deduce_is_constr uf r h' eqs env ex in
           env, eqs
         else env, eqs
 
 
 
-(* dot it modulo equivalence class ? or is it sufficient ? *)
+(* TODO: Do it modulo equivalence class ? or is it sufficient ? *)
+(* Update the domains of the semantic values [sm1] and [sm2] according to
+   the equation [sm1 = sm2]. More precisley, we replace their domains by
+   their intersection.
+
+   @raise Ex.Inconsistent if the domains of [sm1] and [sm2] are disjoint. *)
 let add_eq uf hss sm1 sm2 dep env eqs =
   match sm1, sm2 with
   | Adt.Alien r, Adt.Constr { c_name = h; _ }
@@ -560,7 +696,9 @@ let add_aux env r =
   match Th.embed r with
   | Adt.Alien r when not (MX.mem r env.domains) ->
     begin match values_of (X.type_info r) with
-      | Some s -> { env with domains = MX.add r (s, Ex.empty) env.domains }
+      | Some s ->
+        (* All the constructors are possible. *)
+        { env with domains = MX.add r (s, Ex.empty) env.domains }
       | None ->
         env
     end
@@ -604,6 +742,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
     { env with selectors = MX.add r2 _new env.selectors }, !eqs
   with Not_found -> env, eqs
 
+(* Remove duplicate literals in the list [la]. *)
 let remove_redundancies la =
   let cache = ref SLR.empty in
   List.filter
@@ -687,6 +826,9 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
+(* Do a case-split by choosing a semantic value [r] and constructor [c]
+   for which there are pending destructor equations and propagate the
+   literal [(not (_ is c) r)]. *)
 let case_split env _uf ~for_model =
   if Options.get_disable_adts () || not (Options.get_enable_adts_cs())
   then
@@ -705,7 +847,7 @@ let case_split env _uf ~for_model =
         if Options.get_debug_adt () then
           Printer.print_dbg ~header:false
             "found hs = %a" Hs.print hs;
-        (* cs on negative version would be better in general *)
+        (* CS on negative version would be better in general. *)
         let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
         [ cs, true, Th_util.CS (Th_util.Th_adt, two) ]
       with Not_found ->
