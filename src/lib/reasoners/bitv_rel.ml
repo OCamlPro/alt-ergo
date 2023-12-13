@@ -681,7 +681,7 @@ let propagate =
     let changed, dom = propagate SX.empty bcs dom in
     SX.fold (fun r acc ->
         add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
-      ) changed [], dom
+      ) changed [], bcs, dom
 
 type t =
   { delayed : Rel_utils.Delayed.t
@@ -741,7 +741,7 @@ let assume env uf la =
           (env.congruence, (env.constraints, env.domain), env.size_splits)
           la
       in
-      let eqs, domain = propagate constraints domain in
+      let eqs, constraints, domain = propagate constraints domain in
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
@@ -816,7 +816,7 @@ let add env uf r t =
         let dr = abstract_bitlist (Shostak.Bitv.embed r) Ex.empty in
         let dom = Domains.update Ex.empty r env.domain dr in
         let congruence = Congruence.add r env.congruence in
-        let eqs', dom = propagate bcs dom in
+        let eqs', bcs, dom = propagate bcs dom in
         { env with congruence ; constraints = bcs ; domain = dom },
         List.rev_append eqs' eqs
       with Bitlist.Inconsistent ex ->
