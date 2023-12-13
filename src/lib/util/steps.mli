@@ -43,6 +43,7 @@ type incr_kind =
   | Omega             (** Arith : number of omega procedure on  Real and Int *)
   | Uf                (** UF step increment *)
   | Ac                (** AC step reasoning *)
+  | CP                (** Constraint propagation *)
   | Th_assumed of int (** Increment the counter for each term assumed in the
                           theories environment *)
 (** Define the type of increment *)
