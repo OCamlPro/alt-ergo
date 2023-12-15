@@ -1974,7 +1974,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         (* all previous guards are decided *)
         env.next_dec_guard <- Vec.size env.increm_guards
       end
-    else (assert (env.next_dec_guard = 0));
+    else
+      (* We are not decided, so the `next_dec_guard` should point to an
+         earlier guard or we have a bug because guards must be decided in
+         the `increm_guards` order. *)
+      assert (env.next_dec_guard <= Vec.size env.increm_guards);
     enqueue env g.neg 0 None
 
   let optimize env ~is_max obj = env.tenv <- Th.optimize env.tenv ~is_max obj
