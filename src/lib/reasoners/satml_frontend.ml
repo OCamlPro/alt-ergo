@@ -1275,11 +1275,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       end;
       dep
     | (Util.Timeout | I_dont_know ) as e -> raise e
-    | e ->
-      Printer.print_dbg
-        ~module_name:"Satml_frontend" ~function_name:"unsat"
-        "%s" (Printexc.to_string e);
-      assert false
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
