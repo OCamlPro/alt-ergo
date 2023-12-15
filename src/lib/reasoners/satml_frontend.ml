@@ -1274,7 +1274,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           )dep true
       end;
       dep
-    | (Util.Timeout | I_dont_know ) as e -> raise e
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
