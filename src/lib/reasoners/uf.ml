@@ -1106,13 +1106,6 @@ let compute_concrete_model_of_val cache =
   in fun env t ((mdl, mrepr) as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
     if X.is_solvable_theory_symbol f ty
-    (* TODO: BVand, BVor and BVxor are not symbols of the Shostak theory
-       of bitvectors as the solve function of this theory cannot support them.
-       Still these symbols will appear in the union-find.
-       We should use a different predicate to discriminate appropriate terms
-       here. *)
-    || Sy.equal f Sy.(Op BVand) || Sy.equal f Sy.(Op BVor)
-    || Sy.equal f Sy.(Op BVxor)
     || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
     || E.equal t E.vrai || E.equal t E.faux
     then
