@@ -294,4 +294,5 @@ let report fmt = function
       "Invalid action during %a mode: %a"
       Util.pp_mode mode
       report_mode_error merr;
-  | Model_error err -> report_model_error fmt err
+  | Model_error err ->
+    Fmt.pf fmt "Model Error: %a" report_model_error err
