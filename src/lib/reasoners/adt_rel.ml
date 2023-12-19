@@ -87,10 +87,11 @@ type t =
          d t = d' t
        where [d] is a guarded destructor and [d'] its non-guarded version.
 
-       More precisely, this map matches a representative [r] with
-       all the destructor equations on terms of the class of [r]. These
-       destructor equations are classified by their corresponding
-       constructor.
+       More precisely, this map matches a class representative [r] with a map
+       of constructors of the ADT type [X.type_info r] to a list of
+       destructor equations of the form [d t = d' t] where [t] lies in the
+       class of [r]. If a class representative changes, the structure is
+       updated by [update_cs_modulo_eq].
 
        Consider [d] a guarded destructor and [c] its associated constructor.
 
@@ -102,9 +103,7 @@ type t =
 
        - When we assume a tester on [c] (see [assume_is_constr]), we retrieve
          and propagate to CC(X) all the pending destructor equations
-         associated with the constructor [c].
-
-       - *)
+         associated with the constructor [c]. *)
 
     size_splits : Numbers.Q.t;
     (* Product of the size of all the facts learnt by CS assumed in
@@ -126,9 +125,9 @@ type t =
            In this case, we deduce the constructor of the semantic value and
            we add this equation to the pending queue using [deduce_is_constr].
 
-         - When we add a guarded destructor for the first time, we add a new
-           equation to the queue between this destructor and its unguarded
-           version.
+         - When we add a guarded destructor and we have already assumed the
+           tester of its associated constructor, we add a new equation to the
+           queue between this destructor and its unguarded version.
 
          This pending queue is flushed at the end of [assume] and its
          content is propagated to the environment of CC(X). *)
@@ -166,7 +165,7 @@ module Debug = struct
     Fmt.(iter ~sep:cut HSS.iter pp_tester) ppf ts
 
   let pp_domain ppf (r, (hss, _ex)) =
-    Fmt.pf ppf "@[The domain of %a is {%a@]}"
+    Fmt.pf ppf "@[The domain of %a is {%a@]}."
       X.print r
       Fmt.(iter ~sep:(const string "|") HSS.iter Hstring.print) hss
 
@@ -185,16 +184,16 @@ module Debug = struct
   let print_env loc env =
     if Options.get_debug_adt () then begin
       print_dbg ~flushed:false ~module_name:"Adt_rel" ~function_name:"print_env"
-        "@ @[<v 2>--ADT env %s ---------------------------------@ " loc;
-      print_dbg ~flushed:false ~header:false "@[%a@]"
+        "@[<v 2>--ADT env %s ---------------------------------@ " loc;
+      print_dbg ~flushed:false ~header:false "%a"
         Fmt.(iter_bindings ~sep:cut MX.iter pp_domain) env.domains;
       print_dbg ~flushed:false ~header:false
         "@]@ @[<v 2>-- seen testers ---------------------------@ ";
-      print_dbg ~flushed:false ~header:false "@[%a@]"
+      print_dbg ~flushed:false ~header:false "%a"
         Fmt.(iter_bindings ~sep:cut MX.iter pp_testers) env.seen_testers;
       print_dbg ~flushed:false ~header:false
         "@]@ @[<v 2>-- selectors ------------------------------@ ";
-      print_dbg ~flushed:false ~header:false "@[%a@]"
+      print_dbg ~flushed:false ~header:false "%a"
         Fmt.(iter_bindings ~sep:cut MX.iter pp_selectors) env.selectors;
       print_dbg ~header:false
         "@]@ -------------------------------------------";
@@ -440,7 +439,7 @@ let add_aux env (uf:uf) (r:r) t =
       { env with seen_access = SE.add t env.seen_access }
 
     | Sy.Op Sy.Destruct _, _ ->
-      (* This case is excluded by the parser. *)
+      (* The arity of the [Sy.Destruct] operator is 1. *)
       assert false
 
     | _ -> env
@@ -490,35 +489,8 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
 
   | Adt.Alien _ , Adt.Constr _ | Adt.Constr _, Adt.Alien _
   | Adt.Constr _, Adt.Constr _ ->
-    (* Let's imagine that [sm1] is alien and [sm2] is the constructor
-       application`cons1 (d1 x1) ... (dn xn)`. In this situation, we would like
-       to propagate the clause:
-        (_ is cons1 sm1) =>
-          (or (distinct (d1 sm1) x1) ... (distinct (dn sm1) xn))
-
-       But we can only propagate literals to CC(X) with our current
-       implementation. Thus, we ignore silently disequalities in this case.
-
-       In particular, our implementation of the ADT theory is incomplete
-       For instance, Alt-Ergo answers `Unknown` on this input file:
-       ```
-        (set-logic ALL)
-        (declare-datatype Data (
-          (cons1 (d1 Bool))
-          (cons2)
-        ))
-        (declare-const x Data)
-        (declare-const y Data)
-        (declare-const z Data)
-        (assert ((_ is cons1) x))
-        (assert ((_ is cons1) y))
-        (assert ((_ is cons1) z))
-        (assert (distinct x y z))
-        (check-sat)
-       ```
-       The expected answer is `unsat`. If we remove the second constructor
-       [cons2], Alt-Ergo will promote the ADT `Data` to a record and we got the
-       correct answer. *)
+    (* Our implementation of the ADT theory is incomplete.
+       See issue https://github.com/OCamlPro/alt-ergo/issues/1014. *)
     env, eqs
 
   | Adt.Alien r1, Adt.Alien r2 ->
@@ -546,7 +518,7 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
   |  _ -> env, eqs
 
 (* Helper function used in [assume_is_constr] and [assume_not_is_constr].
-   Retrieve the pending destructor equations associated with the semantic
+   Retrieves the pending destructor equations associated with the semantic
    value [r] and the constructor [hs]. This function removes also these
    equations from [env.selectors]. *)
 let assoc_and_remove_selector hs r env =
@@ -565,7 +537,7 @@ let assoc_and_remove_selector hs r env =
   with Not_found ->
     [], env
 
-(* Assume the tester `((_ is hs) r)` where [r] can be a constructor
+(* Assumes the tester `((_ is hs) r)` where [r] can be a constructor
    application or a uninterpreted semantic value.
 
    We add the destructor equations associated with [r] and [hs] to [eqs].
@@ -604,8 +576,7 @@ let assume_is_constr uf hs r dep env eqs =
       let dom, ex =
         try MX.find r env.domains
         with Not_found ->
-        (*Cannot just put assert false !
-          some terms are not well inited *)
+        (* Cannot just put assert false! some terms are not well inited. *)
         match values_of (X.type_info r) with
         | None -> assert false
         | Some s -> s, Ex.empty
@@ -632,7 +603,7 @@ let assume_not_is_constr uf hs r dep env eqs =
     let dom, ex =
       try MX.find r env.domains with
         Not_found ->
-        (* semantic values may be not inited with function add *)
+        (* Semantic values may be not inited with function add. *)
         match values_of (X.type_info r) with
         | Some s -> s, Ex.empty
         | None -> assert false
@@ -704,10 +675,16 @@ let add_aux env r =
     end
   | _ -> env
 
-(* needed for models generation because fresh terms are not
-   added with function add *)
+(* Needed for models generation because fresh terms are not
+   added with function add. *)
 let add_rec env r = List.fold_left add_aux env (X.leaves r)
 
+(* Update the field [env.selectors] when a Subst equality have
+   been propagated to CC(X).
+
+   If [r2] becomes the class representative of [r1], this function is
+   called and [env.selectors] maps [r2] to the union of the old
+   selectors of [r2] and [r1]. *)
 let update_cs_modulo_eq r1 r2 ex env eqs =
   (* PB Here: even if Subst, we are not sure that it was
      r1 |-> r2, because LR.mkv_eq may swap r1 and r2 *)

@@ -92,8 +92,8 @@ module Shostak (X : ALIEN) = struct
     | Sy.Op Sy.Destruct (_, guarded), _ ->
       (* A guarded destructor isn't interpreted by the ADT theory.
          If we assume the tester of the constructor associated with
-         this destructor, we produce release the guard. See the
-         documentation of [env.selectors] in [Adt_rel]. *)
+         this destructor, we propagate the non-guarded version of the
+         destructor. See the documentation of [env.selectors] in [Adt_rel]. *)
       not guarded
     | _ -> false
 
