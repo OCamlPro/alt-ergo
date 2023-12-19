@@ -346,7 +346,7 @@ val is_model_term : t -> bool
     - A record definition involving only model terms.
     - A constructor application involving only model terms,
     - A literal of a basic type (integer, real, boolean, unit or bitvector),
-    - An application of function of arity [0]. *)
+    - A name. *)
 
 val save_cache: unit -> unit
 (** Saves the modules cache *)

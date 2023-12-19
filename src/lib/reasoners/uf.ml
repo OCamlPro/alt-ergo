@@ -1014,7 +1014,7 @@ let model_repr_of_term t env mrepr =
     let mk = try ME.find t env.make with Not_found -> assert false in
     let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
     (* We call this function during the model generation only. At this time,
-       we are sure that representatives are constant semantic values. *)
+       we are sure that class representatives are constant semantic values. *)
     assert (X.is_constant rep);
     match X.to_model_term rep with
     | Some v -> v, ME.add t v mrepr
