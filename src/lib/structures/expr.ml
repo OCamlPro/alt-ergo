@@ -1194,6 +1194,12 @@ let mk_builtin ~is_pos n l =
   in
   if is_pos then pos else neg pos
 
+(** smart constructors for datatypes. *)
+
+let mk_constr cons xs ty = mk_term (Sy.Op (Constr (Hstring.make cons))) xs ty
+
+let mk_tester cons t =
+  mk_builtin ~is_pos:true (Sy.IsConstr (Hstring.make cons)) [t]
 
 (** Substitutions *)
 

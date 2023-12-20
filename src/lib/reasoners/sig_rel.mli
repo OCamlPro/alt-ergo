@@ -88,6 +88,8 @@ module type RELATION = sig
     t * instances
 
   val new_terms : t -> Expr.Set.t
+  (** [new_terms env] returns all the new terms created by the theory.
+      These terms can be used to instantiate axiomes. *)
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 

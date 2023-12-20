@@ -216,6 +216,11 @@ val mk_if : t -> t -> t -> t
 val mk_xor : t -> t -> t
 val mk_ite : t -> t -> t -> t
 
+(** smart constructor for datatypes. *)
+
+val mk_constr : string -> t list -> Ty.t -> t
+val mk_tester : string -> t -> t
+
 (** Substitutions *)
 
 val apply_subst : subst -> t -> t
