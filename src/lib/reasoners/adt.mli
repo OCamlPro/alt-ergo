@@ -32,8 +32,6 @@ type 'a abstract =
   | Constr of
       { c_name : Hstring.t ; c_ty : Ty.t ; c_args : (Hstring.t * 'a) list }
   | Select of { d_name : Hstring.t ; d_ty : Ty.t ; d_arg : 'a }
-  | Tester of { t_name : Hstring.t ; t_arg : 'a }
-  (* tester is currently not used to build values *)
 
   | Alien of 'a
 
