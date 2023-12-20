@@ -41,9 +41,6 @@ type 'a abstract =
   (* [Select { d_name; d_ty; d_arg }] represents the destructor [d_name] of
      the ADT [d_ty] on the ADT value [d_arg]. *)
 
-  | Tester of { t_name : Hs.t ; t_arg : 'a }
-  (* Tester is currently not used. *)
-
   | Alien of 'a
   (* [Alien r] represents a uninterpreted ADT semantic value. *)
 
@@ -117,14 +114,11 @@ module Shostak (X : ALIEN) = struct
     | Select d ->
       Fmt.pf ppf "%a#!!%a" X.print d.d_arg Hs.print d.d_name
 
-    | Tester t ->
-      Fmt.pf ppf "(%a ? %a)" X.print t.t_arg Hs.print t.t_name
-
 
   let is_mine u =
     match u with
     | Alien r -> r
-    | Constr _ | Tester _ ->
+    | Constr _ ->
       X.embed u
       [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
 
@@ -162,10 +156,6 @@ module Shostak (X : ALIEN) = struct
       Hstring.equal d1.d_name d2.d_name &&
       Ty.equal d1.d_ty d2.d_ty &&
       X.equal d1.d_arg d2.d_arg
-
-    | Tester t1, Tester t2 ->
-      Hstring.equal t1.t_name t2.t_name &&
-      X.equal t1.t_arg t2.t_arg
 
     | _ -> false
 
@@ -226,12 +216,9 @@ module Shostak (X : ALIEN) = struct
     | Select { d_name ; d_ty ; d_arg } ->
       ((Hstring.hash d_name + 11 * Ty.hash d_ty)) * 11 + X.hash d_arg
 
-    | Tester { t_name ; t_arg } ->
-      Hstring.hash t_name * 13 + X.hash t_arg
-
   let leaves r =
     match r with
-    | Alien r | Select { d_arg = r; _ } | Tester { t_arg = r; _ } ->
+    | Alien r | Select { d_arg = r; _ } ->
       X.leaves r
 
     | Constr { c_args; _ } ->
@@ -244,7 +231,7 @@ module Shostak (X : ALIEN) = struct
 
   let is_constant r =
     match r with
-    | Alien r | Select { d_arg = r; _ } | Tester { t_arg = r; _ } ->
+    | Alien r | Select { d_arg = r; _ } ->
       X.is_constant r
 
     | Constr { c_args; _ } ->
@@ -265,7 +252,6 @@ module Shostak (X : ALIEN) = struct
     | Alien r -> X.type_info r
     | Constr { c_ty ; _ } ->  c_ty
     | Select { d_ty  ; _ } -> d_ty
-    | Tester _ -> Ty.Tbool
 
   let compare s1 s2 =
     match embed s1, embed s2 with
@@ -304,15 +290,6 @@ module Shostak (X : ALIEN) = struct
         if c <> 0 then c
         else X.str_cmp d1.d_arg d2.d_arg
 
-    | Select _, _ -> 1
-    | _, Select _ -> -1
-
-    | Tester t1, Tester t2 ->
-      let c = Hstring.compare t1.t_name t2.t_name in
-      if c <> 0 then c
-      else
-        X.str_cmp t1.t_arg t2.t_arg
-
   let abstract_selectors p acc =
     match p with
     | Alien _ -> assert false (* handled in Combine *)
@@ -332,13 +309,6 @@ module Shostak (X : ALIEN) = struct
     (* assert false
        should probably reconstruct a new 'p' using args
     *)
-
-    | Tester { t_arg; _ } ->
-      let s_arg, acc = X.abstract_selectors t_arg acc in
-      if not (X.equal s_arg t_arg)
-         [@ocaml.ppwarning "TODO: abstract Selectors: case to test"] then
-        assert false;
-      is_mine p, acc
 
     | Select ({ d_arg; _ } as s)
       [@ocaml.ppwarning "TODO: abstract Selectors"] ->
@@ -392,7 +362,6 @@ module Shostak (X : ALIEN) = struct
     assert (not @@ Options.get_disable_adts ());
     match embed r1, embed r2 with
     | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
-    | Tester _, _ | _, Tester _ -> assert false (* not interpreted *)
     | Alien _, Alien _ ->
       Sig.{ pb with
             sbt = (if X.str_cmp r1 r2 > 0 then r1, r2 else r2, r1) :: pb.sbt }
@@ -431,9 +400,6 @@ module Shostak (X : ALIEN) = struct
 
     | Select d ->
       is_mine @@ Select { d with d_arg = X.subst p v d.d_arg }
-
-    | Tester t ->
-      is_mine @@ Tester { t with t_arg = X.subst p v t.t_arg }
 
 
   let color _        = assert false

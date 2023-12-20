@@ -297,7 +297,7 @@ let deduce_is_constr uf r h eqs env ex =
         Printer.print_err "%a" X.print r;
         assert false
     end
-  | Constr _ | Tester _ | Select _ -> env, eqs
+  | Constr _ | Select _ -> env, eqs
 
 (* Collect all the constructors of the ADT type [ty]. *)
 let values_of ty =
@@ -552,7 +552,7 @@ let assume_is_constr uf hs r dep env eqs =
 
   | Adt.Constr _ -> env, eqs
 
-  | Adt.Tester _ | Adt.Select _ ->
+  | Adt.Select _ ->
     (* We never call this function on such semantic values. *)
     assert false
 
