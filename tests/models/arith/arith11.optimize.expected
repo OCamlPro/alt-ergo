@@ -1,9 +1,9 @@
 
 unknown
 (
-  (define-fun x () Real 2.0)
   (define-fun p1 () Bool false)
   (define-fun p2 () Bool true)
+  (define-fun x () Real 2.0)
 )
 (objectives 
   (x 2.0)

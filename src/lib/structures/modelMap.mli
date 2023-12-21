@@ -28,33 +28,31 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Maps of values for alt-ergo's models.
-    Elements are sorted by symbols/types (P) and accumulated as sets
-    of expressions matching the P.key type (V).
-*)
-
-module P : Map.S with type key =
-                        Symbols.t * Ty.t list * Ty.t
-
-module V : Set.S with type elt =
-                        (Expr.t * (Shostak.Combine.r * string)) list *
-                        (Shostak.Combine.r * string)
-
-type key = P.key
-type elt = V.t
+type sy = Id.t * Ty.t list * Ty.t
+(** Typed symbol of function defined in the model. In order:
+    - The identifier of the symbol.
+    - The types of its arguments.
+    - The returned type. *)
 
 type t
+(** Type of model. *)
 
-val add : key -> V.elt -> t -> t
+val add : sy -> Expr.t list -> Expr.t -> t -> t
+(** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
+    associated with the symbol [sy]. *)
 
-val iter : (key -> elt -> unit) -> t -> unit
+val empty : suspicious:bool -> t
+(** An empty model. The [suspicious] flag is used to remember that this
+    model may be wrong as it involves symbols from theories for which the
+    model generation is known to be incomplete. *)
 
-val fold : (key -> elt -> 'acc -> 'acc) -> t -> 'acc -> 'acc
+val subst : Id.t -> Expr.t -> t -> t
+(** [subst id e mdl] substitutes all the occurrences of the identifier [id]
+    in the model [mdl] by the model term [e].
 
-val empty : t
+    @Raise Error if the expression [e] is not a model term or the type of
+           [e] doesn't agree with some occurrence of [id] in the model. *)
 
-val is_empty : t -> bool
-
-val is_suspicious : t -> bool
-(* Determine if the model is suspicious as it contains symbols
-   of theories for which the model generation is not properly supported. *)
+val pp : t Fmt.t
+(** [pp ppf mdl] prints the model [mdl] on the formatter [ppf] using the
+    SMT-LIB format. *)

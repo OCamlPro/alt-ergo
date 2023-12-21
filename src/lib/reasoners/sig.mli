@@ -128,11 +128,14 @@ module type SHOSTAK = sig
      [Some (t, false)], then there must be no context in which
      [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
-  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
+  val to_model_term : r -> Expr.t option
+  (** [to_model_term r] creates a model term if [r] is constant.
+      The function cannot fail if [r] is a constant (that is statisfied the
+      predicate [X.is_constant]).
 
+      The returned value always satisfies the predicate
+      [Expr.is_model_term]. See its documentation for more details about
+      model terms. *)
 end
 
 module type X = sig
@@ -191,8 +194,12 @@ module type X = sig
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
-  (* choose the value to print and how to print it for the given term.
-     The second term is its representative. The list is its equivalence class
-  *)
-  val choose_adequate_model : Expr.t -> r -> (Expr.t * r) list -> r * string
+  val to_model_term : r -> Expr.t option
+  (** [to_model_term r] creates a model term if [r] is constant.
+      The function cannot fail if [r] is a constant (that is statisfied the
+      predicate [X.is_constant]).
+
+      The returned value always satisfies the predicate
+      [Expr.is_model_term]. See its documentation for more details about
+      model terms. *)
 end

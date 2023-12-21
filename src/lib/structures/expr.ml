@@ -313,6 +313,16 @@ module SmtPrinter = struct
     | Sy.Real q when Q.(equal q zero) -> true
     | _ -> false
 
+  let pp_rational ppf q =
+    if Z.equal (Q.den q) Z.one then
+      Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
+    else if Q.sign q = -1 then
+      Fmt.pf ppf "(/ (- %a) %a)"
+        Z.pp_print (Z.abs (Q.num q))
+        Z.pp_print (Q.den q)
+    else
+      Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+
   let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
@@ -415,6 +425,9 @@ module SmtPrinter = struct
 
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
 
+    | Sy.Op Minus, [e1; { f = Sy.Real q; _ }] when is_zero e1.f ->
+      pp_rational ppf (Q.neg q)
+
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
       Fmt.pf ppf "@[<2>(- %a@])" pp e2
 
@@ -426,6 +439,10 @@ module SmtPrinter = struct
     | Sy.True, [] -> Fmt.pf ppf "true"
 
     | Sy.False, [] -> Fmt.pf ppf "false"
+
+    | Sy.Name { hs = n; _ }, []
+      when Id.Namespace.Abstract.is_id (Hstring.view n) ->
+      Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
 
     | Sy.Name { hs = n; _ }, [] -> Symbols.pp_name ppf (Hstring.view n)
 
@@ -443,14 +460,7 @@ module SmtPrinter = struct
         Fmt.pf ppf "%a" Z.pp_print i
 
     | Sy.Real q, [] ->
-      if Z.equal (Q.den q) Z.one then
-        Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
-      else if Q.sign q = -1 then
-        Fmt.pf ppf "(/ (- %a) %a)"
-          Z.pp_print (Z.abs (Q.num q))
-          Z.pp_print (Q.den q)
-      else
-        Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+      pp_rational ppf q
 
     | Sy.Bitv (n, s), [] ->
       Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
@@ -670,6 +680,8 @@ let print_list_sep sep =
     Fmt.list ~sep:Fmt.(const string sep) AEPrinter.pp
 
 let print_list ppf = print_list_sep "," ppf
+
+let pp_smtlib = SmtPrinter.pp
 
 let pp_binders ppf =
   if Options.get_output_smtlib ()
@@ -895,6 +907,10 @@ let void = mk_term (Sy.Void) [] Ty.Tunit
 
 let fresh_name ty = mk_term (Sy.fresh_internal_name ()) [] ty
 
+let mk_abstract ty =
+  let id = Id.Namespace.Abstract.fresh () |> Hstring.make in
+  mk_term (Sy.Name { hs = id; defined = false; kind = Other }) [] ty
+
 let is_internal_name t =
   match t with
   | { f; xs = []; _ } -> Sy.is_fresh_internal_name f
@@ -1015,14 +1031,23 @@ let mk_ite cond th el =
     if ty == Ty.Tbool then mk_if cond th el
     else mk_term (Sy.Op Sy.Tite) [cond; th; el] ty
 
-let [@inline always] const_term e =
-  (* we use this function because depth is currently not correct to
+let rec is_model_term e =
+  match e.f, e.xs with
+  | (Op Constr _ | Op Record | Op Set), xs -> List.for_all is_model_term xs
+  | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
+  | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
+  | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
+  | (True | False | Void | Name _ | Int _ | Real _ | Bitv _), [] -> true
+  | _ -> false
+
+let[@inline always] is_value_term e =
+  (* We use this function because depth is currently not correct to
      detect constants (not incremented in some situations due to
-     some regression) *)
+     some regression). *)
   match e.f with
-  | Sy.Form _ | Sy.Lit _ | Sy.Let  -> false
-  | True | False | Void | Name _ | Int _ | Real _ | Bitv _
-  | Op _ | Var _ | In _ | MapsTo _ ->
+  | Sy.Form _ | Sy.Lit _ | Sy.Let -> false
+  | True | False | Void | Name _ | Int _ | Real _ | Bitv _ | Op _
+  | Var _ | In _ | MapsTo _ ->
     let res = (e.xs == []) in
     assert (res == (depth e <= 1));
     res
@@ -1368,7 +1393,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
   try
     let _, nb_occ = Var.Map.find let_v in_e.vars in
     if nb_occ = 1 && (let_e.pure (*1*) || Sy.equal (Sy.var let_v) in_e.f) ||
-       const_term let_e then (* inline in these situations *)
+       is_value_term let_e then (* inline in these situations *)
       apply_subst_aux (Var.Map.singleton let_v let_e, Ty.esubst) in_e
     else
       let ty = type_info in_e in
@@ -1697,7 +1722,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     Fmt.kstr
-      (fun str -> Sy.make_as_fresh_skolem str)
+      (fun str -> Sy.name (Id.Namespace.make_as_fresh_skolem str))
       "%s%s!%d"
       s
       tyvars
@@ -3111,4 +3136,21 @@ module BV = struct
          (bvule s t))
   let bvsgt s t = bvslt t s
   let bvsge s t = bvsle t s
+end
+
+(** Constructors from the smtlib theory of functional arrays with
+    extensionality logic.
+
+    https://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml *)
+module ArraysEx = struct
+  let select a i =
+    let rty =
+      match type_info a with
+      | Tfarray (_, rty) -> rty
+      | _ -> invalid_arg "Expr.ArraysEx.select"
+    in
+    mk_term Sy.(Op Get) [a; i] rty
+
+  let store a i v =
+    mk_term Sy.(Op Set) [a; i; v] (type_info a)
 end

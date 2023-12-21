@@ -520,5 +520,5 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         Sat_solver_sig.pp_ae_unknown_reason_opt ur;
 
     | Some model ->
-      Models.output_concrete_model ppf model
+      Models.pp ppf model
 end

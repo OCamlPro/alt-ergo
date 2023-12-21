@@ -97,6 +97,11 @@ type mode_error =
   | Invalid_set_option of string
   | Forbidden_command of string
 
+(** Errors raised while using models. *)
+type model_error =
+  | Subst_type_clash of Id.t * Ty.t * Ty.t
+  | Subst_not_model_term of Expr.t
+
 (** All types of error that can be raised *)
 type error =
   | Parser_error of string (** Error used at parser loading *)
@@ -107,8 +112,12 @@ type error =
   | Warning_as_error
   | Dolmen_error of (int * string)
   (** Error code + description raised by dolmen. *)
+
   | Mode_error of Util.mode * mode_error
   (** Error used when performing actions forbidden in some modes. *)
+
+  | Model_error of model_error
+  (** Error raised while using models. *)
 
 (** {2 Exceptions } *)
 

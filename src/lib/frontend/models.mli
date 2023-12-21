@@ -32,16 +32,11 @@
 
 type t = {
   propositional : Expr.Set.t;
-  constants : ModelMap.t;
-  functions : ModelMap.t;
-  arrays : ModelMap.t;
-  terms_values : (Shostak.Combine.r * string) Expr.Map.t
-  (** A map from terms to their values in the model (as a
-      representative of type X.r and as a string. *)
+  model : ModelMap.t;
+  term_values : Expr.t Expr.Map.t
+  (** A map from terms to their values in the model. *)
 }
 
 val empty : t
 
-val output_concrete_model : t Fmt.t
-(** [output_concrete_model ppf mdl] prints the model [mdl] on
-    the formatter [ppf]. *)
+val pp : t Fmt.t

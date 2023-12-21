@@ -47,3 +47,7 @@ val apply : ('a -> 'a) -> 'a list -> 'a list * bool
 val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 (** similar to function apply, but the elements of the list are
     couples **)
+
+val try_map : ('a -> 'b option) -> 'a list -> 'b list option
+(** [try_map f l] is similar to [List.map f l] but the function [f]
+    may fail and the iterator shortcuts the computation. *)
