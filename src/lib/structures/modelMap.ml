@@ -31,8 +31,6 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
-
 module Graph = struct
   module M = Map.Make
       (struct
@@ -113,9 +111,9 @@ end
 
 module P = Map.Make
     (struct
-      type t = sy
+      type t = Id.typed
 
-      let compare = compare_sy
+      let compare = Id.compare_typed
     end)
 
 type t = {
