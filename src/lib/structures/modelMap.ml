@@ -134,7 +134,7 @@ let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
          it means there is no constraint on this graph. We replace it by
          the graph with the only constraint given by [arg_vals] and
          [ret_val]. *)
-      if Graph.cardinal graph == 1 then
+      if Graph.cardinal graph = 1 then
         let _, value = Graph.choose graph in
         let Expr.{ f; _ } = Expr.term_view value in
         match f with
