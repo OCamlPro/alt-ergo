@@ -53,6 +53,12 @@ module HT = Hashtbl.Make(
     let hash = Fun.id
   end)
 
+module DeclSet = Set.Make
+    (struct
+      type t = Id.typed
+      let compare = Id.compare_typed
+    end)
+
 (** Helper function: returns the basename of a dolmen path, since in AE
     the problems are contained in one-file (for now at least), the path is
     irrelevant and only the basename matters *)
@@ -701,8 +707,15 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
     end
   in
   Cache.store_sy tcst sy;
+  Cache.store_ty_vars id_ty;
   (* Adding polymorphic types to the cache. *)
-  Cache.store_ty_vars id_ty
+  let arg_tys, ret_ty =
+    match DT.view id_ty with
+    | `Arrow (arg_tys, ret_ty) ->
+      List.map dty_to_ty arg_tys, dty_to_ty ret_ty
+    | _ -> [], dty_to_ty id_ty
+  in
+  (Hstring.make name, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -2087,14 +2100,24 @@ let make dloc_file acc stmt =
             assert false
         ) defs
 
-    | {contents = `Decls [td]; _ } ->
-      begin match td with
-        | `Type_decl (td, _def) -> mk_ty_decl td
-        | `Term_decl td -> mk_term_decl td
-      end;
-      acc
+    | {contents = `Decls [td]; loc; _ } ->
+      let decl = match td with
+        | `Type_decl (td, _def) ->
+          mk_ty_decl td;
+          None
 
-    | {contents = `Decls dcl; _ } ->
+        | `Term_decl td ->
+          Some (mk_term_decl td)
+      in
+      begin match decl with
+        | Some d ->
+          let st_loc = dl_to_ael dloc_file loc in
+          C.{ st_decl = Decl d; st_loc } :: acc
+        | None ->
+          acc
+      end
+
+    | {contents = `Decls dcl; loc; _ } ->
       let rec aux acc tdl =
         (* for now, when acc has more than one element it is assumed that the
            types are mutually recursive. Which is not necessarily the case.
@@ -2107,21 +2130,24 @@ let make dloc_file acc stmt =
             | [otd] -> mk_ty_decl otd
             | _ -> mk_mr_ty_decls (List.rev acc)
           end;
-          mk_term_decl td;
-          aux [] tl
+          let st_loc = dl_to_ael dloc_file loc in
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl
 
         | `Type_decl (td, _def) :: tl ->
           aux (td :: acc) tl
 
         | [] ->
-          begin match acc with
-            | [] -> ()
-            | [otd] -> mk_ty_decl otd
-            | _ ->  mk_mr_ty_decls (List.rev acc)
+          begin
+            let () =
+              match acc with
+              | [] -> ()
+              | [otd] -> mk_ty_decl otd
+              | _ ->  mk_mr_ty_decls (List.rev acc)
+            in
+            []
           end
       in
-      aux [] dcl;
-      acc
+      aux [] dcl @ acc
 
     | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
 

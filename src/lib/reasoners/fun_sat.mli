@@ -40,6 +40,8 @@ module Make (Th : Theory.S) : sig
 
   val empty_with_inst : (Expr.t -> bool) -> t
 
+  val declare : t -> Id.typed -> t
+
   val push : t -> int -> t
 
   val pop : t -> int -> t
