@@ -53,12 +53,6 @@ module HT = Hashtbl.Make(
     let hash = Fun.id
   end)
 
-module DeclSet = Set.Make
-    (struct
-      type t = Id.typed
-      let compare = Id.compare_typed
-    end)
-
 (** Helper function: returns the basename of a dolmen path, since in AE
     the problems are contained in one-file (for now at least), the path is
     irrelevant and only the basename matters *)

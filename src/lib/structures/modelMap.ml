@@ -148,12 +148,6 @@ let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   let values = P.add sy (Graph.add arg_vals ret_val graph) values in
   { values; suspicious }
 
-module DeclSets = Set.Make
-    (struct
-      type t = Id.typed
-      let compare = Id.compare_typed
-    end)
-
 let empty ~suspicious declared_ids =
   let values =
     List.fold_left
