@@ -707,8 +707,8 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
     end
   in
   Cache.store_sy tcst sy;
-  Cache.store_ty_vars id_ty;
   (* Adding polymorphic types to the cache. *)
+  Cache.store_ty_vars id_ty;
   let arg_tys, ret_ty =
     match DT.view id_ty with
     | `Arrow (arg_tys, ret_ty) ->
