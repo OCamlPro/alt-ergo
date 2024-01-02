@@ -177,8 +177,7 @@ module Make (Th : Theory.S) = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
     last_saved_model : Models.t Lazy.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
-    declare_ids : Id.typed Vec.t;
-    declare_lim : int Vec.t;
+    declare_ids : Id.typed list Stack.t;
   }
 
   let reset_refs () =
@@ -1125,7 +1124,7 @@ module Make (Th : Theory.S) = struct
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = Vec.to_list env.declare_ids in
+        let declared_ids = Stack.top env.declare_ids in
         let model, _ = Th.compute_concrete_model ~declared_ids env.tbox in
         env.last_saved_model := Some model;
         env
@@ -1615,7 +1614,10 @@ module Make (Th : Theory.S) = struct
       raise e
 
   let declare env id =
-    Vec.push env.declare_ids id;
+    (* As we guarantee that the stack [env.declare_ids] is never empty,
+       we don't need to catch the [Stack.Empty] exception here. *)
+    let l = Stack.pop env.declare_ids in
+    Stack.push (id :: l) env.declare_ids;
     env
 
   let push env to_push =
@@ -1626,6 +1628,9 @@ module Make (Th : Theory.S) = struct
             Tableaux(CDCL) solver ! \
             Please use the Tableaux or CDLC SAT solvers instead"
         );
+    (* As we guarantee that the stack [env.declare_ids] is never empty,
+       we don't need to catch the [Stack.Empty] exception here. *)
+    let declare_ids = Stack.top env.declare_ids in
     Util.loop
       ~f:(fun _n () acc ->
           let new_guard = E.fresh_name Ty.Tbool in
@@ -1633,7 +1638,7 @@ module Make (Th : Theory.S) = struct
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)
               acc.guards.guards in
-          Vec.push env.declare_lim (Vec.size env.declare_ids);
+          Stack.push declare_ids env.declare_ids;
           {acc with guards =
                       { acc.guards with
                         current_guard = new_guard;
@@ -1664,8 +1669,12 @@ module Make (Th : Theory.S) = struct
           in
           acc.model_gen_phase := false;
           env.last_saved_model := None;
-          let lim = Vec.size env.declare_ids - Vec.pop env.declare_lim in
-          Vec.shrink env.declare_ids lim;
+          let () =
+            try ignore (Stack.pop env.declare_ids)
+            with Stack.Empty ->
+              (* Happens if we perform more pops than pushes. *)
+              invalid_arg "Fun_sat.pop"
+          in
           {acc with inst;
                     guards =
                       { acc.guards with
@@ -1847,10 +1856,10 @@ module Make (Th : Theory.S) = struct
       add_inst = selector;
       last_saved_model = ref None;
       unknown_reason = None;
-      declare_ids = Vec.make 17 ~dummy:Id.dummy_typed;
-      declare_lim = Vec.make 17 ~dummy:(-1);
+      declare_ids = Stack.create ();
     }
     in
+    Stack.push [] env.declare_ids;
     assume env gf_true Ex.empty
   (*maybe usefull when -no-theory is on*)
 
