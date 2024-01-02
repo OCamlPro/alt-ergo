@@ -31,8 +31,6 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
-type sy = Id.t * Ty.t list * Ty.t [@@deriving ord]
-
 module Graph = struct
   module M = Map.Make
       (struct
@@ -44,6 +42,8 @@ module Graph = struct
   let empty = M.empty
   let add = M.add
   let map = M.map
+  let cardinal = M.cardinal
+  let choose = M.choose
 
   (* A fiber of the function [f] over a value [v] is the set of all the values
      in the domain of [f] whose the image by [f] is [v].
@@ -113,9 +113,9 @@ end
 
 module P = Map.Make
     (struct
-      type t = sy
+      type t = Id.typed
 
-      let compare = compare_sy
+      let compare = Id.compare_typed
     end)
 
 type t = {
@@ -127,12 +127,45 @@ let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
                      arguments" Id.pp id;
-
-  let graph = try P.find sy values with Not_found -> Graph.empty in
+  let graph =
+    try
+      let graph = P.find sy values in
+      (* If the graph associated with [sy] contains only an abstract value,
+         it means there is no constraint on this graph. We replace it by
+         the graph with the only constraint given by [arg_vals] and
+         [ret_val]. *)
+      if Graph.cardinal graph == 1 then
+        let _, value = Graph.choose graph in
+        let Expr.{ f; _ } = Expr.term_view value in
+        match f with
+        | Sy.Name { hs; _ }
+          when Id.Namespace.Abstract.is_id (Hstring.view hs) ->
+          Graph.empty
+        | _ -> graph
+      else
+        graph
+    with Not_found -> Graph.empty in
   let values = P.add sy (Graph.add arg_vals ret_val graph) values in
   { values; suspicious }
 
-let empty ~suspicious = { values = P.empty; suspicious }
+module DeclSets = Set.Make
+    (struct
+      type t = Id.typed
+      let compare = Id.compare_typed
+    end)
+
+let empty ~suspicious declared_ids =
+  let values =
+    List.fold_left
+      (fun values ((_, arg_tys, ret_ty) as sy) ->
+         let arg_vals = List.map Expr.mk_abstract arg_tys in
+         let ret_val = Expr.mk_abstract ret_ty in
+         let graph = Graph.add arg_vals ret_val Graph.empty in
+         P.add sy graph values
+      )
+      P.empty declared_ids
+  in
+  { values; suspicious }
 
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in

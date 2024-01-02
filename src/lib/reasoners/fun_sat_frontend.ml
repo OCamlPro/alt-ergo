@@ -47,6 +47,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | FS.Unsat expl -> raise (Unsat expl)
     | FS.I_dont_know e -> env := e; raise I_dont_know
 
+  let declare t id =
+    t := FS.declare !t id
+
   let push t i = exn_handler (fun env -> t := FS.push env i) t
 
   let pop t i = exn_handler (fun env -> t := FS.pop env i) t

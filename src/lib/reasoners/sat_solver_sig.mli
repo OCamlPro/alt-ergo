@@ -56,6 +56,8 @@ module type S = sig
   val empty : unit -> t
   val empty_with_inst : (Expr.t -> bool) -> t
 
+  val declare : t -> Id.typed -> unit
+
   (** [push env n] add n new assertion levels.
       A guard g is added for every expression e assumed at the current
       assertion level.

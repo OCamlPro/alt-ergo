@@ -1167,11 +1167,11 @@ let compute_concrete_model_of_val cache =
 let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
   let get_abstract_for = Cache.get_abstract_for cache.abstracts
-  in fun ~prop_model env ->
+  in fun ~prop_model ~declared_ids env ->
     let terms, suspicious = terms env in
     let model, mrepr =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-        terms (ModelMap.empty ~suspicious, ME.empty)
+        terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
     in
     let model =
       Hashtbl.fold (fun t vals mdl ->
@@ -1212,9 +1212,9 @@ let extract_concrete_model cache =
     in
     { Models.propositional = prop_model; model; term_values = mrepr }
 
-let extract_concrete_model ~prop_model =
+let extract_concrete_model ~prop_model ~declared_ids =
   let cache : cache = {
     array_selects = Hashtbl.create 17;
     abstracts = Hashtbl.create 17;
   }
-  in fun env -> extract_concrete_model cache ~prop_model env
+  in fun env -> extract_concrete_model cache ~prop_model ~declared_ids env

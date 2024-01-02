@@ -30,6 +30,8 @@
 
 type t = Hstring.t [@@deriving ord]
 
+type typed = t * Ty.t list * Ty.t [@@deriving ord]
+
 let equal = Hstring.equal
 
 let pp ppf id =
@@ -79,3 +81,7 @@ module Namespace = struct
     Skolem.reset_fresh_cpt ();
     Abstract.reset_fresh_cpt ()
 end
+
+let dummy_typed =
+  let id = Namespace.Internal.fresh () |> Hstring.make in
+  (id, [], Ty.Tunit)

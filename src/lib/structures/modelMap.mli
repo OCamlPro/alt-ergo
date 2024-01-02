@@ -28,20 +28,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type sy = Id.t * Ty.t list * Ty.t
-(** Typed symbol of function defined in the model. In order:
-    - The identifier of the symbol.
-    - The types of its arguments.
-    - The returned type. *)
-
 type t
 (** Type of model. *)
 
-val add : sy -> Expr.t list -> Expr.t -> t -> t
+val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
 
-val empty : suspicious:bool -> t
+val empty : suspicious:bool -> Id.typed list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
