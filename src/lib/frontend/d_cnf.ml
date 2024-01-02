@@ -2101,20 +2101,14 @@ let make dloc_file acc stmt =
         ) defs
 
     | {contents = `Decls [td]; loc; _ } ->
-      let decl = match td with
+      begin match td with
         | `Type_decl (td, _def) ->
           mk_ty_decl td;
-          None
+          acc
 
         | `Term_decl td ->
-          Some (mk_term_decl td)
-      in
-      begin match decl with
-        | Some d ->
           let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl d; st_loc } :: acc
-        | None ->
-          acc
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
       end
 
     | {contents = `Decls dcl; loc; _ } ->
