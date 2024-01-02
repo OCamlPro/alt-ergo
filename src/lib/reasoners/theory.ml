@@ -61,7 +61,10 @@ module type S = sig
   val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
-  val compute_concrete_model : t -> Models.t Lazy.t * Objective.Model.t
+  val compute_concrete_model :
+    t ->
+    declared_ids:Id.typed list ->
+    Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -879,13 +882,14 @@ module Main_Default : S = struct
   let get_real_env t = t.gamma
   let get_case_split_env t = t.gamma_finite
 
-  let compute_concrete_model env =
+  let compute_concrete_model env ~declared_ids =
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
     in
     lazy (
       CC_X.extract_concrete_model
         ~prop_model:assumed_set
+        ~declared_ids
         gamma_finite
     ), objectives
 
@@ -940,7 +944,8 @@ module Main_Empty : S = struct
   let get_case_split_env _ = CC_X.empty
   let do_case_split env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
-  let compute_concrete_model _env = lazy Models.empty, Objective.Model.empty
+  let compute_concrete_model _env ~declared_ids:_ =
+    lazy Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []

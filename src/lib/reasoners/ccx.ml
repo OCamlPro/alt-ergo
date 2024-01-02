@@ -86,7 +86,10 @@ module type S = sig
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
     t -> (Expr.t -> Expr.t -> bool) -> t * Sig_rel.instances
 
-  val extract_concrete_model : prop_model:Expr.Set.t -> t -> Models.t
+  val extract_concrete_model :
+    prop_model:Expr.Set.t ->
+    declared_ids:Id.typed list ->
+    t -> Models.t
 
 end
 
@@ -748,6 +751,6 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let extract_concrete_model ~prop_model env =
-    Uf.extract_concrete_model ~prop_model env.uf
+  let extract_concrete_model ~prop_model ~declared_ids env =
+    Uf.extract_concrete_model ~prop_model ~declared_ids env.uf
 end

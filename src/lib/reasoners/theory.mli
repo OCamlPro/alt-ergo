@@ -54,7 +54,10 @@ module type S = sig
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
-  val compute_concrete_model : t -> Models.t Lazy.t * Objective.Model.t
+  val compute_concrete_model :
+    t ->
+    declared_ids:Id.typed list ->
+    Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :

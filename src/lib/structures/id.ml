@@ -81,3 +81,7 @@ module Namespace = struct
     Skolem.reset_fresh_cpt ();
     Abstract.reset_fresh_cpt ()
 end
+
+let dummy_typed =
+  let id = Namespace.Internal.fresh () |> Hstring.make in
+  (id, [], Ty.Tunit)

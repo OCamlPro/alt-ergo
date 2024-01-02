@@ -36,6 +36,8 @@ type typed = t * Ty.t list * Ty.t
     - Types of its arguments.
     - The returned type. *)
 
+val dummy_typed : typed
+
 val compare_typed : typed -> typed -> int
 val equal : t -> t -> bool
 val show : t -> string

@@ -43,7 +43,7 @@ type t = {
 
 let empty = {
   propositional = Expr.Set.empty;
-  model = ModelMap.empty ~suspicious:false;
+  model = ModelMap.empty ~suspicious:false [];
   term_values = Expr.Map.empty;
 }
 
