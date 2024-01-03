@@ -67,8 +67,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
-    declare_ids : Id.typed Vec.t;
-    declare_lim : int Vec.t;
+
+    mutable declare_top : Id.typed list;
+    declare_tail : Id.typed list Stack.t;
+    (** Stack of the declared symbols by the user. The field [declare_top]
+        is the top of the stack and [declare_tail] is tail. In particular, this
+        stack is never empty. *)
   }
 
   let empty_guards () = {
@@ -99,8 +103,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       last_saved_model = None;
       last_saved_objectives = None;
       unknown_reason = None;
-      declare_ids = Vec.make 17 ~dummy:Id.dummy_typed;
-      declare_lim = Vec.make 17 ~dummy:(-1);
+      declare_top = [];
+      declare_tail = Stack.create ();
     }
 
   exception Sat
@@ -969,9 +973,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = Vec.to_list env.declare_ids in
         let model, objectives =
-          Th.compute_concrete_model ~declared_ids (SAT.current_tbox env.satml)
+          Th.compute_concrete_model ~declared_ids:env.declare_top
+            (SAT.current_tbox env.satml)
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;
@@ -1209,7 +1213,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       expr_guard, atom_guard
     | _ -> assert false
 
-  let declare env id = Vec.push env.declare_ids id
+  let declare env id =
+    env.declare_top <- id :: env.declare_top
 
   let push env to_push =
     Util.loop ~f:(fun _n () () ->
@@ -1219,7 +1224,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           Stack.push expr_guard env.guards.stack_guard;
           Steps.push_steps ();
           env.guards.current_guard <- expr_guard;
-          Vec.push env.declare_lim (Vec.size env.declare_ids)
+          Stack.push env.declare_top env.declare_tail;
         with
         | Util.Step_limit_reached _ ->
           (* This function should be called without step limit
@@ -1243,8 +1248,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.last_saved_objectives <- None;
           env.inst <- inst;
           env.guards.current_guard <- b;
-          let lim = Vec.size env.declare_ids - Vec.pop env.declare_lim in
-          Vec.shrink env.declare_ids lim
+          let declare_top =
+            try Stack.pop env.declare_tail
+            with Stack.Empty -> invalid_arg "Satml_frontend.pop"
+          in
+          env.declare_top <- declare_top;
         )
       ~max:to_pop
       ~elt:()
