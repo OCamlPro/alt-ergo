@@ -182,7 +182,7 @@ let subst id e { values; suspicious } =
       (fun graph ->
          match graph with
          | C constraints -> C (Constraints.map (subst_in_term id e) constraints)
-         | Free a -> Free (subst_in_term id e a)
+         | Free _ -> graph
       ) values in
   { values; suspicious }
 
