@@ -37,9 +37,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   type t = FS.t ref
 
-  let empty () = ref (FS.empty ())
-
-  let empty_with_inst f = ref (FS.empty_with_inst f)
+  let empty ?selector () = ref (FS.empty ?selector ())
 
   let exn_handler f env =
     try f !env with

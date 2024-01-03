@@ -123,7 +123,7 @@ let main worker_id content =
     let solve all_context (cnf, goal_name) =
       let used_context = Frontend.choose_used_context all_context ~goal_name in
       SAT.reset_refs ();
-      let sat_env = SAT.empty_with_inst add_inst in
+      let sat_env = SAT.empty ~selector:add_inst () in
       let ftnd_env = FE.init_env ~sat_env used_context in
       List.iter
         (FE.process_decl ~hook_on_status:get_status_and_print ftnd_env)

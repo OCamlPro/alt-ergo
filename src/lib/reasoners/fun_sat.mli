@@ -36,9 +36,7 @@ module Make (Th : Theory.S) : sig
   exception Unsat of Explanation.t
   exception I_dont_know of t
 
-  val empty : unit -> t
-
-  val empty_with_inst : (Expr.t -> bool) -> t
+  val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
   val push : t -> int -> t
 
