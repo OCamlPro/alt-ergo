@@ -2106,36 +2106,36 @@ let make dloc_file acc stmt =
       end
 
     | {contents = `Decls dcl; loc; _ } ->
-      let rec aux acc tdl =
+      let rec aux ty_decls tdl acc =
         (* for now, when acc has more than one element it is assumed that the
            types are mutually recursive. Which is not necessarily the case.
            But it doesn't affect the execution.
         *)
         match tdl with
         | `Term_decl td :: tl ->
-          begin match acc with
+          begin match ty_decls with
             | [] -> ()
             | [otd] -> mk_ty_decl otd
-            | _ -> mk_mr_ty_decls (List.rev acc)
+            | _ -> mk_mr_ty_decls (List.rev ty_decls)
           end;
           let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl acc
 
         | `Type_decl (td, _def) :: tl ->
-          aux (td :: acc) tl
+          aux (td :: ty_decls) tl acc
 
         | [] ->
           begin
             let () =
-              match acc with
+              match ty_decls with
               | [] -> ()
               | [otd] -> mk_ty_decl otd
-              | _ ->  mk_mr_ty_decls (List.rev acc)
+              | _ ->  mk_mr_ty_decls (List.rev ty_decls)
             in
-            []
+            acc
           end
       in
-      aux [] dcl @ acc
+      aux [] dcl acc
 
     | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
 
