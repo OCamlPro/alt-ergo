@@ -91,6 +91,7 @@ type run_error =
   | Failed_check_unsat_core
   | Unsupported_feature of string
   | Dynlink_error of string
+  | Stack_underflow
 
 (** Errors raised when performing actions forbidden in some modes. *)
 type mode_error =

@@ -100,7 +100,7 @@ module type S = sig
       Internally, the guard [g] introduced in [push] corresponding to this pop
       is propagated to [false] at level [0].
 
-      @raise invalid_arg if there is no [n] assertion levels in [env]. *)
+      @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
   val assume : t -> Expr.gformula -> Explanation.t -> unit
   (** [assume env f dep] assumes the ground formula [f] in [env].

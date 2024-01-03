@@ -165,7 +165,7 @@ let rec subst_in_term id e c =
   | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
     let ty = Expr.type_info e in
     if not @@ Ty.equal ty ty' then
-      raise (Errors.Error (Model_error (Subst_type_clash (id, ty', ty))));
+      Errors.error (Model_error (Subst_type_clash (id, ty', ty)));
     e
   | _ ->
     begin
@@ -175,7 +175,7 @@ let rec subst_in_term id e c =
 
 let subst id e { values; suspicious } =
   if not @@ Expr.is_model_term e then
-    raise (Errors.Error (Model_error (Subst_not_model_term e)));
+    Errors.error (Model_error (Subst_not_model_term e));
 
   let values =
     P.map

@@ -45,7 +45,7 @@ module Make (Th : Theory.S) : sig
   val pop : t -> int -> t
   (** [pop env n] pops [n] assertion levels of the environment [env].
 
-      @raise invalid_arg if there is no [n] assertion levels in [env]. *)
+      @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
   val assume : t -> Expr.gformula -> Explanation.t -> t
 

@@ -1672,8 +1672,7 @@ module Make (Th : Theory.S) = struct
           let () =
             try env.declare_top := Stack.pop env.declare_tail
             with Stack.Empty ->
-              (* Happens if we perform more pops than pushes. *)
-              invalid_arg "Fun_sat.pop"
+              Errors.error (Run_error Stack_underflow)
           in
           {acc with inst;
                     guards =

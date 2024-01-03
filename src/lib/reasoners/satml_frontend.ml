@@ -1249,8 +1249,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.inst <- inst;
           env.guards.current_guard <- b;
           let declare_top =
-            try Stack.pop env.declare_tail
-            with Stack.Empty -> invalid_arg "Satml_frontend.pop"
+            try
+              Stack.pop env.declare_tail
+            with Stack.Empty ->
+              Errors.error (Run_error Stack_underflow)
           in
           env.declare_top <- declare_top;
         )
