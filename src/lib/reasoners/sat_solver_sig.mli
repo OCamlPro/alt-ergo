@@ -90,13 +90,17 @@ module type S = sig
   (** [optimize env ~is_max o] registers the expression [o] as an objective
       function.
 
+      The solver will try to maximize [o] if [is_max] is [true]. Otherwise,
+      it will try to minimize it.
+
       After optimization, the value of this objective is returned by
       [get_objectives]. *)
 
   val unsat : t -> Expr.gformula -> Explanation.t
-  (** [unsat env f size] checks the unsatisfiability of [f] in [env].
+  (** [unsat env f] checks the unsatisfiability of [f] in [env].
 
-      @raise I_dont_know when the proof tree's height reaches [size].
+      @raise I_dont_know if the solver cannot prove the unsatisfiability
+             of [env].
       @raise Sat if [f] is satisfiable in [env]. *)
 
   val reset_refs : unit -> unit
