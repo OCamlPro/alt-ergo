@@ -79,7 +79,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Stack.push Expr.vrai guards.stack_guard;
     guards
 
-  let empty () =
+  let empty ?(selector=fun _ -> true) () =
     { gamma = ME.empty;
       satml = SAT.empty ();
       ff_hcons_env = FF.empty_hcons_env ();
@@ -93,14 +93,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       inst = Inst.empty;
       skolems = ME.empty;
       guards = init_guards ();
-      add_inst = (fun _ -> true);
+      add_inst = selector;
       last_saved_model = None;
       last_saved_objectives = None;
       unknown_reason = None;
     }
-
-  let empty_with_inst add_inst =
-    { (empty ()) with add_inst = add_inst }
 
   exception Sat
   exception Unsat of Explanation.t

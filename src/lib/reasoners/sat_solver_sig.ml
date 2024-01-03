@@ -72,58 +72,78 @@ module type S = sig
   exception Unsat of Explanation.t
   exception I_dont_know
 
-  (* the empty sat-solver context *)
-  val empty : unit -> t
-  val empty_with_inst : (Expr.t -> bool) -> t
+  val empty : ?selector:(Expr.t -> bool) -> unit -> t
+  (** [empty ~selector ()] creates an empty environment.
 
-  (** [push env n] add n new assertion levels.
-      A guard g is added for every expression e assumed at the current
-      assertion level.
-      Ie. assuming e after the push will become g -> e,
-      a g will be forced to be true (but not propagated at level 0) *)
+      The optional argument [selector] is used to filter ground facts
+      discovered by the instantiation engine. *)
+
   val push : t -> int -> unit
+  (** [push env n] adds [n] new assertion levels in [env].
 
-  (** [pop env n] remove an assertion level.
-      Internally, the guard g introduced in the push correponsding to this pop
-      will be propagated to false (at level 0) *)
+      Internally, for each new assertion level, a fresh guard [g] is created
+      and all formulas [f] assumed at this assertion level is replaced by
+      [g ==> f].
+
+      The guard [g] is forced to be [true] but not propagated at level [0]. *)
+
   val pop : t -> int -> unit
+  (** [pop env n] removes [n] assertion levels in [env].
 
-  (* [assume env f] assume a new formula [f] in [env]. Raises Unsat if
-     [f] is unsatisfiable in [env] *)
+      Internally, the guard [g] introduced in [push] corresponding to this pop
+      is propagated to [false] at level [0]. *)
+
   val assume : t -> Expr.gformula -> Explanation.t -> unit
+  (** [assume env f dep] assumes the ground formula [f] in [env].
+      The [dep] argument can be used to generate an unsat core.
+
+      @raise Unsat if [f] is unsatisfiable in [env]. *)
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  (** [assume env f exp] assumes a new formula [f] with the explanation [exp]
+      in the theory environment of [env]. *)
 
-  (* [pred_def env f] assume a new predicate definition [f] in [env]. *)
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
+  (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 
-  (** [optimize env ~is_max o] registers the expression [o]
-      as an objective function. *)
   val optimize : t -> is_max:bool -> Expr.t -> unit
+  (** [optimize env ~is_max o] registers the expression [o] as an objective
+      function.
 
-  (* [unsat env f size] checks the unsatisfiability of [f] in
-     [env]. Raises I_dont_know when the proof tree's height reaches
-     [size]. Raises Sat if [f] is satisfiable in [env] *)
+      After optimization, the value of this objective is returned by
+      [get_objectives]. *)
+
   val unsat : t -> Expr.gformula -> Explanation.t
+  (** [unsat env f size] checks the unsatisfiability of [f] in [env].
+
+      @raise I_dont_know when the proof tree's height reaches [size].
+      @raise Sat if [f] is satisfiable in [env]. *)
 
   val reset_refs : unit -> unit
 
-  (** [reinit_ctx ()] reinitializes the solving context. *)
   val reinit_ctx : unit -> unit
+  (** [reinit_ctx ()] reinitializes the solving context. *)
 
-  (** [get_model t] produces the current model. *)
   val get_model: t -> Models.t option
+  (** [get_model t] produces the current first-order model.
+      Notice that this model is a best-effort.
 
-  (** [get_unknown_reason t] returns the reason Alt-Ergo raised
-      [I_dont_know] if it did. If it did not, returns None. *)
+      @return [None] if the model generation is not enabled or the
+      environment is unsatisfiable. *)
+
   val get_unknown_reason : t -> unknown_reason option
+  (** [get_unknown_reason t] returns the reason Alt-Ergo raised
+      [I_dont_know] if it did. If it did not, returns [None]. *)
 
+  val get_value : t -> Expr.t -> Expr.t option
   (** [get_value t e] returns the value of [e] as a constant expression
       in the current model generated. Returns [None] if can't decide. *)
-  val get_value : t -> Expr.t -> Expr.t option
 
-  (** [get_objectives t] produces the current objectives. *)
   val get_objectives : t -> Objective.Model.t option
+  (** [get_objectives t] returns the current objective values.
+
+      @return [None] if there is no objective or the environment is
+      unsatisfiable. *)
 end
 
 

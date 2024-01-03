@@ -1803,7 +1803,7 @@ module Make (Th : Theory.S) = struct
     Stack.push (Expr.vrai,{unit_facts = ME.empty}) guards.stack_elt;
     guards
 
-  let empty () =
+  let empty ?(selector=fun _ -> true) () =
     (* initialize some structures in SAT.empty. Otherwise, E.faux is never
        added as it is replaced with (not E.vrai) *)
     reset_refs ();
@@ -1834,16 +1834,13 @@ module Make (Th : Theory.S) = struct
       model_gen_phase = ref false;
       unit_facts_cache = ref ME.empty;
       guards = init_guards ();
-      add_inst = (fun _ -> true);
+      add_inst = selector;
       last_saved_model = ref None;
       unknown_reason = None;
     }
     in
     assume env gf_true Ex.empty
   (*maybe usefull when -no-theory is on*)
-
-  let empty_with_inst add_inst =
-    { (empty ()) with add_inst = add_inst }
 
   let assume_th_elt env th_elt dep =
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
