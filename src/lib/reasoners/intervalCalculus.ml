@@ -1921,37 +1921,19 @@ let fm_simplex_unbounded_integers_encoding env uf =
            "case-split over unions of intervals is needed !!!";
          assert false
 
-       | [(mn, ex_mn), (mx, ex_mx)] ->
+       | [(lb, ex_lb), (ub, ex_ub)] ->
          let l, c = P.to_list p in
-         let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
-         assert (Q.sign c = 0);
-         let cst0 =
-           List.fold_left (fun z (_, c) -> Q.add z (Q.abs c))Q.zero l
-         in
-         let cst = Q.div cst0 (Q.from_int 2) in
-         assert (mn == None || mx == None);
-         let min =
-           let mn =
-             match mn with
-             | None -> None
-             | Some (q, q') -> Some (Q.add q cst, q')
-           in
-           bnd_to_simplex_bound (mn, ex_mn)
-         in
-         let max =
-           let mx =
-             match mx with
-             | None -> None
-             | Some (q, q') -> Some (Q.sub q cst, q')
-           in
-           bnd_to_simplex_bound (mx, ex_mx)
-         in
+         assert (Q.is_zero c);
+         assert (lb == None || ub == None);
+         let min = bnd_to_simplex_bound (lb, ex_lb) in
+         let max = bnd_to_simplex_bound (ub, ex_ub) in
          match l with
          | [] -> assert false
-         | [x, c] ->
+         | [c, x] ->
            assert (Q.is_one c);
            Sim.Assert.var simplex x ?min ?max |> fst
          | _ ->
+           let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
            let xp = alien_of p in
            let sim_p =
              match Sim.Core.poly_of_slake simplex xp with
@@ -2009,7 +1991,7 @@ let model_from_simplex sim is_int env uf =
       )[] (List.rev main_vars)
 
 
-let model_from_unbounded_domains =
+let model_from_infinite_domains =
   let mk_cs acc (x, v, _ex) =
     ((LR.view (LR.mk_eq x v)), true,
      Th_util.CS (Th_util.Th_arith, Q.from_int 2)) :: acc
@@ -2040,7 +2022,7 @@ let case_split env uf ~for_model =
     else
       begin
         match case_split_union_of_intervals env uf with
-        | [] -> model_from_unbounded_domains env uf
+        | [] -> model_from_infinite_domains env uf
         | l -> l
       end
   | _ -> res
