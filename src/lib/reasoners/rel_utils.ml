@@ -235,6 +235,10 @@ module Congruence : sig
       [f] is intended to perform a substitution operation on the type ['a],
       merging the values associated with [rr] into the values associated with
       [nrr]. *)
+
+  val fold_parents : (X.r -> 'a -> 'a) -> t -> X.r -> 'a -> 'a
+  (** [fold_parents f t r acc] folds function [f] over all the registered terms
+      whose current representative contains [r] as a leaf. *)
 end = struct
   module SX = Shostak.SXH
   module MX = Shostak.MXH
@@ -250,6 +254,11 @@ end = struct
     }
 
   let empty = { parents = MX.empty ; registered = SX.empty }
+
+  let fold_parents f { parents; _ } r acc =
+    match MX.find r parents with
+    | deps -> SX.fold f deps acc
+    | exception Not_found -> acc
 
   let add r t =
     if SX.mem r t.registered then
@@ -308,8 +317,12 @@ end = struct
               ) cgr.parents (X.leaves r)
           in
 
+          (* It is no longer here, but it could be added back later -- let's not
+             skip it! *)
+          let registered = SX.remove r cgr.registered in
+
           (* Add the new representative to the congruence if needed *)
-          let cgr = add r' { cgr with parents } in
+          let cgr = add r' { parents ; registered } in
 
           (* Propagate the substitution *)
           cgr, f r r' t
