@@ -193,139 +193,186 @@ end = struct
     env, { Sig_rel.assume = assume_nontrivial_eqs eqs la; remove = [] }
 end
 
-module Congruence : sig
-  (** The [Congruence] module implements a simil-congruence closure algorithm on
-      semantic values.
-
-      It provides an interface to register some semantic values of interest, and
-      for applying a callback when the representative of those registered values
-      change.
-  *)
-
+module type Constraint = sig
   type t
-  (** The type of congruences. *)
+  (** The type of constraints.
+
+      Constraints are associated with a justification as to why they are
+      currently valid. The justification is only used to update domains,
+      identical constraints with different justifications will otherwise behave
+      identically (and, notably, will compare equal).
+
+      Constraints contains semantic values / term representatives of type
+      [X.r]. We maintain the invariant that the semantic values used inside the
+      constraints are *class representatives* i.e. normal forms wrt the `Uf`
+      module, i.e. constraints have a normalized representation. Use `subst` to
+      ensure normalization. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for constraints. *)
+
+  val compare : t -> t -> int
+  (** Comparison function for constraints.
+
+      Constraints typically include explanations, which should not be included
+      in the comparison function: code working with constraints expects
+      constraints with identical representations but different explanations to
+      compare equal.
+
+      {b Note}: The comparison function is arbitrary and has no semantic
+      meaning. You should not depend on any of its properties, other than it
+      defines an (arbitrary) total order on constraint representations. *)
+
+  val subst : Explanation.t -> X.r -> X.r -> t -> t
+  (** [subst ex p v cs] replaces all the instances of [p] with [v] in the
+      constraint.
+
+      Use this to ensure that the representation is always normalized.
+
+      The explanation [ex] justifies the equality [p = v]. *)
+
+  val fold_leaves : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
+
+  type domain
+  (** The type of domains.
+
+      This is typically a mapping from variables to their own domain, but no
+      expectations is made upon the actual structure of that type. *)
+
+  val propagate : t -> domain -> domain
+  (** [propagate c dom] propagates the constraints [c] in [d] and returns the
+      new domain. *)
+
+end
+
+module Constraints_Make(Constraint : Constraint) : sig
+  type t
+  (** The type of constraint sets. A constraint sets records a set of
+      constraints that applies to semantic values, and remembers which
+      constraints are associated with each semantic values.
+
+      It is used to only propagate constraints involving semantic values whose
+      associated domain has changed.
+
+      The constraint sets are expected to keep track of *class representatives*,
+      i.e.  normal forms wrt the `Uf` module, in which case we say the
+      constraint set is *normalized*. Use `subst` to ensure normalization. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for constraint sets. *)
 
   val empty : t
-  (** The empty congruence. *)
+  (** Returns an empty constraint set. *)
 
-  val add : X.r -> t -> t
-  (** [add r t] registers the semantic value [r] in the congruence. *)
+  val subst : Explanation.t -> X.r -> X.r -> t -> t
+  (** [subst ex p v cs] replaces all the instances of [p] with [v] in the
+      constraints.
 
-  val remove : X.r -> t -> t
-  (** [remove r t] unregisters the semantic value [r] from the congruence.
+      Use this to ensure that the representation is always normalized.
 
-      Note that if substitutions have been applied to the congruence after a
-      value has been added, those same substitutions must be applied to the
-      semantic value prior to calling [remove], or [Invalid_argument] will be
-      raised.
+      The explanation [ex] justifies the equality [p = v]. *)
 
-      @raise [Invalid_argument] if [r] is not a registered semantic value. *)
+  val add : t -> Constraint.t -> t
+  (** [add c cs] adds the constraint [c] to [cs]. *)
 
-  val subst : X.r -> X.r -> t -> (X.r -> X.r -> 'a -> 'a) -> 'a -> t * 'a
-  (** [subst p v t f x] performs a local congruence closure of the
-      substitution [p -> v].
+  val propagate_fresh :  t -> Constraint.domain -> t * Constraint.domain
+  (** [propagate_fresh cs acc] propagates the fresh constraints and returns the
+      new domain, as well as a copy of the constraint set with no fresh
+      constraints.
 
-      More precisely, it will fold [f] over the pairs [(rr, nrr)] such that:
-      - [rr] was registered in the congruence
-      - [nrr] is [X.subst p v rr]
+      Fresh constraints are constraints that were never propagated yet. *)
 
-      For each such pair, [rr] is then unregistered from the congruence, and
-      [nrr] is registered instead.
+  val fold_r : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold_r f cs acc] folds [f] over any representative [r] that is currently
+      associated with a constraint (i.e. at least one constraint currently
+      applies to [r]). *)
 
-      [f] is intended to perform a substitution operation on the type ['a],
-      merging the values associated with [rr] into the values associated with
-      [nrr]. *)
-
-  val fold_parents : (X.r -> 'a -> 'a) -> t -> X.r -> 'a -> 'a
-  (** [fold_parents f t r acc] folds function [f] over all the registered terms
-      whose current representative contains [r] as a leaf. *)
+  val propagate : t -> X.r -> Constraint.domain -> Constraint.domain
+  (** [propagate cs r dom] propagates the constraints associated with [r] in the
+      constraint set [cs] and returns the new domain map after propagation. *)
 end = struct
-  module SX = Shostak.SXH
+  module IM = Util.MI
   module MX = Shostak.MXH
 
-  type t =
-    { parents : SX.t MX.t
-    (** Map from leaves to terms that contain them as a leaf.
+  module CS = Set.Make(Constraint)
 
-        [p] is in [parents(x)] => [x] is in [leaves(p)] *)
-    ; registered : SX.t
-    (** The set of terms we care about. If [x] is in [registered],
-        then [x] is also in [parents(y)] for each [y] in [leaves(x)]. *)
-    }
+  type t = {
+    cs_set : CS.t ;
+    (*** All the constraints currently active *)
+    cs_map : CS.t MX.t ;
+    (*** Mapping from semantic values to the constraints that involves them *)
+    fresh : CS.t ;
+    (*** Fresh constraints that have never been propagated *)
+  }
 
-  let empty = { parents = MX.empty ; registered = SX.empty }
+  let pp ppf { cs_set; cs_map = _ ; fresh = _ } =
+    Fmt.(
+      braces @@ hvbox @@
+      iter ~sep:semi CS.iter @@
+      box ~indent:2 @@ braces @@
+      Constraint.pp
+    ) ppf cs_set
 
-  let fold_parents f { parents; _ } r acc =
-    match MX.find r parents with
-    | deps -> SX.fold f deps acc
-    | exception Not_found -> acc
+  let empty =
+    { cs_set = CS.empty
+    ; cs_map = MX.empty
+    ; fresh = CS.empty }
 
-  let add r t =
-    if SX.mem r t.registered then
-      t
-    else
-      let parents =
-        List.fold_left (fun parents leaf ->
-            MX.update leaf (function
-                | Some deps -> Some (SX.add r deps)
-                | None -> Some (SX.singleton r)
-              ) parents
-          ) t.parents (X.leaves r)
+  let cs_add cs r cs_map =
+    MX.update r (function
+        | Some css -> Some (CS.add cs css)
+        | None -> Some (CS.singleton cs)
+      ) cs_map
+
+  let cs_remove cs r cs_map =
+    MX.update r (function
+        | Some css ->
+          let css = CS.remove cs css in
+          if CS.is_empty css then None else Some css
+        | None ->
+          (* Can happen if the same argument is repeated *)
+          None
+      ) cs_map
+
+  let subst ex rr nrr bcs =
+    match MX.find rr bcs.cs_map with
+    | ids ->
+      let cs_map, cs_set, fresh =
+        CS.fold (fun cs (cs_map, cs_set, fresh) ->
+            let fresh = CS.remove cs fresh in
+            let cs_set = CS.remove cs cs_set in
+            let cs_map = Constraint.fold_leaves (cs_remove cs) cs cs_map in
+            let cs' = Constraint.subst ex rr nrr cs in
+            if CS.mem cs' cs_set then
+              cs_map, cs_set, fresh
+            else
+              let cs_set = CS.add cs' cs_set in
+              let cs_map = Constraint.fold_leaves (cs_add cs') cs' cs_map in
+              (cs_map, cs_set, CS.add cs' fresh)
+          ) ids (bcs.cs_map, bcs.cs_set, bcs.fresh)
       in
-      { parents ; registered  = SX.add r t.registered }
+      assert (not (MX.mem rr cs_map));
+      { cs_set ; cs_map ; fresh }
+    | exception Not_found -> bcs
 
-  let remove r t =
-    if SX.mem r t.registered then
-      let parents =
-        List.fold_left (fun parents leaf ->
-            MX.update leaf (function
-                | Some deps ->
-                  let deps = SX.remove r deps in
-                  if SX.is_empty deps then None else Some deps
-                | None ->
-                  (* [r] is in registered, and [leaf] is in [leaves(r)], so
-                     [r] must be in [parents(leaf)]. *)
-                  assert false
-              ) parents
-          ) t.parents (X.leaves r)
-      in
-      { parents ; registered = SX.remove r t.registered }
+  let add bcs c =
+    if CS.mem c bcs.cs_set then
+      bcs
     else
-      invalid_arg "Congruence.remove"
+      let cs_set = CS.add c bcs.cs_set in
+      let cs_map = Constraint.fold_leaves (cs_add c) c bcs.cs_map in
+      let fresh = CS.add c bcs.fresh in
+      { cs_set ; cs_map ; fresh }
 
-  let subst rr nrr cgr f t =
-    match MX.find rr cgr.parents with
-    | rr_deps ->
-      let cgr = { cgr with parents = MX.remove rr cgr.parents } in
-      SX.fold (fun r (cgr, t) ->
-          let r' = X.subst rr nrr r in
-          (* [r] contains [rr] as a leaf by definition *)
-          assert (not (X.equal r r'));
+  let fold_r f bcs acc =
+    MX.fold (fun r _ acc -> f r acc) bcs.cs_map acc
 
-          (* Update the other leaves *)
-          let parents =
-            List.fold_left (fun parents other_leaf ->
-                if X.equal other_leaf rr then
-                  parents
-                else
-                  MX.update other_leaf (function
-                      | Some deps ->
-                        let deps = SX.remove r deps in
-                        if SX.is_empty deps then None else Some deps
-                      | None -> assert false
-                    ) parents
-              ) cgr.parents (X.leaves r)
-          in
+  let propagate bcs r dom =
+    match MX.find r bcs.cs_map with
+    | cs -> CS.fold Constraint.propagate cs dom
+    | exception Not_found -> dom
 
-          (* It is no longer here, but it could be added back later -- let's not
-             skip it! *)
-          let registered = SX.remove r cgr.registered in
-
-          (* Add the new representative to the congruence if needed *)
-          let cgr = add r' { parents ; registered } in
-
-          (* Propagate the substitution *)
-          cgr, f r r' t
-        ) rr_deps (cgr, t)
-    | exception Not_found -> cgr, t
+  let propagate_fresh bcs dom =
+    let dom = CS.fold Constraint.propagate bcs.fresh dom in
+    { bcs with fresh = CS.empty }, dom
 end
