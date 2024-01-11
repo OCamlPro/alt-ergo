@@ -78,8 +78,15 @@ exception Stopped
 
 type conflict_origin =
   | C_none
+  (* No conflict. *)
+
   | C_bool of Atom.clause
+  (* Conflict found during the boolean constraint propagation with
+     its conflict clause. *)
+
   | C_theory of Ex.t
+  (* Conflict found during the theory constraint propagation.
+     The explanation is returned by the theory reasoner. *)
 
 (* not even the final one *)
 let vraie_form = E.vrai
@@ -182,32 +189,78 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (* un vecteur des variables du probleme *)
       mutable vars : Atom.var Vec.t;
 
-      (* la pile de decisions avec les faits impliques *)
       mutable trail : Atom.atom Vec.t;
+      (** Stack of the assigned atoms. An atom [a] is assigned if [a.is_true]
+          is [true].
 
-      (* une pile qui pointe vers les niveaux de decision dans trail *)
+          An assigned atom [a] is decided or propagated:
+          - [a] is decided if we choose it but there is no constraint which
+              forces it to be [true].
+          - [a] is propaged if we discover that [a] as to be [true] because
+              of boolean/theory constraints.
+
+          Both have a decision level stored in [a.var.level]. The decision level
+          of an atom [a] is set as follows:
+          - if [a] is the only atom of a learnt clause, its decision level
+              is [0];
+
+          - if [a] is propagated during the BCP, its decision level is:
+              * The current decision level if [Options.get_minimal_bj ()] is
+                [false].
+              * Otherwise, its decision level is the maximal decision level of
+                the atoms of the unit clause that constraints [a] to be [true];
+
+          - if [a] is an atom of maximal decision level among the atoms of
+              a conflict clause [C] discovered during BCP and all the other
+              atoms of [C] have a lower decision level than [a], we revert
+              the assignation of [a] and [a.neg] is propagated with the
+              decision level given by the second maximal decision level in the
+              clause [C];
+
+          - if [a] is the first atom of a new learnt clause [C]
+              (of size at least 2), we immediatly propagate this atom with the
+              decision level equals to:
+              * The current decision level if [Options.get_minimal_bj ()] is
+                [false].
+              * Otherwise, its decision level is the maximal decision level of
+                the atoms of [C].
+
+          Note: in this trail, atoms aren't ordered in increasing decision
+          level but decided atoms are in order. *)
+
       mutable trail_lim : int Vec.t;
+      (* Stack of decision's indexes in trail.
+
+         The length of this stack is the current decision level. *)
 
       (* Tete de la File des faits unitaires a propager.
          C'est un index vers le trail *)
       mutable qhead : int;
 
-      (* Nombre des assignements top-level depuis la derniere
-         execution de 'simplify()' *)
       mutable simpDB_assigns : int;
+      (** Size of the trail at decision level 0 since the last call of
+          [simplify]. *)
 
       (* Nombre restant de propagations a faire avant la prochaine
          execution de 'simplify()' *)
       mutable simpDB_props : int;
 
-      (* Un tas ordone en fonction de l'activite des variables *)
       mutable order : Vheap.t;
+      (* Priority queue used to choose the next variable to decide in
+         [search]. The priorities of variables are given by a heuristic
+         based on the activities of clauses using these variables.
+
+         Notice that the underlying variables of guards aren't present in
+         this queue. Instead these variables are decided first. *)
 
       (* estimation de progressions, mis a jour par 'search()' *)
       mutable progress_estimate : float;
 
-      (* *)
       remove_satisfied : bool;
+      (** If this flag is set to [true], assumed clauses at decision level
+          [0] are removed. *
+
+          Currently, this flag is always [true]. *)
 
       (* inverse du facteur d'acitivte des variables, vaut 1/0.999 par defaut *)
       var_decay : float;
@@ -237,27 +290,31 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable starts : int;
 
-      mutable decisions : int;
-
-      mutable propagations : int;
-
       mutable conflicts : int;
+      (** Number of conflicts found. This field is unread. *)
 
       mutable clauses_literals : int;
+      (** Sum of the size of all the assumed clauses.
+          The size of a clause is given by its number of literals. *)
 
       mutable learnts_literals : int;
+      (** Sum of the size of all the learnt clauses.
+          The size of a clause is given by its number of literals. *)
 
       mutable max_literals : int;
 
       mutable tot_literals : int;
 
       mutable nb_init_clauses : int;
+      (** Number of assumed clauses. *)
 
       mutable tenv : Th.t;
 
       mutable unit_tenv : Th.t;
 
+      (* TODO: rename to tenv_stack. *)
       mutable tenv_queue : Th.t Vec.t;
+      (** Stack of the environments of Theory. *)
 
       mutable tatoms_queue : Atom.atom Queue.t;
       (** Queue of atoms that have been added to the [trail] through either
@@ -384,8 +441,24 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           solver. *)
 
       mutable increm_guards : Atom.atom Vec.t;
+      (** Stack of incremental guards. After each push, a new guard is added
+          to this stack and assigned with the current decision level.
+          All the formulas [f] assumed at this assertion level has to be
+          prefixed by the guard: [g ==> f].
+
+          If the corresponding pop is performed, the guard [g] is disactivate
+          (the field [g.is_guard] is set to [false]) and the the negation of
+          [g] is propagated.
+
+          Finally, if the negation of [g] is propagated before beging
+          desactivate, it means some clause asserted at the assertion level
+          of [g] can't be satisfy and the problem is unsatisfiable at the
+          level of assertion. *)
 
       mutable next_dec_guard : int;
+      (** Index in the trail of the next unassigned guard.
+          This index is used to ensure that we decide all the guards before
+          choosing other variables in [search]. *)
     }
 
   exception Conflict of Atom.clause
@@ -443,10 +516,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       polarity_mode = false;
 
       starts = 0;
-
-      decisions = 0;
-
-      propagations = 0;
 
       conflicts = 0;
 
@@ -522,15 +591,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       env.clause_inc <- env.clause_inc *. 1e-20
     end
 
-  let decision_level env = Vec.size env.trail_lim
+  let[@inline always] decision_level env = Vec.size env.trail_lim
 
-  let nb_assigns env = Vec.size env.trail
-  let nb_clauses env = Vec.size env.clauses
+  let[@inline always] nb_assigns env = Vec.size env.trail
+  let[@inline always] nb_clauses env = Vec.size env.clauses
   (* unused -- let nb_learnts env = Vec.size env.learnts *)
-  let nb_vars    env = Vec.size env.vars
+  let[@inline always] nb_vars    env = Vec.size env.vars
 
   let new_decision_level env =
-    env.decisions <- env.decisions + 1;
     Vec.push env.trail_lim (Vec.size env.trail);
     if Options.get_profiling() then
       Profiling.decision (decision_level env) "<none>";
@@ -659,6 +727,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     assert (Options.get_minimal_bj () || (!repush == []));
     List.iter (enqueue_assigned env) !repush
 
+  (* Select the next unassigned variable with the highest priority.
+
+     @raise Sat if there is no more unassigned atom. *)
   let rec pick_branch_var env =
     if Vheap.size env.order = 0 then raise Sat;
     let v = Vheap.remove_min env.order in
@@ -671,6 +742,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let pick_branch_lit env =
     if env.next_dec_guard < Vec.size env.increm_guards then
       begin
+        (* Guards are always choosen first. *)
         let a = Vec.get env.increm_guards env.next_dec_guard in
         (assert (not (a.neg.is_guard || a.neg.is_true)));
         env.next_dec_guard <- env.next_dec_guard + 1;
@@ -698,14 +770,27 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         max_lvl := max !max_lvl a.var.level) c.atoms;
     !max_lvl
 
+  (* Push in the trail the atom [a] with decision level [lvl] and reason
+     [reason].
+
+     Requires: the atoms [a] and [a.neg] are unassigned.
+     Ensures: the atom [a] is assigned to [true].
+
+     @raise Unsat if we try to push the negation of a guard which is still
+                  active. *)
   let enqueue env (a : Atom.atom) lvl reason =
     assert (not a.is_true && not a.neg.is_true &&
             a.var.level < 0 && a.var.reason == None && lvl >= 0);
     if a.neg.is_guard then begin
-      (* if the negation of a is (still) a guard, it should be forced to true
-         during the first decisions.
-         If the SAT tries to deduce that a.neg is true (ie. a is false),
-         then we have detected an inconsistency. *)
+      (* If the negation [g = a.neg] of [a] is still an active guard and we try
+         to decide [a], it means that there is a clause [c] asserted at
+         assertion level of [g] which is false in current trail (and so the
+         clause [~g \/ c] is unit, which is the reason of the propagation of
+         [~g]). But active guards are decided first. Thus the only reason for
+         which [g] cannot be decided
+         But [c] is a part of the problem (at the current assertion
+         level) and has to be true to answer `Sat`. Otherwise, the problem is
+         unsatisfiable. *)
       assert (a.var.level <= env.next_dec_guard);
       (* guards are necessarily decided/propagated before all other atoms *)
       raise (Unsat None);
@@ -795,6 +880,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end
       with Exit -> ()
 
+  (* Propagate the boolean constraints implied by assuming [a].
+     If a contradiction is discovered, its reason is stored in [res]. *)
   let propagate_atom env (a : Atom.atom) res =
     let watched = a.watched in
     let new_sz_w = ref 0 in
@@ -950,6 +1037,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        "expensive_theory_propagate => Inconsistent@."; *)
   (*   Some dep *)
 
+  (* Propagate the atoms assigned at level [0] in [lazy_q] to
+     the theory environment [env.tenv]. *)
   let unit_theory_propagate env _full_q lazy_q =
     let nb_f = ref 0 in
     let facts =
@@ -1057,6 +1146,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if Options.get_profiling() then Profiling.theory_conflict();
           C_theory dep
 
+  (* Perform all the boolean constraint propagations implied by assuming
+     atoms in the queue stored at the top of [env.trail] (the head of
+     this queue is given by [env.qhead]).
+
+     If we found a contradiction, the BCP stops and a conflict clause is
+     returned.
+
+     The theory constraint propagation isn't perfom here. Instead, these
+     atoms are stored in the queue [env.tatoms_queue], which is processed
+     in [theory_propagate]. *)
   let propagate env =
     let num_props = ref 0 in
     let res = ref C_none in
@@ -1070,7 +1169,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       propagate_atom env a res;
       Queue.push a env.tatoms_queue;
     done;
-    env.propagations <- env.propagations + !num_props;
     env.simpDB_props <- env.simpDB_props - !num_props;
     !res
 
@@ -1121,6 +1219,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   Vec.shrink env.learnts !j true
 *)
 
+  (* Helper function that removes all the clauses of [vec] that
+     are satisfied at the decision level [0] in the environment [env]. *)
   let remove_satisfied env vec =
     let j = ref 0 in
     for i = 0 to Vec.size vec - 1 do
@@ -1278,6 +1378,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_bool c -> C_bool c
     | C_theory _ -> assert false
     | C_none ->
+      (* We don't find contradiction during the BCP, thus we
+         can perform the TCP. *)
       if Options.get_tableaux_cdcl () then
         C_none
       else
@@ -1292,14 +1394,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_theory dep -> report_t_unsat env dep
     | C_none -> ()
 
+  (* Simplify the clause database by removing some satisfied clauses at
+     the decision level [0]. Notice that these clauses can still appear in
+     watched lists of atoms but we ignore them during the BCP. *)
   let simplify env =
     assert (decision_level env = 0);
     if env.is_unsat then raise (Unsat env.unsat_core);
-    (* report possible propagation conflict *)
-    report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
       if Options.get_debug_sat () then
         Printer.print_dbg ~module_name:"Satml" ~function_name:"simplify" "";
+      (* Before simplifying the clause database, we have to ensure it doesn't
+         contain unreported conflicts for sake of soundness. As the function
+         [simplify] is always called after [propagate_and_stabilize], we don't
+         need to call [all_propagations] here but we keep this call to enforce
+         this important requirement. *)
+      report_conflict env (all_propagations env);
       (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
@@ -1335,6 +1444,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       clause_decay_activity env
     end
 
+  (* The clause [c_clause] is a conflict clause. More precisely,
+     [c_clause] is a unit clause whose the negation of the first atom
+     have been decided or propagated at the current decision level.
+
+     where [max_lvl] is the maximal level of decision among the
+     atoms of the clause [c_clause].
+
+     @return [(blevel, learnt, history)] where
+     - [blevel] is the backtrack level *)
   let conflict_analyze_aux env c_clause max_lvl =
     let pathC = ref 0 in
     let learnt = ref SA.empty in
@@ -1344,6 +1462,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let c : Atom.clause ref = ref c_clause in
     let tr_ind = ref (Vec.size env.trail -1) in
     let history = ref [] in
+    (* This loop terminates the second times [pathC] is [0]. *)
     while !cond do
       if !c.learnt then clause_bump_activity env !c;
       history := !c :: !history;
@@ -1390,6 +1509,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     bj_level, learnt, !history
 
+  (* Search in [confl] an atom of maximal decision level [lvl] such that there
+     is no other atom in [confl] whose the decision level is [lvl].
+
+     If such an atom [a] exists, the function returns the tuple
+     [(a, blvl, snd_max)] where:
+     - [blvl] is a backjump level (equal to [lvl - 1] here);
+     - [snd_max] is the second maximal decision level in [confl].
+
+     @requires all the atom of [confl] are assigned to [false]
+               (it's a conflict clause!). *)
   let fixable_with_simple_backjump (confl : Atom.clause) max_lvl lv =
     if not (Options.get_minimal_bj ()) then None
     else
@@ -1467,6 +1596,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         cancel_until env blevel;
         record_learnt_clause env ~is_T_learn:false blevel learnt history
       | Some (a, blevel, propag_lvl) ->
+        (* We found an atom [a] in the conflict clause [c] whose the
+           decision level is bigger than all the other atoms of this clause.
+
+           In this case, we backjump just before the decision of [a.neg]
+           (given by the backjump level [blevel]) and we propagate the atom [a]
+           with the decision level given by the second maximum decision level
+           of [c]. *)
         assert (a.neg.is_true);
         cancel_until env blevel;
         assert (not a.neg.is_true);
@@ -1489,10 +1625,17 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 *)
 
 
+  (* Strategies to choose the next decision. *)
   type strat =
     | Auto
+    (* In this mode, we use the activity-based heuristic to choose
+       the next decision. *)
+
     | Stop
+    (* We stop the search process. *)
+
     | Interactive of Atom.atom
+    (* We force the decision of this atom. *)
 
   let find_uip_reason q =
     let res = ref SA.empty in
@@ -1554,6 +1697,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end
         else raise e
 
+  (* Produce a clause of the form [fuip \/ ~a1 \/ ... \/ ~an] where
+     the [a_i] are all the literals assigned by the SAT solver and involved
+     in the explanation [d]. *)
   let clause_of_dep d fuip =
     let cpt = ref 0 in
     let l =
@@ -1568,6 +1714,24 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     fuip :: l, !cpt + 1
 
+  (* Check if the atom [a] or its negation is entailed by the current theory
+     environment [tenv].
+
+     if [a] is entailed by [tenv], the function returns a new
+     tautological clause of the form:
+       a \/ ~a1 \/ ... \/ ~an
+     where [ai] are all the atoms assigned by the SAT solver and involved in
+     the explanation produced by the theory reasoner.
+
+     In other words, the formula [a1 /\ ... /\ an ==> a] is first-order
+     tautological (it's true in any first-order model but the underlying
+     proposition formula isn't necessary a tautology).
+
+     For instance, if the atom [a] is [x < z] and the theory environment
+     [tenv] contains the facts [x < y] and [y < z]. Then the tautological
+     implication
+       x < y /\ y < z => x < y
+     can be discovered by this mechanism. *)
   let th_entailed tenv a =
     if Options.get_no_tcp () || not (Options.get_minimal_bj ()) then None
     else
@@ -1605,6 +1769,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          Vec.size env.learnts - nb_assigns env >= n_of_learnts then
         reduce_db();
 
+      (* We get an appropriate candidate for the next decision. *)
       let next =
         match !strat with
         | Auto -> pick_branch_lit env
@@ -1613,18 +1778,34 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           strat := Stop; f
       in
 
+      (* We first check if the [next] literal has to be true according to the
+         theory. It is an heuristic to accelerate the exploration of the
+         decision tree by avoiding to perform BCP whose the conclusion can
+         already be discovered by the theory. *)
       match th_entailed env.tenv next with
       | None ->
         new_decision_level env;
         let current_level = decision_level env in
         env.cpt_current_propagations <- 0;
+        (* The variable [next.var] aren't already assigned as [pick_branch_lit]
+           guarantees it. *)
         assert (next.var.level < 0);
         if Options.get_debug_sat () then
           Printer.print_dbg "[satml] decide: %a" Atom.pr_atom next;
         enqueue env next current_level None
       | Some(c, _) ->
+        (* We discover a first-order tautology [c] of the form
+             [a1 /\ ... /\ an => next] or [a1 /\ ... /\ an => ~next].
+           In this case, we learn the clause [c] discovered thanks to the
+           theory reasoner.
+
+           We don't need to decide [next] as it's entailed or it's negation
+           is entailed by the theory and learning [c] will propagate this atom
+           later (if we don't backtrack before).
+
+           The right decision level will be set inside
+           [record_learnt_clause]. *)
         record_learnt_clause env ~is_T_learn:true (decision_level env) c []
-        (* right decision level will be set inside record_learnt_clause *)
     done
 
   (* unused --

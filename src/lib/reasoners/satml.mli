@@ -87,6 +87,11 @@ module type SAT_ML = sig
   val do_case_split : t -> Util.case_split_policy -> conflict_origin
 
   val decide : t -> Atom.atom -> unit
+  (** [decide env a] forces the decision of the atom [a] in the environment
+      [env].
+
+      @raise Unsat if the environment is already unsatisfiable.  *)
+
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
   val push : t -> Satml_types.Atom.atom -> unit

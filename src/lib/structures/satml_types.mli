@@ -34,33 +34,83 @@ module type ATOM = sig
   type var =
     {  vid : int;
        pa : atom;
+       (* Pointer to the positive atom having this variable as
+          underlying variable. *)
+
        na : atom;
+       (* Pointer to the nagative atom having this variable as
+          underlying variable. *)
+
        mutable weight : float;
        mutable seen : bool;
-       mutable level : int; (* decision level *)
-       mutable index : int; (* position in the trail, debug only *)
-       mutable hindex : int; (* index in heap *)
+       mutable level : int;
+       (** Decision level. For more details, see the documention of the field
+           [trail] of the environment of SatML. *)
+
+       mutable index : int;
+       (** Position in the trail, debug only.
+
+           This position doesn't correspond to a propagation level,
+           see the documention of the field [trail] of the environment of
+           SatML. *)
+
+       mutable hindex : int;
+       (** Index in heap. *)
+
        mutable reason: reason;
+       (** If the value is [Some c], the clause [c] is the reason for
+           which [pa] or [na] have been assigned to be [true]. *)
+
        mutable vpremise : premise}
 
-  and atom =
-    { var : var;
-      lit : Expr.t;
-      neg : atom;
-      mutable watched : clause Vec.t;
-      mutable is_true : bool;
-      mutable timp : int;
-      mutable is_guard : bool;
-      aid : int }
+  and atom = {
+    var : var;
+    (** The underlying variable. *)
 
-  and clause =
-    { name : string;
-      mutable atoms : atom Vec.t ;
-      mutable activity : float;
-      mutable removed : bool;
-      learnt : bool;
-      cpremise : premise;
-      form : Expr.t}
+    lit : Expr.t;
+    (** The underlying literal. *)
+
+    neg : atom;
+    (** The negation of this atom. *)
+
+    mutable watched : clause Vec.t;
+    (** List of clauses watched by this atom. *)
+
+    mutable is_true : bool;
+    (** Determine if the atom is assigned. An atom [a] and its
+        negation [a.neg] cannot be both assigned. *)
+
+    mutable timp : int;
+    mutable is_guard : bool;
+    (** Determine if the atom is used as an incremental guard. *)
+
+    aid : int
+  }
+
+  and clause = {
+    name : string;
+    mutable atoms : atom Vec.t;
+    (** Atoms of the clause.
+
+        A clause has always at least two atoms and
+        the negations of the two first atoms watch the clause. *)
+
+    mutable activity : float;
+    mutable removed : bool;
+    (** If this flag is set to [true], the clause is ignored during
+        the boolean constraint propagation. More precisely, if the clause
+        is watched by an atom [a], we don't propagate constraints in this
+        clause after assigned [a] to [true].
+
+        Satisfied clauses (that is clauses whose one of their atoms has been
+        decided at the level [0]) can be removed for sake of performance. *)
+
+    learnt : bool;
+    (** This flag is set to [true] if the clause have been learnt by solver. *)
+
+    cpremise : premise;
+    form : Expr.t
+  }
 
   and reason = clause option
 
@@ -121,20 +171,63 @@ module Atom : ATOM
 
 module type FLAT_FORMULA = sig
   type t
-  type view = private UNIT of Atom.atom | AND of t list | OR of t list
+  (* Type of hconsed flat formula. *)
+
+  type view = private
+    | UNIT of Atom.atom
+    (** [UNIT a] represents an atom. *)
+
+    | AND of t list
+    (** [AND (A1, ..., An)] represents the n-ary [AND] gate
+         A1 /\ ... /\ An
+        with the following invariants:
+        - There are at least two elements;
+        - No duplicate;
+        - None of the [Ai] are [AND] gates;
+        - The elements are in increasing order for the function [compare];
+        - The gate doesn't contain a contradiction. *)
+
+    | OR of t list
+    (** [OR (A1, ..., An)]) represents the n-ary [OR] gate
+         A1 \/ ... \/ An
+        with the following invariants:
+        - There are at least two elements;
+        - No duplicate;
+        - None of the [Ai] are [OR] gates;
+        - The elements are in increasing order for the function [compare];
+        - The gate doesn't contain tautology. *)
+
   type hcons_env
+  (* Environment of the hconsing. *)
 
   val equal   : t -> t -> bool
+  (** [equal f1 f2] checks the equality of the hashes of [f1] and [f2]. *)
+
   val compare : t -> t -> int
+  (** [compare f1 f2] compares the two flat formulas [f1] and [f2] using hashes.
+
+      By construction, the negation of a flat formula [f] is the immediate
+      successor or predecessor of [f] for this comparison function.
+
+      [vrai] is the smallest element for this order and [faux] is
+      the second smallest element. *)
+
   val print   : Format.formatter -> t -> unit
-  val print_stats : Format.formatter -> unit
   val vrai    : t
   val faux    : t
   val view    : t -> view
   val mk_lit  : hcons_env -> Expr.t -> Atom.var list -> t * Atom.var list
   val mk_and  : hcons_env -> t list -> t
+  (** [mk_and l] where [l = [f1; ...; fn]] is a flat formula equivalent to
+      [f1 /\ ... /\ fn]. *)
+
   val mk_or   : hcons_env -> t list -> t
+  (** [mk_or l] where [l = [f1; ...; fn]] is a flat formula equivalent to
+      [f1 \/ ... \/ fn]. *)
+
   val mk_not  : t -> t
+  (** [mk_not f] is a flat formula equivalent to the negation of [f]. *)
+
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
   val get_atom : hcons_env -> Expr.t -> Atom.atom
@@ -146,6 +239,18 @@ module type FLAT_FORMULA = sig
     Atom.var list ->
     t * (Expr.t * (t * Atom.atom)) list
     * Atom.var list
+  (** [simplify henv f abstr acc] creates a flat formula from the
+      expression formula [f] in the hconsing environment [henv].
+
+      The [abstr] function is used to hit a cache of abstract atoms used to
+      represent lemmas.
+
+      @return [(ff, new_abstrs, new_vars)] where
+      - [ff] is the flat formula built from [f].
+      - [new_abstrs] is the list of abstractions created for lemmas in [f].
+           The internal cache of [abstr] has to be updated with the new
+           abstractions before recalling [simplify].
+      - [new_vars] is an accumulator of all the new atoms. *)
 
   val get_proxy_of : t ->
     (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
