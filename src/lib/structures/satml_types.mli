@@ -28,7 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 module type ATOM = sig
 
   type var =
@@ -45,7 +44,7 @@ module type ATOM = sig
 
   and atom =
     { var : var;
-      lit : Expr.t;
+      lit : Shostak.Literal.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -76,7 +75,7 @@ module type ATOM = sig
   val pr_clause : Format.formatter -> clause -> unit
   val get_atom : hcons_env -> Expr.t ->  atom
 
-  val literal : atom -> Expr.t
+  val literal : atom -> Shostak.Literal.t
   val weight : atom -> float
   val is_true : atom -> bool
   val neg : atom -> atom
@@ -111,6 +110,8 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
+  val add_lit_atom :
+    hcons_env -> Shostak.Literal.t -> var list -> atom * var list
   val add_atom : hcons_env -> Expr.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
@@ -150,6 +151,7 @@ module type FLAT_FORMULA = sig
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
   val get_atom : hcons_env -> Expr.t -> Atom.atom
+  val atom_hcons_env : hcons_env -> Atom.hcons_env
 
   val simplify :
     hcons_env ->

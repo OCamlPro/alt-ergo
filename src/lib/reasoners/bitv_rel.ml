@@ -619,7 +619,7 @@ let assume env uf la =
       raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
   in
   let assume =
-    List.rev_map (fun (lit, ex) -> Sig_rel.LSem lit, ex, Th_util.Other) eqs
+    List.rev_map (fun (lit, ex) -> Literal.LSem lit, ex, Th_util.Other) eqs
   in
   let result =
     { result with assume = List.rev_append assume result.assume }

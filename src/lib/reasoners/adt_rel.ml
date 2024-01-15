@@ -267,7 +267,7 @@ let deduce_is_constr uf r h eqs env ex =
                 ~module_name:"Adt_rel"
                 ~function_name:"deduce_is_constr"
                 "%a" E.print is_c;
-            (Sig_rel.LTerm is_c, ex, Th_util.Other) :: eqs
+            (Literal.LTerm is_c, ex, Th_util.Other) :: eqs
         in
         begin
           match E.term_view t with
@@ -291,7 +291,7 @@ let deduce_is_constr uf r h eqs env ex =
                 ~module_name:"Adt_rel"
                 ~function_name:"deduce equal to constr"
                 "%a" E.print eq;
-            let eqs = (Sig_rel.LTerm eq, ex, Th_util.Other) :: eqs in
+            let eqs = (Literal.LTerm eq, ex, Th_util.Other) :: eqs in
             env, eqs
           | _ -> env, eqs
         end
@@ -407,7 +407,7 @@ let add_guarded_destr env uf t hs e t_ty =
   let r_e, ex_e = try Uf.find uf e with Not_found -> assert false in
   if trivial_tester r_e c || seen_tester r_e c env then
     {env with pending_deds =
-                (Sig_rel.LTerm eq, ex_e, Th_util.Other) :: env.pending_deds}
+                (Literal.LTerm eq, ex_e, Th_util.Other) :: env.pending_deds}
   else
     let m_e = try MX.find r_e env.selectors with Not_found -> MHs.empty in
     let old = try MHs.find c m_e with Not_found -> [] in
@@ -570,7 +570,7 @@ let assume_is_constr uf hs r dep env eqs =
       let eqs =
         List.fold_left
           (fun eqs (ded, dep') ->
-             (Sig_rel.LTerm ded, Ex.union dep dep', Th_util.Other) :: eqs
+             (Literal.LTerm ded, Ex.union dep dep', Th_util.Other) :: eqs
           )eqs deds
       in
       let env = update_tester r hs env in
@@ -710,7 +710,7 @@ let update_cs_modulo_eq r1 r2 ex env eqs =
                  X.print r2 Hs.print hs;
              List.iter
                (fun (a, dep) ->
-                  eqs := (Sig_rel.LTerm a, dep, Th_util.Other) :: !eqs) l;
+                  eqs := (Literal.LTerm a, dep, Th_util.Other) :: !eqs) l;
            end;
            let l = List.rev_map (fun (a, dep) -> a, Ex.union ex dep) l in
            MHs.add hs l mhs
@@ -791,7 +791,7 @@ let assume env uf la =
     Debug.print_env "after assume" env;
     let print fmt (a,_,_) =
       match a with
-      | Sig_rel.LTerm a -> Format.fprintf fmt "%a" E.print a;
+      | Literal.LTerm a -> Format.fprintf fmt "%a" E.print a;
       | _ -> assert false
     in
     if Options.get_debug_adt () then

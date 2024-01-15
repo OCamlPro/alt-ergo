@@ -224,18 +224,21 @@ let get_rule () = !rule
 
 let case_split_policy = ref Util.AfterTheoryAssume
 let enable_adts_cs = ref false
+let enable_sat_cs = ref false
 let max_split = ref (Numbers.Q.from_int 1000000)
 
 (* Case split setters *)
 
 let set_case_split_policy p = case_split_policy := p
 let set_enable_adts_cs b = enable_adts_cs := b
+let set_enable_sat_cs b = enable_sat_cs := b
 let set_max_split n = max_split := n
 
 (* Case split getters *)
 
 let get_case_split_policy () = !case_split_policy
 let get_enable_adts_cs () = !enable_adts_cs
+let get_enable_sat_cs () = !enable_sat_cs
 let get_max_split () = !max_split
 
 (** Context options *)

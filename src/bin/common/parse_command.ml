@@ -272,7 +272,7 @@ module Debug = struct
            ~doc:full_doc)
 end
 
-let mk_case_split_opt case_split_policy enable_adts_cs max_split
+let mk_case_split_opt case_split_policy enable_adts_cs max_split ()
   =
   let res =
     match case_split_policy with
@@ -577,6 +577,14 @@ let parse_case_split_opt =
     let doc = "Enable case-split for Algebraic Datatypes theory." in
     Arg.(value & flag & info ["enable-adts-cs"] ~docs ~doc) in
 
+  let enable_sat_cs =
+    let doc = "Enable case-split in the SAT solver (Experts only)" in
+    Term.(
+      const set_enable_sat_cs $
+      Arg.(value & flag & info ["enable-sat-cs"] ~docs ~doc)
+    )
+  in
+
   let max_split =
     let dv = Numbers.Q.to_string (get_max_split ()) in
     let doc =
@@ -585,7 +593,7 @@ let parse_case_split_opt =
     Arg.(value & opt string dv & info ["max-split"] ~docv ~docs ~doc) in
 
   Term.(ret (const mk_case_split_opt $
-             case_split_policy $ enable_adts_cs $ max_split))
+             case_split_policy $ enable_adts_cs $ max_split $ enable_sat_cs))
 
 let parse_context_opt =
 

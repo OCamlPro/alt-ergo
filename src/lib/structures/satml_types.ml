@@ -48,7 +48,7 @@ module type ATOM = sig
 
   and atom =
     { var : var;
-      lit : E.t;
+      lit : Shostak.Literal.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -79,7 +79,7 @@ module type ATOM = sig
   val pr_clause : Format.formatter -> clause -> unit
   val get_atom : hcons_env -> E.t ->  atom
 
-  val literal : atom -> E.t
+  val literal : atom -> Shostak.Literal.t
   val weight : atom -> float
   val is_true : atom -> bool
   val neg : atom -> atom
@@ -114,6 +114,8 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
+  val add_lit_atom :
+    hcons_env -> Shostak.Literal.t -> var list -> atom * var list
   val add_atom : hcons_env -> E.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
@@ -186,7 +188,7 @@ module Atom : ATOM = struct
 
   and atom =
     { var : var;
-      lit : E.t;
+      lit : Shostak.Literal.t;
       neg : atom;
       mutable watched : clause Vec.t;
       mutable is_true : bool;
@@ -225,7 +227,7 @@ module Atom : ATOM = struct
   and dummy_atom =
     { var = dummy_var;
       timp = 0;
-      lit = dummy_lit;
+      lit = Shostak.Literal.make @@ LTerm dummy_lit;
       watched = {Vec.dummy=dummy_clause; data=[||]; sz=0};
       neg = dummy_atom;
       is_true = false;
@@ -263,22 +265,18 @@ module Atom : ATOM = struct
 
     let atom fmt a =
       Format.fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
-        (sign a) (a.var.vid+1) (value a) a.var.index E.print a.lit
+        (sign a) (a.var.vid+1) (value a) a.var.index Shostak.Literal.pp a.lit
         premise a.var.vpremise
 
     let atoms_vec = Vec.pp atom
 
     let clause fmt { name; atoms=arr; cpremise=cp; _ } =
-      Format.fprintf fmt "%s:{ %a} cpremise={{%a}}" name atoms_vec
+      Format.fprintf fmt "%s:@[@[{ %a@]}@ cpremise={{%a}}@]" name atoms_vec
         arr premise cp
   end
 
   let pr_atom = Debug.atom
   let pr_clause = Debug.clause
-
-  let normal_form lit = (* XXX do better *)
-    let is_pos = E.is_positive lit in
-    (if is_pos then lit else E.neg lit), not is_pos
 
   let literal a = a.lit
   let weight a = a.var.weight
@@ -287,13 +285,13 @@ module Atom : ATOM = struct
   let level a = a.var.level
   let neg a = a.neg
 
-  module HT = Hashtbl.Make(E)
+  module HT = Shostak.Literal.Table
 
   type hcons_env = { tbl : var HT.t ; cpt : int ref }
 
   let make_var =
     fun hcons lit acc ->
-    let lit, negated = normal_form lit in
+    let lit, negated = Shostak.Literal.normal_form lit in
     try HT.find hcons.tbl lit, negated, acc
     with Not_found ->
       let cpt = !(hcons.cpt) in
@@ -321,8 +319,8 @@ module Atom : ATOM = struct
           aid = cpt_fois_2 (* aid = vid*2 *) }
       and na =
         { var = var;
-          lit = E.neg lit;
-          watched = Vec.make 10 ~dummy:dummy_clause;
+          lit = Shostak.Literal.neg lit;
+          watched = Vec.make ~dummy:dummy_clause 10;
           neg = pa;
           is_true = false;
           is_guard = false;
@@ -332,9 +330,12 @@ module Atom : ATOM = struct
       incr hcons.cpt;
       var, negated, var :: acc
 
-  let add_atom hcons lit acc =
+  let add_lit_atom hcons lit acc =
     let var, negated, acc = make_var hcons lit acc in
     (if negated then var.na else var.pa), acc
+
+  let add_atom hcons lit acc =
+    add_lit_atom hcons (Shostak.Literal.make @@ LTerm lit) acc
 
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
@@ -355,9 +356,10 @@ module Atom : ATOM = struct
   let nb_made_vars hcons = !(hcons.cpt)
 
   let get_atom hcons lit =
+    let lit = Shostak.Literal.make (LTerm lit) in
     try (HT.find hcons.tbl lit).pa
     with Not_found ->
-    try (HT.find hcons.tbl (E.neg lit)).na
+    try (HT.find hcons.tbl (Shostak.Literal.neg lit)).na
     with Not_found -> assert false
 
   let make_clause name ali f is_learnt premise =
@@ -456,6 +458,7 @@ module type FLAT_FORMULA = sig
   val empty_hcons_env : unit -> hcons_env
   val nb_made_vars : hcons_env -> int
   val get_atom : hcons_env -> E.t -> Atom.atom
+  val atom_hcons_env : hcons_env -> Atom.hcons_env
 
   val simplify :
     hcons_env ->
@@ -665,6 +668,8 @@ module Flat_Formula : FLAT_FORMULA = struct
     f_empty_hcons, vrai
 
   let faux = mk_not vrai
+
+  let atom_hcons_env { atoms; _ } = atoms
 
   let nb_made_vars hcons = Atom.nb_made_vars hcons.atoms
 

@@ -55,7 +55,7 @@
     ; structures
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
-    Expr Var Ty Typed Xliteral ModelMap Id Objective
+    Expr Var Ty Typed Xliteral ModelMap Id Objective Literal
     ; util
     Emap Gc_debug Hconsing Hstring Heap Lists Loc
     MyUnix Numbers

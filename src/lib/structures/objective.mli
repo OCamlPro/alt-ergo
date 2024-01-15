@@ -90,7 +90,7 @@ module Model : sig
   (** [functions mdl] returns the list of objective functions of the model
       [mdl] in decreasing order of priority. *)
 
-  val next_unknown : for_model:bool -> t -> (Function.t * int) option
+  val next_unknown : t -> Function.t option
   (** [next_unknown ~for_model mdl] returns the next optimization in
       decreasing order of priority whose the value is [Unknown].
       The flag [for_model] is [true] when we invoke this function during
@@ -100,8 +100,4 @@ module Model : sig
   val has_no_limit : t -> bool
   (** [has_no_limit mdl] checks if all the objective functions in the model
       [mdl] have a finite value or unknown value. *)
-
-  val reset_until : t -> int -> t
-  (** [reset_until mdl i] sets to [Unknown] the values of the objective
-      functions with priority greater than [i]. *)
 end

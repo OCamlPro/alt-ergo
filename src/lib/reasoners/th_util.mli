@@ -107,3 +107,36 @@ type optimized_split = {
       Indeed, [value] isn't always a proper model value when the problem
       is unbounded or some objective functions involved strict inequalities. *)
 }
+
+(** The type of actions that a theory can take.
+
+    Inspired by mSAT's equivalent type [1].
+
+    [1] :
+      https://github.com/Gbury/mSAT/blob/ \
+      1496a48bc8b948e4d5a2bc20edaec33a6901c8fa/src/core/Solver_intf.ml#L104 *)
+type 'literal acts = {
+  acts_add_decision_lit : 'literal -> unit ;
+  (** Ask the SAT solver to decide on the given formula before it can answer
+      [SAT]. The order of decisions is among multiple calls of
+      [acts_add_decision_lit] is unspecified.
+
+      Decisions added using [acts_add_decision_lit] are forgotten when
+      backtracking. *)
+
+  acts_add_objective :
+    Objective.Function.t -> Objective.Value.t -> 'literal -> unit ;
+  (** Ask the SAT solver to optimistically select the appropriate value for the
+      given objective function (encoded as a decision in the ['literal]). If
+      the solver backtracks on that decision, the theory will have an
+      opportunity to select another value in a context where the ['literal] is
+      negated.
+
+      In case multiple objectives are added before the solver gets to make a
+      decision, only the *last* objective is taken into consideration; you
+      cannot assume that the objective has been optimized until the objective is
+      sent back to the theory through [add_objective].
+
+      Objectives added using [acts_add_objective] are forgotten when
+      backtracking. *)
+}

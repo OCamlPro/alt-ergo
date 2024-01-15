@@ -552,7 +552,7 @@ module Debug = struct
   let implied_equalities l =
     if get_debug_fm () then
       let pp_literal ppf = function
-        | Sig_rel.LTerm e -> Expr.print ppf e
+        | Literal.LTerm e -> Expr.print ppf e
         | LSem ra -> LR.print ppf (LR.make ra)
       in
       let print fmt (ra, ex, _) =
@@ -2070,11 +2070,16 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
             Objective.Value.Minfinity
         in
         (* As the problem is unbounded, we need to produce a value for the
-           objective function. In this case, we pick a value in the domain
-           of the polynomial [p]. *)
+           objective function. Rather than picking a value directly, we add a
+           constraint to let the case split mechanism pick a "large" (or
+           "small") value in the interval (otherwise, later objectives are
+           computed while assuming that the middle value is forced, which is
+           incorrect). *)
         let case_split =
-          LR.mkv_eq r1 (middle_value env ~is_max ty p None), true, Th_util.CS
-            (Th_util.Th_arith, Q.one)
+          LR.mkv_builtin false LT
+            [r1; (middle_value env ~is_max ty p None)],
+          true,
+          Th_util.CS (Th_util.Th_arith, Q.one)
         in
         Some Th_util.{ value; case_split }
 

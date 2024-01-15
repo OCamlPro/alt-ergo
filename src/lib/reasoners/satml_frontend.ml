@@ -86,9 +86,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     guards
 
   let empty ?(selector=fun _ -> true) () =
+    let ff_hcons_env = FF.empty_hcons_env () in
     { gamma = ME.empty;
-      satml = SAT.empty ();
-      ff_hcons_env = FF.empty_hcons_env ();
+      satml = SAT.create (FF.atom_hcons_env ff_hcons_env);
+      ff_hcons_env ;
       nb_mrounds = 0;
       last_forced_normal = 0;
       last_forced_greedy = 0;
@@ -439,11 +440,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun acc (gf, dep) ->
          match literals_of_ex dep with
          | []  ->
+           (* Toplevel assertions from [axiom_def] have no literals *)
            gf :: acc
-         | [{ Atom.lit; _ }] ->
-           {gf with
-            E.ff =
-              E.mk_or gf.E.ff (E.neg lit) false} :: acc
+         | [{ Atom.lit; _ }] -> (
+             (* Instantiations from [internal_axiom_def] are justified by a
+                single syntaxic literal (from [axs_of_abstr]) *)
+             match Shostak.Literal.view lit with
+             | LTerm lit ->
+               {gf with
+                E.ff =
+                  E.mk_or gf.E.ff (E.neg lit) false} :: acc
+             | LSem _ -> assert false
+           )
          | _   -> assert false
       )acc l
 
@@ -468,7 +476,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"register_abstraction"
         "abstraction of %a is %a" E.print f FF.print af;
-    let lat = Atom.literal at in
+    let lat =
+      match Shostak.Literal.view @@ Atom.literal at with
+      | LTerm at -> at
+      | LSem _ ->
+        (* Abstractions are always fresh expressions, so `at` is always a
+           syntaxic literal *)
+        assert false
+    in
     let new_abstr_vars =
       if not (Atom.is_true at) then at :: new_abstr_vars else new_abstr_vars
     in
@@ -585,7 +600,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match FF.view f with
       | FF.UNIT at ->
         if not (Atom.is_true at) then None
-        else Some [Atom.literal at]
+        else
+          Some [
+            match Shostak.Literal.view @@ Atom.literal at with
+            | LTerm at -> at
+            | LSem _ ->
+              (* Flat formulas only contain syntaxic literals. *)
+              assert false
+          ]
 
       | FF.AND l ->
         begin
@@ -635,7 +657,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if frugal then sa
         else add_reasons_graph (SA.elements sa) SA.empty
       in
-      SA.fold (fun a s -> SE.add (Atom.literal a) s) sa SE.empty
+      let add_elit a s =
+        match Shostak.Literal.view @@ Atom.literal a with
+        | LTerm a -> SE.add a s
+        | LSem _ -> s
+      in
+      SA.fold add_elit sa SE.empty
 
   let atoms_from_lazy_greedy env =
     let aux accu ff =
@@ -850,10 +877,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let rec assume_aux ~dec_lvl env l =
     let updated, new_abstr_vars = assume_aux_bis ~dec_lvl env l in
+    let elit a =
+      match Shostak.Literal.view @@ Atom.literal a with
+      | LTerm a -> a
+      | LSem _ ->
+        (* This is only called on newly added skolems, which are always
+           syntaxic literals *)
+        assert false
+    in
     let bot_abstr_vars = (* try to immediately expand newly added skolems *)
       List.fold_left (fun acc at ->
           let neg_at = Atom.neg at in
-          if Atom.is_true neg_at then (Atom.literal neg_at) :: acc else acc
+          if Atom.is_true neg_at then (elit neg_at) :: acc else acc
         )[] new_abstr_vars
     in
     match bot_abstr_vars with
@@ -973,9 +1008,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
+        let declared_ids = env.declare_top in
         let model, objectives =
-          Th.compute_concrete_model ~declared_ids:env.declare_top
-            (SAT.current_tbox env.satml)
+          SAT.compute_concrete_model ~declared_ids env.satml
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;
@@ -1057,7 +1092,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             | Limit (_, v) ->
               raise (Give_up ((e, v, is_max, false) :: acc))
             | Unknown ->
-              assert false
+              [] (* assert false *)
           ) objs []
       with Give_up acc -> acc
     in
@@ -1332,9 +1367,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let bmodel = SAT.boolean_model env.satml in
         Stdcompat.List.find_map
           (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
-             if E.equal t lit then
+             let tlit = Shostak.Literal.make (LTerm t) in
+             if Shostak.Literal.equal tlit lit then
                Some E.vrai
-             else if E.equal t neglit then
+             else if Shostak.Literal.equal tlit neglit then
                Some E.faux
              else
                None
