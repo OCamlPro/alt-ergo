@@ -121,12 +121,11 @@ let add_if_named
             names. *)
     acc
 
-(* We currently use the full state of the solver as model. *)
-type model = Model : 'a sat_module * 'a -> model
+type sat_env = Env : 'a sat_module * 'a -> sat_env
 
 type solve_res =
-  | Sat of model
-  | Unknown of model option
+  | Sat of sat_env
+  | Unknown of sat_env option
   | Unsat
 
 exception StopProcessDecl
@@ -172,31 +171,29 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Options.Output.get_fmt_diagnostic ());
-      let partial_model = ftdn_env.sat_env in
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
          printing wrong model. *)
       match ftdn_env.FE.res with
       | `Sat ->
         begin
-          let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
-              FE.print_model partial_model
+              (Frontend.print_model None) (SAT.get_model ftdn_env.sat_env)
           end;
-          Sat mdl
+          Sat (Env ((module SAT), ftdn_env.sat_env))
         end
       | `Unknown ->
         begin
-          let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
-            let ur = SAT.get_unknown_reason partial_model in
+            let ur = SAT.get_unknown_reason ftdn_env.sat_env in
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
               Sat_solver_sig.pp_ae_unknown_reason_opt ur;
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
-              FE.print_model partial_model
+              (Frontend.print_model ur) (SAT.get_model ftdn_env.sat_env)
           end;
+          let mdl = Env ((module SAT), ftdn_env.sat_env) in
           Unknown (Some mdl)
         end
       | `Unsat -> Unsat
@@ -344,8 +341,16 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let partial_model_key: model option State.key =
-    State.create_key ~pipe:"" "sat_state"
+  let consistent_env_key: sat_env option State.key =
+    State.create_key ~pipe:"" "consistent_env"
+  in
+
+  let last_model_key: Models.t option State.key =
+    State.create_key ~pipe:"" "last_model"
+  in
+
+  let last_unknown_reason: Sat_solver_sig.unknown_reason option State.key =
+    State.create_key ~pipe:"" "last_unknown_reason"
   in
 
   let named_terms: DStd.Expr.term Util.MS.t State.key =
@@ -420,16 +425,23 @@ let main () =
     | Unsat ->
       st
       |> DO.Mode.set Util.Unsat
-      |> State.set partial_model_key None
+      |> State.set consistent_env_key None
+      |> State.set last_model_key None
+      |> State.set last_unknown_reason None
     | Unknown None ->
       st
       |> DO.Mode.set Util.Sat
-      |> State.set partial_model_key None
-    | Unknown (Some m)
-    | Sat m ->
+      |> State.set consistent_env_key None
+      |> State.set last_model_key None
+      |> State.set last_unknown_reason None
+    | Unknown (Some env)
+    | Sat env ->
+      let Env ((module SAT), sat_env) = env in
       st
       |> DO.Mode.set Util.Sat
-      |> State.set partial_model_key (Some m)
+      |> State.set consistent_env_key (Some env)
+      |> State.set last_model_key (SAT.get_model sat_env)
+      |> State.set last_unknown_reason (SAT.get_unknown_reason sat_env)
   in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
   let read_all ch =
@@ -515,7 +527,9 @@ let main () =
     logic_file,
     State.empty
     |> State.set solver_ctx_key solver_ctx
-    |> State.set partial_model_key None
+    |> State.set consistent_env_key None
+    |> State.set last_model_key None
+    |> State.set last_unknown_reason None
     |> State.set named_terms Util.MS.empty
     |> State.set incremental_depth 0
     |> DO.init
@@ -708,9 +722,9 @@ let main () =
   let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
     let () =
       if Options.get_interpretation () then
-        match State.get partial_model_key st with
-        | Some Model ((module SAT), partial_model) ->
-          let objectives = SAT.get_objectives partial_model in
+        match State.get consistent_env_key st with
+        | Some Env ((module SAT), env) ->
+          let objectives = SAT.get_objectives env in
           begin
             match objectives with
             | Some o ->
@@ -764,13 +778,10 @@ let main () =
       let err () =
         recoverable_error "Invalid (get-info :reason-unknown)"
       in
-      match State.get partial_model_key st with
+      match State.get last_unknown_reason st with
       | None -> err ()
-      | Some Model ((module SAT), sat) ->
-        match SAT.get_unknown_reason sat with
-        | None -> err ()
-        | Some ur ->
-          print_std Sat_solver_sig.pp_smt_unknown_reason ur
+      | Some ur ->
+        print_std Sat_solver_sig.pp_smt_unknown_reason ur
     in
     match name with
     | ":authors" ->
@@ -928,11 +939,12 @@ let main () =
       | {contents = `Get_model; _ } ->
         cmd_on_modes st [Sat] "get-model";
         if Options.get_interpretation () then
-          let () = match State.get partial_model_key st with
-            | Some (Model ((module SAT), env)) ->
-              let module FE = Frontend.Make (SAT) in
+          let () =
+            match State.get last_model_key st with
+            | Some mdl ->
+              let ur = State.get last_unknown_reason st in
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
-                FE.print_model env
+                (Frontend.print_model ur) (Some mdl)
             | None ->
               (* TODO: add the location of the statement. *)
               recoverable_error "No model produced."
@@ -948,7 +960,7 @@ let main () =
 
       | {contents = `Reset; _} ->
         st
-        |> State.set partial_model_key None
+        |> State.set consistent_env_key None
         |> State.set solver_ctx_key empty_solver_ctx
         |> DO.Mode.clear
         |> DO.Optimize.clear
@@ -973,11 +985,11 @@ let main () =
       | {contents = `Get_assignment; _} ->
         begin
           cmd_on_modes st [Sat] "get-assignment";
-          match State.get partial_model_key st with
-          | Some Model ((module SAT), partial_model) ->
+          match State.get consistent_env_key st with
+          | Some Env ((module SAT), env) ->
             if DO.ProduceAssignment.get st then
               handle_get_assignment
-                ~get_value:(SAT.get_value partial_model)
+                ~get_value:(SAT.get_value env)
                 st
             else
               recoverable_error

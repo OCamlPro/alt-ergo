@@ -43,6 +43,8 @@ type 'a status =
 
 val print_status : 'a status -> int -> unit
 
+val print_model: Sat_solver_sig.unknown_reason option -> Models.t option Fmt.t
+
 module type S = sig
 
   (** The SAT working environment. *)
@@ -89,8 +91,6 @@ module type S = sig
     env ->
     Commands.sat_tdecl ->
     unit
-
-  val print_model: sat_env Fmt.t
 end
 
 module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t

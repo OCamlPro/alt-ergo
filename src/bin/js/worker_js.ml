@@ -136,9 +136,9 @@ let main worker_id content =
         | `Sat | `Unknown ->
           begin
             if Options.(get_interpretation () && get_dump_models ()) then
-              FE.print_model
+              (Frontend.print_model None)
                 (Options.Output.get_fmt_models ())
-                ftnd_env.sat_env;
+                (SAT.get_model ftnd_env.sat_env);
           end
         | `Unsat -> ()
       in
