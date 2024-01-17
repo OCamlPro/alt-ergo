@@ -131,6 +131,9 @@
 * Require dolmen 0.9 #1050
 * Test compatibility for OCaml 5.2 #1059
 
+### New features
+* support for the SMT-LIB statement `get-value`
+
 ## v2.5.2
 
 ### Bug fixes

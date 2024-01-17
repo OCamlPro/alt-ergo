@@ -954,6 +954,8 @@ let mk_term s l ty =
     neg.neg <- Some pos;
     pos
 
+let mk_app name l ty = mk_term (Symbols.Name name) l ty
+
 let vrai =
   let res =
     let nb_nodes = 0 in
@@ -2977,6 +2979,7 @@ module Core = struct
   let and_ s t = mk_and s t false
   let or_ s t = mk_or s t false
   let ite c t e = mk_ite c t e
+  let of_bool b = if b then vrai else faux
 end
 
 (** Constructors from the smtlib theory of integers.

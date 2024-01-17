@@ -1,4 +1,5 @@
 (set-option :produce-models true)
+(set-option :verify-models false)
 (set-logic ALL)
 (declare-const x Int)
 (assert (<= 0 x 10))

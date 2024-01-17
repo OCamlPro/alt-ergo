@@ -292,18 +292,19 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
                 });
       Errors.run_error Errors.Failed_check_unsat_core
     with
-    | SAT.Unsat _  -> ()
-    | (SAT.Sat | SAT.I_dont_know) as e -> raise e
+    | Sat_solver_sig.Unsat _  -> ()
+    | (Sat_solver_sig.Sat | Sat_solver_sig.I_dont_know) as e -> raise e
 
   let mk_root_dep name f loc =
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
+  let internal_decl ?(loc = Loc.dummy) (name : Symbols.typed_name)
+      (env : env) : unit =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
-      SAT.declare env.sat_env id
+      SAT.declare env.sat_env name
     | `Unsat -> ()
 
   let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =
@@ -417,11 +418,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let handle_sat_exn f ?loc x env =
     try f ?loc x env with
-    | SAT.Sat -> env.res <- `Sat
-    | SAT.Unsat expl ->
+    | Sat_solver_sig.Sat -> env.res <- `Sat
+    | Sat_solver_sig.Unsat expl ->
       env.res <- `Unsat;
       env.expl <- Ex.union expl env.expl
-    | SAT.I_dont_know ->
+    | Sat_solver_sig.I_dont_know ->
       env.res <- `Unknown
 
   (* Wraps the function f to check if the step limit is reached (in which case,
@@ -460,7 +461,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (* If we have reached an unknown state, we can return it right
              away. *)
           match SAT.get_unknown_reason env.sat_env with
-          | Some (Step_limit _ | Timeout _)  -> raise SAT.I_dont_know
+          | Some (Step_limit _ | Timeout _)  -> raise Sat_solver_sig.I_dont_know
           | Some _ ->
             (* For now, only the step limit is an unknown step reachable
                here. We could raise SAT.I_dont_know as in the previous case,
@@ -478,13 +479,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Optimize fn ->
         check_if_over (internal_optimize ~loc:d.st_loc fn) env
     with
-    | SAT.Sat ->
+    | Sat_solver_sig.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
       hook_on_status (Sat (d, env.sat_env)) (Steps.get_steps ());
       env.res <- `Sat
 
-    | SAT.Unsat expl' ->
+    | Sat_solver_sig.Unsat expl' ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
          status should be printed at the next query. *)
@@ -494,7 +495,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       env.res <- `Unsat;
       env.expl <- expl
 
-    | SAT.I_dont_know ->
+    | Sat_solver_sig.I_dont_know ->
       (* TODO: always print Unknown for why3 ? *)
       let ur = SAT.get_unknown_reason env.sat_env in
       let status =

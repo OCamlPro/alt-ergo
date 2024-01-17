@@ -1,4 +1,5 @@
 (set-option :produce-models true)
+(set-option :verify-models false)
 (set-logic ALL)
 (declare-const p1 Bool)
 (declare-const p2 Bool)

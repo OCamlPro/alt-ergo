@@ -35,7 +35,7 @@ module Make (_ : Theory.S) : sig
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
-  val declare : t -> Id.typed -> t
+  val declare : t -> Symbols.typed_name -> t
 
   val push : t -> int -> t
 
@@ -56,9 +56,9 @@ module Make (_ : Theory.S) : sig
 
   val reinit_ctx : unit -> unit
 
-  val get_model: t -> Models.t option
+  val get_boolean_model : t -> Expr.t list
+
+  val get_model : t -> Models.t option
 
   val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
-
-  val get_value : t -> Expr.t -> Expr.t option
 end

@@ -73,9 +73,10 @@ type form =
   | F_Lemma
   | F_Skolem
 
-type name_kind = Ac | Other
+type name_kind = Ac | Other [@@deriving ord, eq]
 
-type name_space = User | Internal | Fresh | Fresh_ac | Skolem | Abstract
+type name_space =
+  User | Internal | Fresh | Fresh_ac | Skolem | Abstract | GetValue
 
 let compare_name_space ns1 ns2 =
   match ns1, ns2 with
@@ -100,20 +101,62 @@ let compare_name_space ns1 ns2 =
   | _, Skolem -> 1
 
   | Abstract, Abstract -> 0
+  | Abstract, _ -> -1
+  | _, Abstract -> 1
+
+  | GetValue, GetValue -> 0
+
+let equal_name_space ns1 ns2 = compare_name_space ns1 ns2 = 0
 
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
+module Name = struct
+  type t = {
+    hs : Id.t;
+    kind : name_kind;
+    defined : bool;
+    ns : name_space
+  } [@@deriving ord, eq]
+
+  let mangle ns s =
+    match ns with
+    | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
+    | User when String.length s > 0 && Char.equal '@' s.[0] -> ".@" ^ s
+    | User -> s
+    | Internal -> ".!" ^ s
+    | Fresh -> ".k" ^ s
+    | Fresh_ac -> ".K" ^ s
+    | Skolem -> ".?__" ^ s
+    | Abstract -> "@a" ^ s
+    | GetValue -> "@g" ^ s
+
+  (* NB: names are pre-mangled, which means that we don't need to take the
+     namespace into consideration when hashing or comparing. *)
+  let mk ?(kind=Other) ?(defined=false) ?(ns = User) s =
+    { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
+
+  let pp ppf { hs; _ } =
+    (* Names are pre-mangled *)
+    Hstring.view hs
+    |> Dolmen.Std.Name.simple
+    |> Dolmen.Smtlib2.Script.Poly.Print.id ppf
+end
+
+type typed_name = Name.t * Ty.t list * Ty.t [@@deriving ord]
+
+let pp_typed_name ppf (name, arg_tys, ret_ty) =
+  Fmt.pf ppf "%a : (%a) -> %a"
+    Name.pp name
+    Fmt.(list ~sep:sp Ty.pp_smtlib) arg_tys
+    Ty.pp_smtlib ret_ty
+
 type t =
   | True
   | False
-  | Name of
-      { hs : Id.t
-      ; kind : name_kind
-      ; defined : bool
-      ; ns : name_space }
+  | Name of Name.t
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -125,21 +168,8 @@ type t =
   | MapsTo of Var.t
   | Let
 
-let mangle ns s =
-  match ns with
-  | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
-  | User when String.length s > 0 && Char.equal '@' s.[0] -> ".@" ^ s
-  | User -> s
-  | Internal -> ".!" ^ s
-  | Fresh -> ".k" ^ s
-  | Fresh_ac -> ".K" ^ s
-  | Skolem -> ".?__" ^ s
-  | Abstract -> "@a" ^ s
-
-(* NB: names are pre-mangled, which means that we don't need to take the
-   namespace into consideration when hashing or comparing. *)
 let name ?(kind=Other) ?(defined=false) ?(ns = User) s =
-  Name { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
+  Name (Name.mk ~kind ~defined ~ns s)
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -171,7 +201,7 @@ let is_ac x = match x with
 
 let is_internal sy =
   match sy with
-  | Name { ns = User; _ } -> false
+  | Name { ns = (User | GetValue); _ } -> false
   | Name _ -> true
   | _ -> false
 
@@ -312,10 +342,6 @@ let string_of_bound b =
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
-let pp_name ppf (_ns, s) =
-  (* Names are pre-mangled *)
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
-
 module AEPrinter = struct
   let pp_operator ppf op =
     match op with
@@ -418,7 +444,7 @@ module AEPrinter = struct
     (* Core theory *)
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
-    | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
+    | Name name -> Name.pp ppf name
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
 

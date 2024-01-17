@@ -62,12 +62,12 @@ let pp_ae_unknown_reason_opt ppf = function
   | Some Step_limit i -> Fmt.pf ppf "StepLimit:%i" i
   | Some Timeout t -> Fmt.pf ppf "Timeout:%a" pp_ae_timeout_reason t
 
+exception Sat
+exception Unsat of Explanation.t
+exception I_dont_know
+
 module type S = sig
   type t
-
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
   (** [empty ~selector ()] creates an empty environment.
@@ -75,11 +75,11 @@ module type S = sig
       The optional argument [selector] is used to filter ground facts
       discovered by the instantiation engine. *)
 
-  val declare : t -> Id.typed -> unit
-  (** [declare env id] declares a new identifier [id].
+  val declare : t -> Symbols.typed_name -> unit
+  (** [declare env name] declares a new typed name [name].
 
       If the environment [env] isn't unsatisfiable and the model generation
-      is enabled, the solver produces a model term for [id] which can be
+      is enabled, the solver produces a model term for [name] which can be
       retrieved with [get_model]. *)
 
   val push : t -> int -> unit
@@ -130,7 +130,9 @@ module type S = sig
   val reinit_ctx : unit -> unit
   (** [reinit_ctx ()] reinitializes the solving context. *)
 
-  val get_model: t -> Models.t option
+  val get_boolean_model : t -> Expr.t list
+
+  val get_model : t -> Models.t option
   (** [get_model t] produces the current first-order model.
       Notice that this model is a best-effort.
 
@@ -141,10 +143,6 @@ module type S = sig
   (** [get_unknown_reason t] returns the reason Alt-Ergo raised
       [I_dont_know] if it did. If it did not, returns [None]. *)
 
-  val get_value : t -> Expr.t -> Expr.t option
-  (** [get_value t e] returns the value of [e] as a constant expression
-      in the current model generated. Returns [None] if can't decide. *)
-
   val get_objectives : t -> Objective.Model.t option
   (** [get_objectives t] returns the current objective values.
 
@@ -153,8 +151,9 @@ module type S = sig
 
   val supports_optimization : bool
   (** Returns whether the solver supports optimization. *)
-end
 
+  val reset_decisions : t -> unit
+end
 
 module type SatContainer = sig
   module Make (_ : Theory.S) : S

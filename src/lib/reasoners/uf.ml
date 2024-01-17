@@ -1226,7 +1226,7 @@ let compute_concrete_model_of_val cache =
             acc
           end
 
-        | Sy.Name { hs = id; _ }, _, _ ->
+        | Sy.Name name, _, _ ->
           let value =
             match ty with
             | Ty.Text _ ->
@@ -1236,7 +1236,7 @@ let compute_concrete_model_of_val cache =
               get_abstract_for env t
             | _ -> ret_rep
           in
-          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
+          ModelMap.(add (name, arg_tys, ty) arg_vals value mdl), mrepr
 
         | _ ->
           Printer.print_err
@@ -1248,11 +1248,11 @@ let compute_concrete_model_of_val cache =
 let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
   let get_abstract_for = Cache.get_abstract_for cache.abstracts
-  in fun ~prop_model ~declared_ids env ->
+  in fun ~prop_model ~declared_names env ->
     let terms, suspicious = terms env in
     let model, mrepr =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-        terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
+        terms (ModelMap.empty ~suspicious declared_names, ME.empty)
     in
     let model =
       Hashtbl.fold (fun t vals mdl ->
@@ -1265,11 +1265,11 @@ let extract_concrete_model cache =
                 Expr.ArraysEx.store arr_val i v
               ) vals abstract
           in
-          let id, is_user =
+          let name, is_user =
             let Expr.{ f; _ } = Expr.term_view t in
             match f with
-            | Sy.Name { hs; ns = User; _ } -> hs, true
-            | Sy.Name { hs; _ } -> hs, false
+            | Sy.Name ({ ns = User; _ } as name) -> name, true
+            | Sy.Name name -> name, false
             | _ ->
               (* We only store array declarations as keys in the cache
                  [array_selects]. *)
@@ -1277,7 +1277,7 @@ let extract_concrete_model cache =
           in
           let mdl =
             if is_user then
-              ModelMap.add (id, [], ty) [] arr_val mdl
+              ModelMap.add (name, [], ty) [] arr_val mdl
             else
               (* Internal identifiers can occur here if we need to generate
                  a model term for an embedded array but this array isn't itself
@@ -1285,18 +1285,18 @@ let extract_concrete_model cache =
               mdl
           in
           (* We need to update the model [mdl] in order to substitute all the
-             occurrences of the array identifier [id] by an appropriate model
+             occurrences of the array identifier [name] by an appropriate model
              term. This cannot be performed while computing the model with
              `compute_concrete_model_of_val` because we need to first iterate
              on all the union-find environment to collect array values. *)
-          ModelMap.subst id arr_val mdl
+          ModelMap.subst name arr_val mdl
         ) cache.array_selects model
     in
     { Models.propositional = prop_model; model; term_values = mrepr }
 
-let extract_concrete_model ~prop_model ~declared_ids =
+let extract_concrete_model ~prop_model ~declared_names =
   let cache : cache = {
     array_selects = Hashtbl.create 17;
     abstracts = Hashtbl.create 17;
   }
-  in fun env -> extract_concrete_model cache ~prop_model ~declared_ids env
+  in fun env -> extract_concrete_model cache ~prop_model ~declared_names env

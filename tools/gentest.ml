@@ -362,6 +362,7 @@ let () =
   let shared =
     [ timelimit
     ; "--enable-assertions"
+    ; "--verify-models"
     ]
   in
   let solvers = [

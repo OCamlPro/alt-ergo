@@ -88,7 +88,7 @@ type mode_error =
   | Forbidden_command of string
 
 type model_error =
-  | Subst_type_clash of Id.t * Ty.t * Ty.t
+  | Subst_type_clash of Symbols.Name.t * Ty.t * Ty.t
   | Subst_not_model_term of Expr.t
 
 type error =
@@ -258,11 +258,11 @@ let report_mode_error fmt = function
     fprintf fmt "Command %s" s
 
 let report_model_error ppf = function
-  | Subst_type_clash (id, ty1, ty2) ->
+  | Subst_type_clash (name, ty1, ty2) ->
     Fmt.pf ppf
-      "Cannot substitute the identifier %a of type %a by an expression of \
+      "Cannot substitute the name %a of type %a by an expression of \
        type %a"
-      Id.pp id
+      Symbols.Name.pp name
       Ty.pp_smtlib ty1
       Ty.pp_smtlib ty2
 

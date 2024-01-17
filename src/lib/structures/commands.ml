@@ -28,7 +28,7 @@
 (* Sat entry *)
 
 type sat_decl_aux =
-  | Decl of Id.typed
+  | Decl of Symbols.typed_name
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t Typed.rwt_rule) list
@@ -44,11 +44,8 @@ type sat_tdecl = {
 }
 
 let print_aux fmt = function
-  | Decl (id, arg_tys, ret_ty) ->
-    Fmt.pf fmt "declare %a with type (%a) -> %a"
-      Id.pp id
-      Fmt.(list ~sep:comma Ty.print) arg_tys
-      Ty.print ret_ty
+  | Decl tn ->
+    Fmt.pf fmt "declare %a" Symbols.pp_typed_name tn
 
   | Assume (name, e, b) ->
     Format.fprintf fmt "assume %s(%b): @[<hov>%a@]" name b Expr.print e

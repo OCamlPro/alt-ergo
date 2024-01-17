@@ -246,6 +246,7 @@ val print_tagged_classes : Format.formatter -> Set.t list -> unit
 
 val mk_trigger : ?user:bool -> ?depth:int -> ?hyp:t list -> t list -> trigger
 val mk_term : Symbols.t -> t list -> Ty.t -> t
+val mk_app : Symbols.Name.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t
 val void : t
@@ -445,16 +446,12 @@ val reinit_cache: unit -> unit
     https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
 module Core : sig
   val not : t -> t
-
   val eq : t -> t -> t
-
   val xor : t -> t -> t
-
   val and_ : t -> t -> t
-
   val or_ : t -> t -> t
-
   val ite : t -> t -> t -> t
+  val of_bool : bool -> t
 end
 
 (** Constructors from the smtlib theory of integers.

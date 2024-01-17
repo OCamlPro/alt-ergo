@@ -37,6 +37,21 @@ module Constraints = struct
   let empty = M.empty
   let add = M.add
   let map = M.map
+  let iter = M.iter
+  let find_opt = M.find_opt
+
+  (* Check if the graph defined by the set of constraints [c] is constant.
+     Requires that [c] isn't empty. *)
+  let is_constant c =
+    assert (not @@ M.is_empty c);
+    try
+      let _, t = M.choose c in
+      M.iter
+        (fun _args_val ret_val ->
+           if not @@ Expr.equal ret_val t then raise Exit
+        ) c;
+      true
+    with Exit -> false
 
   (* A fiber of the function [f] over a value [v] is the set of all the values
      in the domain of [f] whose the image by [f] is [v].
@@ -104,73 +119,112 @@ module Constraints = struct
     aux ppf (Expr.Map.to_seq c)
 end
 
-module P = Map.Make
-    (struct
-      type t = Id.typed
+module P = struct
+  include Map.Make
+      (struct
+        type t = Sy.typed_name
 
-      let compare = Id.compare_typed
-    end)
+        let compare = Sy.compare_typed_name
+      end)
 
-type graph =
-  | Free of Expr.t
-  (* Represents a graph without any constraint. The expression is
-     an abstract value. *)
+  let iter f =
+    iter (fun (({ ns; _ }, _, _) as tn) v ->
+        match ns with
+        | User -> f tn v
+        | _ -> ())
+end
 
-  | C of Constraints.t
+module Graph = struct
+  type t =
+    | Free of Expr.t
+    (* Represents a graph without any constraint. The expression is
+       an abstract value. *)
+
+    | C of Constraints.t
+
+  let is_constant graph =
+    match graph with
+    | Free _ -> true
+    | C constraints -> Constraints.is_constant constraints
+
+  let iter f graph =
+    match graph with
+    | Free _ -> ()
+    | C constraints -> Constraints.iter f constraints
+
+  let find_opt arg_vals graph =
+    match graph with
+    | Free _ -> None
+    | C constraints -> Constraints.find_opt arg_vals constraints
+
+  let pp ppf graph =
+    match graph with
+    | Free a -> Expr.pp_smtlib ppf a
+    | C constraints ->
+      let inverse_rel = Constraints.inverse constraints in
+      Constraints.pp_inverse ppf inverse_rel
+end
 
 type t = {
-  values : graph P.t;
+  values : Graph.t P.t;
   suspicious : bool;
 }
 
-let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
+let add ((name, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
-                     arguments" Id.pp id;
+                     arguments" Symbols.Name.pp name;
   let constraints =
     match P.find sy values with
     | C g -> g
     | Free _ | exception Not_found -> Constraints.empty
   in
   let values =
-    P.add sy (C (Constraints.add arg_vals ret_val constraints)) values
+    P.add sy (Graph.C (Constraints.add arg_vals ret_val constraints)) values
   in
   { values; suspicious }
+
+let iter f { values; _ } = P.iter f values
+
+let get_value id arg_vals { values; _ } =
+  Option.bind (P.find_opt id values) @@ Graph.find_opt arg_vals
 
 let empty ~suspicious declared_ids =
   let values =
     List.fold_left
       (fun values ((_, _, ret_ty) as sy) ->
-         P.add sy (Free (Expr.mk_abstract ret_ty)) values
+         P.add sy (Graph.Free (Expr.mk_abstract ret_ty)) values
       )
       P.empty declared_ids
   in
   { values; suspicious }
 
-let rec subst_in_term id e c =
+let rec subst_in_term name e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
-  | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
+  | Sy.Name name', [] when Symbols.Name.equal name name' ->
     let ty = Expr.type_info e in
     if not @@ Ty.equal ty ty' then
-      Errors.error (Model_error (Subst_type_clash (id, ty', ty)));
+      raise (Errors.Error (Model_error (Subst_type_clash (name, ty', ty))));
     e
   | _ ->
     begin
-      let xs = List.map (subst_in_term id e) xs in
+      let xs = List.map (subst_in_term name e) xs in
       Expr.mk_term f xs ty'
     end
 
-let subst id e { values; suspicious } =
+let subst name e { values; suspicious } =
   if not @@ Expr.is_model_term e then
-    Errors.error (Model_error (Subst_not_model_term e));
+    raise (Errors.Error (Model_error (Subst_not_model_term e)));
 
   let values =
     P.map
       (fun graph ->
          match graph with
-         | C constraints -> C (Constraints.map (subst_in_term id e) constraints)
-         | Free _ -> graph
+         | Graph.C constraints ->
+           Graph.C (Constraints.map (subst_in_term name e) constraints)
+         | Free a ->
+           Free (subst_in_term name e a)
       ) values in
   { values; suspicious }
 
@@ -178,23 +232,14 @@ let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
   let pp_unused ppf unused = if unused then Fmt.pf ppf "_" else () in
   Fmt.pf ppf "(%aarg_%i %a)" pp_unused unused arg_name Ty.pp_smtlib arg_ty
 
-let pp_define_fun ~is_constant pp ppf ((id, arg_tys, ret_ty), a) =
+let pp_define_fun ppf ((name, arg_tys, ret_ty), graph) =
+  let unused = Graph.is_constant graph in
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
-    Id.pp id
-    Fmt.(list ~sep:sp (pp_named_arg_ty ~unused:is_constant)) named_arg_tys
+    Symbols.Name.pp name
+    Fmt.(list ~sep:sp (pp_named_arg_ty ~unused)) named_arg_tys
     Ty.pp_smtlib ret_ty
-    pp a
-
-let pp_define_fun ppf (sy, graph) =
-  match graph with
-  | Free a ->
-    pp_define_fun ~is_constant:true Expr.pp_smtlib ppf (sy, a)
-
-  | C constraints ->
-    let inverse_rel = Constraints.inverse constraints  in
-    let is_constant = Expr.Map.cardinal inverse_rel = 1 in
-    pp_define_fun ~is_constant Constraints.pp_inverse ppf (sy, inverse_rel)
+    Graph.pp graph
 
 let pp ppf {values; suspicious} =
   if suspicious then begin
