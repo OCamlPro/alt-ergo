@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) --- OCamlPro SAS                                     *)
+(*     Copyright (C) 2013-2023 --- OCamlPro SAS                           *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
@@ -19,66 +19,43 @@
 (*                                                                        *)
 (*     CNRS - INRIA - Universite Paris Sud                                *)
 (*                                                                        *)
+(*     Until 2013, some parts of this code were released under            *)
+(*     the Apache Software License version 2.0.                           *)
+(*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
 (*                                                                        *)
 (**************************************************************************)
 
-let rec assoc eq x = function
-  | [] -> raise Not_found
-  | (a,b)::l -> if eq a x then b else assoc eq x l
+type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
 
-let rec assoc_opt eq x = function
-    [] -> None
-  | (a,b)::l -> if eq a x then Some b else assoc_opt eq x l
+type any_sat_module = (module Sat_solver_sig.S)
 
-let rec mem_assoc eq x = function
-  | [] -> false
-  | (a, _) :: l -> eq a x || mem_assoc eq x l
+type lbool = False | True | Unknown
 
-let rec remove_assoc eq x = function
-  | [] -> []
-  | (a, _ as pair) :: l ->
-    if eq a x then l else pair :: remove_assoc eq x l
+val pp_lbool : lbool Fmt.t
 
-let apply f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) a ->
-         let b = f a in
-         b :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
+exception Wrong_model of Explanation.t
+exception No_model
 
-let apply_right f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) (v, a) ->
-         let b = f a in
-         (v, b) :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
+val get_value : 'a sat_module -> 'a -> Expr.t list -> Expr.t list option
+(** [get_value (module SAT) env l] returns the model values of the expressions
+    of [l] in the current generated model of [env].
 
-let rec try_map f l =
-  match l with
-  | [] -> Some []
-  | x :: xs ->
-    Option.bind (f x) @@ fun y ->
-    Option.bind (try_map f xs) @@ fun ys ->
-    Some (y :: ys)
+    @return [None] if the model generation is not enabled or the
+            environment is already unsatisfiable before calling this function.
+    @raise Wrong_model if the solver found a contradiction in the current
+           model.
+    @raise No_model if the solver didn't produce a model but the model
+           generation is enabled. *)
 
-let rec is_sorted cmp l =
-  match l with
-  | x :: y :: xs -> cmp x y <= 0 && is_sorted cmp (y :: xs)
-  | [_] | [] -> true
+val get_assignment : 'a sat_module -> 'a -> Expr.t list -> lbool list
+(** [get_assignment (module SAT) env l] returns the status of the literals [l]
+    in the current boolean model of [env].
 
-let rec iter_pair f (l1, l2) =
-  match l1, l2 with
-  | [], [] -> ()
-  | hd1 :: tl1, hd2 :: tl2 ->
-    f (hd1, hd2);
-    iter_pair f (tl1, tl2)
-  | _ -> invalid_arg "iter_pair"
+    The status is [unknown] if the literal isn't a subformula of the user
+    input.
+
+    @raise invalid_argument if one of the expressions of [l] isn't a
+           literal. *)

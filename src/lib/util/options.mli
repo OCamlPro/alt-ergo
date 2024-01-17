@@ -224,6 +224,9 @@ val set_strict_mode : bool -> unit
 (** [dump_models] accessible with {!val:get_dump_models}. *)
 val set_dump_models : bool -> unit
 
+(** [verify_models] accessible with {!val:set_verify_models}. *)
+val set_verify_models : bool -> unit
+
 (** Set [objectives_in_interpretation] accessible with
     {!val:get_objectives_in_interpretation} *)
 val set_objectives_in_interpretation : bool -> unit
@@ -720,6 +723,11 @@ val get_strict_mode : unit -> bool
 (** [true] if the interpretation for each goal or check-sat is
     printed. *)
 val get_dump_models : unit -> bool
+(** Default to [false]. *)
+
+(** [true] if the interpretation for each goal or check-sat is
+    produced and verified (best-effort). *)
+val get_verify_models : unit -> bool
 (** Default to [false]. *)
 
 (** [true] if the interpretation is set to first interpretation *)

@@ -91,8 +91,9 @@ module type SAT_ML = sig
   type t
 
   val solve : t -> unit
+
   val compute_concrete_model :
-    declared_ids:Id.typed list ->
+    declared_names:Symbols.typed_name list ->
     t ->
     Models.t Lazy.t * Objective.Model.t
 
@@ -1925,23 +1926,23 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (* check_unsat_core cl; *)
       raise e
 
-  let rec compute_concrete_model ~declared_ids env =
+  let rec compute_concrete_model env ~declared_names =
     let acts = theory_slice env in
     match Th.compute_concrete_model ~acts env.tenv with
     | () -> (
         if is_sat env then
-          Th.extract_concrete_model ~declared_ids env.tenv
+          Th.extract_concrete_model env.tenv ~declared_names
         else
           try
             solve env; assert false
           with Sat ->
-            compute_concrete_model ~declared_ids env
+            compute_concrete_model env ~declared_names
       )
     | exception Ex.Inconsistent (ex, _) ->
       conflict_analyze_and_fix env (C_theory ex);
-      compute_concrete_model ~declared_ids env
+      compute_concrete_model env ~declared_names
 
-  let compute_concrete_model ~declared_ids env =
+  let compute_concrete_model ~declared_names env =
     assert (is_sat env);
 
     (* Make sure all objectives are optimized before starting model
@@ -1955,7 +1956,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         try solve env; assert false
         with Sat -> loop env
       else
-        compute_concrete_model ~declared_ids env
+        compute_concrete_model ~declared_names env
     in loop env
 
   exception Trivial

@@ -2,7 +2,7 @@
 unknown
 (
   (define-fun a () Int 0)
-  (define-fun intrefqtmk ((_arg_0 Int)) intref (as @a4 intref))
+  (define-fun intrefqtmk ((_arg_0 Int)) intref (as @a10 intref))
   (define-fun f ((_arg_0 Int)) Int 0)
   (define-fun a1 () Int 0)
 )

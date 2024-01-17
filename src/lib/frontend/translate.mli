@@ -39,6 +39,14 @@ val make_form :
   decl_kind:Expr.decl_kind ->
   Expr.t
 
+val mk_expr :
+  ?loc:Loc.t ->
+  ?name_base:string ->
+  ?toplevel:bool ->
+  decl_kind:Expr.decl_kind ->
+  Dolmen.Std.Expr.term ->
+  Expr.t
+
 val make :
   D_loop.DStd.Loc.file ->
   Commands.sat_tdecl list ->

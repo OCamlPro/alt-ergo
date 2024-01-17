@@ -88,7 +88,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
-    declared_ids:Id.typed list ->
+    declared_names:Symbols.typed_name list ->
     t -> Models.t
 
 end
@@ -762,6 +762,6 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let extract_concrete_model ~prop_model ~declared_ids env =
-    Uf.extract_concrete_model ~prop_model ~declared_ids env.uf
+  let extract_concrete_model ~prop_model ~declared_names env =
+    Uf.extract_concrete_model ~prop_model ~declared_names env.uf
 end
