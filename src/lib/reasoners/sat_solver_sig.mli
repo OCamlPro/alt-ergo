@@ -45,12 +45,12 @@ val pp_smt_unknown_reason: unknown_reason Fmt.t
 val pp_ae_unknown_reason_opt : unknown_reason option Fmt.t
 (** Prints an optional unknown reason in Alt-Ergo format. *)
 
+exception Sat
+exception Unsat of Explanation.t
+exception I_dont_know
+
 module type S = sig
   type t
-
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
   (** [empty ~selector ()] creates an empty environment.

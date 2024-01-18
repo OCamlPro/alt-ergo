@@ -31,9 +31,22 @@
 type t
 (** Type of model. *)
 
+module Graph : sig
+  type t
+
+  val choose : t -> Expr.t
+  val is_constant : t -> bool
+  val iter : (Expr.t list -> Expr.t -> unit) -> t -> unit
+  val pp : t Fmt.t
+end
+
 val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
+
+val iter : (Id.typed -> Graph.t -> unit) -> t -> unit
+
+val value_of : Id.typed -> Expr.t list -> t -> Expr.t option
 
 val empty : suspicious:bool -> Id.typed list -> t
 (** An empty model. The [suspicious] flag is used to remember that this

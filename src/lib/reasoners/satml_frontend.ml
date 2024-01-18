@@ -31,6 +31,7 @@
 module X = Shostak.Combine
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+  open Sat_solver_sig
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
   module Ex = Explanation
@@ -107,10 +108,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       declare_top = [];
       declare_tail = Stack.create ();
     }
-
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
 
   let i_dont_know env ur =
     env.unknown_reason <- Some ur;

@@ -345,7 +345,10 @@ let main () =
     State.create_key ~pipe:"" "consistent_env"
   in
 
-  let last_model_key: Models.t option State.key =
+  (* Key of the last computed model after a successful `check-sat`.
+     The boolean value tells if the computed model have been already
+     asserted in `consistent_env`. *)
+  let last_model_key: (Models.t * bool) option State.key =
     State.create_key ~pipe:"" "last_model"
   in
 
@@ -437,10 +440,13 @@ let main () =
     | Unknown (Some env)
     | Sat env ->
       let Env ((module SAT), sat_env) = env in
+      let mdl =
+        Option.bind (SAT.get_model sat_env) @@ fun m -> Some (m, false)
+      in
       st
       |> DO.Mode.set Util.Sat
       |> State.set consistent_env_key (Some env)
-      |> State.set last_model_key (SAT.get_model sat_env)
+      |> State.set last_model_key mdl
       |> State.set last_unknown_reason (SAT.get_unknown_reason sat_env)
   in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
@@ -831,6 +837,147 @@ let main () =
       (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
   in
 
+  (****************************************************************************)
+  (*                Helper function for the get-value support                 *)
+  (****************************************************************************)
+
+  let declare (Env ((module SAT), env)) id =
+    SAT.declare env id
+  in
+
+  let assume (Env ((module SAT), env)) e =
+    SAT.assume env
+      {Expr.ff= e;
+       origin_name = "titi";
+       gdist = -1;
+       hdist = 0;
+       trigger_depth = max_int;
+       nb_reductions = 0;
+       age=0;
+       lem=None;
+       mf=false;
+       gf=false;
+       from_terms = [];
+       theory_elim = true;
+      }
+      Explanation.empty
+  in
+
+  let check (Env ((module SAT), env)) =
+    try
+      let ex = SAT.unsat env
+          {Expr.ff=Expr.vrai;
+           origin_name = "vrey";
+           hdist = -1;
+           gdist = 0;
+           trigger_depth = max_int;
+           nb_reductions = 0;
+           age=0;
+           lem=None;
+           mf=true;
+           gf=true;
+           from_terms = [];
+           theory_elim = true;
+          }
+      in
+      raise (Sat_solver_sig.Unsat ex)
+    with
+    | Sat_solver_sig.I_dont_know | Sat_solver_sig.Sat -> ()
+  in
+
+  (* Assert the last computed model in the last consistent environment.
+
+     @raise Sat_solver_sig.Unsat if the solver found a contradiction, which
+            means the model is wrong. *)
+  let assert_model st =
+    let env = State.get consistent_env_key st |> Option.get in
+    let (mdl, is_asserted) = State.get last_model_key st |> Option.get in
+    assert (not is_asserted);
+    ModelMap.iter
+      (fun (id, _, ret_ty) graph ->
+         ModelMap.Graph.iter
+           (fun val_args val_ret ->
+              let f = Symbols.name (Hstring.view id) in
+              let e = Expr.mk_term f val_args ret_ty in
+              let eq = Expr.mk_eq ~iff:false e val_ret in
+              assume env eq
+           )
+           graph
+      )
+      mdl.model;
+    check env
+  in
+
+  let get_value_in_model (Env ((module SAT), env)) acc l =
+    let mdl = SAT.get_model env |> Option.get in
+    let rec aux acc1 acc2 = function
+      | [] -> acc1, acc2
+      | (e1, e2) as e :: tl ->
+        begin
+          let { Expr.f; xs; ty; _ } = Expr.term_view e2 in
+          match f with
+          | Symbols.Name { hs; _ } ->
+            begin
+              let arg_tys = List.map Expr.type_info xs in
+              match ModelMap.value_of (hs, arg_tys, ty) xs mdl.model with
+              | Some v -> aux ((e1, v) :: acc1) acc2 tl
+              | None -> aux acc1 (e :: acc2) tl
+            end
+          | _ -> aux acc1 (e :: acc2) tl
+        end
+    in
+    aux acc [] l
+  in
+
+  (* Requires that the last `check-sat` is successful and the state [st]
+     contains a model which has been asserted in the last consistent
+     environment of the solver. *)
+  let handle_get_value l st =
+    let env = State.get consistent_env_key st |> Option.get in
+    let values, l = get_value_in_model env [] (List.map (fun x -> x, x) l) in
+    match l with
+    | [] ->
+      Printer.print_std
+        "(@[<v 0>%a@])@,"
+        Fmt.(list ~sep:cut
+               (pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib |> parens)) values
+    | _ ->
+      try
+        (* For each expression [e] of the list [l], we assert an equality of
+           the form [n = e] where [n] is a fresh abstract name. *)
+        let ids =
+          List.map (fun (e1, _) ->
+              let ty = Expr.type_info e1 in
+              let name = Expr.mk_abstract ty in
+              let t = Expr.mk_eq ~iff:false name e1 in
+              let () =
+                let { Expr.f; ty; _ } = Expr.term_view name in
+                match f with
+                | Symbols.Name { hs; _ } ->
+                  declare env (hs, [], ty)
+                | _ -> assert false
+              in
+              assume env t;
+              e1, name
+            ) l
+        in
+        check env;
+        match get_value_in_model env values ids with
+        | values, [] ->
+          Printer.print_std
+            "(@[<v 0>%a@])@,"
+            Fmt.(list ~sep:cut
+                   (pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib |> parens))
+            values
+        | _ ->
+          (* The model generation has to produce a value for declared symbols.
+             If some declared symbols are missing in the model, it's a bug. *)
+          assert false
+      with
+      | Sat_solver_sig.Unsat _ ->
+        recoverable_error "The model is probably wrong."
+  in
+
   let handle_get_assignment ~get_value st =
     let assignments =
       Util.MS.fold
@@ -941,7 +1088,7 @@ let main () =
         if Options.get_interpretation () then
           let () =
             match State.get last_model_key st with
-            | Some mdl ->
+            | Some (mdl, _) ->
               let ur = State.get last_unknown_reason st in
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
                 (Frontend.print_model ur) (Some mdl)
@@ -1000,6 +1147,34 @@ let main () =
             (* TODO: add the location of the statement. *)
             recoverable_error
               "No model produced, cannot execute get-assignment.";
+            st
+        end
+
+      | {contents = `Get_value l; _} ->
+        begin
+          cmd_on_modes st [Sat] "get-value";
+          match State.get last_model_key st with
+          | Some (mdl, is_asserted) ->
+            begin
+              let l =
+                List.map (D_cnf.mk_expr ~loc:Loc.dummy ~toplevel:false
+                            ~decl_kind:Daxiom) l
+              in
+              (* The first time we call `get-value` after the last `check-sat`,
+                 we have to assert the last model to ensure that the output of
+                 the `get-value` statements will be consistent with the output
+                 of `get-model`. *)
+              try
+                if not is_asserted then assert_model st;
+                handle_get_value l st;
+                State.set last_model_key (Some (mdl, true)) st
+              with Sat_solver_sig.Unsat _ ->
+                recoverable_error "wrong model";
+                st
+            end
+          | None ->
+            (* TODO: add the location of the statement. *)
+            recoverable_error "No model produced, cannot execute get-value.";
             st
         end
 

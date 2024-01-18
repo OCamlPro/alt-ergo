@@ -65,12 +65,12 @@ let pp_ae_unknown_reason_opt ppf = function
   | Some Step_limit i -> Fmt.pf ppf "StepLimit:%i" i
   | Some Timeout t -> Fmt.pf ppf "Timeout:%a" pp_ae_timeout_reason t
 
+exception Sat
+exception Unsat of Explanation.t
+exception I_dont_know
+
 module type S = sig
   type t
-
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
   (** [empty ~selector ()] creates an empty environment.

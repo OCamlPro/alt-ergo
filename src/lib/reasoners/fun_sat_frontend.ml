@@ -29,9 +29,7 @@
 (**************************************************************************)
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
+  open Sat_solver_sig
 
   module FS = Fun_sat.Make(Th)
 
