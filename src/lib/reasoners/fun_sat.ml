@@ -177,6 +177,12 @@ module Make (Th : Theory.S) = struct
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
     last_saved_model : Models.t Lazy.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
+
+    declare_top : Id.typed list ref;
+    declare_tail : Id.typed list Stack.t;
+    (** Stack of the declared symbols by the user. The field [declare_top]
+        is the top of the stack and [declare_tail] is tail. In particular, this
+        stack is never empty. *)
   }
 
   let reset_refs () =
@@ -1123,7 +1129,9 @@ module Make (Th : Theory.S) = struct
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let model, _ = Th.compute_concrete_model env.tbox in
+        let model, _ =
+          Th.compute_concrete_model ~declared_ids:!(env.declare_top) env.tbox
+        in
         env.last_saved_model := Some model;
         env
       with Ex.Inconsistent (expl, classes) ->
@@ -1611,6 +1619,10 @@ module Make (Th : Theory.S) = struct
           "solved with backward!";
       raise e
 
+  let declare env id =
+    env.declare_top := id :: !(env.declare_top);
+    env
+
   let push env to_push =
     if Options.get_tableaux_cdcl () then
       Errors.run_error
@@ -1626,6 +1638,7 @@ module Make (Th : Theory.S) = struct
           let guards = ME.add new_guard
               (mk_gf new_guard "" true true,Ex.empty)
               acc.guards.guards in
+          Stack.push !(env.declare_top) env.declare_tail;
           {acc with guards =
                       { acc.guards with
                         current_guard = new_guard;
@@ -1656,6 +1669,11 @@ module Make (Th : Theory.S) = struct
           in
           acc.model_gen_phase := false;
           env.last_saved_model := None;
+          let () =
+            try env.declare_top := Stack.pop env.declare_tail
+            with Stack.Empty ->
+              Errors.error (Run_error Stack_underflow)
+          in
           {acc with inst;
                     guards =
                       { acc.guards with
@@ -1837,6 +1855,8 @@ module Make (Th : Theory.S) = struct
       add_inst = selector;
       last_saved_model = ref None;
       unknown_reason = None;
+      declare_top = ref [];
+      declare_tail = Stack.create ();
     }
     in
     assume env gf_true Ex.empty

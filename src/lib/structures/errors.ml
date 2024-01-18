@@ -84,6 +84,7 @@ type run_error =
   | Failed_check_unsat_core
   | Unsupported_feature of string
   | Dynlink_error of string
+  | Stack_underflow
 
 type mode_error =
   | Invalid_set_option of string
@@ -250,6 +251,8 @@ let report_run_error fmt = function
     fprintf fmt "Unsupported Feature: %s" f
   | Dynlink_error s ->
     fprintf fmt "[Dynlink] %s" s
+  | Stack_underflow ->
+    fprintf fmt "The stack of the assertion levels is empty"
 
 let report_mode_error fmt = function
   | Invalid_set_option s ->

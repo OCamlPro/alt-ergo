@@ -702,7 +702,14 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   in
   Cache.store_sy tcst sy;
   (* Adding polymorphic types to the cache. *)
-  Cache.store_ty_vars id_ty
+  Cache.store_ty_vars id_ty;
+  let arg_tys, ret_ty =
+    match DT.view id_ty with
+    | `Arrow (arg_tys, ret_ty) ->
+      List.map dty_to_ty arg_tys, dty_to_ty ret_ty
+    | _ -> [], dty_to_ty id_ty
+  in
+  (Hstring.make name, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -2087,41 +2094,48 @@ let make dloc_file acc stmt =
             assert false
         ) defs
 
-    | {contents = `Decls [td]; _ } ->
+    | {contents = `Decls [td]; loc; _ } ->
       begin match td with
-        | `Type_decl (td, _def) -> mk_ty_decl td
-        | `Term_decl td -> mk_term_decl td
-      end;
-      acc
+        | `Type_decl (td, _def) ->
+          mk_ty_decl td;
+          acc
 
-    | {contents = `Decls dcl; _ } ->
-      let rec aux acc tdl =
+        | `Term_decl td ->
+          let st_loc = dl_to_ael dloc_file loc in
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
+      end
+
+    | {contents = `Decls dcl; loc; _ } ->
+      let rec aux ty_decls tdl acc =
         (* for now, when acc has more than one element it is assumed that the
            types are mutually recursive. Which is not necessarily the case.
            But it doesn't affect the execution.
         *)
         match tdl with
         | `Term_decl td :: tl ->
-          begin match acc with
+          begin match ty_decls with
             | [] -> ()
             | [otd] -> mk_ty_decl otd
-            | _ -> mk_mr_ty_decls (List.rev acc)
+            | _ -> mk_mr_ty_decls (List.rev ty_decls)
           end;
-          mk_term_decl td;
-          aux [] tl
+          let st_loc = dl_to_ael dloc_file loc in
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl acc
 
         | `Type_decl (td, _def) :: tl ->
-          aux (td :: acc) tl
+          aux (td :: ty_decls) tl acc
 
         | [] ->
-          begin match acc with
-            | [] -> ()
-            | [otd] -> mk_ty_decl otd
-            | _ ->  mk_mr_ty_decls (List.rev acc)
+          begin
+            let () =
+              match ty_decls with
+              | [] -> ()
+              | [otd] -> mk_ty_decl otd
+              | _ ->  mk_mr_ty_decls (List.rev ty_decls)
+            in
+            acc
           end
       in
-      aux [] dcl;
-      acc
+      aux [] dcl acc
 
     | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
 

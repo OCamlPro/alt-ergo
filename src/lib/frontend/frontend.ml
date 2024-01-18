@@ -302,6 +302,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
+  let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
+    ignore loc;
+    match env.res with
+    | `Sat | `Unknown ->
+      SAT.declare env.sat_env id
+    | `Unsat -> ()
+
   let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
@@ -443,6 +450,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let process_decl ?(hook_on_status=(fun _ -> ignore)) env d =
     try
       match d.st_decl with
+      | Decl id -> check_if_over (internal_decl ~loc:d.st_loc id) env
       | Push n -> check_if_over (internal_push ~loc:d.st_loc n) env
       | Pop n -> check_if_over (internal_pop ~loc:d.st_loc n) env
       | Assume (n, f, mf) ->

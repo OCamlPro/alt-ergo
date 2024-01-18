@@ -58,6 +58,13 @@ module type S = sig
       The optional argument [selector] is used to filter ground facts
       discovered by the instantiation engine. *)
 
+  val declare : t -> Id.typed -> unit
+  (** [declare env id] declares a new identifier [id].
+
+      If the environment [env] isn't unsatisfiable and the model generation
+      is enabled, the solver produces a model term for [id] which can be
+      retrieved with [get_model]. *)
+
   val push : t -> int -> unit
   (** [push env n] adds [n] new assertion levels in [env].
 
@@ -71,7 +78,9 @@ module type S = sig
   (** [pop env n] removes [n] assertion levels in [env].
 
       Internally, the guard [g] introduced in [push] corresponding to this pop
-      is propagated to [false] at level [0]. *)
+      is propagated to [false] at level [0].
+
+      @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
   val assume : t -> Expr.gformula -> Explanation.t -> unit
   (** [assume env f dep] assumes the ground formula [f] in [env].

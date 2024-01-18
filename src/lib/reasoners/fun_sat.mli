@@ -38,9 +38,14 @@ module Make (Th : Theory.S) : sig
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
+  val declare : t -> Id.typed -> t
+
   val push : t -> int -> t
 
   val pop : t -> int -> t
+  (** [pop env n] pops [n] assertion levels of the environment [env].
+
+      @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
   val assume : t -> Expr.gformula -> Explanation.t -> t
 

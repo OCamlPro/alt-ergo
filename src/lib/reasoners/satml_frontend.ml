@@ -67,6 +67,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
+
+    mutable declare_top : Id.typed list;
+    declare_tail : Id.typed list Stack.t;
+    (** Stack of the declared symbols by the user. The field [declare_top]
+        is the top of the stack and [declare_tail] is tail. In particular, this
+        stack is never empty. *)
   }
 
   let empty_guards () = {
@@ -97,6 +103,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       last_saved_model = None;
       last_saved_objectives = None;
       unknown_reason = None;
+      declare_top = [];
+      declare_tail = Stack.create ();
     }
 
   exception Sat
@@ -966,7 +974,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       try
         (* also performs case-split and pushes pending atoms to CS *)
         let model, objectives =
-          Th.compute_concrete_model (SAT.current_tbox env.satml)
+          Th.compute_concrete_model ~declared_ids:env.declare_top
+            (SAT.current_tbox env.satml)
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;
@@ -1204,6 +1213,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       expr_guard, atom_guard
     | _ -> assert false
 
+  let declare env id =
+    env.declare_top <- id :: env.declare_top
+
   let push env to_push =
     Util.loop ~f:(fun _n () () ->
         try
@@ -1211,7 +1223,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           SAT.push env.satml atom_guard;
           Stack.push expr_guard env.guards.stack_guard;
           Steps.push_steps ();
-          env.guards.current_guard <- expr_guard
+          env.guards.current_guard <- expr_guard;
+          Stack.push env.declare_top env.declare_tail;
         with
         | Util.Step_limit_reached _ ->
           (* This function should be called without step limit
@@ -1234,7 +1247,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.last_saved_model <- None;
           env.last_saved_objectives <- None;
           env.inst <- inst;
-          env.guards.current_guard <- b
+          env.guards.current_guard <- b;
+          let declare_top =
+            try
+              Stack.pop env.declare_tail
+            with Stack.Empty ->
+              Errors.error (Run_error Stack_underflow)
+          in
+          env.declare_top <- declare_top;
         )
       ~max:to_pop
       ~elt:()

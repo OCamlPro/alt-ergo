@@ -31,6 +31,7 @@
 (* Sat entry *)
 
 type sat_decl_aux =
+  | Decl of Id.typed
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
   | RwtDef of (Expr.t Typed.rwt_rule) list

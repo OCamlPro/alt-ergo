@@ -72,7 +72,11 @@ val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 (** {2 Counterexample function} *)
 
 (** Compute a counterexample using the Uf environment *)
-val extract_concrete_model : prop_model:Expr.Set.t -> t -> Models.t
+val extract_concrete_model :
+  prop_model:Expr.Set.t ->
+  declared_ids:Id.typed list ->
+  t ->
+  Models.t
 
 (** saves the module's cache *)
 val save_cache : unit -> unit
