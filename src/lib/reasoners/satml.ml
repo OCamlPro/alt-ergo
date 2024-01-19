@@ -666,6 +666,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
+      env.nchoices <- Vec.get env.nchoices_stack lvl;
       if Options.get_cdcl_tableaux () then begin
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
