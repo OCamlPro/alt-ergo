@@ -637,14 +637,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
-      Vec.shrink env.trail ((Vec.size env.trail) - env.qhead);
-      Vec.shrink env.trail_lim ((Vec.size env.trail_lim) - lvl);
-      Vec.shrink env.tenv_queue ((Vec.size env.tenv_queue) - lvl);
+      Vec.shrink env.trail env.qhead;
+      Vec.shrink env.trail_lim lvl;
+      Vec.shrink env.tenv_queue lvl;
       if Options.get_cdcl_tableaux () then begin
         Vec.shrink
-          env.lazy_cnf_queue ((Vec.size env.lazy_cnf_queue) - lvl);
+          env.lazy_cnf_queue lvl;
         Vec.shrink env.relevants_queue
-          ((Vec.size env.relevants_queue) - lvl)
+          lvl
         [@ocaml.ppwarning "TODO: try to disable 'fill_with_dummy'"]
       end;
       (try
@@ -806,8 +806,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           ) watched;
       with Conflict c -> assert (!res == C_none); res := C_bool c
     end;
-    let dead_part = Vec.size watched - !new_sz_w in
-    Vec.shrink watched dead_part
+    Vec.shrink watched !new_sz_w
 
 
   let do_case_split env origin =
@@ -1119,13 +1118,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   else
   begin Vec.set env.learnts !j c; incr j end
   done;
-  Vec.shrink env.learnts (lim2 - !j) true
+  Vec.shrink env.learnts !j true
 *)
 
   let remove_satisfied env vec =
     let j = ref 0 in
-    let k = Vec.size vec - 1 in
-    for i = 0 to k do
+    for i = 0 to Vec.size vec - 1 do
       let c = Vec.get vec i in
       if satisfied c then remove_clause env c
       else begin
@@ -1133,7 +1131,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         incr j
       end
     done;
-    Vec.shrink vec (k + 1 - !j)
+    Vec.shrink vec !j
 
 
   module HUC = Hashtbl.Make

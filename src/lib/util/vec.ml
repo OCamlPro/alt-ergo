@@ -49,10 +49,10 @@ let[@inline] clear vec =
 let[@inline] shrink vec i =
   assert (i >= 0);
   assert (i <= vec.sz);
-  for j = vec.sz - i to vec.sz - 1 do
+  for j = i to vec.sz - 1 do
     Array.unsafe_set vec.data j vec.dummy
   done;
-  vec.sz <- vec.sz - i
+  vec.sz <- i
 
 let[@inline] pop vec =
   assert (vec.sz > 0);
