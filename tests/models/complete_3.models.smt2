@@ -9,3 +9,4 @@
 ; not produce a model value for it.
 (check-sat)
 (get-model)
+(get-value (true))

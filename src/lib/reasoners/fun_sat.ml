@@ -1858,20 +1858,8 @@ module Make (Th : Theory.S) = struct
 
   let get_unknown_reason env = env.unknown_reason
 
-  let get_value env t =
-    match E.type_info t with
-    | Ty.Tbool ->
-      begin
-        match ME.find_opt t env.gamma with
-        | None ->
-          begin
-            match ME.find_opt (E.neg t) env.gamma with
-            | None -> None
-            | Some _ -> Some E.faux
-          end
-        | Some _ -> Some E.vrai
-      end
-    | _ -> None
+  let get_boolean_model env =
+    Some (ME.fold (fun e _ acc -> e :: acc) env.gamma [])
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)

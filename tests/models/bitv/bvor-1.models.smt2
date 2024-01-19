@@ -7,3 +7,4 @@
 (assert (= y (bvor #b01011010 x)))
 (check-sat)
 (get-model)
+(get-value (true))

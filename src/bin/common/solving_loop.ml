@@ -121,11 +121,12 @@ let add_if_named
             names. *)
     acc
 
-type sat_env = Env : 'a sat_module * 'a -> sat_env
+(* We currently use the full state of the solver as model. *)
+type model = Model : 'a sat_module * 'a -> model
 
 type solve_res =
-  | Sat of sat_env
-  | Unknown of sat_env option
+  | Sat of model
+  | Unknown of model option
   | Unsat
 
 exception StopProcessDecl
@@ -171,29 +172,31 @@ let main () =
         Profiling.print true
           (Steps.get_steps ())
           (Options.Output.get_fmt_diagnostic ());
+      let partial_model = ftdn_env.sat_env in
       (* If the status of the SAT environment is inconsistent,
          we have to drop the partial model in order to prevent
          printing wrong model. *)
       match ftdn_env.FE.res with
       | `Sat ->
         begin
+          let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
-              (Frontend.print_model None) (SAT.get_model ftdn_env.sat_env)
+              FE.print_model partial_model
           end;
-          Sat (Env ((module SAT), ftdn_env.sat_env))
+          Sat mdl
         end
       | `Unknown ->
         begin
+          let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
-            let ur = SAT.get_unknown_reason ftdn_env.sat_env in
+            let ur = SAT.get_unknown_reason partial_model in
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
               Sat_solver_sig.pp_ae_unknown_reason_opt ur;
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
-              (Frontend.print_model ur) (SAT.get_model ftdn_env.sat_env)
+              FE.print_model partial_model
           end;
-          let mdl = Env ((module SAT), ftdn_env.sat_env) in
           Unknown (Some mdl)
         end
       | `Unsat -> Unsat
@@ -341,19 +344,8 @@ let main () =
     State.create_key ~pipe:"" "solving_state"
   in
 
-  let consistent_env_key: sat_env option State.key =
-    State.create_key ~pipe:"" "consistent_env"
-  in
-
-  (* Key of the last computed model after a successful `check-sat`.
-     The boolean value tells if the computed model have been already
-     asserted in `consistent_env`. *)
-  let last_model_key: (Models.t * bool) option State.key =
-    State.create_key ~pipe:"" "last_model"
-  in
-
-  let last_unknown_reason: Sat_solver_sig.unknown_reason option State.key =
-    State.create_key ~pipe:"" "last_unknown_reason"
+  let partial_model_key: model option State.key =
+    State.create_key ~pipe:"" "partial_model"
   in
 
   let named_terms: DStd.Expr.term Util.MS.t State.key =
@@ -428,26 +420,16 @@ let main () =
     | Unsat ->
       st
       |> DO.Mode.set Util.Unsat
-      |> State.set consistent_env_key None
-      |> State.set last_model_key None
-      |> State.set last_unknown_reason None
+      |> State.set partial_model_key None
     | Unknown None ->
       st
       |> DO.Mode.set Util.Sat
-      |> State.set consistent_env_key None
-      |> State.set last_model_key None
-      |> State.set last_unknown_reason None
-    | Unknown (Some env)
-    | Sat env ->
-      let Env ((module SAT), sat_env) = env in
-      let mdl =
-        Option.bind (SAT.get_model sat_env) @@ fun m -> Some (m, false)
-      in
+      |> State.set partial_model_key None
+    | Unknown (Some mdl)
+    | Sat mdl ->
       st
       |> DO.Mode.set Util.Sat
-      |> State.set consistent_env_key (Some env)
-      |> State.set last_model_key mdl
-      |> State.set last_unknown_reason (SAT.get_unknown_reason sat_env)
+      |> State.set partial_model_key (Some mdl)
   in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
   let read_all ch =
@@ -533,9 +515,7 @@ let main () =
     logic_file,
     State.empty
     |> State.set solver_ctx_key solver_ctx
-    |> State.set consistent_env_key None
-    |> State.set last_model_key None
-    |> State.set last_unknown_reason None
+    |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
     |> State.set incremental_depth 0
     |> DO.init
@@ -728,9 +708,9 @@ let main () =
   let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
     let () =
       if Options.get_interpretation () then
-        match State.get consistent_env_key st with
-        | Some Env ((module SAT), env) ->
-          let objectives = SAT.get_objectives env in
+        match State.get partial_model_key st with
+        | Some Model ((module SAT), partial_model) ->
+          let objectives = SAT.get_objectives partial_model in
           begin
             match objectives with
             | Some o ->
@@ -784,10 +764,13 @@ let main () =
       let err () =
         recoverable_error "Invalid (get-info :reason-unknown)"
       in
-      match State.get last_unknown_reason st with
+      match State.get partial_model_key st with
       | None -> err ()
-      | Some ur ->
-        print_std Sat_solver_sig.pp_smt_unknown_reason ur
+      | Some Model ((module SAT), sat) ->
+        match SAT.get_unknown_reason sat with
+        | None -> err ()
+        | Some ur ->
+          print_std Sat_solver_sig.pp_smt_unknown_reason ur
     in
     match name with
     | ":authors" ->
@@ -814,185 +797,39 @@ let main () =
       unsupported_opt name
   in
 
-  (* Fetches the term value in the current model. *)
-  let evaluate_term get_value name term =
-    (* There are two ways to evaluate a term:
-       - if its name is registered in the environment, get its value;
-       - if not, check if the formula is in the environment.
-    *)
-    let simple_form =
-      Expr.mk_term
-        (Sy.name name)
-        []
-        (D_cnf.dty_to_ty term.DStd.Expr.term_ty)
+  let handle_get_value ~get_value l =
+    let l =
+      List.map (D_cnf.mk_expr ~loc:Loc.dummy ~toplevel:false
+                  ~decl_kind:Daxiom) l
     in
-    match get_value simple_form with
-    | Some v -> Fmt.to_to_string Expr.print v
-    | None -> "unknown"
-  in
-
-  let print_terms_assignments =
-    Fmt.list
-      ~sep:Fmt.cut
-      (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
-  in
-
-  (****************************************************************************)
-  (*                Helper function for the get-value support                 *)
-  (****************************************************************************)
-
-  let declare (Env ((module SAT), env)) id =
-    SAT.declare env id
-  in
-
-  let assume (Env ((module SAT), env)) e =
-    SAT.assume env
-      {Expr.ff= e;
-       origin_name = "titi";
-       gdist = -1;
-       hdist = 0;
-       trigger_depth = max_int;
-       nb_reductions = 0;
-       age=0;
-       lem=None;
-       mf=false;
-       gf=false;
-       from_terms = [];
-       theory_elim = true;
-      }
-      Explanation.empty
-  in
-
-  let check (Env ((module SAT), env)) =
-    try
-      let ex = SAT.unsat env
-          {Expr.ff=Expr.vrai;
-           origin_name = "vrey";
-           hdist = -1;
-           gdist = 0;
-           trigger_depth = max_int;
-           nb_reductions = 0;
-           age=0;
-           lem=None;
-           mf=true;
-           gf=true;
-           from_terms = [];
-           theory_elim = true;
-          }
-      in
-      raise (Sat_solver_sig.Unsat ex)
-    with
-    | Sat_solver_sig.I_dont_know | Sat_solver_sig.Sat -> ()
-  in
-
-  (* Assert the last computed model in the last consistent environment.
-
-     @raise Sat_solver_sig.Unsat if the solver found a contradiction, which
-            means the model is wrong. *)
-  let assert_model st =
-    let env = State.get consistent_env_key st |> Option.get in
-    let (mdl, is_asserted) = State.get last_model_key st |> Option.get in
-    assert (not is_asserted);
-    ModelMap.iter
-      (fun (name, _, ret_ty) graph ->
-         ModelMap.Graph.iter
-           (fun val_args val_ret ->
-              let e = Expr.mk_app name val_args ret_ty in
-              let eq = Expr.mk_eq ~iff:false e val_ret in
-              assume env eq
-           )
-           graph
-      )
-      mdl.model;
-    check env
-  in
-
-  let get_value_in_model (Env ((module SAT), env)) acc l =
-    let mdl = SAT.get_model env |> Option.get in
-    let rec aux acc1 acc2 = function
-      | [] -> acc1, acc2
-      | (e1, e2) as e :: tl ->
-        begin
-          let { Expr.f; xs; ty; _ } = Expr.term_view e2 in
-          match f with
-          | Symbols.Name name ->
-            begin
-              let arg_tys = List.map Expr.type_info xs in
-              match ModelMap.value_of (name, arg_tys, ty) xs mdl.model with
-              | Some v -> aux ((e1, v) :: acc1) acc2 tl
-              | None -> aux acc1 (e :: acc2) tl
-            end
-          | _ -> aux acc1 (e :: acc2) tl
-        end
-    in
-    aux acc [] l
-  in
-
-  (* Requires that the last `check-sat` is successful and the state [st]
-     contains a model which has been asserted in the last consistent
-     environment of the solver. *)
-  let handle_get_value l st =
-    let env = State.get consistent_env_key st |> Option.get in
-    let values, l = get_value_in_model env [] (List.map (fun x -> x, x) l) in
-    match l with
-    | [] ->
+    match get_value l with
+    | Some values ->
       Printer.print_std
         "(@[<v 0>%a@])@,"
-        Fmt.(list ~sep:cut
-               (pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib |> parens)) values
-    | _ ->
-      try
-        (* For each expression [e] of the list [l], we assert an equality of
-           the form [n = e] where [n] is a fresh abstract name. *)
-        let ids =
-          List.map (fun (e1, _) ->
-              let ty = Expr.type_info e1 in
-              let name = Expr.mk_abstract ty in
-              let t = Expr.mk_eq ~iff:false name e1 in
-              let () =
-                let { Expr.f; ty; _ } = Expr.term_view name in
-                match f with
-                | Symbols.Name name ->
-                  declare env (name, [], ty)
-                | _ -> assert false
-              in
-              assume env t;
-              e1, name
-            ) l
-        in
-        check env;
-        match get_value_in_model env values ids with
-        | values, [] ->
-          Printer.print_std
-            "(@[<v 0>%a@])@,"
-            Fmt.(list ~sep:cut
-                   (pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib |> parens))
-            values
-        | _ ->
-          (* The model generation has to produce a value for declared symbols.
-             If some declared symbols are missing in the model, it's a bug. *)
-          assert false
-      with
-      | Sat_solver_sig.Unsat _ ->
-        recoverable_error "The model is probably wrong."
+        Fmt.(iter ~sep:cut Lists.iter_pair
+               ((pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib) |> parens))
+        (l, values)
+    | None ->
+      recoverable_error "No model produced, cannot execute get-value."
+    | exception Sat_solver_sig.Unsat _ ->
+      recoverable_error "The model is wrong, cannot execute get-value."
   in
 
-  let handle_get_assignment ~get_value st =
-    let assignments =
-      Util.MS.fold
-        (fun name term acc ->
-           if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
-             (name, evaluate_term get_value name term) :: acc
-           else
-             acc
-        )
-        (State.get named_terms st)
-        []
+  let handle_get_assignment ~get_assignment st =
+    let names, l =
+      Util.MS.fold (fun name term (names, acc) ->
+          assert (DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool);
+          name :: names,
+          Expr.mk_term (Sy.name name) []
+            (D_cnf.dty_to_ty term.DStd.Expr.term_ty) :: acc
+        ) (State.get named_terms st) ([], [])
     in
+    let values = get_assignment l in
     Printer.print_std
       "(@[<v 0>%a@])@,"
-      print_terms_assignments
-      assignments
+      Fmt.(iter ~sep:cut Lists.iter_pair
+             ((pair ~sep:sp string Sat_solver_sig.pp_lbool) |> parens))
+      (names, values)
   in
 
   let handle_stmt :
@@ -1086,11 +923,11 @@ let main () =
         cmd_on_modes st [Sat] "get-model";
         if Options.get_interpretation () then
           let () =
-            match State.get last_model_key st with
-            | Some (mdl, _) ->
-              let ur = State.get last_unknown_reason st in
+            match State.get partial_model_key st with
+            | Some Model ((module SAT), partial_model) ->
+              let module FE = Frontend.Make (SAT) in
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
-                (Frontend.print_model ur) (Some mdl)
+                FE.print_model partial_model
             | None ->
               (* TODO: add the location of the statement. *)
               recoverable_error "No model produced."
@@ -1106,7 +943,7 @@ let main () =
 
       | {contents = `Reset; _} ->
         st
-        |> State.set consistent_env_key None
+        |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
         |> DO.Mode.clear
         |> DO.Optimize.clear
@@ -1131,11 +968,11 @@ let main () =
       | {contents = `Get_assignment; _} ->
         begin
           cmd_on_modes st [Sat] "get-assignment";
-          match State.get consistent_env_key st with
-          | Some Env ((module SAT), env) ->
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
             if DO.ProduceAssignment.get st then
               handle_get_assignment
-                ~get_value:(SAT.get_value env)
+                ~get_assignment:(SAT.get_assignment partial_model)
                 st
             else
               recoverable_error
@@ -1152,25 +989,11 @@ let main () =
       | {contents = `Get_value l; _} ->
         begin
           cmd_on_modes st [Sat] "get-value";
-          match State.get last_model_key st with
-          | Some (mdl, is_asserted) ->
-            begin
-              let l =
-                List.map (D_cnf.mk_expr ~loc:Loc.dummy ~toplevel:false
-                            ~decl_kind:Daxiom) l
-              in
-              (* The first time we call `get-value` after the last `check-sat`,
-                 we have to assert the last model to ensure that the output of
-                 the `get-value` statements will be consistent with the output
-                 of `get-model`. *)
-              try
-                if not is_asserted then assert_model st;
-                handle_get_value l st;
-                State.set last_model_key (Some (mdl, true)) st
-              with Sat_solver_sig.Unsat _ ->
-                recoverable_error "wrong model";
-                st
-            end
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            handle_get_value
+              ~get_value:(SAT.get_value partial_model) l;
+            st
           | None ->
             (* TODO: add the location of the statement. *)
             recoverable_error "No model produced, cannot execute get-value.";

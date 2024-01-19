@@ -74,7 +74,8 @@ type form =
 
 type name_kind = Ac | Other [@@deriving ord, eq]
 
-type name_space = User | Internal | Fresh | Skolem | Abstract [@@deriving eq]
+type name_space =
+    User | Internal | Fresh | Skolem | Abstract | GetValue [@@deriving eq]
 
 let compare_name_space ns1 ns2 =
   match ns1, ns2 with
@@ -95,6 +96,10 @@ let compare_name_space ns1 ns2 =
   | _, Skolem -> 1
 
   | Abstract, Abstract -> 0
+  | Abstract, _ -> -1
+  | _, Abstract -> 1
+
+  | GetValue, GetValue -> 0
 
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
@@ -118,6 +123,7 @@ module Name = struct
     | Fresh -> ".k" ^ s
     | Skolem -> ".?__" ^ s
     | Abstract -> "@a" ^ s
+    | GetValue -> "@g" ^ s
 
   (* NB: names are pre-mangled, which means that we don't need to take the
      namespace into consideration when hashing or comparing. *)
@@ -190,7 +196,7 @@ let is_ac x = match x with
 
 let is_internal sy =
   match sy with
-  | Name { ns = User; _ } -> false
+  | Name { ns = (User | GetValue); _ } -> false
   | Name _ -> true
   | _ -> false
 

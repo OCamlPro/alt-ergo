@@ -8,3 +8,4 @@
 (assert (= ((_ extract 3 3) x) #b0))
 (check-sat)
 (get-model)
+(get-value (true))

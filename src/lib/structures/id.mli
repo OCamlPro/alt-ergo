@@ -41,6 +41,7 @@ module Namespace : sig
   module Internal : S
   module Skolem : S
   module Abstract : S
+  module GetValue : S
 
   val reinit : unit -> unit
   (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]

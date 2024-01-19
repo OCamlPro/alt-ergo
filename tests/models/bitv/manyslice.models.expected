@@ -5,3 +5,5 @@ unknown
   (define-fun y () (_ BitVec 1) #b0)
   (define-fun xy () (_ BitVec 2) #b10)
 )
+((true true))
+

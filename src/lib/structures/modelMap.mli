@@ -34,7 +34,6 @@ type t
 module Graph : sig
   type t
 
-  val choose : t -> Expr.t
   val is_constant : t -> bool
   val iter : (Expr.t list -> Expr.t -> unit) -> t -> unit
   val pp : t Fmt.t
@@ -45,8 +44,14 @@ val add : Symbols.typed_name -> Expr.t list -> Expr.t -> t -> t
     associated with the symbol [sy]. *)
 
 val iter : (Symbols.typed_name -> Graph.t -> unit) -> t -> unit
+(** [iter f mdl] iterates over all the graphes of the model [mdl]. *)
 
-val value_of : Symbols.typed_name -> Expr.t list -> t -> Expr.t option
+val get_value : Symbols.typed_name -> Expr.t list -> t -> Expr.t option
+(** [get_value f args mdl] returns the value of the declared name [f]
+    evaluates to the arguments [args] in the model [mdl].
+
+    @return [None] if the model [mdl] doesn't contain a definition for the
+            name [f]. *)
 
 val empty : suspicious:bool -> Symbols.typed_name list -> t
 (** An empty model. The [suspicious] flag is used to remember that this

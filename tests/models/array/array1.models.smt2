@@ -10,3 +10,4 @@
 (assert (= (store a2 x y) a1))
 (check-sat)
 (get-model)
+(get-value (true))

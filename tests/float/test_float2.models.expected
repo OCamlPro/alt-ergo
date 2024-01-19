@@ -3,3 +3,5 @@ unknown
 (
   (define-fun x () Real (/ 1 4))
 )
+((true true))
+

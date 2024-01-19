@@ -36,7 +36,7 @@ let pp ppf id =
   Dolmen.Smtlib2.Script.Poly.Print.id ppf
     (Dolmen.Std.Name.simple (Hstring.view id))
 
-let show id = Fmt.str "%a" pp id
+let show id = Fmt.to_to_string pp id
 
 module Namespace = struct
   module type S = sig
@@ -62,6 +62,8 @@ module Namespace = struct
   module Skolem = Make ()
 
   module Abstract = Make ()
+
+  module GetValue = Make ()
 
   let reinit () =
     Internal.reset_fresh_cpt ();

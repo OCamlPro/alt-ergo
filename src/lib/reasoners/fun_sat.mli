@@ -59,9 +59,9 @@ module Make (Th : Theory.S) : sig
 
   val reinit_ctx : unit -> unit
 
-  val get_model: t -> Models.t option
+  val get_boolean_model : t -> Expr.t list option
+
+  val get_model : t -> Models.t option
 
   val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
-
-  val get_value : t -> Expr.t -> Expr.t option
 end

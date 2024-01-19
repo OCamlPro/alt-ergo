@@ -51,7 +51,6 @@ module Constraints = struct
   let map = M.map
   let iter = M.iter
   let find_opt = M.find_opt
-  let choose = M.choose
 
   (* Check if the graph defined by the set of constraints [c] is constant.
      Requires that [c] isn't empty. *)
@@ -155,11 +154,6 @@ module Graph = struct
 
     | C of Constraints.t
 
-  let choose graph =
-    match graph with
-    | Free e -> e
-    | C constraints -> Constraints.choose constraints |> snd
-
   let is_constant graph =
     match graph with
     | Free _ -> true
@@ -204,7 +198,7 @@ let add ((name, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
 
 let iter f { values; _ } = P.iter f values
 
-let value_of id arg_vals { values; _ } =
+let get_value id arg_vals { values; _ } =
   Option.bind (P.find_opt id values) @@ Graph.find_opt arg_vals
 
 let empty ~suspicious declared_ids =

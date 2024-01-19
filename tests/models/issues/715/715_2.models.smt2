@@ -6,3 +6,4 @@
 (define-fun g ((x Int) (y Int)) Int (+ x y))
 (check-sat)
 (get-model)
+(get-value (true))

@@ -6,3 +6,4 @@
 ; value for them.
 (check-sat)
 (get-model)
+(get-value (true))

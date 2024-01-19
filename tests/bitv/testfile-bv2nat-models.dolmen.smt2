@@ -4,3 +4,4 @@
 (assert (= (bv2nat x) 7))
 (check-sat)
 (get-model)
+(get-value (true))

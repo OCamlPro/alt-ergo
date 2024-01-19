@@ -69,7 +69,7 @@ exception Sat
 exception Unsat of Explanation.t
 exception I_dont_know
 
-module type S = sig
+module type Internal = sig
   type t
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
@@ -79,7 +79,7 @@ module type S = sig
       discovered by the instantiation engine. *)
 
   val declare : t -> Symbols.typed_name -> unit
-  (** [declare env nmae] declares a new typed name [name].
+  (** [declare env name] declares a new typed name [name].
 
       If the environment [env] isn't unsatisfiable and the model generation
       is enabled, the solver produces a model term for [name] which can be
@@ -137,7 +137,9 @@ module type S = sig
   val reinit_ctx : unit -> unit
   (** [reinit_ctx ()] reinitializes the solving context. *)
 
-  val get_model: t -> Models.t option
+  val get_boolean_model : t -> Expr.t list option
+
+  val get_model : t -> Models.t option
   (** [get_model t] produces the current first-order model.
       Notice that this model is a best-effort.
 
@@ -148,10 +150,6 @@ module type S = sig
   (** [get_unknown_reason t] returns the reason Alt-Ergo raised
       [I_dont_know] if it did. If it did not, returns [None]. *)
 
-  val get_value : t -> Expr.t -> Expr.t option
-  (** [get_value t e] returns the value of [e] as a constant expression
-      in the current model generated. Returns [None] if can't decide. *)
-
   val get_objectives : t -> Objective.Model.t option
   (** [get_objectives t] returns the current objective values.
 
@@ -159,6 +157,35 @@ module type S = sig
       unsatisfiable. *)
 end
 
+type lbool = True | False | Unknown
+
+let pp_lbool ppf b =
+  match b with
+  | True -> Fmt.pf ppf "true"
+  | False -> Fmt.pf ppf "false"
+  | Unknown -> Fmt.pf ppf "unknown"
+
+module type S = sig
+  include Internal
+
+  val get_value : t -> Expr.t list -> Expr.t list option
+  (** [get_value t e] returns the value of [e] as a constant expression
+      in the current generated model.
+
+      @return [None] if the model generation is not enabled or the
+              environment is unsatisfiable.
+      @raise Unsat if the solver found a contradiction. *)
+
+  val get_assignment : t -> Expr.t list -> lbool list
+  (** [get_assignment env l] returns the status of the literals [l] in the
+      current boolean model of [env].
+
+      The status is [unknown] if the literal isn't a subformula of the user
+      input.
+
+      @raise invalid_argument if one of the expressions of [l] isn't a
+             literal. *)
+end
 
 module type SatContainer = sig
   module Make (Th : Theory.S) : S

@@ -59,3 +59,11 @@ let rec try_map f l =
     Option.bind (f x) @@ fun y ->
     Option.bind (try_map f xs) @@ fun ys ->
     Some (y :: ys)
+
+let rec iter_pair f (l1, l2) =
+  match l1, l2 with
+  | [], [] -> ()
+  | hd1 :: tl1, hd2 :: tl2 ->
+    f (hd1, hd2);
+    iter_pair f (tl1, tl2)
+  | _ -> invalid_arg "iter_pair"

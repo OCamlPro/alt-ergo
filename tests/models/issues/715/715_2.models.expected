@@ -3,3 +3,5 @@ unknown
 (
   (define-fun f () Int 0)
 )
+((true true))
+

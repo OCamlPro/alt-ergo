@@ -6,3 +6,4 @@
 (assert (= ((_ ae.round 1 2) RTZ 0.3) x))
 (check-sat)
 (get-model)
+(get-value (true))

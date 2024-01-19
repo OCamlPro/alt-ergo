@@ -7,3 +7,4 @@
 (assert (= y (bvand #b01011010 (bvnot x))))
 (check-sat)
 (get-model)
+(get-value (true))

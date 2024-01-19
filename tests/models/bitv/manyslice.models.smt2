@@ -6,3 +6,4 @@
 (assert (= (concat (concat x y) (concat xy xy)) (concat #b1010 (concat x y))))
 (check-sat)
 (get-model)
+(get-value (true))

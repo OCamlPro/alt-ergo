@@ -10,6 +10,9 @@
   External plugins must now be registered through the dune-site plugin
   mechanism in the `(alt-ergo plugins)` site to be picked up by Alt-Ergo.
 
+### New features
+* support for the SMT-LIB statement `get-value`
+
 ## v2.5.2
 
 ### Bug fixes
