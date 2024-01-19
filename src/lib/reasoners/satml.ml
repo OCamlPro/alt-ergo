@@ -579,26 +579,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.reason <- None;
     a.var.vpremise <- []
 
-  let enqueue_assigned env (a : Atom.atom) =
-    if Options.get_debug_sat () then
-      Printer.print_dbg "[satml] enqueue_assigned: %a@." Atom.pr_atom a;
-    if a.neg.is_guard then begin
-      (* if the negation of a is (still) a guard, it should be forced to true
-         during the first decisions.
-         If the SAT tries to deduce that a.neg is true (ie. a is false),
-         then we have detected an inconsistency. *)
-      assert (a.var.level <= env.next_dec_guard);
-      (* guards are necessarily decided/propagated before all other atoms *)
-      raise (Unsat None);
-    end;
-    assert (a.is_true || a.neg.is_true);
-    if a.timp = 1 then begin
-      a.timp <- -1;
-      a.neg.timp <- -1
-    end;
-    assert (a.var.level >= 0);
-    Vec.push env.trail a
-
   let cancel_ff_lvls_until env lvl =
     for i = decision_level env downto lvl + 1 do
       try
@@ -614,14 +594,22 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg
         "[satml] cancel until %d (current is %d)@." lvl (decision_level env);
     cancel_ff_lvls_until env lvl;
-    let repush = ref [] in
     if decision_level env > lvl then begin
-      env.qhead <- Vec.get env.trail_lim lvl;
-      for c = Vec.size env.trail - 1 downto env.qhead do
+      let head = ref (Vec.get env.trail_lim lvl) in
+      env.qhead <- !head;
+      for c = !head to Vec.size env.trail - 1 do
         let a = Vec.get env.trail c in
         if Options.get_minimal_bj () && a.var.level <= lvl then begin
+          assert (a.var.level >= 0);
           assert (a.var.level = 0 || a.var.reason != None);
-          repush := a :: !repush
+          (* bclement: Ported over from the old [enqueue_assigned] -- not sure
+             what this actually does *)
+          if a.timp = 1 then begin
+            a.timp <- -1;
+            a.neg.timp <- -1;
+          end;
+          Vec.set env.trail !head a;
+          incr head
         end
         else begin
           unassign_atom a;
@@ -637,7 +625,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
-      Vec.shrink env.trail env.qhead;
+      Vec.shrink env.trail !head;
       Vec.shrink env.trail_lim lvl;
       Vec.shrink env.tenv_queue lvl;
       if Options.get_cdcl_tableaux () then begin
@@ -655,9 +643,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       );
     end;
     if Options.get_profiling() then Profiling.reset_dlevel (decision_level env);
-    assert (Vec.size env.trail_lim = Vec.size env.tenv_queue);
-    assert (Options.get_minimal_bj () || (!repush == []));
-    List.iter (enqueue_assigned env) !repush
+    assert (Vec.size env.trail_lim = Vec.size env.tenv_queue)
 
   let rec pick_branch_var env =
     if Vheap.size env.order = 0 then raise Sat;
