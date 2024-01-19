@@ -131,7 +131,7 @@ module Make(Rank : RankedType) = struct
       end
       else Rank.set_index elt absent;
     done;
-    Vec.shrink heap (lim - !j);
+    Vec.shrink heap !j;
     for i = (lim / 2) - 1 downto 0 do
       percolate_down s (Vec.get heap i)
     done
