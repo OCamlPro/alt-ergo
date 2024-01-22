@@ -125,6 +125,8 @@ module Main_Default : S = struct
       | _ -> Ty.fresh_tvar ()
 
     let logics_of_assumed st =
+      (* NB: using an [Hstring.Map] here depends on the fact that name mangling
+         is done pre-emptively in [Symbols.name] *)
       SE.fold
         (fun t mp ->
            match E.term_view t with

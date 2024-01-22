@@ -43,16 +43,13 @@ let show id = Fmt.str "%a" pp id
 module Namespace = struct
   module type S = sig
     val fresh : ?base:string -> unit -> string
-    val is_id : string -> bool
   end
 
-  module Make (S : sig val prefix : string end) = struct
-    let make_as_fresh = (^) S.prefix
-
+  module Make () = struct
     let fresh, reset_fresh_cpt =
       let cpt = ref 0 in
       let fresh_string ?(base = "") () =
-        let res = make_as_fresh (base ^ (string_of_int !cpt)) in
+        let res = base ^ (string_of_int !cpt) in
         incr cpt;
         res
       in
@@ -60,28 +57,16 @@ module Namespace = struct
         cpt := 0
       in
       fresh_string, reset_fresh_string_cpt
-
-    let is_id = Stdcompat.String.starts_with ~prefix:S.prefix
   end
 
-  module Internal = Make (struct let prefix = ".k" end)
+  module Internal = Make ()
 
-  module Skolem = Make
-      (struct
-        (* garder le suffixe "__" car cela influence l'ordre *)
-        let prefix = ".?__"
-      end)
+  module Skolem = Make ()
 
-  let make_as_fresh_skolem = Skolem.make_as_fresh
-
-  module Abstract = Make (struct let prefix = "@a" end)
+  module Abstract = Make ()
 
   let reinit () =
     Internal.reset_fresh_cpt ();
     Skolem.reset_fresh_cpt ();
     Abstract.reset_fresh_cpt ()
 end
-
-let dummy_typed =
-  let id = Namespace.Internal.fresh () |> Hstring.make in
-  (id, [], Ty.Tunit)

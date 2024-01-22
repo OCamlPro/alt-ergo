@@ -36,8 +36,6 @@ type typed = t * Ty.t list * Ty.t
     - Types of its arguments.
     - The returned type. *)
 
-val dummy_typed : typed
-
 val compare_typed : typed -> typed -> int
 val equal : t -> t -> bool
 val show : t -> string
@@ -46,14 +44,11 @@ val pp : t Fmt.t
 module Namespace : sig
   module type S = sig
     val fresh : ?base:string -> unit -> string
-    val is_id : string -> bool
   end
 
   module Internal : S
   module Skolem : S
   module Abstract : S
-
-  val make_as_fresh_skolem : string -> string
 
   val reinit : unit -> unit
   (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
