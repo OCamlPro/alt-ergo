@@ -602,8 +602,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         if Options.get_minimal_bj () && a.var.level <= lvl then begin
           assert (a.var.level >= 0);
           assert (a.var.level = 0 || a.var.reason != None);
-          (* bclement: Ported over from the old [enqueue_assigned] -- not sure
-             what this actually does *)
+          (* `timp` is set to `1 by `th_entailed` and we set it to `-1` here
+             when we propagate the atom to earlier levels so that we check in
+             `theory_propagate` whether it is still known by the theory or
+             we need to tell the theory about this fact again *)
           if a.timp = 1 then begin
             a.timp <- -1;
             a.neg.timp <- -1;
