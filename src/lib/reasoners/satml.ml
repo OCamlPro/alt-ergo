@@ -638,7 +638,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (try
          let last_dec =
            if Vec.size env.trail_lim = 0 then 0 else Vec.last env.trail_lim in
-         env.cpt_current_propagations <- (Vec.size env.trail) - last_dec
+         env.cpt_current_propagations <- env.qhead - last_dec
        with _ -> assert false
       );
     end;
