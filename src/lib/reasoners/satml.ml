@@ -1393,7 +1393,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            Note that if the [fuip] is itself a semantic literal, it will act as
            a (local) learned clause (see [semantic_expansion]). *)
         let has_split = Vec.exists is_semantic lclause.atoms in
-        if has_split then (
+        if not has_split then (
           Vec.push env.learnts lclause;
           attach_clause env lclause;
           clause_bump_activity env lclause
