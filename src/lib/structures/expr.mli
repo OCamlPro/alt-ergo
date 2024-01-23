@@ -308,6 +308,12 @@ val skolemize : quantified -> t
 val elim_let : recursive:bool -> letin -> t
 
 val elim_iff : t -> t -> with_conj:bool -> t
+(** [elim ~with_conj e1 e2] produces a formula equivalent to [f1 <==> f2].
+    - If [with_conj] is [true], the internal formula is of the form:
+       [f1 ==> f2 /\ f2 ==> f1]
+
+    - Otherwise, the internal formula is of the form:
+       [(f1 /\ f2) \/ (~f1 /\ ~f2)]. *)
 
 (*val purify_literal : t -> t*)
 val purify_form : t -> t

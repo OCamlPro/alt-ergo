@@ -44,7 +44,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   type guards = {
     mutable current_guard: E.t;
+    (* Top element of the stack [stack_guard]. *)
+
     stack_guard: E.t Stack.t;
+    (* Stack of the incremental guards. *)
   }
 
   type t = {
@@ -54,14 +57,23 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable last_forced_normal : int;
     mutable last_forced_greedy : int;
     mutable gamma : (int * FF.t option) ME.t;
+    (** Stack of assumed flat formulas. *)
+
     mutable conj : (int * SE.t) FF.Map.t;
     mutable abstr_of_axs : (FF.t * Atom.atom) ME.t;
+    (** Map a lemma to the abstract literal used to represent it in the flat
+        formulas. *)
+
     mutable axs_of_abstr : (E.t * Atom.atom) ME.t;
+    (** Inverse map of [abstr_of_axs]. *)
+
     mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
     mutable inst : Inst.t;
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
+    (* Stack of the incremental guards. *)
+
     mutable last_saved_model : Models.t Lazy.t option;
     mutable last_saved_objectives : Objective.Model.t option;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
@@ -496,7 +508,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let ded = match E.neg f |> E.form_view with
         | E.Skolem q -> E.skolemize q
         | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _
-        | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+        | E.Let _ | E.Iff _ | E.Xor _ ->
+          (* *)
+          assert false
       in
       (*XXX TODO: internal skolems*)
       let f = E.mk_or lat ded false in

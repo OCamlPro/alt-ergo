@@ -289,7 +289,13 @@ module Atom : ATOM = struct
 
   module HT = Hashtbl.Make(E)
 
-  type hcons_env = { tbl : var HT.t ; cpt : int ref }
+  type hcons_env = {
+    tbl : var HT.t;
+    (** Hashtable of positive literals to their atom. *)
+
+    cpt : int ref
+    (** Number of keys of the hashtable [tbl]. *)
+  }
 
   let make_var =
     fun hcons lit acc ->
@@ -438,7 +444,6 @@ module type FLAT_FORMULA = sig
   val equal   : t -> t -> bool
   val compare : t -> t -> int
   val print   : Format.formatter -> t -> unit
-  val print_stats : Format.formatter -> unit
   val vrai    : t
   val faux    : t
   val view    : t -> view
@@ -521,8 +526,6 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let print fmt f = cpt := 0; print fmt f
 
-  let print_stats _ = ()
-
   let compare f1 f2 = f1.tag - f2.tag
 
   let equal f1 f2 = f1.tag == f2.tag
@@ -530,6 +533,8 @@ module Flat_Formula : FLAT_FORMULA = struct
   (* unused -- let tag  f = f.tag *)
   let view f = f.view
 
+  (* Helper function used to ensure we don't store a flat formula and
+     its negation in the hconsing environment. *)
   let is_positive pos = match pos with
     | AND _ -> true
     | OR  _ -> false
@@ -570,8 +575,18 @@ module Flat_Formula : FLAT_FORMULA = struct
           eq_aux f1.view f2.view
       end)
 
-  type hcons_env = { tbl : t HT.t ; cpt : int ref ;
-                     atoms : Atom.hcons_env}
+  type hcons_env = {
+    tbl : t HT.t;
+    (** Hash set of positive flat formulas. The notion of positive function
+        is only used to ensure we don't store a flat formula and its negation
+        in this hash set. *)
+
+    cpt : int ref;
+    (** Cardinal of the set [tbl]. *)
+
+    atoms : Atom.hcons_env
+    (** Hconsing environment for the construction of atoms. *)
+  }
 
   let make hcons pos neg =
     let is_pos = is_positive pos in
@@ -600,7 +615,7 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let aaz a = assert (a.Atom.var.Atom.level = 0)
 
-  let complements f1 f2 = f1.tag == f2.neg.tag
+  let[@inline always] complements f1 f2 = f1.tag == f2.neg.tag
 
   let mk_lit hcons a acc =
     let at, acc = Atom.add_atom hcons.atoms a acc in
@@ -636,8 +651,25 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let nb_made_vars hcons = Atom.nb_made_vars hcons.atoms
 
+  (* Helper function used in the smart constructors [mk_and] and [mk_or].
+     Requires:
+        [l1] and [l2] are two [AND] gates, respectively two [OR] gates, whose
+        the elements are sorted in increasing order and without duplicates.
+
+     Ensures:
+        If [l1 = A1 /\ ... /\ An] and [l2 = B1 /\ ... /\ Bm] then
+        the result of the function is an [AND] gate equivalent to
+          (A1 /\ .. /\ An) /\ (B1 /\ ... /\ Bm)
+        but the result gate is actually represented by a sorted list
+        without duplicates.
+
+        The same goes for the [OR] case.
+
+     @raise Exit if [l1] contains an element [A] and [l2] contains
+            its negation. *)
   let merge_and_check l1 l2 =
     let rec merge_rec l1 l2 hd =
+      (* Invariant: [hd] is the minimum of the heads of [l1] or [l2]. *)
       match l1, l2 with
       | [], l2 -> l2
       | l1, [] -> l1
@@ -647,10 +679,16 @@ module Flat_Formula : FLAT_FORMULA = struct
         else
         if compare h1 h2 < 0
         then begin
+          (* As the index of the negation of [hd] follows immediatly the
+             index of [hd], we have the guarantee that [t1] cannot
+             contain the negation of [hd]. *)
           if complements hd h1 then raise Exit;
           h1 :: merge_rec t1 l2 h1
         end
         else begin
+          (* As the index of the negation of [hd] follows immediatly the
+             index of [hd], we have the guarantee that [t2] cannot
+             contain the negation of [hd]. *)
           if complements hd h2 then raise Exit;
           h2 :: merge_rec l1 t2 h2
         end
@@ -846,6 +884,11 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   (* translation from E.t *)
 
+  (* Helper function used in [simplify] to create a fresh atom for
+     the lemmas embedded in an expression formula.
+
+     Both [abstr] and [lem] ensure we won't create twice an abstraction
+     for the same lemma. *)
   let abstract_lemma hcons abstr (f: E.t) tl lem new_vars =
     try fst (abstr f)
     with Not_found ->
@@ -866,7 +909,10 @@ module Flat_Formula : FLAT_FORMULA = struct
         xlit
 
   let simplify hcons f abstr new_vars =
+    (* Cache of the new lemmas discovered in [f]. These lemmas aren't
+       present in the internal cache of [abstr]. *)
     let lem = ref [] in
+    (* Accumulator of the new atoms. *)
     let new_vars = ref new_vars in
     let rec simp topl ~parent_disj f =
       match E.form_view f with
