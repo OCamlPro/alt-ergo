@@ -62,8 +62,15 @@ module type SHOSTAK = sig
   (** Give the leaves of a term of the theory *)
   val leaves : t -> r list
 
-  (** Determines whether the term is a constant. [is_constant t] is equivalent
-      to [leaves t == []], but is more efficient.
+  (** Determines whether the semantic value is a constant value. [is_constant t]
+      is equivalent to [leaves t == []] (except for the special cases below),
+      but is more efficient.
+
+      In addition, some terms (e.g. [true], [false], [void]) that have no
+      associated theories are considered as constant by this function.
+
+      Semantic value for which [is_constant] returns [true] contains no free
+      names and thus have the same concrete value in all contexts.
 
       Note that for some theories (e.g. records, arrays) the constant may not be
       pure: it may involve nested (constant) terms of other theories. *)
