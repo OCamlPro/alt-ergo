@@ -69,9 +69,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
 
-    mutable declare_top : Id.typed list;
-    declare_tail : Id.typed list Stack.t;
-    (** Stack of the declared symbols by the user. The field [declare_top]
+    mutable declare_top : Symbols.typed_name list;
+    declare_tail : Symbols.typed_name list Stack.t;
+    (** Stack of the declared names by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
   }
@@ -1005,9 +1005,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = env.declare_top in
+        let declared_names = env.declare_top in
         let model, objectives =
-          SAT.compute_concrete_model ~declared_ids env.satml
+          Th.extract_concrete_model ~declared_names
+          (SAT.current_tbox env.satml)
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;

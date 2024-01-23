@@ -313,11 +313,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
+  let internal_decl ?(loc = Loc.dummy) (name : Symbols.typed_name)
+      (env : env) : unit =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
-      SAT.declare env.sat_env id
+      SAT.declare env.sat_env name
     | `Unsat -> ()
 
   let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =

@@ -132,12 +132,20 @@ module Constraints = struct
     aux ppf (Expr.Map.to_seq c)
 end
 
-module P = Map.Make
-    (struct
-      type t = Id.typed
+module P = struct
+  include Map.Make
+      (struct
+        type t = Sy.typed_name
 
-      let compare = Id.compare_typed
-    end)
+        let compare = Sy.compare_typed_name
+      end)
+
+  let iter f =
+    iter (fun (({ ns; _ }, _, _) as tn) v ->
+        match ns with
+        | User -> f tn v
+        | _ -> ())
+end
 
 module Graph = struct
   type t =
@@ -180,10 +188,10 @@ type t = {
   suspicious : bool;
 }
 
-let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
+let add ((name, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
-                     arguments" Id.pp id;
+                     arguments" Symbols.Name.pp name;
   let constraints =
     match P.find sy values with
     | C g -> g
@@ -209,21 +217,21 @@ let empty ~suspicious declared_ids =
   in
   { values; suspicious }
 
-let rec subst_in_term id e c =
+let rec subst_in_term name e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
-  | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
+  | Sy.Name name', [] when Symbols.Name.equal name name' ->
     let ty = Expr.type_info e in
     if not @@ Ty.equal ty ty' then
-      raise (Errors.Error (Model_error (Subst_type_clash (id, ty', ty))));
+      raise (Errors.Error (Model_error (Subst_type_clash (name, ty', ty))));
     e
   | _ ->
     begin
-      let xs = List.map (subst_in_term id e) xs in
+      let xs = List.map (subst_in_term name e) xs in
       Expr.mk_term f xs ty'
     end
 
-let subst id e { values; suspicious } =
+let subst name e { values; suspicious } =
   if not @@ Expr.is_model_term e then
     raise (Errors.Error (Model_error (Subst_not_model_term e)));
 
@@ -232,9 +240,9 @@ let subst id e { values; suspicious } =
       (fun graph ->
          match graph with
          | Graph.C constraints ->
-           Graph.C (Constraints.map (subst_in_term id e) constraints)
+           Graph.C (Constraints.map (subst_in_term name e) constraints)
          | Free a ->
-           Free (subst_in_term id e a)
+           Free (subst_in_term name e a)
       ) values in
   { values; suspicious }
 
@@ -242,11 +250,11 @@ let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
   let pp_unused ppf unused = if unused then Fmt.pf ppf "_" else () in
   Fmt.pf ppf "(%aarg_%i %a)" pp_unused unused arg_name Ty.pp_smtlib arg_ty
 
-let pp_define_fun ppf ((id, arg_tys, ret_ty), graph) =
+let pp_define_fun ppf ((name, arg_tys, ret_ty), graph) =
   let unused = Graph.is_constant graph in
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
-    Id.pp id
+    Symbols.Name.pp name
     Fmt.(list ~sep:sp (pp_named_arg_ty ~unused)) named_arg_tys
     Ty.pp_smtlib ret_ty
     Graph.pp graph

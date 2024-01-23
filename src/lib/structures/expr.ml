@@ -876,6 +876,8 @@ let mk_term s l ty =
     neg.neg <- Some pos;
     pos
 
+let mk_app name l ty = mk_term (Symbols.Name name) l ty
+
 let vrai =
   let res =
     let nb_nodes = 0 in

@@ -894,11 +894,10 @@ let main () =
     let (mdl, is_asserted) = State.get last_model_key st |> Option.get in
     assert (not is_asserted);
     ModelMap.iter
-      (fun (id, _, ret_ty) graph ->
+      (fun (name, _, ret_ty) graph ->
          ModelMap.Graph.iter
            (fun val_args val_ret ->
-              let f = Symbols.name (Hstring.view id) in
-              let e = Expr.mk_term f val_args ret_ty in
+              let e = Expr.mk_app name val_args ret_ty in
               let eq = Expr.mk_eq ~iff:false e val_ret in
               assume env eq
            )
@@ -916,10 +915,10 @@ let main () =
         begin
           let { Expr.f; xs; ty; _ } = Expr.term_view e2 in
           match f with
-          | Symbols.Name { hs; _ } ->
+          | Symbols.Name name ->
             begin
               let arg_tys = List.map Expr.type_info xs in
-              match ModelMap.value_of (hs, arg_tys, ty) xs mdl.model with
+              match ModelMap.value_of (name, arg_tys, ty) xs mdl.model with
               | Some v -> aux ((e1, v) :: acc1) acc2 tl
               | None -> aux acc1 (e :: acc2) tl
             end
@@ -953,8 +952,8 @@ let main () =
               let () =
                 let { Expr.f; ty; _ } = Expr.term_view name in
                 match f with
-                | Symbols.Name { hs; _ } ->
-                  declare env (hs, [], ty)
+                | Symbols.Name name ->
+                  declare env (name, [], ty)
                 | _ -> assert false
               in
               assume env t;

@@ -195,6 +195,7 @@ val print_tagged_classes : Format.formatter -> Set.t list -> unit
 (** smart constructors for terms *)
 
 val mk_term : Symbols.t -> t list -> Ty.t -> t
+val mk_app : Symbols.Name.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t
 val void : t

@@ -38,7 +38,7 @@ module Make (Th : Theory.S) : sig
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
-  val declare : t -> Id.typed -> t
+  val declare : t -> Symbols.typed_name -> t
 
   val push : t -> int -> t
 

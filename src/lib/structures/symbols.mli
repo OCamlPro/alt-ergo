@@ -128,16 +128,45 @@ type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 type bound = private
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
+module Name : sig
+  type t = {
+    hs : Id.t;
+    (** Note: [hs] is prefixed according to [ns]. *)
+
+    kind : name_kind;
+    defined : bool;
+    ns : name_space
+  }
+
+  val mk : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
+  (** [mk ~kind ~defined ~ns id] creats a new name with the given identifier
+      [id].
+
+      By default, names are created in the [User] name space.
+
+      Note that names are pre-mangled: the [hs] field of the resulting name may
+      not be exactly the name that was passed to this function (however, calling
+      `name` with the same string but two different name spaces is guaranteed to
+      return two [Name]s with distinct [hs] fields). *)
+
+  val equal : t -> t -> bool
+  val pp : t Fmt.t
+end
+
+type typed_name = Name.t * Ty.t list * Ty.t
+(** Typed name of function. In order:
+    - The identifier.
+    - Types of its arguments.
+    - The returned type. *)
+
+val compare_typed_name : typed_name -> typed_name -> int
+val pp_typed_name : typed_name Fmt.t
+
 type t =
   | True
   | False
   | Void
-  | Name of
-      { hs : Id.t
-      (** Note: [hs] is prefixed according to [ns]. *)
-      ; kind : name_kind
-      ; defined : bool
-      ; ns : name_space }
+  | Name of Name.t
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -149,16 +178,7 @@ type t =
   | MapsTo of Var.t
   | Let
 
-(** Create a new symbol with the given name.
-
-    By default, names are created in the [User] name space.
-
-    Note that names are pre-mangled: the [hs] field of the resulting name may
-    not be exactly the name that was passed to this function (however, calling
-    `name` with the same string but two different name spaces is guaranteed to
-    return two [Name]s with distinct [hs] fields). *)
 val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
-
 val var : Var.t -> t
 val int : string -> t
 val bitv : string -> t
@@ -187,8 +207,6 @@ val print : t Fmt.t
 
 val to_string_clean : t -> string
 val print_clean : t Fmt.t
-
-val pp_name : (name_space * string) Fmt.t
 
 val pp_ae_operator : operator Fmt.t
 (* [pp_ae_operator ppf op] prints the operator symbol [op] on the

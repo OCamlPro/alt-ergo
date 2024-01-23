@@ -40,20 +40,20 @@ module Graph : sig
   val pp : t Fmt.t
 end
 
-val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
+val add : Symbols.typed_name -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
 
-val iter : (Id.typed -> Graph.t -> unit) -> t -> unit
+val iter : (Symbols.typed_name -> Graph.t -> unit) -> t -> unit
 
-val value_of : Id.typed -> Expr.t list -> t -> Expr.t option
+val value_of : Symbols.typed_name -> Expr.t list -> t -> Expr.t option
 
-val empty : suspicious:bool -> Id.typed list -> t
+val empty : suspicious:bool -> Symbols.typed_name list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
 
-val subst : Id.t -> Expr.t -> t -> t
+val subst : Symbols.Name.t -> Expr.t -> t -> t
 (** [subst id e mdl] substitutes all the occurrences of the identifier [id]
     in the model [mdl] by the model term [e].
 
