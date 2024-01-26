@@ -51,7 +51,7 @@ let ones b = { b with bits_clr = Z.zero }
 
 let zeroes b = { b with bits_set = Z.zero }
 
-let add_explanation b ex = { b with ex = Ex.union b.ex ex }
+let add_explanation ~ex b = { b with ex = Ex.union b.ex ex }
 
 let pp ppf { width; bits_set; bits_clr; ex } =
   for i = width - 1 downto 0 do
@@ -80,7 +80,7 @@ let value b = b.bits_set
 let is_fully_known b =
   Z.(equal (shift_right (bits_known b + ~$1) b.width) ~$1)
 
-let intersect b1 b2 ex =
+let intersect ~ex b1 b2 =
   let width = b1.width in
   let bits_set = Z.logor b1.bits_set b2.bits_set in
   let bits_clr = Z.logor b1.bits_clr b2.bits_clr in

@@ -67,8 +67,8 @@ val zeroes : t -> t
 (** [zeroes b] returns a bitlist where the one bits in [b] are replaced with
     unknown bits. *)
 
-val add_explanation : t -> Explanation.t -> t
-(** [add_explanation b ex] adds the explanation [ex] to the bitlist [b]. The
+val add_explanation : ex:Explanation.t -> t -> t
+(** [add_explanation ~ex b] adds the explanation [ex] to the bitlist [b]. The
     returned bitlist has both the explanation of [b] and [ex] as explanation. *)
 
 val bits_known : t -> Z.t
@@ -87,8 +87,8 @@ val value : t -> Z.t
     [b] is not fully known, then only the known bits (those that are set in
     [bits_known b]) are meaningful; unknown bits are set to [0]. *)
 
-val intersect : t -> t -> Explanation.t -> t
-(** [intersect b1 b2 ex] returns a new bitlist [b] that subsumes both [b1] and
+val intersect : ex:Explanation.t -> t -> t -> t
+(** [intersect ~ex b1 b2] returns a new bitlist [b] that subsumes both [b1] and
     [b2]. The explanation [ex] justifies that the two bitlists can be merged.
 
     Raises [Inconsistent] if [b1] and [b2] are not compatible (i.e. there are

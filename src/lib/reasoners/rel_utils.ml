@@ -15,7 +15,8 @@
 (**************************************************************************)
 
 module X = Shostak.Combine
-module MXH = Shostak.MXH
+module MX = Shostak.MXH
+module SX = Shostak.SXH
 module L = Xliteral
 module LR = Uf.LX
 module SR = Set.Make(
@@ -121,10 +122,10 @@ end = struct
 
   type t = {
     dispatch : Symbols.operator -> delayed_fn option ;
-    used_by : Expr.Set.t OMap.t MXH.t ;
+    used_by : Expr.Set.t OMap.t MX.t ;
   }
 
-  let create dispatch = { dispatch; used_by = MXH.empty }
+  let create dispatch = { dispatch; used_by = MX.empty }
 
   let add ({ dispatch; used_by } as env) uf r t =
     (* Note: we dispatch on [Op] symbols, but it could make sense to dispatch on
@@ -144,7 +145,7 @@ end = struct
           | None ->
             let used_by =
               List.fold_left (fun used_by x ->
-                  MXH.update (Uf.make uf x) (fun sm ->
+                  MX.update (Uf.make uf x) (fun sm ->
                       let sm = Option.value ~default:OMap.empty sm in
                       Option.some @@
                       OMap.update f (fun se ->
@@ -155,7 +156,7 @@ end = struct
     | _ -> env, []
 
   let update { dispatch; used_by } uf r1 eqs =
-    match MXH.find r1 used_by with
+    match MX.find r1 used_by with
     | exception Not_found -> eqs
     | sm ->
       OMap.fold (fun sy se eqs ->
@@ -191,6 +192,307 @@ end = struct
         ) [] la
     in
     env, { Sig_rel.assume = assume_nontrivial_eqs eqs la; remove = [] }
+end
+
+module type Domain = sig
+  type t
+  (** The type of domains for a single value.
+
+      This is an abstract type that is instanciated by the theory. Note that
+      it is expected that this type can carry explanations. *)
+
+  val equal : t -> t -> bool
+  (** [equal d1 d2] returns [true] if the domains [d1] and [d2] are
+      identical.  Explanations should not be taken into consideration, i.e.
+      two domains with different explanations but identical semantics content
+      should compare equal. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for domains. *)
+
+  exception Inconsistent of Explanation.t
+  (** Exception raised by [intersect] when an inconsistency is detected. *)
+
+  val unknown : Ty.t -> t
+  (** [unknown ty] returns a full domain for values of type [t]. *)
+
+  val add_explanation : ex:Explanation.t -> t -> t
+  (** [add_explanation ~ex d] adds the justification [ex] to the domain d. The
+      returned domain is identical to the domain of [d], only the
+      justifications are changed. *)
+
+  val intersect : ex:Explanation.t -> t -> t -> t
+  (** [intersect ~ex d1 d2] returns a new domain [d] that subsumes both [d1]
+      and [d2]. The explanation [ex] justifies that the two domains can be
+      merged.
+
+      @raise Inconsistent if [d1] and [d2] are not compatible (the
+      intersection would be empty). The justification always includes the
+      justification [ex] used for the intersection. *)
+
+
+  val fold_leaves : (X.r -> t -> 'a -> 'a) -> X.r -> t -> 'a -> 'a
+  (** [fold_leaves f r t acc] folds [f] over the leaves of [r], deconstructing
+      the domain [t] according to the structure of [r].
+
+      It is assumed that [t] already contains any justification required for
+      it to apply to [r].
+
+      @raise Inconsistent if [r] cannot possibly be in the domain of [t]. *)
+
+  val map_leaves : (X.r -> 'a -> t) -> X.r -> 'a -> t
+  (** [map_leaves f r acc] is the "inverse" of [fold_leaves] in the sense that
+      it rebuilds a domain for [r] by using [f] to access the domain for each
+      of [r]'s leaves. *)
+end
+
+module type Domains = sig
+  type t
+  (** The type of domain maps. A domain map maps each representative (semantic
+      value, of type [X.r]) to its associated domain.*)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for domain maps. *)
+
+  val empty : t
+  (** The empty domain map. *)
+
+  type elt
+  (** The type of domains contained in the map. Each domain of type [elt]
+      applies to a single semantic value. *)
+
+  exception Inconsistent of Explanation.t
+  (** Exception raised by [update], [subst] and [structural_propagation] when
+      an inconsistency is detected. *)
+
+  val add : X.r -> t -> t
+  (** [add r t] adds a domain for [r] in the domain map. If [r] does not
+      already have an associated domain, a fresh domain will be created for
+      [r]. *)
+
+  val get : X.r -> t -> elt
+  (** [get r t] returns the domain currently associated with [r] in [t]. *)
+
+  val update : X.r -> elt -> t -> t
+  (** [update r d t] intersects the domain of [r] in [t] with the domain [d].
+
+      {b Soundness}: The domain [d] must already include the justification
+      that it applies to [r].
+
+      @raise Inconsistent if this causes the domain associated with [r] to
+      become empty. *)
+
+  val fold_leaves : (X.r -> elt -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold f t acc] folds [f] over all the domains in [t] that are associated
+      with leaves. *)
+
+  val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
+  (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
+      domains, merging the corresponding domains as appropriate.
+
+      The explanation [ex] justifies the equality [p = v].
+
+      @raise Inconsistent if this causes any domain in [d] to become empty. *)
+
+  val choose_changed : t -> X.r * t
+  (** [choose_changed d] returns a pair [r, d'] such that:
+
+      - The domain associated with [r] has changed since the last time
+        [choose_changed] was called.
+      - [r] has (by definition) not changed in [d']
+
+      Moreover, prior to returning [r], structural propagation is
+      automatically performed.
+
+      More precisely, if [r] is a leaf, the domain of [r] is propagated to any
+      semantic value that contains [r] as a leaf according to the structure of
+      that semantic value (using [Domain.map_leaves]); if [r] is not a leaf,
+      its domain is propagated to any of the leaves it contains.
+
+      We only perform *forward* structural propagation: if structural
+      propagation causes a domain of a leaf or parent to be changed, then we
+      will perform structural propagation for that leaf or parent once it
+      itself is selected by [choose_changed].
+
+      @raise Inconsistent if an inconsistency if detected during structural
+      propagation. *)
+end
+
+module Domains_make(Domain : Domain) : Domains with type elt = Domain.t =
+struct
+  type elt = Domain.t
+
+  exception Inconsistent = Domain.Inconsistent
+
+  type t = {
+    domains : Domain.t MX.t ;
+    (** Map from tracked representatives to their domain *)
+
+    changed : SX.t ;
+    (** Representatives whose domain has changed since the last flush *)
+
+    leaves_map : SX.t MX.t ;
+    (** Map from leaves to the *tracked* representatives that contains them *)
+  }
+
+  let pp ppf t =
+    Fmt.(iter_bindings ~sep:semi MX.iter
+           (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
+         |> braces
+        )
+      ppf t.domains
+
+  let empty =
+    { domains = MX.empty ; changed = SX.empty ; leaves_map = MX.empty }
+
+  let r_add r leaves_map =
+    List.fold_left (fun leaves_map leaf ->
+        MX.update leaf (function
+            | Some parents -> Some (SX.add r parents)
+            | None -> Some (SX.singleton r)
+          ) leaves_map
+      ) leaves_map (X.leaves r)
+
+  let create_domain r =
+    Domain.map_leaves (fun r () ->
+        Domain.unknown (X.type_info r)
+      ) r ()
+
+  let add r t =
+    match MX.find r t.domains with
+    | _ -> t
+    | exception Not_found ->
+      (* Note: we do not need to mark [r] as needing propagation, because no
+          constraints applied to it yet. Any constraint that apply to [r] will
+          already be marked as pending due to being newly added. *)
+      let d = create_domain r in
+      let domains = MX.add r d t.domains in
+      let leaves_map = r_add r t.leaves_map in
+      { t with domains; leaves_map }
+
+  let r_remove r leaves_map =
+    List.fold_left (fun leaves_map leaf ->
+        MX.update leaf (function
+            | Some parents ->
+              let parents = SX.remove r parents in
+              if SX.is_empty parents then None else Some parents
+            | None -> None
+          ) leaves_map
+      ) leaves_map (X.leaves r)
+
+  let remove r t =
+    let changed = SX.remove r t.changed in
+    let domains = MX.remove r t.domains in
+    let leaves_map = r_remove r t.leaves_map in
+    { changed; domains; leaves_map }
+
+  let get r t =
+    (* We need to catch [Not_found] because of fresh terms that can be added
+        by the solver and for which we don't call [add]. Note that in this
+        case, only structural constraints can apply to [r]. *)
+    try MX.find r t.domains with Not_found -> create_domain r
+
+  let update r d t =
+    match MX.find r t.domains with
+    | od ->
+      (* Both domains are already valid for [r], we can intersect them
+          without additional justifications. *)
+      let d = Domain.intersect ~ex:Explanation.empty od d in
+      if Domain.equal od d then
+        t
+      else
+        let domains = MX.add r d t.domains in
+        let changed = SX.add r t.changed in
+        { t with domains; changed }
+    | exception Not_found ->
+      (* We need to catch [Not_found] because of fresh terms that can be added
+          by the solver and for which we don't call [add]. *)
+      let d = Domain.intersect ~ex:Explanation.empty d (create_domain r) in
+      let domains = MX.add r d t.domains in
+      let changed = SX.add r t.changed in
+      let leaves_map = r_add r t.leaves_map in
+      { domains; changed; leaves_map }
+
+  let fold_leaves f t acc =
+    MX.fold (fun r _ acc ->
+        f r (get r t) acc
+      ) t.leaves_map acc
+
+  let subst ~ex rr nrr t =
+    match MX.find rr t.leaves_map with
+    | parents ->
+      SX.fold (fun r t ->
+          let d =
+            try MX.find r t.domains
+            with Not_found ->
+              (* [r] was in the [leaves_map] to it must have a domain *)
+              assert false
+          in
+          let changed = SX.mem r t.changed in
+          let t = remove r t in
+          let nr = X.subst rr nrr r in
+          match MX.find nr t.domains with
+          | nd ->
+            (* If there is an existing domain for [nr], there might be
+                constraints applying to [nr] prior to the substitution, and the
+                constraints that used to apply to [r] will also apply to [nr]
+                after the substitution.
+
+                We need to notify changed to either of these constraints, so we
+                must notify if the domain is different from *either* the old
+                domain of [r] or the old domain of [nr]. *)
+            let nnd = Domain.intersect ~ex d nd in
+            let nr_changed = not (Domain.equal nnd nd) in
+            let r_changed = not (Domain.equal nnd d) in
+            let domains =
+              if nr_changed then MX.add nr nnd t.domains else t.domains
+            in
+            let changed = changed || r_changed || nr_changed in
+            let changed =
+              if changed then SX.add nr t.changed else t.changed
+            in
+            { t with domains; changed }
+          | exception Not_found ->
+            (* If there is no existing domain for [nr], there were no
+                constraints applying to [nr] prior to the substitution.
+
+                The only constraints that need to be notified are those that
+                were applying to [r], and they only need to be notified if the
+                new domain is different from the old domain of [r]. *)
+            let nd = Domain.intersect ~ex d (create_domain nr) in
+            let r_changed = not (Domain.equal nd d) in
+            let domains = MX.add nr nd t.domains in
+            let leaves_map = r_add nr t.leaves_map in
+            let changed = changed || r_changed in
+            let changed =
+              if changed then SX.add nr t.changed else t.changed
+            in
+            { domains; changed; leaves_map }
+        ) parents t
+    | exception Not_found ->
+      (* We are not tracking any semantic value that have [r] as a leaf, so we
+          have nothing to do. *)
+      t
+
+  let structural_propagation r t =
+    if X.is_a_leaf r then
+      match MX.find r t.leaves_map with
+      | parents ->
+        SX.fold (fun parent t ->
+            if X.is_a_leaf parent then (
+              assert (X.equal r parent);
+              t
+            ) else
+              update parent (Domain.map_leaves get parent t) t
+          ) parents t
+      | exception Not_found -> t
+    else
+      Domain.fold_leaves update r (get r t) t
+
+  let choose_changed t =
+    let r = SX.choose t.changed in
+    let t = { t with changed = SX.remove r t.changed } in
+    r, structural_propagation r t
 end
 
 module type Constraint = sig
@@ -288,8 +590,6 @@ module Constraints_make(Constraint : Constraint) : sig
 
       @raise Not_found if there are no pending constraints. *)
 end = struct
-  module MX = Shostak.MXH
-
   module CS = Set.Make(struct
       type t = Constraint.t explained
 
