@@ -197,182 +197,210 @@ module type Constraint = sig
   type t
   (** The type of constraints.
 
-      Constraints are associated with a justification as to why they are
-      currently valid. The justification is only used to update domains,
-      identical constraints with different justifications will otherwise behave
-      identically (and, notably, will compare equal).
-
-      Constraints contains semantic values / term representatives of type
-      [X.r]. We maintain the invariant that the semantic values used inside the
-      constraints are *class representatives* i.e. normal forms wrt the `Uf`
-      module, i.e. constraints have a normalized representation. Use `subst` to
-      ensure normalization. *)
+      Constraints apply to semantic values of type [X.r] as arguments. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for constraints. *)
 
   val compare : t -> t -> int
-  (** Comparison function for constraints.
+  (** Comparison function for constraints. The comparison function is
+      arbitrary and has no semantic meaning. You should not depend on any of
+      its properties, other than it defines an (arbitrary) total order on
+      constraint representations. *)
 
-      Constraints typically include explanations, which should not be included
-      in the comparison function: code working with constraints expects
-      constraints with identical representations but different explanations to
-      compare equal.
+  val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold_args f c acc] folds function [f] over the arguments of constraint
+      [c].
 
-      {b Note}: The comparison function is arbitrary and has no semantic
-      meaning. You should not depend on any of its properties, other than it
-      defines an (arbitrary) total order on constraint representations. *)
+      During propagation, the constraint {b MUST} only look at (and update)
+      the domains associated of its arguments; it is not allowed to look at
+      the domains of other semantic values. This allows efficient updates of
+      the pending constraints. *)
 
-  val subst : Explanation.t -> X.r -> X.r -> t -> t
-  (** [subst ex p v cs] replaces all the instances of [p] with [v] in the
+  val subst : X.r -> X.r -> t -> t
+  (** [subst p v cs] replaces all the instances of [p] with [v] in the
       constraint.
 
-      Use this to ensure that the representation is always normalized.
-
-      The explanation [ex] justifies the equality [p = v]. *)
-
-  val fold_leaves : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-
-  type domain
-  (** The type of domains.
-
-      This is typically a mapping from variables to their own domain, but no
-      expectations is made upon the actual structure of that type. *)
-
-  val propagate : t -> domain -> domain
-  (** [propagate c dom] propagates the constraints [c] in [d] and returns the
-      new domain. *)
-
+      Substitution can perform constraint simplification. *)
 end
 
-module Constraints_Make(Constraint : Constraint) : sig
+type 'a explained = { value : 'a ; explanation : Explanation.t }
+
+let explained ~ex value = { value ; explanation = ex }
+
+module Constraints_make(Constraint : Constraint) : sig
   type t
-  (** The type of constraint sets. A constraint sets records a set of
-      constraints that applies to semantic values, and remembers which
-      constraints are associated with each semantic values.
+  (** The type of constraint sets. A constraint set records a set of
+      constraints that applies to semantic values, and remembers the relation
+      between constraints and semantic values.
 
-      It is used to only propagate constraints involving semantic values whose
-      associated domain has changed.
+      The constraints associated with specific semantic values can be notified
+      (see [notify]), which is used to only propagate constraints involving
+      semantic values whose domain has changed.
 
-      The constraint sets are expected to keep track of *class representatives*,
-      i.e.  normal forms wrt the `Uf` module, in which case we say the
-      constraint set is *normalized*. Use `subst` to ensure normalization. *)
+      The constraints that have been notified are called "pending
+      constraints", and the set thereof is the "pending set". These are
+      constraints that need to be propagated, and can be recovered using
+      [next_pending]. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for constraint sets. *)
 
   val empty : t
-  (** Returns an empty constraint set. *)
+  (** The empty constraint set. *)
 
-  val subst : Explanation.t -> X.r -> X.r -> t -> t
-  (** [subst ex p v cs] replaces all the instances of [p] with [v] in the
+  val add : ?pending:bool -> ex:Explanation.t -> Constraint.t -> t -> t
+  (** [add ~ex c t] adds the constraint [c] to the set [t].
+
+      The explanation [ex] justifies that the constraint [c] holds.
+
+      The constraint is only added to the pending set if it was not already
+      active (i.e. previously added). Setting the [pending] optional argument to
+      [true] forces the constraint to be marked as pending even if it is already
+      active. *)
+
+  val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
+  (** [subst ~ex p v t] replaces all instances of [p] with [v] in the
       constraints.
-
-      Use this to ensure that the representation is always normalized.
 
       The explanation [ex] justifies the equality [p = v]. *)
 
-  val add : t -> Constraint.t -> t
-  (** [add c cs] adds the constraint [c] to [cs]. *)
+  val notify : X.r -> t -> t
+  (** [notify r t] marks all constraints involving [r] (i.e. all constraints
+      that have [r] as one of their arguments) as pending.
 
-  val propagate_fresh :  t -> Constraint.domain -> t * Constraint.domain
-  (** [propagate_fresh cs acc] propagates the fresh constraints and returns the
-      new domain, as well as a copy of the constraint set with no fresh
-      constraints.
+      This function should be used when the domain of [r] is updated, if
+      domains are tracked for all representatives. *)
 
-      Fresh constraints are constraints that were never propagated yet. *)
+  val notify_leaf : X.r -> t -> t
+  (** [notify_leaf r t] marks all constraints that have [r] as a leaf (i.e.
+      all constraints that have at least one argument [a] such that [r] is in
+      [X.leaves a]) as pending.
 
-  val fold_r : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold_r f cs acc] folds [f] over any representative [r] that is currently
-      associated with a constraint (i.e. at least one constraint currently
-      applies to [r]). *)
+      This function should be used when the domain of [r] is updated, if
+      domains are tracked for leaves only. *)
 
-  val propagate : t -> X.r -> Constraint.domain -> Constraint.domain
-  (** [propagate cs r dom] propagates the constraints associated with [r] in the
-      constraint set [cs] and returns the new domain map after propagation. *)
+  val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold_args f t acc] folds [f] over all the term representatives that are
+      arguments of at least one constraint. *)
+
+  val next_pending : t -> Constraint.t explained * t
+  (** [next_pending t] returns a pair [c, t'] where [c] was pending in [t] and
+      [t'] is identical to [t], except that [c] is no longer a pending
+      constraint.
+
+      @raise Not_found if there are no pending constraints. *)
 end = struct
-  module IM = Util.MI
   module MX = Shostak.MXH
 
-  module CS = Set.Make(Constraint)
+  module CS = Set.Make(struct
+      type t = Constraint.t explained
+
+      let compare a b = Constraint.compare a.value b.value
+    end)
 
   type t = {
-    cs_set : CS.t ;
-    (*** All the constraints currently active *)
-    cs_map : CS.t MX.t ;
-    (*** Mapping from semantic values to the constraints that involves them *)
-    fresh : CS.t ;
-    (*** Fresh constraints that have never been propagated *)
+    args_map : CS.t MX.t ;
+    (** Mapping from semantic values to constraints involving them *)
+
+    leaves_map : CS.t MX.t ;
+    (** Mapping from semantic values to constraints they are a leaf of *)
+
+    active : CS.t ;
+    (** Set of all currently active constraints *)
+
+    pending : CS.t ;
+    (** Set of active constraints that have not yet been propagated *)
   }
 
-  let pp ppf { cs_set; cs_map = _ ; fresh = _ } =
+  let pp ppf { active; _ } =
     Fmt.(
       braces @@ hvbox @@
       iter ~sep:semi CS.iter @@
+      using (fun { value; _ } -> value) @@
       box ~indent:2 @@ braces @@
       Constraint.pp
-    ) ppf cs_set
+    ) ppf active
 
   let empty =
-    { cs_set = CS.empty
-    ; cs_map = MX.empty
-    ; fresh = CS.empty }
+    { args_map = MX.empty
+    ; leaves_map = MX.empty
+    ; active = CS.empty
+    ; pending = CS.empty }
 
-  let cs_add cs r cs_map =
+  let cs_add c r cs_map =
     MX.update r (function
-        | Some css -> Some (CS.add cs css)
-        | None -> Some (CS.singleton cs)
+        | Some cs -> Some (CS.add c cs)
+        | None -> Some (CS.singleton c)
       ) cs_map
 
-  let cs_remove cs r cs_map =
-    MX.update r (function
-        | Some css ->
-          let css = CS.remove cs css in
-          if CS.is_empty css then None else Some css
-        | None ->
-          (* Can happen if the same argument is repeated *)
-          None
-      ) cs_map
+  let fold_leaves f c acc =
+    Constraint.fold_args (fun r acc ->
+        List.fold_left (fun acc r -> f r acc) acc (X.leaves r)
+      ) c acc
 
-  let subst ex rr nrr bcs =
-    match MX.find rr bcs.cs_map with
-    | ids ->
-      let cs_map, cs_set, fresh =
-        CS.fold (fun cs (cs_map, cs_set, fresh) ->
-            let fresh = CS.remove cs fresh in
-            let cs_set = CS.remove cs cs_set in
-            let cs_map = Constraint.fold_leaves (cs_remove cs) cs cs_map in
-            let cs' = Constraint.subst ex rr nrr cs in
-            if CS.mem cs' cs_set then
-              cs_map, cs_set, fresh
-            else
-              let cs_set = CS.add cs' cs_set in
-              let cs_map = Constraint.fold_leaves (cs_add cs') cs' cs_map in
-              (cs_map, cs_set, CS.add cs' fresh)
-          ) ids (bcs.cs_map, bcs.cs_set, bcs.fresh)
+  let add ?(pending = false) ~ex c t =
+    let c = explained ~ex c in
+    (* Note: use [CS.find] here, not [CS.mem], to ensure we use the same
+       explanation for [c] in the [pending] and [active] sets. *)
+    match CS.find c t.active with
+    | c ->
+      if pending then { t with pending = CS.add c t.pending } else t
+    | exception Not_found ->
+      let active = CS.add c t.active in
+      let args_map =
+        Constraint.fold_args (cs_add c) c.value t.args_map
       in
-      assert (not (MX.mem rr cs_map));
-      { cs_set ; cs_map ; fresh }
-    | exception Not_found -> bcs
+      let leaves_map = fold_leaves (cs_add c) c.value t.leaves_map in
+      let pending = CS.add c t.pending in
+      { active; args_map; leaves_map; pending }
 
-  let add bcs c =
-    if CS.mem c bcs.cs_set then
-      bcs
-    else
-      let cs_set = CS.add c bcs.cs_set in
-      let cs_map = Constraint.fold_leaves (cs_add c) c bcs.cs_map in
-      let fresh = CS.add c bcs.fresh in
-      { cs_set ; cs_map ; fresh }
+  let cs_remove c r cs_map =
+    MX.update r (function
+        | Some cs ->
+          let cs = CS.remove c cs in
+          if CS.is_empty cs then None else Some cs
+        | None -> None
+      ) cs_map
 
-  let fold_r f bcs acc =
-    MX.fold (fun r _ acc -> f r acc) bcs.cs_map acc
+  let remove c t =
+    let active = CS.remove c t.active in
+    let args_map =
+      Constraint.fold_args (cs_remove c) c.value t.args_map
+    in
+    let leaves_map = fold_leaves (cs_remove c) c.value t.leaves_map in
+    let pending = CS.remove c t.pending in
+    { active; args_map; leaves_map; pending }
 
-  let propagate bcs r dom =
-    match MX.find r bcs.cs_map with
-    | cs -> CS.fold Constraint.propagate cs dom
-    | exception Not_found -> dom
+  let subst ~ex rr nrr t =
+    match MX.find rr t.leaves_map with
+    | cs ->
+      CS.fold (fun c t ->
+          let pending = CS.mem c t.pending in
+          let t = remove c t  in
+          let ex = Explanation.union ex c.explanation in
+          add ~pending ~ex (Constraint.subst rr nrr c.value) t
+        ) cs t
+    | exception Not_found -> t
 
-  let propagate_fresh bcs dom =
-    let dom = CS.fold Constraint.propagate bcs.fresh dom in
-    { bcs with fresh = CS.empty }, dom
+  let notify r t =
+    match MX.find r t.args_map with
+    | cs ->
+      CS.fold (fun c t -> { t with pending = CS.add c t.pending }) cs t
+    | exception Not_found -> t
+
+  let notify_leaf r t =
+    match MX.find r t.leaves_map with
+    | cs ->
+      CS.fold (fun c t -> { t with pending = CS.add c t.pending }) cs t
+    | exception Not_found -> t
+
+  let fold_args f c acc =
+    MX.fold (fun r _ acc ->
+        f r acc
+      ) c.args_map acc
+
+  let next_pending t =
+    let c = CS.choose t.pending in
+    c, { t with pending = CS.remove c t.pending }
 end
