@@ -104,6 +104,16 @@ let cmd_on_modes st modes cmd =
       Errors.forbidden_command curr_mode cmd
   end
 
+let verify_model ~get_value () =
+  match get_value [Expr.vrai] with
+  | Some [e] when Expr.equal e Expr.vrai -> ()
+  | Some [_] | None | exception Sat_solver_sig.Unsat _ ->
+    recoverable_error "The model is wrong"
+  | Some _ ->
+    (* The length of the output list is the same as the length of the
+       input list. *)
+    assert false
+
 (* Dolmen util *)
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
@@ -184,6 +194,8 @@ let main () =
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
+          if Options.get_verify_models () then
+            verify_model ~get_value:(SAT.get_value partial_model) ();
           Sat mdl
         end
       | `Unknown ->
@@ -197,6 +209,8 @@ let main () =
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
+          if Options.get_verify_models () then
+            verify_model ~get_value:(SAT.get_value partial_model) ();
           Unknown (Some mdl)
         end
       | `Unsat -> Unsat
