@@ -118,7 +118,7 @@ type optimized_split = {
 type 'literal acts = {
   acts_add_decision_lit : 'literal -> unit ;
   (** Ask the SAT solver to decide on the given formula before it can answer
-      [SAT]. The order of decisions is among multiple calls of
+      [SAT]. The order of decisions among multiple calls of
       [acts_add_decision_lit] is unspecified.
 
       Decisions added using [acts_add_decision_lit] are forgotten when

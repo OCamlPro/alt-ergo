@@ -652,7 +652,7 @@ module Main_Default : S = struct
            the procedure will success to produce the upper bound of [x] and
            [y] modulo the other constraints on it.
          - If the objective function isn't linear, the nonlinear part of the
-           expression have seen as uninterpreted term of the arithemic theory.
+           expression is seen as uninterpreted term of the arithmetic theory.
            Let's imagine we try to maximize the expression:
              5 * x * x + 2 * y + 3,
            The objective function given to Ocplib-simplex looks like:
@@ -945,7 +945,7 @@ module Main_Default : S = struct
   let get_objectives env = env.objectives
 
   let add_objective env fn value =
-    (* We have to add the term [f] and its subterms as the MaxSMT
+    (* We have to add the term [fn] and its subterms as the MaxSMT
        syntax allows to optimize expressions that aren't part of
        the current context. *)
     let expr = fn.Objective.Function.e in

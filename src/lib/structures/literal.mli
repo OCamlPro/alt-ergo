@@ -63,10 +63,9 @@ module type S = sig
   (** [normal_form l] returns the normal form of [l]. The normal form of [l] is
       a pair [l', is_neg] such that:
 
-      - [l] is [neg l'] if [is_neg] is [true]
-      - [l] is [l'] if [is_neg] is [false]
+      - [l'] is [neg l] if [is_neg] is [true]
+      - [l'] is [l] if [is_neg] is [false]
       - [normal_form l'] is [l', false] *)
-
   val is_ground : t -> bool
   (** [is_ground l] is always [true] if [l] is a semantic literal, and otherwise
       is [true] iff the syntaxic literal is ground (does not contain free

@@ -2077,7 +2077,7 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
            incorrect). *)
         let case_split =
           LR.mkv_builtin false LT
-            [r1; (middle_value env ~is_max ty p None)],
+            [r1; middle_value env ~is_max ty p None],
           true,
           Th_util.CS (Th_util.Th_arith, Q.one)
         in
