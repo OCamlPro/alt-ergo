@@ -1382,9 +1382,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           Atom.make_clause name learnt vraie_form true history
         in
         (* Do not learn clauses involving semantic literals (but still record
-           them as a reason for the propagated literal), otherwise we could
-           learn stuff about these semantic literals in a scope where they are
-           no longer valid.
+           them as a reason for the propagated literal). Learned clauses are
+           valid at level 0, but semantic literals can contain terms created by
+           the Shostak module that are only useful in a portion of the search
+           tree, and in particular would not exist (in Uf) at lower levels.
 
            Note that we try to avoid semantic literals as much as possible in
            [conflict_analyze_aux], but we can still have semantic decisions
