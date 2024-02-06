@@ -388,19 +388,21 @@ module Main_Default : S = struct
         let new_choices =
           List.map add_explanations_to_split new_splits
         in
-        aux env sem_facts acc_choices new_choices
+        propagate_choices env sem_facts acc_choices new_choices
 
     (* Propagates the choice made by case-splitting to the environment
        [gamma_finite] of the CC(X) algorithm. If there is no more choices
-       to propagate, we call the dispatcher [aux] to leave the function.
+       to propagate, we call the [generate_choices] to either generate more
+       choices or leave the function.
 
        @raise [Inconsistent] if we detect an inconsistent with the choice
               on the top of [new_choices] but this choice doesn't
               participate to the inconsistency. *)
     and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
+      Options.tool_req 3 "TR-CCX-CS-Case-Split";
       match new_choices with
-      | [] -> aux env sem_facts acc_choices new_choices
+      | [] -> generate_choices env sem_facts acc_choices
 
       | ((c, lit_orig, CNeg, ex_c) as a) :: new_choices ->
         let facts = CC_X.empty_facts () in
@@ -455,15 +457,8 @@ module Main_Default : S = struct
           propagate_choices env sem_facts acc_choices
             [neg_c, lit_orig, CNeg, dep]
 
-    and aux env sem_facts acc_choices new_choices =
-      Options.tool_req 3 "TR-CCX-CS-Case-Split";
-      match new_choices with
-      | [] ->
-        generate_choices env sem_facts acc_choices
-      | _ ->
-        propagate_choices env sem_facts acc_choices new_choices
     in
-    aux env sem_facts (List.rev env.choices) new_choices
+    propagate_choices env sem_facts (List.rev env.choices) new_choices
 
   (* remove old choices involving fresh variables that are no longer in UF *)
   let filter_valid_choice uf (ra, _, _, _) =
