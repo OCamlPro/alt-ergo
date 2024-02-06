@@ -737,7 +737,12 @@ module Main_Default : S = struct
                 | LSem a ->
                   (* When assuming a semantic literal (typically a case split),
                      we may end up in cases where they contain terms that have
-                     not been added. *)
+                     not been added.
+
+                     One reason this can happen is when (the negation of)
+                     semantic literals are pushed onto the trail at lower
+                     levels than they were initially created (notably with
+                     with minimal backjumps). *)
                   let aview = LR.view a in
                   let trms = extract_terms_from_xliteral SE.empty aview in
                   let gamma = SE.fold (fun t gamma ->
