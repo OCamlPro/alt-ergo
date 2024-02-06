@@ -1996,9 +1996,10 @@ let case_split env uf ~for_model =
   | _ -> res
 
 (* Helper function used in [optimizing_objective] to pick a value
-   for the polynomial [p] in its interval. We use this function in the case
-   the value produced by the optimization procedure doesn't satisfy some
-   constraints that involve strict inequalities or the problem is unbounded. *)
+   for the polynomial [p] in its interval. We use this function to split the
+   search space and bias it towards the optimum in the case the value produced
+   by the optimization procedure doesn't satisfy some constraints that involve
+   strict inequalities or the problem is unbounded. *)
 let middle_value env ~is_max ty p bound =
   let interval =
     match MP0.find_opt p env.polynomes, bound with
