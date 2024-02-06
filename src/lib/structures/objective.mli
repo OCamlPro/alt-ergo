@@ -92,10 +92,7 @@ module Model : sig
 
   val next_unknown : t -> Function.t option
   (** [next_unknown ~for_model mdl] returns the next optimization in
-      decreasing order of priority whose the value is [Unknown].
-      The flag [for_model] is [true] when we invoke this function during
-      model generation only. In this case, the function returns [None]
-      if we see a limit objective values. *)
+      decreasing order of priority whose the value is [Unknown]. *)
 
   val has_no_limit : t -> bool
   (** [has_no_limit mdl] checks if all the objective functions in the model

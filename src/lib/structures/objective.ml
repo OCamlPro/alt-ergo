@@ -115,17 +115,8 @@ module Model = struct
     try
       M.iter (fun { f; order = _ } v ->
           match (v : Value.t) with
-          | Value _ -> ()
-          | Limit _ | Pinfinity | Minfinity ->
-            (* While generating models, keeps optimizing values with
-               lower priority even if we see a limit value. *)
-            ()
-          | _ ->
-            (* While doing CS, we try again to optimize a bound even if
-               the last result was a limit. As CS can be performed in
-               Assert mode, a unboundd problem can become bounded after
-               a new assert. *)
-            raise (Found f)
+          | Unknown -> raise (Found f)
+          | Value _ | Limit _ | Pinfinity | Minfinity -> ()
         ) mdl;
       None
     with
