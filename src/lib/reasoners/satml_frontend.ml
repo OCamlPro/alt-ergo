@@ -1092,7 +1092,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             | Limit (_, v) ->
               raise (Give_up ((e, v, is_max, false) :: acc))
             | Unknown ->
-              [] (* assert false *)
+              assert false
           ) objs []
       with Give_up acc -> acc
     in
