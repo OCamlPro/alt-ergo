@@ -32,38 +32,22 @@ module X = Shostak.Combine
 
 (*** Combination module of Relations ***)
 
-module Rel1 : Sig_rel.RELATION = IntervalCalculus
-
-module Rel2 : Sig_rel.RELATION = Records_rel
-
-module Rel3 : Sig_rel.RELATION = Bitv_rel
-
-module Rel4 : Sig_rel.RELATION = Arrays_rel
-
-module Rel5 : Sig_rel.RELATION = Enum_rel
-
-module Rel6 : Sig_rel.RELATION = Adt_rel
-
-module Rel7 : Sig_rel.RELATION = Ite_rel
-
 type t = {
-  r1: Rel1.t;
-  r2: Rel2.t;
-  r3: Rel3.t;
-  r4: Rel4.t;
-  r5: Rel5.t;
-  r6: Rel6.t;
-  r7: Rel7.t;
+  r1: IntervalCalculus.t;
+  r2: Bitv_rel.t;
+  r3: Arrays_rel.t;
+  r4: Enum_rel.t;
+  r5: Adt_rel.t;
+  r6: Ite_rel.t;
 }
 
 let empty classes = {
-  r1=Rel1.empty classes;
-  r2=Rel2.empty classes;
-  r3=Rel3.empty classes;
-  r4=Rel4.empty classes;
-  r5=Rel5.empty classes;
-  r6=Rel6.empty classes;
-  r7=Rel7.empty classes;
+  r1=IntervalCalculus.empty classes;
+  r2=Bitv_rel.empty classes;
+  r3=Arrays_rel.empty classes;
+  r4=Enum_rel.empty classes;
+  r5=Adt_rel.empty classes;
+  r6=Ite_rel.empty classes;
 }
 
 let (|@|) l1 l2 =
@@ -74,66 +58,59 @@ let (|@|) l1 l2 =
 let assume env uf sa =
   Options.exec_thread_yield ();
   let env1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
-    Rel1.assume env.r1 uf sa in
+    IntervalCalculus.assume env.r1 uf sa in
   let env2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
-    Rel2.assume env.r2 uf sa in
+    Bitv_rel.assume env.r2 uf sa in
   let env3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
-    Rel3.assume env.r3 uf sa in
+    Arrays_rel.assume env.r3 uf sa in
   let env4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
-    Rel4.assume env.r4 uf sa in
+    Enum_rel.assume env.r4 uf sa in
   let env5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
-    Rel5.assume env.r5 uf sa in
+    Adt_rel.assume env.r5 uf sa in
   let env6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
-    Rel6.assume env.r6 uf sa in
-  let env7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
-    Rel7.assume env.r7 uf sa in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
-  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
-     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
+    Ite_rel.assume env.r6 uf sa in
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6},
+  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6;
+     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6}
    : _ Sig_rel.result)
 
 let assume_th_elt env th_elt dep =
   Options.exec_thread_yield ();
-  let env1 = Rel1.assume_th_elt env.r1 th_elt dep in
-  let env2 = Rel2.assume_th_elt env.r2 th_elt dep in
-  let env3 = Rel3.assume_th_elt env.r3 th_elt dep in
-  let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
-  let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
-  let env6 = Rel6.assume_th_elt env.r6 th_elt dep in
-  let env7 = Rel7.assume_th_elt env.r7 th_elt dep in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7}
+  let env1 = IntervalCalculus.assume_th_elt env.r1 th_elt dep in
+  let env2 = Bitv_rel.assume_th_elt env.r2 th_elt dep in
+  let env3 = Arrays_rel.assume_th_elt env.r3 th_elt dep in
+  let env4 = Enum_rel.assume_th_elt env.r4 th_elt dep in
+  let env5 = Adt_rel.assume_th_elt env.r5 th_elt dep in
+  let env6 = Ite_rel.assume_th_elt env.r6 th_elt dep in
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6}
 
 let query env uf a =
   Options.exec_thread_yield ();
-  match Rel1.query env.r1 uf a with
+  match IntervalCalculus.query env.r1 uf a with
   | Some _ as ans -> ans
   | None ->
-    match Rel2.query env.r2 uf a with
+    match Bitv_rel.query env.r2 uf a with
     | Some _ as ans -> ans
     | None ->
-      match Rel3.query env.r3 uf a with
+      match Arrays_rel.query env.r3 uf a with
       | Some _ as ans -> ans
       | None ->
-        match Rel4.query env.r4 uf a with
+        match Enum_rel.query env.r4 uf a with
         | Some _ as ans -> ans
         | None ->
-          match Rel5.query env.r5 uf a with
+          match Adt_rel.query env.r5 uf a with
           | Some _ as ans -> ans
-          | None ->
-            match Rel6.query env.r6 uf a with
-            | Some _ as ans -> ans
-            | None -> Rel7.query env.r7 uf a
+          | None -> Ite_rel.query env.r6 uf a
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();
-  let seq1 = Rel1.case_split env.r1 uf ~for_model in
-  let seq2 = Rel2.case_split env.r2 uf ~for_model in
-  let seq3 = Rel3.case_split env.r3 uf ~for_model in
-  let seq4 = Rel4.case_split env.r4 uf ~for_model in
-  let seq5 = Rel5.case_split env.r5 uf ~for_model in
-  let seq6 = Rel6.case_split env.r6 uf ~for_model in
-  let seq7 = Rel7.case_split env.r7 uf ~for_model in
-  let splits = [seq1; seq2; seq3; seq4; seq5; seq6; seq7] in
+  let seq1 = IntervalCalculus.case_split env.r1 uf ~for_model in
+  let seq2 = Bitv_rel.case_split env.r2 uf ~for_model in
+  let seq3 = Arrays_rel.case_split env.r3 uf ~for_model in
+  let seq4 = Enum_rel.case_split env.r4 uf ~for_model in
+  let seq5 = Adt_rel.case_split env.r5 uf ~for_model in
+  let seq6 = Ite_rel.case_split env.r6 uf ~for_model in
+  let splits = [seq1; seq2; seq3; seq4; seq5; seq6] in
   let splits = List.fold_left (|@|) [] splits in
   List.fast_sort
     (fun (_ ,_ , sz1) (_ ,_ , sz2) ->
@@ -155,55 +132,51 @@ let rec optimizing_dispatcher s l =
 let optimizing_objective env uf o =
   Options.exec_thread_yield ();
   optimizing_dispatcher o [
-    Rel1.optimizing_objective env.r1 uf;
-    Rel2.optimizing_objective env.r2 uf;
-    Rel3.optimizing_objective env.r3 uf;
-    Rel4.optimizing_objective env.r4 uf;
-    Rel5.optimizing_objective env.r5 uf
+    IntervalCalculus.optimizing_objective env.r1 uf;
+    Bitv_rel.optimizing_objective env.r2 uf;
+    Arrays_rel.optimizing_objective env.r3 uf;
+    Enum_rel.optimizing_objective env.r4 uf;
+    Adt_rel.optimizing_objective env.r5 uf
   ]
 
 let add env uf r t =
   Options.exec_thread_yield ();
-  let r1, eqs1 =Rel1.add env.r1 uf r t in
-  let r2, eqs2 =Rel2.add env.r2 uf r t in
-  let r3, eqs3 =Rel3.add env.r3 uf r t in
-  let r4, eqs4 =Rel4.add env.r4 uf r t in
-  let r5, eqs5 =Rel5.add env.r5 uf r t in
-  let r6, eqs6 =Rel6.add env.r6 uf r t in
-  let r7, eqs7 =Rel7.add env.r7 uf r t in
-  {r1;r2;r3;r4;r5;r6;r7;},eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
+  let r1, eqs1 = IntervalCalculus.add env.r1 uf r t in
+  let r2, eqs2 = Bitv_rel.add env.r2 uf r t in
+  let r3, eqs3 = Arrays_rel.add env.r3 uf r t in
+  let r4, eqs4 = Enum_rel.add env.r4 uf r t in
+  let r5, eqs5 = Adt_rel.add env.r5 uf r t in
+  let r6, eqs6 = Ite_rel.add env.r6 uf r t in
+  {r1; r2; r3; r4; r5; r6}, eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6
 
 
 let instantiate ~do_syntactic_matching t_match env uf selector =
   Options.exec_thread_yield ();
   let r1, l1 =
-    Rel1.instantiate ~do_syntactic_matching t_match env.r1 uf selector in
+    IntervalCalculus.instantiate ~do_syntactic_matching t_match env.r1 uf
+      selector
+  in
   let r2, l2 =
-    Rel2.instantiate ~do_syntactic_matching t_match env.r2 uf selector in
+    Bitv_rel.instantiate ~do_syntactic_matching t_match env.r2 uf selector in
   let r3, l3 =
-    Rel3.instantiate ~do_syntactic_matching t_match env.r3 uf selector in
+    Arrays_rel.instantiate ~do_syntactic_matching t_match env.r3 uf selector in
   let r4, l4 =
-    Rel4.instantiate ~do_syntactic_matching t_match env.r4 uf selector in
+    Enum_rel.instantiate ~do_syntactic_matching t_match env.r4 uf selector in
   let r5, l5 =
-    Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
+    Adt_rel.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
   let r6, l6 =
-    Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
-  let r7, l7 =
-    Rel7.instantiate ~do_syntactic_matching t_match env.r7 uf selector in
-  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
-  l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
+    Ite_rel.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
+  {r1; r2; r3; r4; r5; r6}, l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
 let new_terms env =
-  let t1 = Rel1.new_terms env.r1 in
-  let t2 = Rel2.new_terms env.r2 in
-  let t3 = Rel3.new_terms env.r3 in
-  let t4 = Rel4.new_terms env.r4 in
-  let t5 = Rel5.new_terms env.r5 in
-  let t6 = Rel6.new_terms env.r6 in
-  let t7 = Rel7.new_terms env.r7 in
+  let t1 = IntervalCalculus.new_terms env.r1 in
+  let t2 = Bitv_rel.new_terms env.r2 in
+  let t3 = Arrays_rel.new_terms env.r3 in
+  let t4 = Enum_rel.new_terms env.r4 in
+  let t5 = Adt_rel.new_terms env.r5 in
+  let t6 = Ite_rel.new_terms env.r6 in
   Expr.Set.union t1
     (Expr.Set.union t2
        (Expr.Set.union t3
           (Expr.Set.union t4
-             (Expr.Set.union t5
-                (Expr.Set.union t6 t7)) )))
+             (Expr.Set.union t5 t6))))
