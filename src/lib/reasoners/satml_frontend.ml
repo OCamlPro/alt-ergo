@@ -57,7 +57,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable conj : (int * SE.t) FF.Map.t;
     mutable abstr_of_axs : (FF.t * Atom.atom) ME.t;
     mutable axs_of_abstr : (E.t * Atom.atom) ME.t;
-    mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
+    mutable proxies : FF.proxies;
     mutable inst : Inst.t;
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
@@ -95,7 +95,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       conj = FF.Map.empty;
       abstr_of_axs = ME.empty;
       axs_of_abstr = ME.empty;
-      proxies = Util.MI.empty;
+      proxies = FF.empty_proxies;
       inst = Inst.empty;
       skolems = ME.empty;
       guards = init_guards ();

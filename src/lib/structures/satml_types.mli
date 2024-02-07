@@ -124,6 +124,18 @@ module type FLAT_FORMULA = sig
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
   type hcons_env
 
+  type proxy_defn
+  (** A proxy definition, encoding an equivalence [p <=> l_1 /\ ... /\ l_n] or
+      [p <=> l_1 \/ ... \/ l_n] where [p] is a proxy and [l_1], ..., [l_n] are
+      literals.
+
+      See [get_proxy_of] and [expand_proxy_defn]. *)
+
+  type proxies
+  (** Mapping from flat formulas to their proxy definition, if any. *)
+
+  val empty_proxies : proxies
+
   val equal   : t -> t -> bool
   val compare : t -> t -> int
   val print   : Format.formatter -> t -> unit
@@ -147,22 +159,38 @@ module type FLAT_FORMULA = sig
     t * (Expr.t * (t * Atom.atom)) list
     * Atom.var list
 
-  val get_proxy_of : t ->
-    (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
+  val get_proxy_of : t -> proxies -> Atom.atom option
+  (** [get_proxy_of ff proxies] returns the proxy registered for [ff] in
+      [proxies], if it exists.
+
+      Note: If [ff] is a unit formula (i.e. a literal), [get_proxy_of] returns
+      [None].
+
+      The proxy of a flat formula [ff] is an atom [p] with the (implicit)
+      equivalent [p <=> ff]. Proxies are used to perform lazy CNF conversion of
+      formulas in the CDCL-Tableaux solver. *)
 
   val cnf_abstr :
     hcons_env ->
     t ->
-    (Atom.atom * Atom.atom list * bool) Util.MI.t ->
+    proxies ->
     Atom.var list ->
     Atom.atom
-    * (Atom.atom * Atom.atom list * bool) list
-    * (Atom.atom * Atom.atom list * bool) Util.MI.t
+    * proxy_defn list
+    * proxies
     * Atom.var list
 
   val expand_proxy_defn :
-    Atom.atom list list ->
-    Atom.atom * Atom.atom list * bool -> Atom.atom list list
+    Atom.atom list list -> proxy_defn -> Atom.atom list list
+  (** Expand a proxy definition into clausal normal form.
+
+      The definition [p <=> l_1 \/ ... \/ l_n] is expanded into:
+
+        [(~p \/ l_1 \/ ... \/ l_n) /\ (p \/ ~l_1) /\ ... /\ (p \/ ~l_n)]
+
+      and the definition [p <=> l_1 /\ ... /\ l_n] is expanded into:
+
+        [(p \/ ~l_1 \/ ... \/ ~l_n) /\ (~p \/ l_1) /\ ... /\ (~p \/ l_n)] *)
 
   val reinit_cpt : unit -> unit
   (** Resets to 0 the counter *)

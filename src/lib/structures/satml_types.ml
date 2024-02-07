@@ -435,6 +435,12 @@ module type FLAT_FORMULA = sig
   type view = private UNIT of Atom.atom | AND of t list | OR of t list
   type hcons_env
 
+  type proxy_defn
+
+  type proxies
+
+  val empty_proxies : proxies
+
   val equal   : t -> t -> bool
   val compare : t -> t -> int
   val print   : Format.formatter -> t -> unit
@@ -459,22 +465,20 @@ module type FLAT_FORMULA = sig
     t * (E.t * (t * Atom.atom)) list
     * Atom.var list
 
-  val get_proxy_of : t ->
-    (Atom.atom * Atom.atom list * bool) Util.MI.t -> Atom.atom option
+  val get_proxy_of : t -> proxies -> Atom.atom option
 
   val cnf_abstr :
     hcons_env ->
     t ->
-    (Atom.atom * Atom.atom list * bool) Util.MI.t ->
+    proxies ->
     Atom.var list ->
     Atom.atom
-    * (Atom.atom * Atom.atom list * bool) list
-    * (Atom.atom * Atom.atom list * bool) Util.MI.t
+    * proxy_defn list
+    * proxies
     * Atom.var list
 
   val expand_proxy_defn :
-    Atom.atom list list ->
-    Atom.atom * Atom.atom list * bool -> Atom.atom list list
+    Atom.atom list list -> proxy_defn -> Atom.atom list list
 
   val reinit_cpt : unit -> unit
 
@@ -534,6 +538,34 @@ module Flat_Formula : FLAT_FORMULA = struct
     | AND _ -> true
     | OR  _ -> false
     | UNIT at -> at == at.Atom.var.Atom.pa
+
+  type proxy_defn = Atom.atom * Atom.atom list * bool
+  (** A proxy definition, represented as a triple [p, l, is_and].
+
+      [l] is a list of atoms that represent the "components" of the proxied
+      formula. The meaning of [l] depends on the value of [is_and]: if [is_and]
+      is [true], then [p] is a proxy for [l_1 /\ ... /\ l_n]; otherwise, [p] is
+      a proxy for [l_1 \/ ... \/ l_n]. *)
+
+  type proxies = proxy_defn Util.MI.t
+  (** Map from flat formula tags to their proxy definitions. If flat formula [f]
+      is associated to [p, l, is_and], then [p] is an atom that represents [f]
+      (so that deciding on [p] forces [f] to take the same truth value).
+
+      Only [AND] and [OR] flat formulas are present in a [proxies] map: [UNIT]
+      flat formulas do not need a proxy, as they are already atoms.
+
+      Note: Integer maps (keyed on tags) are used for historical reasons (and
+      possibly slight performance boost).
+
+      Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]),
+      then the corresponding [is_and] entry is [false] (resp. [true]), and
+      the list [l] contains the atoms or proxies for the values in [fl].
+
+      Note: the [proxies] map contains either a flat formula or its
+      negation; [get_proxy_of] tries both possibilities. *)
+
+  let empty_proxies = Util.MI.empty
 
   module HT =
     Hashtbl.Make
@@ -974,9 +1006,8 @@ module Flat_Formula : FLAT_FORMULA = struct
   let reinit_cpt () =
     cpt := 0
 
-  module Set = Set.Make(struct type t'=t type t=t' let compare=compare end)
-  module Map = Map.Make(struct type t'=t type t=t' let compare=compare end)
-
+  module Set = Set.Make (struct type nonrec t = t let compare = compare end)
+  module Map = Map.Make (struct type nonrec t = t let compare = compare end)
 end
 
 module Proxy_formula = struct
