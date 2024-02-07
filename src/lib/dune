@@ -24,6 +24,7 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    logs
     stdcompat
   )
   (preprocess
