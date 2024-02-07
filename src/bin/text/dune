@@ -12,8 +12,9 @@
 
 ; Rule to generate a man page for alt-ergo
 (rule
+  (deps (:bin Main_text.exe))
   (target alt-ergo.1)
-  (action (with-stdout-to %{target} (run alt-ergo --help=groff))))
+  (action (with-stdout-to %{target} (run %{bin} --help=groff))))
 
 ; Install the man page
 (install
