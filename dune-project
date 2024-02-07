@@ -84,6 +84,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (zarith (>= 1.11))
   seq
   (fmt (>= 0.9.0))
+  logs
   stdlib-shims
   (ppx_blob (>= 0.7.2))
   ppx_deriving
