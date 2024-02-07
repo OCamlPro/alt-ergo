@@ -47,10 +47,7 @@ module type SAT_ML = sig
 
   val solve : t -> unit
 
-  val set_new_proxies :
-    t ->
-    (Satml_types.Atom.atom * Satml_types.Atom.atom list * bool) Util.MI.t ->
-    unit
+  val set_new_proxies : t -> Flat_Formula.proxies -> unit
 
   val new_vars :
     t ->

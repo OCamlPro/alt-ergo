@@ -92,8 +92,7 @@ module type SAT_ML = sig
 
   val solve : t -> unit
 
-  val set_new_proxies :
-    t -> (Atom.atom * Atom.atom list * bool) Util.MI.t -> unit
+  val set_new_proxies : t -> FF.proxies -> unit
 
   val new_vars :
     t ->
@@ -286,31 +285,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable cpt_current_propagations : int;
 
-      mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
-      (** Map from flat formulas to proxy triples [p, l, is_and].
+      mutable proxies : FF.proxies;
+      (** Map from flat formulas to the proxies that represent them.
 
-          Only [AND] and [OR] flat formulas are present in the [proxies] map:
-          [UNIT] flat formulas do not need a proxy, as they are already atoms.
-
-          [p] is an atom that represents the flat formula (so that deciding on
-          [p] forces the flat formula to take the same truth value).
-
-          [l] is a list of atoms that represent the "components" of the flat
-          formula.  The meaning of [l] depends on the value of [is_and]: if
-          [is_and] is [true], then [p] is equivalent to [l_1 /\ ... /\ l_n]; if
-          [is_and] is [false], then [p] is equivalent to [l_1 \/ ... \/ l_n].
-
-          Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]),
-          then the corresponding [is_and] entry is [false] (resp. [true]), and
-          the list [l] contains the atoms or proxies for the values in [fl].
-
-          Note: the [proxies] map contains either a flat formula or its
-          negation: to look up into this map, use [FF.get_proxy_of] which
-          performs the appropriate negation if needed.
-
-          Note: the [Satml] module does not touch the proxies itself.
+          Note: the [Satml] module does not touch the [proxies] field itself; it
+          only uses it to find the atom associated with a flat formula.
           Appropriate proxies that cover all the flat formulas to be encountered
-          need to be pre-emptively given using [set_new_proxies]. *)
+          need to be pre-emptively given using [set_new_proxies], which is
+          called from [Satml_frontend]. *)
 
       mutable lazy_cnf :
         (FF.t list MFF.t * FF.t) Matoms.t;
@@ -472,7 +454,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       cpt_current_propagations = 0;
 
-      proxies = Util.MI.empty;
+      proxies = FF.empty_proxies;
 
       lazy_cnf = Matoms.empty;
 
