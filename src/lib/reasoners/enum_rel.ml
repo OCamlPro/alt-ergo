@@ -337,31 +337,6 @@ let query env uf a_ex =
   try ignore(assume env uf [a_ex]); None
   with Ex.Inconsistent (expl, classes) -> Some (expl, classes)
 
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Sum Timers.F_assume;
-      let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_assume;
-      raise e
-  else assume env uf la
-
-let query env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Sum Timers.F_query;
-      let res = query env uf la  in
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_query;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_query;
-      raise e
-  else query env uf la
-
-
 let new_terms _ = Expr.Set.empty
 
 let instantiate ~do_syntactic_matching:_ _ env _ _  = env, []
@@ -371,3 +346,11 @@ let assume_th_elt t th_elt _ =
   | Util.Sum ->
     failwith "This Theory does not support theories extension"
   | _ -> t
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Sum
+    let assume = assume
+    let query = query
+  end)

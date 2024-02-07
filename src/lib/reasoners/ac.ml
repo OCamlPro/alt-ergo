@@ -184,25 +184,25 @@ module Make (X : Sig.X) = struct
         X.term_embed k, eq::acc
 
   let make t =
-    Timers.exec_timer_start Timers.M_AC Timers.F_make;
-    let x = match Expr.term_view t with
-      | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
-        let ra, ctx1 = X.make a in
-        let rb, ctx2 = X.make b in
-        let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
-        let rb, ctx = abstract2 sy b rb ctx in
-        let rxs = [ ra,1 ; rb,1 ] in
-        X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
-                    distribute = true},
-        ctx
-      | {xs; _} ->
-        Printer.print_err
-          "AC theory expects only terms with 2 arguments; \
-           got %i (%a)." (List.length xs) Expr.print_list xs;
-        assert false
-    in
-    Timers.exec_timer_pause Timers.M_AC Timers.F_make;
-    x
+    match Expr.term_view t with
+    | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
+      let ra, ctx1 = X.make a in
+      let rb, ctx2 = X.make b in
+      let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
+      let rb, ctx = abstract2 sy b rb ctx in
+      let rxs = [ ra,1 ; rb,1 ] in
+      X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
+                  distribute = true},
+      ctx
+    | {xs; _} ->
+      Printer.print_err
+        "AC theory expects only terms with 2 arguments; \
+         got %i (%a)." (List.length xs) Expr.print_list xs;
+      assert false
+
+  let make t =
+    Timers.with_timer Timers.M_AC Timers.F_make @@ fun () ->
+    make t
 
   let is_mine_symb sy _ = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
 
@@ -278,18 +278,13 @@ module Make (X : Sig.X) = struct
 
   let subst p v ({ h; l; _ } as tm)  =
     Options.exec_thread_yield ();
-    Timers.exec_timer_start Timers.M_AC Timers.F_subst;
+    Timers.with_timer Timers.M_AC Timers.F_subst @@ fun () ->
     Debug.subst p v tm;
-    let t = X.color {tm with l=compact (fold_flatten h (X.subst p v) l)} in
-    Timers.exec_timer_pause Timers.M_AC Timers.F_subst;
-    t
-
+    X.color {tm with l=compact (fold_flatten h (X.subst p v) l)}
 
   let add h arg arg_l =
-    Timers.exec_timer_start Timers.M_AC Timers.F_add;
-    let r = compact (flatten h arg arg_l) in
-    Timers.exec_timer_pause Timers.M_AC Timers.F_add;
-    r
+    Timers.with_timer Timers.M_AC Timers.F_add @@ fun () ->
+    compact (flatten h arg arg_l)
 
   let fully_interpreted _ = true
 

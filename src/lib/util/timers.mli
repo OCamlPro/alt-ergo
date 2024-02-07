@@ -39,6 +39,8 @@ type ty_module =
   | M_Arrays
   | M_Sum
   | M_Records
+  | M_Adt
+  | M_Bitv
   | M_AC
   | M_Expr
   | M_Triggers
@@ -109,5 +111,6 @@ val set_timer_start : (ty_module -> ty_function -> unit) -> unit
 (** This functions assumes (asserts) that timers() yields true **)
 val set_timer_pause : (ty_module -> ty_function -> unit) -> unit
 
-val exec_timer_start : ty_module -> ty_function -> unit
-val exec_timer_pause : ty_module -> ty_function -> unit
+val with_timer : ty_module -> ty_function -> (unit -> 'a) -> 'a
+(** [with_timer mod_ fun_ f] wraps the call [f ()] with the timer
+    [(mod_, fun_)]. *)

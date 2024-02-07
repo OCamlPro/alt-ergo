@@ -853,5 +853,12 @@ let query env uf (ra, _, ex, _) =
     with
     | Ex.Inconsistent (expl, classes) -> Some (expl, classes)
 
-
 (* ################################################################ *)
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Adt
+    let assume = assume
+    let query = query
+  end)

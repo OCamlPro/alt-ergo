@@ -1787,28 +1787,12 @@ module Make (Th : Theory.S) = struct
         Inst.add_predicate env.inst ~guard ~name gf dep }
 
   let unsat env fg =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_unsat;
-        let env = unsat env fg in
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        env
-      with e ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        raise e
-    else unsat env fg
+    Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
+    unsat env fg
 
   let assume env fg =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        let env = assume env fg in
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-        env
-      with e ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-        raise e
-    else assume env fg
+    Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
+    assume env fg
 
   let empty_guards () = {
     current_guard = Expr.vrai;

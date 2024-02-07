@@ -1512,17 +1512,8 @@ let apply_subst, clear_subst_cache =
   apply_subst, clear_subst_cache
 
 let apply_subst s t =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Expr Timers.F_apply_subst;
-      let res = apply_subst s t in
-      Timers.exec_timer_pause Timers.M_Expr Timers.F_apply_subst;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Expr Timers.F_apply_subst;
-      raise e
-  else apply_subst s t
-
+  Timers.with_timer Timers.M_Expr Timers.F_apply_subst @@ fun () ->
+  apply_subst s t
 
 (** Subterms, and related stuff *)
 

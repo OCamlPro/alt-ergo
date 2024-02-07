@@ -149,17 +149,8 @@ module Sim_Wrap = struct
 
 
   let solve env i =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Simplex Timers.F_solve;
-        let res = solve env i in
-        Timers.exec_timer_pause Timers.M_Simplex Timers.F_solve;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Simplex Timers.F_solve;
-        raise e
-    else solve env i
-
+    Timers.with_timer Timers.M_Simplex Timers.F_solve @@ fun () ->
+    solve env i
 
   let extract_bound i get_lb =
     let func, q =
@@ -1716,31 +1707,6 @@ let query env uf a_ex =
     None
   with Ex.Inconsistent (expl, classes) -> Some (expl, classes)
 
-
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Arith Timers.F_assume;
-      let res =assume ~query:false env uf la in
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_assume;
-      raise e
-  else assume ~query:false env uf la
-
-let query env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Arith Timers.F_query;
-      let res = query env uf la in
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_query;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_query;
-      raise e
-  else query env uf la
-
 let case_split_polynomes env =
   let o = MP.fold
       (fun p i o ->
@@ -2570,18 +2536,18 @@ let assume_th_elt t th_elt dep =
   | _ -> t
 
 let instantiate ~do_syntactic_matching env uf selector =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Arith Timers.F_instantiate;
-      let res = instantiate ~do_syntactic_matching env uf selector in
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Arith Timers.F_instantiate;
-      raise e
-  else instantiate ~do_syntactic_matching env uf selector
+  Timers.with_timer Timers.M_Arith Timers.F_instantiate @@ fun () ->
+  instantiate ~do_syntactic_matching env uf selector
 
 let reinit_cache () =
   let module Oracle = (val get_oracle ()) in
   Oracle.reset_age_cpt ();
   EM.reinit_caches ()
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Arith
+    let assume = assume ~query:false
+    let query = query
+  end)

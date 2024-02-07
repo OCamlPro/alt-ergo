@@ -178,16 +178,8 @@ module Shostak (X : ALIEN) = struct
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
 
   let solve r1 r2 pb =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Sum Timers.F_solve;
-        let res = solve r1 r2 pb in
-        Timers.exec_timer_pause Timers.M_Sum Timers.F_solve;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Sum Timers.F_solve;
-        raise e
-    else solve r1 r2 pb
+    Timers.with_timer Timers.M_Sum Timers.F_solve @@ fun () ->
+    solve r1 r2 pb
 
   let assign_value _ _ _ =
     (* As the models of this theory are finite, the case-split

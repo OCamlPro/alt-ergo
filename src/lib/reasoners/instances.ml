@@ -363,16 +363,8 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         ) lf
 
   let new_facts env tbox selector substs =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_new_facts;
-        let res = new_facts env tbox selector substs in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_new_facts;
-        raise e
-    else new_facts env tbox selector substs
+    Timers.with_timer Timers.M_Match Timers.F_new_facts @@ fun () ->
+    new_facts env tbox selector substs
 
   let mround env axs tbox selector ilvl kind mconf =
     Debug.new_mround ilvl kind;
@@ -406,70 +398,30 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     in
     { env with lemmas = ME.add orig (guard, age,dep) env.lemmas }
 
-  (*** add wrappers to profile exported functions ***)
-
-  let add_terms env s gf =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_add_terms;
-        let res = add_terms env s gf in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_terms;
-        raise e
-    else add_terms env s gf
-
-  let add_lemma env gf dep =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_add_lemma;
-        let res = add_lemma env gf dep in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_lemma;
-        raise e
-    else add_lemma env gf dep
-
-  let add_predicate env ~guard ~name gf =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_add_predicate;
-        let res = add_predicate env ~guard ~name gf in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_add_predicate;
-        raise e
-    else add_predicate env ~guard ~name gf
-
-  let m_lemmas mconf env tbox selector ilvl =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_m_lemmas;
-        let res = m_lemmas env tbox selector ilvl mconf in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_m_lemmas;
-        raise e
-    else m_lemmas env tbox selector ilvl mconf
-
-  let m_predicates mconf env tbox selector ilvl =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_m_predicates;
-        let res = m_predicates env tbox selector ilvl mconf in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_m_predicates;
-        raise e
-    else m_predicates env tbox selector ilvl mconf
-
   let matching_terms_info env = EM.terms_info env.matching
 
   let reinit_em_cache () = EM.reinit_caches ()
+
+  (*** add wrappers to profile exported functions ***)
+
+  let add_terms env s gf =
+    Timers.with_timer Timers.M_Match Timers.F_add_terms @@ fun () ->
+    add_terms env s gf
+
+  let add_lemma env gf dep =
+    Timers.with_timer Timers.M_Match Timers.F_add_lemma @@ fun () ->
+    add_lemma env gf dep
+
+  let add_predicate env ~guard ~name gf =
+    Timers.with_timer Timers.M_Match Timers.F_add_predicate @@ fun () ->
+    add_predicate env ~guard ~name gf
+
+  let m_lemmas mconf env tbox selector ilvl =
+    Timers.with_timer Timers.M_Match Timers.F_m_lemmas @@ fun () ->
+    m_lemmas env tbox selector ilvl mconf
+
+  let m_predicates mconf env tbox selector ilvl =
+    Timers.with_timer Timers.M_Match Timers.F_m_predicates @@ fun () ->
+    m_predicates env tbox selector ilvl mconf
 
 end

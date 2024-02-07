@@ -1308,27 +1308,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
-    if not (Options.get_timers ()) then assume t ff dep
-    else
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        assume t ff dep;
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-      with exn ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-        raise exn
+    Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
+    assume t ff dep
 
   let unsat t ff =
-    if not (Options.get_timers()) then unsat t ff
-    else
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_unsat;
-        let t = unsat t ff in
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        t
-      with exn ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        raise exn
+    Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
+    unsat t ff
 
   let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep

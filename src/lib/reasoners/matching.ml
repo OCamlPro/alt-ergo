@@ -552,16 +552,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
       raise e
 
   let query env tbox =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Match Timers.F_query;
-        let res = query env tbox in
-        Timers.exec_timer_pause Timers.M_Match Timers.F_query;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Match Timers.F_query;
-        raise e
-    else query env tbox
+    Timers.with_timer Timers.M_Match Timers.F_query @@ fun () ->
+    query env tbox
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
 

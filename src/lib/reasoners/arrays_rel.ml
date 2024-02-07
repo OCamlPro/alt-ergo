@@ -428,19 +428,6 @@ let assume env uf la =
   in
   env, { Sig_rel.assume = l; remove = [] }
 
-
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Arrays Timers.F_assume;
-      let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Arrays Timers.F_assume;
-      raise e
-  else assume env uf la
-
 let query _ _ _ = None
 let add env _ _ _ = env, []
 
@@ -452,3 +439,11 @@ let assume_th_elt t th_elt _ =
   | Util.Arrays ->
     failwith "This Theory does not support theories extension"
   | _ -> t
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Arrays
+    let assume = assume
+    let query = query
+  end)

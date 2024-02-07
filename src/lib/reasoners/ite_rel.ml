@@ -209,18 +209,6 @@ let assume env _ la =
     let env, deds = extract_pending_deductions env in
     env, { Sig_rel.assume = deds; remove = [] }
 
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Ite Timers.F_assume;
-      let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
-      raise e
-  else assume env uf la
-
 let case_split _env _uf ~for_model:_ = []
 
 let optimizing_objective _env _uf _o = None
@@ -231,3 +219,11 @@ let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t _ _ = t
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Ite
+    let assume = assume
+    let query = query
+  end)

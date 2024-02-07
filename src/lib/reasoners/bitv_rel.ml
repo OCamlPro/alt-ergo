@@ -715,3 +715,11 @@ let assume_th_elt t th_elt _ =
   | Util.Bitv ->
     failwith "This Theory does not support theories extension"
   | _ -> t
+
+include Rel_utils.Instrumentation (struct
+    type nonrec t = t
+
+    let mod_ = Timers.M_Bitv
+    let assume = assume
+    let query = query
+  end)

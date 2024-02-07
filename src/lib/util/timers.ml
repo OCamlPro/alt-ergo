@@ -43,6 +43,8 @@ type ty_module =
   | M_Arrays
   | M_Sum
   | M_Records
+  | M_Adt
+  | M_Bitv
   | M_AC
   | M_Expr
   | M_Triggers
@@ -62,6 +64,8 @@ let all_modules =
     M_Arrays;
     M_Sum;
     M_Records;
+    M_Adt;
+    M_Bitv;
     M_AC;
     M_Expr;
     M_Triggers;
@@ -134,6 +138,8 @@ let string_of_ty_module k = match k with
   | M_Arrays   -> "Arrays"
   | M_Sum      -> "Sum"
   | M_Records  -> "Records"
+  | M_Adt      -> "Adt"
+  | M_Bitv     -> "Bitv"
   | M_AC       -> "AC"
   | M_Expr     -> "Expr"
   | M_Triggers -> "Triggers"
@@ -312,5 +318,9 @@ let (timer_pause : (ty_module -> ty_function -> unit) ref) =
 let set_timer_start f = assert (Options.get_timers ()); timer_start := f
 let set_timer_pause f = assert (Options.get_timers ()); timer_pause := f
 
-let exec_timer_start kd msg = !timer_start kd msg
-let exec_timer_pause kd = !timer_pause kd
+let with_timer mod_ fun_ f =
+  if not @@ Options.get_timers () then f ()
+  else begin
+    !timer_start mod_ fun_;
+    Fun.protect ~finally:(fun _ -> !timer_pause mod_ fun_) f
+  end
