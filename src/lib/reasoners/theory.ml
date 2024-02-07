@@ -702,7 +702,7 @@ module Main_Default : S = struct
         do_case_split_aux t ~for_model:false
       | (lview, _, _) :: _ ->
         let lit = Shostak.(Literal.make @@ LSem (L.make lview)) in
-        acts.Th_util.acts_add_decision_lit lit;
+        acts.Th_util.acts_add_split lit;
         t, SE.empty
 
   let do_case_split_or_optimize ?acts t =

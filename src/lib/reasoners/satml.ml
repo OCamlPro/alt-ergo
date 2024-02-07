@@ -394,6 +394,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
           These are added by the theory through calls to [acts_add_decision]. *)
 
+      mutable next_split : Atom.atom option;
+      (** Literal that should be decided on before the solver answers [Sat].
+
+          These are added by the theory through calls to [acts_add_split]. The
+          difference with [next_decisions] is that the [splits] are optional
+          (i.e. they can be dropped, and the solver is allowed to answer [Sat]
+          without deciding on the splits if it chooses so) whereas once added,
+          the [decisions] are guaranteed to be decided on at some point (unless
+          backtracking occurs). *)
+
       mutable next_objective :
         (Objective.Function.t * Objective.Value.t * Atom.atom) option;
       (** Objective functions that must be optimized before the solver can
@@ -516,6 +526,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       next_dec_guard = 0;
 
       next_decisions = [];
+
+      next_split = None;
 
       next_objective = None;
     }
@@ -689,6 +701,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        with _ -> assert false
       );
       env.next_decisions <- [];
+      env.next_split <- None;
       env.next_objective <- None
     end;
     if Options.get_profiling() then Profiling.reset_dlevel (decision_level env);
@@ -834,6 +847,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     ) else
       assert (atom.is_true || atom.neg.is_true)
 
+  let acts_add_split env lit =
+    let atom, _ = Atom.add_lit_atom env.hcons_env lit [] in
+    if atom.var.level < 0 then (
+      assert (not atom.is_true && not atom.neg.is_true);
+      env.next_split <- Some atom
+    ) else
+      assert (atom.is_true || atom.neg.is_true)
+
   let acts_add_objective env fn value lit =
     (* Note: we must store the objective even if the atom is already true,
        because we must send back the objective to the theory afterwards.
@@ -845,6 +866,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let[@inline] theory_slice env : _ Th_util.acts = {
     acts_add_decision_lit = acts_add_decision_lit env ;
+    acts_add_split = acts_add_split env ;
     acts_add_objective = acts_add_objective env ;
   }
 
@@ -1529,6 +1551,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let conflict_analyze_and_fix env confl =
     env.next_decisions <- [];
+    env.next_split <- None;
+    env.next_objective <- None;
     env.conflicts <- env.conflicts + 1;
     if decision_level env = 0 then report_conflict env confl;
     match confl with
@@ -1735,9 +1759,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         env.next_decisions <- tl;
         pick_branch_aux env atom
       | [] ->
-        match Vheap.remove_min env.order with
-        | v -> pick_branch_aux env v.na
-        | exception Not_found -> raise_notrace Sat
+        match env.next_split with
+        | Some atom ->
+          env.next_split <- None;
+          pick_branch_aux env atom
+        | None ->
+          match Vheap.remove_min env.order with
+          | v -> pick_branch_aux env v.na
+          | exception Not_found -> raise_notrace Sat
 
   let pick_branch_lit env =
     if env.next_dec_guard < Vec.size env.increm_guards then
@@ -1751,8 +1780,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       pick_branch_lit env
 
   let is_sat env =
+    Option.is_none env.next_objective &&
     Lists.is_empty env.next_decisions &&
-    Option.is_none env.next_objective && (
+    Option.is_none env.next_split && (
       nb_assigns env = nb_vars env ||
       (Options.get_cdcl_tableaux_inst () &&
        Matoms.is_empty env.lazy_cnf))
@@ -1992,10 +2022,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let try_to_backjump_further =
     let rec better_bj env sf =
+      (* If we *don't* backjump further, we need to restore any part of the
+         environment that depends on the theory. *)
       let old_dlvl = decision_level env in
       let old_lazy = env.lazy_cnf in
       let old_relevants = env.relevants in
       let old_tenv = env.tenv in
+      let old_decisions = env.next_decisions in
+      let old_split = env.next_split in
+      let old_objective = env.next_objective in
       let fictive_lazy =
         SFF.fold (fun ff acc -> add_form_to_lazy_cnf env acc ff)
           sf old_lazy
@@ -2009,7 +2044,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           assert (old_dlvl == new_dlvl);
           env.lazy_cnf <- old_lazy;
           env.relevants <- old_relevants;
-          env.tenv     <- old_tenv
+          env.tenv     <- old_tenv;
+          env.next_decisions <- old_decisions;
+          env.next_split <- old_split;
+          env.next_objective <- old_objective
         end
     in
     fun env sff ->

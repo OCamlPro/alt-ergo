@@ -124,6 +124,15 @@ type 'literal acts = {
       Decisions added using [acts_add_decision_lit] are forgotten when
       backtracking. *)
 
+  acts_add_split : 'literal -> unit ;
+  (** Let the SAT solver know about a case split. The SAT solver should decide
+      on the provided formula before answering [Sat], although it is not
+      required to do so. The order of decisions among multiple calls of
+      [acts_add_split] is unspecified, and the solver is allowed to drop some
+      of them.
+
+      Splits added using [acts_add_split] are forgotten when backtracking. *)
+
   acts_add_objective :
     Objective.Function.t -> Objective.Value.t -> 'literal -> unit ;
   (** Ask the SAT solver to optimistically select the appropriate value for the
