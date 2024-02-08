@@ -396,3 +396,17 @@ let print_smtlib_err ?(flushed=true) s =
   in
   Format.fprintf fmt "(error \"";
   Format.kfprintf k fmt s
+
+let reporter ppf =
+  Fmt.set_style_renderer ppf `Ansi_tty;
+  let report _src level ~over k msgf =
+    let k _ = over (); k () in
+    let with_header h _tags k ppf fmt =
+      Fmt.kpf k ppf ("%a @[" ^^ fmt ^^ "@]@.") Logs_fmt.pp_header (level, h)
+    in
+    msgf @@ fun ?header ?tags fmt -> with_header header tags k ppf fmt
+  in
+  { Logs.report }
+
+module Make () = struct
+end

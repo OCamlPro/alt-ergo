@@ -32,7 +32,7 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
-let timer = Timers.M_Sum
+let timer = Modules.M_Sum
 
 type 'a abstract = 'a Enum.abstract =
   | Cons of Hs.t * Ty.t

@@ -52,7 +52,7 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Sum"
 
-  let timer = Timers.M_Sum
+  let timer = Modules.M_Sum
 
   let is_mine_symb sy ty =
     match sy, ty with

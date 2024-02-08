@@ -46,7 +46,7 @@ module LR = Uf.LX
 module SLR = Set.Make(LR)
 module MHs = Hs.Map
 
-let timer = Timers.M_Adt
+let timer = Modules.M_Adt
 
 type t =
   {

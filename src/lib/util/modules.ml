@@ -28,71 +28,73 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type 'a literal = 'a Xliteral.view Literal.view
+(* To get rid of warnings produced by ppx_deriving. *)
+[@@@warning "-32"]
 
-type instances = (Expr.t list * Expr.gformula * Explanation.t) list
+(* The type of modules, followed by the list of every element. *)
+type t =
+  | M_None
+  | M_Combine
+  | M_Typing
+  | M_Sat
+  | M_Match
+  | M_CC
+  | M_UF
+  | M_Arith
+  | M_Arrays
+  | M_Sum
+  | M_Records
+  | M_Adt
+  | M_Bitv
+  | M_AC
+  | M_Expr
+  | M_Triggers
+  | M_Simplex
+  | M_Ite
+[@@deriving enum]
 
-type 'a input =
-  'a Xliteral.view * Expr.t option * Explanation.t * Th_util.lit_origin
+let all =
+  let l = [
+    M_None;
+    M_Combine;
+    M_Typing;
+    M_Sat;
+    M_Match;
+    M_CC;
+    M_UF;
+    M_Arith;
+    M_Arrays;
+    M_Sum;
+    M_Records;
+    M_Adt;
+    M_Bitv;
+    M_AC;
+    M_Expr;
+    M_Triggers;
+    M_Simplex;
+    M_Ite
+  ]
+  in
+  assert ((List.length l) = max + 1);
+  l
 
-type 'a fact = 'a literal * Explanation.t * Th_util.lit_origin
-
-type 'a facts = {
-  equas     : 'a fact Queue.t;
-  diseqs  : 'a fact Queue.t;
-  ineqs   : 'a fact Queue.t;
-  mutable touched : 'a Util.MI.t;
-}
-
-type 'a result = {
-  assume : 'a fact list;
-  remove: Expr.t list;
-}
-
-module type RELATION = sig
-  type t
-
-  val timer : Modules.t
-
-  val empty : Expr.Set.t list -> t
-
-  val assume : t ->
-    Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
-  val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
-
-  val case_split :
-    t -> Uf.t -> for_model:bool -> Th_util.case_split list
-  (** case_split env returns a list of equalities
-
-      The returned case splits *must* have a [CS] origin; see the doc of
-      [Th_util.case_split].
-
-      The [for_model] flag is [true] when we are splitting for the purpose of
-      generating a model; the case split may need to be more aggressive in this
-      case to ensure completeness.
-
-      Note: not always equalities (e.g. the arrays theory returns
-      disequalities) *)
-
-  val optimizing_objective :
-    t -> Uf.t -> Objective.Function.t -> Th_util.optimized_split option
-  (** [optimizing_split env uf o] tries to optimize objective [o].
-      Returns [None] if the theory cannot optimize the objective. *)
-
-  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
-    t * (Shostak.Combine.r Xliteral.view * Explanation.t) list
-  (** add a representant to take into account *)
-
-  val instantiate :
-    do_syntactic_matching:bool ->
-    Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
-    t * instances
-
-  val new_terms : t -> Expr.Set.t
-  (** [new_terms env] returns all the new terms created by the theory.
-      These terms can be used to instantiate axiomes. *)
-
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
-
-end
+let show k =
+  match k with
+  | M_None     -> "None"
+  | M_Combine  -> "Combine"
+  | M_Typing   -> "Typing"
+  | M_Sat      -> "Sat"
+  | M_Match    -> "Match"
+  | M_CC       -> "CC"
+  | M_UF       -> "UF"
+  | M_Arith    -> "Arith"
+  | M_Arrays   -> "Arrays"
+  | M_Sum      -> "Sum"
+  | M_Records  -> "Records"
+  | M_Adt      -> "Adt"
+  | M_Bitv     -> "Bitv"
+  | M_AC       -> "AC"
+  | M_Expr     -> "Expr"
+  | M_Triggers -> "Triggers"
+  | M_Simplex  -> "Simplex"
+  | M_Ite      -> "Ite"
