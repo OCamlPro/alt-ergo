@@ -30,7 +30,7 @@
 
 type t = unit
 
-let timer = Modules.M_Records
+let timer = Self.M_Records
 
 let empty _ = ()
 let assume _ _ _ =

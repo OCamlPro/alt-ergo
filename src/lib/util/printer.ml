@@ -397,16 +397,74 @@ let print_smtlib_err ?(flushed=true) s =
   Format.fprintf fmt "(error \"";
   Format.kfprintf k fmt s
 
-let reporter ppf =
-  Fmt.set_style_renderer ppf `Ansi_tty;
-  let report _src level ~over k msgf =
+let mdl_src = Logs.Src.create ~doc:"model" "alt-ergo-lib.model"
+
+let pp_source ppf src =
+  let name = Logs.Src.doc src in
+  Fmt.pf ppf "%s" name
+
+let pp_smtlib_header ppf level =
+  match (level : Logs.level) with
+  | App | Info -> ()
+  | Debug | Warning | Error -> Fmt.pf ppf "; "
+
+let tags_iter (f : Logs.Tag.t -> unit) (t : Logs.Tag.set) : unit =
+  Logs.Tag.fold (fun t () -> f t) t ()
+
+let pp_tag ppf (Logs.Tag.V (d, v)) = (Logs.Tag.printer d) ppf v
+
+let reporter =
+  let report src level ~over k msgf =
     let k _ = over (); k () in
-    let with_header h _tags k ppf fmt =
-      Fmt.kpf k ppf ("%a @[" ^^ fmt ^^ "@]@.") Logs_fmt.pp_header (level, h)
+    let with_header h tags k fmt =
+      if Logs.Src.equal src Logs.default then
+        Fmt.kpf k (Options.Output.get_fmt_regular ())
+          ("%a@[" ^^ fmt ^^ "@]@.")
+          pp_smtlib_header level
+      else if Logs.Src.equal src mdl_src then
+        Fmt.kpf k (Options.Output.get_fmt_models ())
+          ("@[" ^^ fmt ^^ "@]@.")
+      else
+        let ppf = Options.Output.get_fmt_diagnostic () in
+        if Options.get_output_with_colors () then
+          Fmt.set_style_renderer ppf `Ansi_tty;
+        Fmt.kpf k ppf
+          ("%a[%a]%a @[" ^^ fmt ^^ "@]@.")
+          Logs_fmt.pp_header (level, h)
+          pp_source src
+          Fmt.(option (
+              iter ~sep:sp tags_iter pp_tag
+              |> brackets)) tags
     in
-    msgf @@ fun ?header ?tags fmt -> with_header header tags k ppf fmt
+    msgf @@ fun ?header ?tags fmt -> with_header header tags k fmt
   in
   { Logs.report }
 
-module Make () = struct
+let with_fn ?fn (logger : 'a Logs.log) : 'a Logs.log =
+  fun (msgf : ('a, unit) Logs.msgf) ->
+  match fn with
+  | Some fn ->
+    logger @@ fun k ->
+    let k ?header ?tags fmt =
+      let tags =
+        Option.value tags ~default:Logs.Tag.empty
+        |> Logs.Tag.add (Self.tag_fn fn) fn
+      in
+      k ?header ~tags fmt
+    in
+    msgf k
+  | None ->
+    logger msgf
+
+module Make (M : sig val mod_ : Self.mod_ end) = struct
+  let src = Self.get_source M.mod_
+
+  let err ?fn msg =
+    with_fn ?fn (Logs.err ~src) msg
+
+  let debug ?fn msg =
+    with_fn ?fn (Logs.debug ~src) msg
+
+  let warn ?fn msg =
+    with_fn ?fn (Logs.warn ~src) msg
 end

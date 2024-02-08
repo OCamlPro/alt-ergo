@@ -52,7 +52,7 @@ type 'a result = {
 module type RELATION = sig
   type t
 
-  val timer : Modules.t
+  val timer : Self.mod_
 
   val empty : Expr.Set.t list -> t
 
