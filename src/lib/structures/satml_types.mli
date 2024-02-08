@@ -103,7 +103,9 @@ module type ATOM = sig
 
   (*val made_vars_info : unit -> int * var list*)
 
-  val cmp_var : var -> var -> int
+  val equal_var : var -> var -> bool
+  val compare_var : var -> var -> int
+  val hash_var : var -> int
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
