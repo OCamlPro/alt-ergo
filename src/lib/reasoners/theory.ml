@@ -887,11 +887,11 @@ module Main_Default : S = struct
   let cl_extract env = CC_X.cl_extract env.gamma
 
   let assume ?(ordered=true) facts t =
-    Timers.with_timer Timers.M_CC Timers.F_assume @@ fun () ->
+    Timers.with_timer Modules.M_CC Timers.F_assume @@ fun () ->
     assume ordered facts t
 
   let query a t =
-    Timers.with_timer Timers.M_CC Timers.F_query @@ fun () ->
+    Timers.with_timer Modules.M_CC Timers.F_query @@ fun () ->
     query a t
 
   let extract_ground_terms env = env.terms

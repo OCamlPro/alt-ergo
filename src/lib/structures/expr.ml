@@ -1565,7 +1565,7 @@ let apply_subst, clear_subst_cache =
   apply_subst, clear_subst_cache
 
 let apply_subst s t =
-  Timers.with_timer Timers.M_Expr Timers.F_apply_subst @@ fun () ->
+  Timers.with_timer Modules.M_Expr Timers.F_apply_subst @@ fun () ->
   apply_subst s t
 
 (** Subterms, and related stuff *)

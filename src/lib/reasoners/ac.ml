@@ -312,12 +312,12 @@ module Make (X : Sig.X) = struct
 
   let subst p v ({ h; l; _ } as tm)  =
     Options.exec_thread_yield ();
-    Timers.with_timer Timers.M_AC Timers.F_subst @@ fun () ->
+    Timers.with_timer Modules.M_AC Timers.F_subst @@ fun () ->
     Debug.subst p v tm;
     X.color {tm with l=compact (fold_flatten h (X.subst p v) l)}
 
   let add h arg arg_l =
-    Timers.with_timer Timers.M_AC Timers.F_add @@ fun () ->
+    Timers.with_timer Modules.M_AC Timers.F_add @@ fun () ->
     compact (flatten h arg arg_l)
 
   let fully_interpreted _ = true

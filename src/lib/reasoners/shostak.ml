@@ -361,23 +361,23 @@ struct
       AC.is_mine_symb sb ty
     with
     | true, false, false, false, false ->
-      Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () ->
+      Timers.with_timer Modules.M_Arith Timers.F_make @@ fun () ->
       ARITH.make t
 
     | false, true, false, false, false ->
-      Timers.with_timer Timers.M_Records Timers.F_make @@ fun () ->
+      Timers.with_timer Modules.M_Records Timers.F_make @@ fun () ->
       RECORDS.make t
 
     | false, false, true, false, false ->
-      Timers.with_timer Timers.M_Bitv Timers.F_make @@ fun () ->
+      Timers.with_timer Modules.M_Bitv Timers.F_make @@ fun () ->
       BITV.make t
 
     | false, false, false, true, false ->
-      Timers.with_timer Timers.M_Adt Timers.F_make @@ fun () ->
+      Timers.with_timer Modules.M_Adt Timers.F_make @@ fun () ->
       ADT.make t
 
     | false, false, false, false, true  ->
-      Timers.with_timer Timers.M_AC Timers.F_make @@ fun () ->
+      Timers.with_timer Modules.M_AC Timers.F_make @@ fun () ->
       AC.make t
 
     | false, false, false, false, false ->
@@ -543,7 +543,7 @@ struct
             ADT.solve ra rb pb
 
           | _                  ->
-            Timers.with_timer Timers.M_Combine Timers.F_solve @@ fun () ->
+            Timers.with_timer Modules.M_Combine Timers.F_solve @@ fun () ->
             solve_uninterpreted ra rb pb
         in
         solve_list pb

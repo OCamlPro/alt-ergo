@@ -25,26 +25,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type ty_module =
-  | M_None
-  | M_Combine
-  | M_Typing
-  | M_Sat
-  | M_Match
-  | M_CC
-  | M_UF
-  | M_Arith
-  | M_Arrays
-  | M_Sum
-  | M_Records
-  | M_Adt
-  | M_Bitv
-  | M_AC
-  | M_Expr
-  | M_Triggers
-  | M_Simplex
-  | M_Ite
-
 type ty_function =
   | F_add
   | F_add_lemma
@@ -76,39 +56,35 @@ val empty : unit -> t
 (** reset the given env to empty *)
 val reset : t -> unit
 
-(** save the current timer and start the timer "ty_module x ty_function" **)
-val start : t -> ty_module -> ty_function -> unit
+(** save the current timer and start the timer "Modules.t x ty_function" **)
+val start : t -> Modules.t -> ty_function -> unit
 
-(** pause the timer "ty_module x ty_function" and restore the former timer **)
-val pause : t -> ty_module -> ty_function -> unit
+(** pause the timer "Modules.t x ty_function" and restore the former timer **)
+val pause : t -> Modules.t -> ty_function -> unit
 
 (** update the value of the current timer **)
 val update : t -> unit
 
-(** get the value of the timer "ty_module x ty_function" **)
-val get_value : t -> ty_module -> ty_function -> float
+(** get the value of the timer "Modules.t x ty_function" **)
+val get_value : t -> Modules.t -> ty_function -> float
 
-(** get the sum of the "ty_function" timers for the given "ty_module" **)
-val get_sum : t -> ty_module -> float
+(** get the sum of the "ty_function" timers for the given "Modules.t" **)
+val get_sum : t -> Modules.t -> float
 
-val current_timer : t -> ty_module * ty_function * int
+val current_timer : t -> Modules.t * ty_function * int
 
-val string_of_ty_module : ty_module -> string
+val show_ty_function : ty_function -> string
 
-val string_of_ty_function : ty_function -> string
-
-val get_stack : t -> (ty_module * ty_function * int) list
-
-val all_modules : ty_module list
+val get_stack : t -> (Modules.t * ty_function * int) list
 
 val all_functions : ty_function list
 
 (** This functions assumes (asserts) that timers() yields true **)
-val set_timer_start : (ty_module -> ty_function -> unit) -> unit
+val set_timer_start : (Modules.t -> ty_function -> unit) -> unit
 
 (** This functions assumes (asserts) that timers() yields true **)
-val set_timer_pause : (ty_module -> ty_function -> unit) -> unit
+val set_timer_pause : (Modules.t -> ty_function -> unit) -> unit
 
-val with_timer : ty_module -> ty_function -> (unit -> 'a) -> 'a
+val with_timer : Modules.t -> ty_function -> (unit -> 'a) -> 'a
 (** [with_timer mod_ fun_ f] wraps the call [f ()] with the timer
     [(mod_, fun_)]. *)

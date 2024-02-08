@@ -1340,11 +1340,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
-    Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
+    Timers.with_timer Modules.M_Sat Timers.F_assume @@ fun () ->
     assume t ff dep
 
   let unsat t ff =
-    Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
+    Timers.with_timer Modules.M_Sat Timers.F_unsat @@ fun () ->
     unsat t ff
 
   let assume_th_elt env th_elt dep =

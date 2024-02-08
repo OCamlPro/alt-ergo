@@ -1781,11 +1781,11 @@ module Make (Th : Theory.S) = struct
         Inst.add_predicate env.inst ~guard ~name gf dep }
 
   let unsat env fg =
-    Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
+    Timers.with_timer Modules.M_Sat Timers.F_unsat @@ fun () ->
     unsat env fg
 
   let assume env fg =
-    Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
+    Timers.with_timer Modules.M_Sat Timers.F_assume @@ fun () ->
     assume env fg
 
   let empty_guards () = {

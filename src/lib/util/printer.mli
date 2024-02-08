@@ -178,3 +178,5 @@ val print_status_preprocess :
 val print_smtlib_err :
   ?flushed:bool ->
   ('a, Format.formatter, unit) format -> 'a
+
+val reporter : Format.formatter -> Logs.reporter

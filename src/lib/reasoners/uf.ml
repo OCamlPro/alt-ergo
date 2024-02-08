@@ -864,7 +864,7 @@ let union env r1 r2 dep =
   env, res
 
 let union env r1 r2 dep =
-  Timers.with_timer Timers.M_UF Timers.F_union @@ fun () ->
+  Timers.with_timer Modules.M_UF Timers.F_union @@ fun () ->
   union env r1 r2 dep
 
 let rec distinct env rl dep =
@@ -1001,7 +1001,7 @@ let make uf t = ME.find t uf.make
 (*** add wrappers to profile exported functions ***)
 
 let add env t =
-  Timers.with_timer Timers.M_UF Timers.F_add_terms @@ fun () ->
+  Timers.with_timer Modules.M_UF Timers.F_add_terms @@ fun () ->
   add env t
 
 let is_normalized env r =

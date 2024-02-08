@@ -51,7 +51,7 @@ module TB =
         if c <> 0 then c else Bool.compare b1 b2
     end)
 
-let timer = Timers.M_Ite
+let timer = Modules.M_Ite
 
 (* The present theory simplifies the ite terms t of the form
     ite(pred, t1, t2)

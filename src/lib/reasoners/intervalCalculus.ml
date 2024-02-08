@@ -97,7 +97,7 @@ end
 
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
-let timer = Timers.M_Arith
+let timer = Modules.M_Arith
 
 type t = {
   inequations : P.t Inequalities.t MPL.t;
@@ -148,7 +148,7 @@ module Sim_Wrap = struct
 
 
   let solve env i =
-    Timers.with_timer Timers.M_Simplex Timers.F_solve @@ fun () ->
+    Timers.with_timer Modules.M_Simplex Timers.F_solve @@ fun () ->
     solve env i
 
   let extract_bound i get_lb =

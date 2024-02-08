@@ -42,7 +42,7 @@ module Rel5 : Sig_rel.RELATION = Adt_rel
 module Rel6 : Sig_rel.RELATION = Ite_rel
 
 (* This value is unused. *)
-let timer = Timers.M_None
+let timer = Modules.M_None
 
 type t = {
   r1: Rel1.t;

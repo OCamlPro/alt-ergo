@@ -33,7 +33,7 @@ module SX = Shostak.SXH
 module LR = Uf.LX
 module Th = Shostak.Enum
 
-let timer = Timers.M_Sum
+let timer = Modules.M_Sum
 
 module Domain = struct
   type t = {

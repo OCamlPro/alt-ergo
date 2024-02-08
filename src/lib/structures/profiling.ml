@@ -320,7 +320,7 @@ let columns : (string * string * int * bool option * 'a) list =
     "Mod.", "Current active module", 7, None,
     (fun _ _ sz ->
        let kd, _msg, _ = current_timer () in
-       string_resize (Timers.string_of_ty_module kd) sz);
+       string_resize (Modules.show kd) sz);
 
     "Module Id", "Each call to a module is tagged with a fresh Id", 10, None,
     (fun _ _ sz ->
@@ -425,64 +425,64 @@ let columns : (string * string * int * bool option * 'a) list =
     (*-----------------------------------------------------------------*)
     "SAT", "Time spent in SAT module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Sat in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Sat in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Matching", "Time spent in Matching module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Match in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Match in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "CC", "Time spent in CC module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_CC in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_CC in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4)
     );
 
     "Arith", "Time spent in Arith module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Arith in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Arith in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Arrays", "Time spent in Arrays module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Arrays in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Arrays in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Sum", "Time spent in Sum module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Sum in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Sum in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Records", "Time spent in Records module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Records in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_Records in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "AC", "Time spent in AC module(s)", 16, Some false,
     (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_AC in
+       let curr = Timers.get_sum (get_timers ()) Modules.M_AC in
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
     "Total", "Time spent in 'supervised' module(s)", 11, Some false,
     (fun _ _ sz ->
        let timers = get_timers () in
-       let tsat = Timers.get_sum timers Timers.M_Sat in
-       let tmatch = Timers.get_sum timers Timers.M_Match in
-       let tcc = Timers.get_sum timers Timers.M_CC in
-       let tarith = Timers.get_sum timers Timers.M_Arith in
-       let tarrays = Timers.get_sum timers Timers.M_Arrays in
-       let tsum = Timers.get_sum timers Timers.M_Sum in
-       let trecs = Timers.get_sum timers Timers.M_Records in
-       let tac = Timers.get_sum timers Timers.M_AC in
+       let tsat = Timers.get_sum timers Modules.M_Sat in
+       let tmatch = Timers.get_sum timers Modules.M_Match in
+       let tcc = Timers.get_sum timers Modules.M_CC in
+       let tarith = Timers.get_sum timers Modules.M_Arith in
+       let tarrays = Timers.get_sum timers Modules.M_Arrays in
+       let tsum = Timers.get_sum timers Modules.M_Sum in
+       let trecs = Timers.get_sum timers Modules.M_Records in
+       let tac = Timers.get_sum timers Modules.M_AC in
        let total = tsat+.tmatch+.tcc+.tarith+.tarrays+.tsum+.trecs+.tac in
        float_resize total sz);
   ]
@@ -612,14 +612,14 @@ let print_call_tree _forced _steps fmt =
   List.iter
     (fun (k, f, id) ->
        Format.fprintf fmt "(%s, %s, %s) --> "
-         (string_resize (Timers.string_of_ty_module k) 5)
-         (string_resize (Timers.string_of_ty_function f) 10)
+         (string_resize (Modules.show k) 5)
+         (string_resize (Timers.show_ty_function f) 10)
          (int_resize id 7)
     )(List.rev stack);
   let m, f, id = Timers.current_timer timers in
   Format.fprintf fmt "(%s, %s, %s)@."
-    (string_resize (Timers.string_of_ty_module m) 5)
-    (string_resize (Timers.string_of_ty_function f) 10)
+    (string_resize (Modules.show m) 5)
+    (string_resize (Timers.show_ty_function f) 10)
     (int_resize id 7)
 
 let switch fmt =
@@ -648,14 +648,14 @@ let float_print =
 let line_of_module =
   let open Format in
   fun timers fmt f ->
-    fprintf fmt "%s " (string_resize (Timers.string_of_ty_function f) 13);
+    fprintf fmt "%s " (string_resize (Timers.show_ty_function f) 13);
     let cpt = ref 0. in
     List.iter
       (fun m ->
          let v = Timers.get_value timers m f in
          cpt := !cpt +. v;
          fprintf fmt "| %a  " float_print v
-      ) Timers.all_modules;
+      ) Modules.all;
     fprintf fmt "| %a        |@." float_print !cpt
 
 
@@ -668,7 +668,7 @@ let line_of_sum_module =
     List.iter
       (fun m ->
          fprintf fmt "| %a  " float_print (Timers.get_sum timers m))
-      Timers.all_modules;
+      Modules.all;
     fprintf fmt "| GTimer %a |@." float_print (Options.Time.value())
 
 let timers_table =
@@ -681,8 +681,8 @@ let timers_table =
     fprintf fmt "              ";
     List.iter
       (fun f ->
-         fprintf fmt"| %s" (string_resize (Timers.string_of_ty_module f) 9))
-      Timers.all_modules;
+         fprintf fmt"| %s" (string_resize (Modules.show f) 9))
+      Modules.all;
     fprintf fmt "|@.";
     for _ = 0 to 206 do fprintf fmt "-" done;
     fprintf fmt "|@.";
@@ -777,9 +777,9 @@ let init () =
   set_sigprof ();
   (* Registering timer statistics. *)
   List.iter
-    (fun (m : Timers.ty_module) ->
-       let name = Format.sprintf "timer-%s" (Timers.string_of_ty_module m) in
+    (fun (m : Modules.t) ->
+       let name = Format.sprintf "timer-%s" (Modules.show m) in
        register_float_stat
          name
          (fun () -> Timers.get_sum state.timers m))
-    Timers.all_modules
+    Modules.all

@@ -45,7 +45,7 @@ module TSet = Set.Make
       let compare = Nest.compare
     end)
 
-let timer = Timers.M_Adt
+let timer = Modules.M_Adt
 
 module Domain = struct
   (* Set of possible constructors. The explanation justifies that any value

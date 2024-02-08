@@ -49,7 +49,7 @@ type 'a result = {
 module type RELATION = sig
   type t
 
-  val timer : Timers.ty_module
+  val timer : Modules.t
 
   val empty : Uf.t -> t * Uf.GlobalDomains.t
   (** [empty uf] creates a new environment for this relation and allows for the

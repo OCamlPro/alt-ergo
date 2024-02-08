@@ -42,5 +42,7 @@ let () =
   parse_cmdline ();
   AltErgoLib.Printer.init_colors ();
   AltErgoLib.Printer.init_output_format ();
+  (* Logs.set_reporter (AltErgoLib.Printer.reporter Fmt.stderr);
+     Logs.set_level (Some Logs.Error); *)
   Signals_profiling.init_signals ();
   Solving_loop.main ()
