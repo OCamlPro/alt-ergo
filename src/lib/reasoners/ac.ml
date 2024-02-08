@@ -200,10 +200,6 @@ module Make (X : Sig.X) = struct
          got %i (%a)." (List.length xs) Expr.print_list xs;
       assert false
 
-  let make t =
-    Timers.with_timer Timers.M_AC Timers.F_make @@ fun () ->
-    make t
-
   let is_mine_symb sy _ = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
 
   let type_info { t = ty; _ } = ty

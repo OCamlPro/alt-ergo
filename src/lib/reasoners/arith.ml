@@ -87,6 +87,8 @@ module Shostak
 
   let name = "arith"
 
+  let timer = Timers.M_Arith
+
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
 
@@ -741,14 +743,6 @@ module Shostak
       solve_one pb r1 r2 lvs false (* false == safe mode *)
     with Unsafe ->
       assert false
-
-  let make t =
-    Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () ->
-    make t
-
-  let solve r1 r2 pb =
-    Timers.with_timer Timers.M_Arith Timers.F_solve @@ fun () ->
-    solve r1 r2 pb
 
   let print = P.print
 

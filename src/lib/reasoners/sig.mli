@@ -44,6 +44,8 @@ module type SHOSTAK = sig
   (** Name of the theory*)
   val name : string
 
+  val timer : Timers.ty_module
+
   (** return true if the symbol and the type are owned by the theory*)
   val is_mine_symb : Symbols.t -> Ty.t -> bool
 

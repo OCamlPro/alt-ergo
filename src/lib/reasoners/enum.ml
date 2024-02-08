@@ -52,6 +52,8 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Sum"
 
+  let timer = Timers.M_Sum
+
   let is_mine_symb sy ty =
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tsum _ -> true
@@ -176,10 +178,6 @@ module Shostak (X : ALIEN) = struct
 
   let solve r1 r2 pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
-
-  let solve r1 r2 pb =
-    Timers.with_timer Timers.M_Sum Timers.F_solve @@ fun () ->
-    solve r1 r2 pb
 
   let assign_value _ _ _ =
     (* As the models of this theory are finite, the case-split
