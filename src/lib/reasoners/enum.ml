@@ -52,7 +52,7 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Sum"
 
-  let timer = Modules.M_Sum
+  let timer = Self.M_Sum
 
   let is_mine_symb sy ty =
     match sy, ty with
@@ -67,41 +67,35 @@ module Shostak (X : ALIEN) = struct
 
   let color _ = assert false
 
+  module P = Printer.Make (struct let mod_ = Self.M_Sum end)
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
-    open Printer
+    let pp ppf a =
+      match a with
+      | Cons (hs, _) -> Hs.print ppf hs
+      | Alien x -> X.print ppf x
 
-    let print fmt = function
-      | Cons (hs,_) -> Format.fprintf fmt "%s" (Hs.view hs)
-      | Alien x -> Format.fprintf fmt "%a" X.print x
+    let pp_res ppf res =
+      match res with
+      | Some [p, v] ->
+        Fmt.pf ppf "solvable with %a |-> %a" X.print p X.print v
+      | Some [] ->
+        Fmt.pf ppf "trivial"
+      | None ->
+        Fmt.pf ppf "unsovable"
+      | _ -> assert false
 
-    let solve_bis a b =
-      if Options.get_debug_sum () then
-        print_dbg
-          ~module_name:"Enum" ~function_name:"solve"
-          "@[<v 2>we solve %a = %a@ " X.print a X.print b
-
-    let solve_bis_result res =
-      if Options.get_debug_sum () then
-        match res with
-        | [p,v] ->
-          print_dbg ~header:false
-            "we get: %a |-> %a@]" X.print p X.print v
-        | []    ->
-          print_dbg ~header:false
-            "the equation is trivial"
-        | _ -> assert false
-
-    let solve_bis_unsolvable () =
-      if Options.get_debug_sum () then
-        print_dbg
-          "the equation is unsolvable@]"
-
+    let solve_bis a b res =
+      P.debug ~fn:Self.F_solve
+        (fun k -> k"the equation @[%a = %a@] is %a"
+            X.print a X.print b
+            pp_res res
+        )
   end
   (*BISECT-IGNORE-END*)
 
-  let print = Debug.print
+  let print = Debug.pp
 
   let embed r =
     match X.extract r with
@@ -148,10 +142,9 @@ module Shostak (X : ALIEN) = struct
     | { E.f = Sy.Op (Sy.Constr hs); xs = []; ty; _ } ->
       is_mine (Cons(hs,ty)), []
     | _ ->
-      Printer.print_err
+      Fmt.failwith
         "Enum theory only expect constructors with no arguments; got %a."
-        E.print t;
-      assert false
+        E.print t
 
   let solve a b =
     match embed a, embed b with
@@ -163,13 +156,12 @@ module Shostak (X : ALIEN) = struct
       if X.str_cmp a b > 0 then [a,b] else [b,a]
 
   let solve_bis a b =
-    Debug.solve_bis a b;
     try
       let res = solve a b in
-      Debug.solve_bis_result res;
+      Debug.solve_bis a b (Some res);
       res
     with Util.Unsolvable ->
-      Debug.solve_bis_unsolvable ();
+      Debug.solve_bis a b None;
       raise Util.Unsolvable
 
   let abstract_selectors v acc = is_mine v, acc

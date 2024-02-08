@@ -76,7 +76,7 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Adt"
 
-  let timer = Modules.M_Adt
+  let timer = Self.M_Adt
 
   [@@ocaml.ppwarning "XXX: IsConstr not interpreted currently. Maybe \
                       it's OK"]

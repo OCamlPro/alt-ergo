@@ -60,28 +60,15 @@ type interpretation = INone | IFirst | IEvery | ILast
     worker. *)
 type options = {
   debug : bool option;
-  debug_ac : bool option;
-  debug_adt : bool option;
-  debug_arith : bool option;
-  debug_arrays : bool option;
-  debug_bitv : bool option;
-  debug_cc : bool option;
-  debug_combine : bool option;
+  debug_mods : AltErgoLib.Self.mod_ list option;
   debug_constr : bool option;
   debug_explanations : bool option;
   debug_fm : bool option;
   debug_fpa : int option;
   debug_gc : bool option;
   debug_interpretation : bool option;
-  debug_ite : bool option;
-  debug_matching : int option;
-  debug_sat : bool option;
   debug_split : bool option;
-  debug_sum : bool option;
-  debug_triggers : bool option;
   debug_types : bool option;
-  debug_typing : bool option;
-  debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
   debug_warnings : bool option;

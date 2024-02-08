@@ -18,8 +18,6 @@ bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
   "base-bigarray" {= "base"}
   "base-bytes" {= "base"}
-  "base-domains" {= "base"}
-  "base-nnp" {= "base"}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
   "camlzip" {= "1.11"}
@@ -34,9 +32,9 @@ depends: [
   "dolmen" {= "dev"}
   "dolmen_loop" {= "dev"}
   "dolmen_type" {= "dev"}
-  "dune" {= "3.12.2"}
-  "dune-build-info" {= "3.12.2"}
-  "dune-configurator" {= "3.12.2"}
+  "dune" {= "3.14.2"}
+  "dune-build-info" {= "3.14.2"}
+  "dune-configurator" {= "3.14.2"}
   "fmt" {= "0.9.0"}
   "gen" {= "1.1"}
   "js_of_ocaml" {= "5.4.0"}
@@ -47,7 +45,6 @@ depends: [
   "menhirCST" {= "20231231"}
   "menhirLib" {= "20231231"}
   "menhirSdk" {= "20231231"}
-  "num" {= "1.5"}
   "ocaml-compiler-libs" {= "v0.12.4"}
   "ocaml-options-vanilla" {= "1"}
   "ocamlbuild" {= "0.14.3"}
@@ -58,7 +55,7 @@ depends: [
   "ppx_blob" {= "0.7.2"}
   "ppx_derivers" {= "1.2.1"}
   "ppx_deriving" {= "5.2.1"}
-  "ppxlib" {= "0.31.0"}
+  "ppxlib" {= "0.32.0"}
   "result" {= "1.5"}
   "sedlex" {= "3.2"}
   "seq" {= "base"}
@@ -109,4 +106,8 @@ pin-depends: [
     "js_of_ocaml.5.4.0"
     "https://github.com/ocsigen/js_of_ocaml/releases/download/5.4.0/js_of_ocaml-5.4.0.tbz"
   ]
+  [
+  "ocplib-simplex.0.5"
+  "git+https://github.com/OCamlPro/ocplib-simplex.git#50996ec8142bf9deef383cbbc774cf46d639b371"
+]
 ]

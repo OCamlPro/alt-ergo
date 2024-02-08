@@ -360,7 +360,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
         ) lf
 
   let new_facts env tbox selector substs =
-    Timers.with_timer Modules.M_Match Timers.F_new_facts @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_new_facts @@ fun () ->
     new_facts env tbox selector substs
 
   let mround env axs tbox selector ilvl kind mconf =
@@ -402,23 +402,23 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   (*** add wrappers to profile exported functions ***)
 
   let add_terms env s gf =
-    Timers.with_timer Modules.M_Match Timers.F_add_terms @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_add_terms @@ fun () ->
     add_terms env s gf
 
   let add_lemma env gf dep =
-    Timers.with_timer Modules.M_Match Timers.F_add_lemma @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_add_lemma @@ fun () ->
     add_lemma env gf dep
 
   let add_predicate env ~guard ~name gf =
-    Timers.with_timer Modules.M_Match Timers.F_add_predicate @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_add_predicate @@ fun () ->
     add_predicate env ~guard ~name gf
 
   let m_lemmas mconf env tbox selector ilvl =
-    Timers.with_timer Modules.M_Match Timers.F_m_lemmas @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_m_lemmas @@ fun () ->
     m_lemmas env tbox selector ilvl mconf
 
   let m_predicates mconf env tbox selector ilvl =
-    Timers.with_timer Modules.M_Match Timers.F_m_predicates @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_m_predicates @@ fun () ->
     m_predicates env tbox selector ilvl mconf
 
 end

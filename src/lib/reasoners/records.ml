@@ -45,7 +45,7 @@ module Shostak (X : ALIEN) = struct
 
   let name = "records"
 
-  let timer = Modules.M_Records
+  let timer = Self.M_Records
 
   type t = X.r abstract
   type r = X.r

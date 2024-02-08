@@ -72,8 +72,11 @@ module type ATOM = sig
   val copy_hcons_env : hcons_env -> hcons_env
   val nb_made_vars : hcons_env -> int
 
-  val pr_atom : Format.formatter -> atom -> unit
-  val pr_clause : Format.formatter -> clause -> unit
+  val pp_atom : atom Fmt.t
+  val pp_dump_atom : atom  Fmt.t
+  val pp_clause : clause Fmt.t
+  val pp_dump_clause : clause Fmt.t
+
   val get_atom : hcons_env -> E.t ->  atom
 
   val literal : atom -> Shostak.Literal.t
@@ -244,38 +247,48 @@ module Atom : ATOM = struct
 
   module Debug = struct
 
-    let sign a = if a==a.var.pa then "" else "-"
+    let pp_sign ppf a =
+      if a == a.var.pa then Fmt.pf ppf "+" else Fmt.pf ppf "-"
 
-    let level a =
+    let pp_level ppf a =
       match a.var.level, a.var.reason with
       | n, _ when n < 0 -> assert false
-      | 0, Some c -> Format.sprintf "->0/%s" c.name
-      | 0, None   -> "@0"
-      | n, Some c -> Format.sprintf "->%d/%s" n c.name
-      | n, None   -> Format.sprintf "@@%d" n
+      | 0, Some c -> Fmt.pf ppf "->0/%s" c.name
+      | 0, None   -> Fmt.pf ppf "@0"
+      | n, Some c -> Fmt.pf ppf "->%d/%s" n c.name
+      | n, None   -> Fmt.pf ppf "@@%d" n
 
-    let value a =
-      if a.is_true then Format.sprintf "[T%s]" (level a)
-      else if a.neg.is_true then Format.sprintf "[F%s]" (level a)
-      else ""
+    let pp_value ppf a =
+      if a.is_true then Fmt.pf ppf "[true%a]" pp_level a
+      else if a.neg.is_true then Fmt.pf ppf "[false%a]" pp_level a
+      else Fmt.pf ppf "[unknown]"
 
-    let premise fmt v =
-      List.iter (fun { name = name; _ } -> Format.fprintf fmt "%s," name) v
+    let pp_clause ppf { name; _ } = Fmt.pf ppf "%s" name
 
-    let atom fmt a =
-      Format.fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}"
-        (sign a) (a.var.vid+1) (value a) a.var.index Shostak.Literal.pp a.lit
-        premise a.var.vpremise
+    let pp_premise ppf v =
+      Fmt.(list ~sep:comma pp_clause |> box |> braces) ppf v
 
-    let atoms_vec = Vec.pp atom
+    let pp_atom ppf a = Shostak.Literal.pp ppf a.lit
 
-    let clause fmt { name; atoms=arr; cpremise=cp; _ } =
-      Format.fprintf fmt "%s:@[@[{ %a@]}@ cpremise={{%a}}@]" name atoms_vec
-        arr premise cp
+    let pp_dump_atom ppf a =
+      Fmt.pf ppf "@[%a %a@ value=%a@ index=%d@ vpremise=%a@]"
+        pp_sign a
+        Shostak.Literal.pp a.lit
+        pp_value a
+        a.var.index
+        pp_premise a.var.vpremise
+
+    let pp_dump_clause ppf { name; atoms; cpremise; _ } =
+      Fmt.pf ppf "@[%s:{ %a }@ cpremise=%a@]"
+        name
+        (Vec.pp pp_dump_atom) atoms
+        pp_premise cpremise
   end
 
-  let pr_atom = Debug.atom
-  let pr_clause = Debug.clause
+  let pp_atom = Debug.pp_atom
+  let pp_clause = Debug.pp_clause
+  let pp_dump_atom = Debug.pp_dump_atom
+  let pp_dump_clause = Debug.pp_dump_clause
 
   let literal a = a.lit
   let weight a = a.var.weight
@@ -415,7 +428,7 @@ module Atom : ATOM = struct
       if !cpt <> 1 then begin
         Printer.print_err
           "cpt = %d@ a = %a@ c = %a"
-          !cpt pr_atom a pr_clause c;
+          !cpt pp_dump_atom a pp_dump_clause c;
         assert false
       end;
       !l
@@ -440,8 +453,7 @@ module type FLAT_FORMULA = sig
 
   val equal   : t -> t -> bool
   val compare : t -> t -> int
-  val print   : Format.formatter -> t -> unit
-  val print_stats : Format.formatter -> unit
+  val pp   : t Fmt.t
   val vrai    : t
   val faux    : t
   val view    : t -> view
@@ -478,8 +490,6 @@ module type FLAT_FORMULA = sig
   val expand_proxy_defn :
     Atom.atom list list -> proxy_defn -> Atom.atom list list
 
-  val reinit_cpt : unit -> unit
-
   module Set : Set.S with type elt = t
   module Map : Map.S with type key = t
 end
@@ -495,35 +505,13 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let mk_not f = f.neg
 
-  let cpt = ref 0
-
-  let sp() = let s = ref "" in for _ = 1 to !cpt do s := " " ^ !s done; !s ^ !s
-
-  let rec print fmt fa = match fa.view with
-    | UNIT a -> Format.fprintf fmt "%a" Atom.pr_atom a
-    | AND s  ->
-      incr cpt;
-      Format.fprintf fmt "(and%a" print_list s;
-      decr cpt;
-      Format.fprintf fmt "@.%s)" (sp())
-
-    | OR s   ->
-      incr cpt;
-      Format.fprintf fmt "(or%a" print_list s;
-      decr cpt;
-      Format.fprintf fmt "@.%s)" (sp())
-
-  and print_list fmt l =
-    match l with
-    | [] -> assert false
-    | e::l ->
-      Format.fprintf fmt "@.%s%a" (sp()) print e;
-      List.iter(Format.fprintf fmt "@.%s%a" (sp()) print) l
-
-
-  let print fmt f = cpt := 0; print fmt f
-
-  let print_stats _ = ()
+  let rec pp ppf fa =
+    match fa.view with
+    | UNIT a -> Atom.pp_atom ppf a
+    | AND l ->
+      Fmt.pf ppf "@[(and@, %a)@]" Fmt.(list ~sep:sp pp |> box) l
+    | OR l ->
+      Fmt.pf ppf "@[(or@, %a)@]" Fmt.(list ~sep:sp pp |> box) l
 
   let compare f1 f2 = f1.tag - f2.tag
 
@@ -1002,9 +990,6 @@ module Flat_Formula : FLAT_FORMULA = struct
     abstr f [] proxies_mp new_vars
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
-
-  let reinit_cpt () =
-    cpt := 0
 
   module Set = Set.Make (struct type nonrec t = t let compare = compare end)
   module Map = Map.Make (struct type nonrec t = t let compare = compare end)

@@ -213,19 +213,21 @@ module Debug = struct
     | Commands -> "commands"
     | Optimize -> "optimize"
 
+  let set_debug_level mod_ = Self.set_level mod_ (Some Debug)
+
   let mk ~verbosity flags =
     List.concat flags
     |> List.iter (function
         | Debug -> Options.set_debug true
-        | Ac -> Options.set_debug_ac true
-        | Adt -> Options.set_debug_adt true
-        | Arith -> Options.set_debug_arith true
-        | Arrays -> Options.set_debug_arrays true
-        | Bitv -> Options.set_debug_bitv true
-        | Sum -> Options.set_debug_sum true
-        | Ite -> Options.set_debug_ite true
-        | Cc -> Options.set_debug_cc true
-        | Combine -> Options.set_debug_combine true
+        | Ac -> set_debug_level Self.M_AC
+        | Adt -> set_debug_level Self.M_Adt
+        | Arith -> set_debug_level Self.M_Arith
+        | Arrays -> set_debug_level Self.M_Arrays
+        | Bitv -> set_debug_level Self.M_Bitv
+        | Sum -> set_debug_level Self.M_Sum
+        | Ite -> set_debug_level M_Ite
+        | Cc -> set_debug_level M_CC
+        | Combine -> set_debug_level Self.M_Combine
         | Constr -> Options.set_debug_constr true
         | Explanation -> Options.set_debug_explanations true
         | Fm -> Options.set_debug_fm true
@@ -234,12 +236,12 @@ module Debug = struct
         | Interpretation -> Options.set_debug_interpretation true
         | Intervals -> Options.set_debug_intervals true
         | Matching -> Options.set_debug_matching verbosity
-        | Sat -> Options.set_debug_sat true
+        | Sat -> set_debug_level Self.M_Sat
         | Split -> Options.set_debug_split true
-        | Triggers -> Options.set_debug_triggers true
+        | Triggers -> set_debug_level Self.M_Triggers
         | Types -> Options.set_debug_types true
-        | Typing -> Options.set_debug_typing true
-        | Uf -> Options.set_debug_uf true
+        | Typing -> set_debug_level Self.M_Typing
+        | Uf -> set_debug_level Self.M_UF
         | Unsat_core -> Options.set_debug_unsat_core true
         | Use -> Options.set_debug_use true
         | Warnings -> Options.set_debug_warnings true

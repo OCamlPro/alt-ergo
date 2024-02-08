@@ -64,7 +64,7 @@
     Emap Gc_debug Hconsing Hstring Heap Lists Loc
     MyUnix Numbers Uqueue
     Options Timers Util Vec Version Steps Printer My_zip
-    Theories Nest Modules
+    Theories Nest Self
   )
 
  (js_of_ocaml

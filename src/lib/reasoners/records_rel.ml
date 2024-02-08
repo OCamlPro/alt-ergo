@@ -27,7 +27,7 @@
 
 type t = unit
 
-let timer = Modules.M_Records
+let timer = Self.M_Records
 
 let empty uf = (), Uf.domains uf
 let assume _ uf _ =

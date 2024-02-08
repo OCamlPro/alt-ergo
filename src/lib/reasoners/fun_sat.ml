@@ -1781,11 +1781,11 @@ module Make (Th : Theory.S) = struct
         Inst.add_predicate env.inst ~guard ~name gf dep }
 
   let unsat env fg =
-    Timers.with_timer Modules.M_Sat Timers.F_unsat @@ fun () ->
+    Timers.with_timer Self.M_Sat Self.F_unsat @@ fun () ->
     unsat env fg
 
   let assume env fg =
-    Timers.with_timer Modules.M_Sat Timers.F_assume @@ fun () ->
+    Timers.with_timer Self.M_Sat Self.F_assume @@ fun () ->
     assume env fg
 
   let empty_guards () = {
@@ -1874,7 +1874,6 @@ module Make (Th : Theory.S) = struct
     Symbols.clear_labels ();
     Id.Namespace.reinit ();
     Var.reinit_cnt ();
-    Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
     Inst.reinit_em_cache ();

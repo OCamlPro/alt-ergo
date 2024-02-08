@@ -109,7 +109,8 @@ let print fmt ex =
   if Options.get_debug_explanations () then begin
     fprintf fmt "{";
     S.iter (function
-        | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
+        | Literal a ->
+          fprintf fmt "{Literal:%a}, " Satml_types.Atom.pp_dump_atom a
         | Fresh i -> fprintf fmt "{Fresh:%i}" i;
         | Dep f -> fprintf fmt "{Dep:%a}" E.print f
         | RootDep r -> fprintf fmt "{RootDep:%s}" r.name

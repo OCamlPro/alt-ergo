@@ -168,12 +168,6 @@ let debug_optimize = ref false
 let rule = ref (-1)
 
 let set_debug b = debug := b
-let set_debug_ac b = debug_ac := b
-let set_debug_adt b = debug_adt := b
-let set_debug_arith b = debug_arith := b
-let set_debug_arrays b = debug_arrays := b
-let set_debug_bitv b = debug_bitv := b
-let set_debug_cc b = debug_cc := b
 let set_debug_combine b = debug_combine := b
 let set_debug_constr b = debug_constr := b
 let set_debug_explanations b = debug_explanations := b
@@ -182,15 +176,9 @@ let set_debug_intervals b = debug_intervals := b
 let set_debug_fpa i = debug_fpa := i
 let set_debug_gc b = debug_gc := b
 let set_debug_interpretation b = debug_interpretation := b
-let set_debug_ite b = debug_ite := b
 let set_debug_matching i = debug_matching := i
-let set_debug_sat b = debug_sat := b
 let set_debug_split b = debug_split := b
-let set_debug_sum b = debug_sum := b
-let set_debug_triggers b = debug_triggers := b
 let set_debug_types b = debug_types := b
-let set_debug_typing b = debug_typing := b
-let set_debug_uf b = debug_uf := b
 let set_debug_unsat_core b = debug_unsat_core := b
 let set_debug_use b = debug_use := b
 let set_debug_warnings b = debug_warnings := b

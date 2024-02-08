@@ -25,83 +25,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* To get rid of warnings produced by ppx_deriving. *)
-[@@@warning "-32"]
-
-(* The type of functions, followed by the list of every element. *)
-type ty_function =
-  | F_add
-  | F_add_lemma
-  | F_add_predicate
-  | F_add_terms
-  | F_are_equal
-  | F_assume
-  | F_class_of
-  | F_leaves
-  | F_make
-  | F_m_lemmas
-  | F_m_predicates
-  | F_query
-  | F_solve
-  | F_subst
-  | F_union
-  | F_unsat
-  | F_none
-  | F_new_facts
-  | F_apply_subst
-  | F_instantiate
-[@@deriving enum]
-
-let all_functions =
-  let l = [
-    F_add;
-    F_add_lemma;
-    F_add_predicate;
-    F_add_terms;
-    F_are_equal;
-    F_assume;
-    F_class_of;
-    F_leaves;
-    F_make;
-    F_m_lemmas;
-    F_m_predicates;
-    F_query;
-    F_solve;
-    F_subst;
-    F_union;
-    F_unsat;
-    F_none;
-    F_new_facts;
-    F_apply_subst;
-    F_instantiate;
-  ]
-  in
-  assert ((List.length l) = max_ty_function + 1);
-  l
-
-let show_ty_function f =
-  match f with
-  | F_add           -> "add"
-  | F_add_lemma     -> "add_lemma"
-  | F_assume        -> "assume"
-  | F_class_of      -> "class_of"
-  | F_leaves        -> "leaves"
-  | F_make          -> "make"
-  | F_m_lemmas      -> "m_lemmas"
-  | F_m_predicates  -> "m_predicates"
-  | F_query         -> "query"
-  | F_solve         -> "solve"
-  | F_subst         -> "subst"
-  | F_union         -> "union"
-  | F_unsat         -> "unsat"
-  | F_add_predicate -> "add_predicate"
-  | F_add_terms     -> "add_terms"
-  | F_are_equal     -> "are_equal"
-  | F_none          -> "none"
-  | F_new_facts     -> "new_facts"
-  | F_apply_subst   -> "apply_subst"
-  | F_instantiate   -> "instantiate"
-
 module TimerTable : sig
   (** The table of timers (module -> function -> float). *)
   type t
@@ -114,32 +37,32 @@ module TimerTable : sig
 
   (** Returns the time stored in the table. If it has never been
       stored, returns 0.. *)
-  val get : t -> Modules.t -> ty_function -> float
+  val get : t -> Self.mod_ -> Self.fn -> float
 
   (** Sets the time spend to a given function in a given module.. *)
-  val set : t -> Modules.t -> ty_function -> float -> unit
+  val set : t -> Self.mod_ -> Self.fn -> float -> unit
 
   (** Gets the total time spent in a given module. *)
-  val get_sum : t -> Modules.t -> float
+  val get_sum : t -> Self.mod_ -> float
 end = struct
   type t = float array array
 
   let create () =
     Array.init
-      (Modules.max + 1)
-      (fun _ -> Array.init (max_ty_function + 1) (fun _ -> 0.))
+      (Self.max_mod_ + 1)
+      (fun _ -> Array.init (Self.max_fn + 1) (fun _ -> 0.))
 
   let clear =
     Array.iter (fun a -> Array.iteri (fun j _ -> a.(j) <- 0.) a)
 
   let get t m f =
-    t.(Modules.to_enum m).(ty_function_to_enum f)
+    t.(Self.mod__to_enum m).(Self.fn_to_enum f)
 
   let set t m f v =
-    t.(Modules.to_enum m).(ty_function_to_enum f) <- v
+    t.(Self.mod__to_enum m).(Self.fn_to_enum f) <- v
 
   let get_sum t m =
-    Array.fold_left (+.) 0. t.(Modules.to_enum m)
+    Array.fold_left (+.) 0. t.(Self.mod__to_enum m)
 end
 
 type t = {
@@ -147,10 +70,10 @@ type t = {
   mutable cur_u : float;
 
   (* current activated (module x function) for time profiling *)
-  mutable cur_t : (Modules.t * ty_function * int);
+  mutable cur_t : (Self.mod_ * Self.fn * int);
 
   (* stack of suspended (module x function)s callers *)
-  mutable stack : (Modules.t * ty_function * int) list;
+  mutable stack : (Self.mod_ * Self.fn * int) list;
 
   (* table of timers for each combination "" *)
   z : TimerTable.t ;
@@ -184,13 +107,13 @@ let accumulate_cumulative_mode name env m f cur =
       if Options.get_debug () then
         Printer.print_dbg ~flushed:false
           "@[<v 2>%s time of %s , %s@ "
-          name (Modules.show m) (show_ty_function f);
+          name (Self.show_mod_ m) (Self.show_fn f);
       List.iter
         (fun (m, f, _) ->
            if Options.get_debug () then
              Printer.print_dbg ~flushed:false ~header:false
                "also update time of %s , %s@ "
-               (Modules.show m) (show_ty_function f);
+               (Self.show_mod_ m) (Self.show_fn f);
            accumulate env cur m f
         )env.stack;
       if Options.get_debug () then
@@ -235,17 +158,17 @@ let update env =
 (** Returns the value of the timer associated to the module and function. *)
 let get_value env m f = TimerTable.get env.z m f
 
-(** get the sum of the "ty_function" timers for the given "Modules.t" **)
+(** get the sum of the "Self.fn" timers for the given "Self.mod_" **)
 let get_sum env m = TimerTable.get_sum env.z m
 
 let current_timer env = env.cur_t
 
 let get_stack env = env.stack
 
-let (timer_start : (Modules.t -> ty_function -> unit) ref) =
+let (timer_start : (Self.mod_ -> Self.fn -> unit) ref) =
   ref (fun _ _ -> ())
 
-let (timer_pause : (Modules.t -> ty_function -> unit) ref) =
+let (timer_pause : (Self.mod_ -> Self.fn -> unit) ref) =
   ref (fun _ _ -> ())
 
 let set_timer_start f = assert (Options.get_timers ()); timer_start := f

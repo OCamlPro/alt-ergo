@@ -95,31 +95,21 @@ let set_options_opt f = function
   | None -> ()
   | Some v -> f v
 
+let set_debug_levels mods =
+  List.iter (fun mod_ -> Self.set_level mod_ (Some Debug)) mods
+
 let set_options r =
   set_options_opt Options.set_frontend (get_frontend r.frontend);
   set_options_opt Options.set_debug r.debug;
-  set_options_opt Options.set_debug_ac r.debug_ac ;
-  set_options_opt Options.set_debug_adt r.debug_adt ;
-  set_options_opt Options.set_debug_arith r.debug_arith;
-  set_options_opt Options.set_debug_arrays r.debug_arrays;
-  set_options_opt Options.set_debug_bitv r.debug_bitv;
-  set_options_opt Options.set_debug_cc r.debug_cc;
-  set_options_opt Options.set_debug_combine r.debug_combine;
+  set_options_opt set_debug_levels r.debug_mods;
   set_options_opt Options.set_debug_constr r.debug_constr;
   set_options_opt Options.set_debug_explanations r.debug_explanations;
   set_options_opt Options.set_debug_fm r.debug_fm;
   set_options_opt Options.set_debug_fpa r.debug_fpa;
   set_options_opt Options.set_debug_gc r.debug_gc;
   set_options_opt Options.set_debug_interpretation r.debug_interpretation;
-  set_options_opt Options.set_debug_ite r.debug_ite;
-  set_options_opt Options.set_debug_matching r.debug_matching;
-  set_options_opt Options.set_debug_sat r.debug_sat;
   set_options_opt Options.set_debug_split r.debug_split;
-  set_options_opt Options.set_debug_sum r.debug_sum;
-  set_options_opt Options.set_debug_triggers r.debug_triggers;
   set_options_opt Options.set_debug_types r.debug_types;
-  set_options_opt Options.set_debug_typing r.debug_typing;
-  set_options_opt Options.set_debug_uf r.debug_uf;
   set_options_opt Options.set_debug_unsat_core r.debug_unsat_core;
   set_options_opt Options.set_debug_use r.debug_use;
   set_options_opt Options.set_debug_warnings r.debug_warnings;

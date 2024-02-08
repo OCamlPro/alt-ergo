@@ -175,30 +175,32 @@ let interpretation_encoding =
       (fun () -> ILast);
   ]
 
+let mod__encoding =
+  let open AltErgoLib in
+  union @@ List.mapi
+    (fun i mod_ ->
+       let s = Self.show_mod_ mod_ in
+       case
+         ~title:s
+         (Tag i)
+         (constant s)
+         (fun v ->
+            if String.equal (Self.show_mod_ v) s then Some () else None
+         )
+         (fun () -> Option.get @@ Self.parse s)
+    ) Self.all_mod_
+
 type options = {
   debug : bool option;
-  debug_ac : bool option;
-  debug_adt : bool option;
-  debug_arith : bool option;
-  debug_arrays : bool option;
-  debug_bitv : bool option;
-  debug_cc : bool option;
-  debug_combine : bool option;
+  debug_mods : AltErgoLib.Self.mod_ list option;
   debug_constr : bool option;
   debug_explanations : bool option;
   debug_fm : bool option;
   debug_fpa : int option;
   debug_gc : bool option;
   debug_interpretation : bool option;
-  debug_ite : bool option;
-  debug_matching : int option;
-  debug_sat : bool option;
   debug_split : bool option;
-  debug_sum : bool option;
-  debug_triggers : bool option;
   debug_types : bool option;
-  debug_typing : bool option;
-  debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
   debug_warnings : bool option;
@@ -280,28 +282,15 @@ type options = {
 
 let init_options () = {
   debug = None;
-  debug_ac = None;
-  debug_adt = None;
-  debug_arith = None;
-  debug_arrays = None;
-  debug_bitv = None;
-  debug_cc = None;
-  debug_combine = None;
+  debug_mods = None;
   debug_constr = None;
   debug_explanations = None;
   debug_fm = None;
   debug_fpa = None;
   debug_gc = None;
   debug_interpretation = None;
-  debug_ite = None;
-  debug_matching = None;
-  debug_sat = None;
   debug_split = None;
-  debug_sum = None;
-  debug_triggers = None;
   debug_types = None;
-  debug_typing = None;
-  debug_uf = None;
   debug_unsat_core = None;
   debug_use = None;
   debug_warnings = None;
@@ -381,20 +370,13 @@ let init_options () = {
   file = None;
 }
 
-
 let opt_dbg1_encoding =
   conv
     (fun dbg1 -> dbg1)
     (fun dbg1 -> dbg1)
-    (obj10
+    (obj4
        (opt "debug" bool)
-       (opt "debug_ac" bool)
-       (opt "debug_adt" bool)
-       (opt "debug_arith" bool)
-       (opt "debug_arrays" bool)
-       (opt "debug_bitv" bool)
-       (opt "debug_cc" bool)
-       (opt "debug_combine" bool)
+       (opt "debug_mods" (list mod__encoding))
        (opt "debug_constr" bool)
        (opt "debug_explanations" bool)
     )
@@ -403,27 +385,20 @@ let opt_dbg2_encoding =
   conv
     (fun dbg2 -> dbg2)
     (fun dbg2 -> dbg2)
-    (obj10
+    (obj5
        (opt "debug_fm" bool)
        (opt "debug_fpa" int31)
        (opt "debug_gc" bool)
        (opt "debug_interpretation" bool)
-       (opt "debug_ite" bool)
-       (opt "debug_matching" int31)
-       (opt "debug_sat" bool)
        (opt "debug_split" bool)
-       (opt "debug_sum" bool)
-       (opt "debug_triggers" bool)
     )
 
 let opt_dbg3_encoding =
   conv
     (fun dbg3 -> dbg3)
     (fun dbg3 -> dbg3)
-    (obj6
+    (obj4
        (opt "debug_types" bool)
-       (opt "debug_typing" bool)
-       (opt "debug_uf" bool)
        (opt "debug_unsat_core" bool)
        (opt "debug_use" bool)
        (opt "debug_warnings" bool)
@@ -553,13 +528,7 @@ let options_encoding =
 let options_to_json opt =
   let dbg_opt1 =
     (opt.debug,
-     opt.debug_ac,
-     opt.debug_adt,
-     opt.debug_arith,
-     opt.debug_arrays,
-     opt.debug_bitv,
-     opt.debug_cc,
-     opt.debug_combine,
+     opt.debug_mods,
      opt.debug_constr,
      opt.debug_explanations)
   in
@@ -568,17 +537,10 @@ let options_to_json opt =
      opt.debug_fpa,
      opt.debug_gc,
      opt.debug_interpretation,
-     opt.debug_ite,
-     opt.debug_matching,
-     opt.debug_sat,
-     opt.debug_split,
-     opt.debug_sum,
-     opt.debug_triggers)
+     opt.debug_split)
   in
   let dbg_opt3 =
     (opt.debug_types,
-     opt.debug_typing,
-     opt.debug_uf,
      opt.debug_unsat_core,
      opt.debug_use,
      opt.debug_warnings)
@@ -685,13 +647,7 @@ let options_from_json options =
                 (all_opt6,
                  all_opt7))))))))) = Json.destruct options_encoding opts in
     let (debug,
-         debug_ac,
-         debug_adt,
-         debug_arith,
-         debug_arrays,
-         debug_bitv,
-         debug_cc,
-         debug_combine,
+         debug_mods,
          debug_constr,
          debug_explanations) =
       dbg_opt1 in
@@ -699,15 +655,8 @@ let options_from_json options =
          debug_fpa,
          debug_gc,
          debug_interpretation,
-         debug_ite,
-         debug_matching,
-         debug_sat,
-         debug_split,
-         debug_sum,
-         debug_triggers) = dbg_opt2 in
+         debug_split) = dbg_opt2 in
     let (debug_types,
-         debug_typing,
-         debug_uf,
          debug_unsat_core,
          debug_use,
          debug_warnings) = dbg_opt3 in
@@ -773,28 +722,15 @@ let options_from_json options =
          file) = all_opt7 in
     {
       debug;
-      debug_ac;
-      debug_adt;
-      debug_arith;
-      debug_arrays;
-      debug_bitv;
-      debug_cc;
-      debug_combine;
+      debug_mods;
       debug_constr;
       debug_explanations;
       debug_fm;
       debug_fpa;
       debug_gc;
       debug_interpretation;
-      debug_ite;
-      debug_matching;
-      debug_sat;
       debug_split;
-      debug_sum;
-      debug_triggers;
       debug_types;
-      debug_typing;
-      debug_uf;
       debug_unsat_core;
       debug_use;
       debug_warnings;

@@ -34,7 +34,7 @@ module MX = Shostak.MXH
 module HX = Shostak.HX
 module L = Xliteral
 
-let timer = Modules.M_Bitv
+let timer = Self.M_Bitv
 
 (* Currently we only compute, but in the future we may want to perform the same
    simplifications as in [Bitv.make]. We currently don't, because we don't

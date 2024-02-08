@@ -67,6 +67,8 @@ module FF = Satml_types.Flat_Formula
 
 module Ex = Explanation
 
+module P = Printer.Make (struct let mod_ = Self.M_Sat end)
+
 exception Sat
 exception Unsat of Atom.clause list option
 exception Last_UIP_reason of Atom.Set.t
@@ -648,8 +650,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.vpremise <- []
 
   let enqueue_assigned env (a : Atom.atom) =
-    if Options.get_debug_sat () then
-      Printer.print_dbg "[satml] enqueue_assigned: %a@." Atom.pr_atom a;
+    P.debug (fun k -> k"enqueue (already assigned):@ %a" Atom.pp_atom a);
     if a.neg.is_guard then begin
       (* if the negation of a is (still) a guard, it should be forced to true
          during the first decisions.
@@ -689,9 +690,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until env lvl =
-    if Options.get_debug_sat () then
-      Printer.print_dbg
-        "[satml] cancel until %d (current is %d)@." lvl (decision_level env);
+    P.debug (fun k ->
+        k"cancel until level %d (current level is %d)" lvl
+          (decision_level env));
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
     if decision_level env > lvl then begin
@@ -789,8 +790,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.is_true <- true;
     a.var.level <- lvl;
     a.var.reason <- reason;
-    if Options.get_debug_sat () then
-      Printer.print_dbg "[satml] enqueue: %a@." Atom.pr_atom a;
+    P.debug (fun k -> k"enqueue:@ %a" Atom.pp_atom a);
     Vec.push env.trail a;
     if is_semantic a then
       env.nchoices <- env.nchoices + 1;
@@ -1083,8 +1083,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            else acc
         )[] lazy_q
     in
-    if Options.get_debug_sat () then
-      Printer.print_dbg "[satml] Unit theory_propagate of %d atoms@." !nb_f;
+    P.debug (fun k -> k"unit theory propagation of %d atoms" !nb_f);
     if facts == [] then C_none
     else
       try
@@ -1155,8 +1154,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             !facts;
         env.cpt_current_propagations <- env.cpt_current_propagations + 1
       done;
-      if Options.get_debug_sat () then
-        Printer.print_dbg "[satml] Theory_propagate of %d atoms@." !nb_f;
+      P.debug (fun k -> k"theory propagation of %d atoms" !nb_f);
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       if !facts == [] then C_none
@@ -1186,8 +1184,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*assert (Queue.is_empty env.tqueue);*)
     while env.qhead < Vec.size env.trail do
       let a = Vec.get env.trail env.qhead in
-      if Options.get_debug_sat () then
-        Printer.print_dbg "[satml] propagate atom %a@." Atom.pr_atom a;
+      P.debug (fun k -> k"propagate atom:@ %a" Atom.pp_atom a);
       env.qhead <- env.qhead + 1;
       incr num_props;
       propagate_atom env a res;
@@ -1260,9 +1257,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   module HUC = Hashtbl.Make
       (struct type t = Atom.clause let equal = (==) let hash = Hashtbl.hash end)
 
-  let print_aux fmt hc =
-    Format.fprintf fmt "%a@," Atom.pr_clause hc
-
   let report_b_unsat env linit =
     if not (Options.get_unsat_core ()) then begin
       env.is_unsat <- true;
@@ -1283,9 +1277,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             l := List.rev_append atom.var.vpremise !l;
             match atom.var.reason with None -> () | Some c -> l := c :: !l
           ) atoms;
-        Printer.print_dbg ~header:false
-          "@[<v 2>UNSAT Deduction made from:@ %a@]"
-          (Printer.pp_list_no_space print_aux) !l;
+        P.debug (fun k -> k"UNSAT Deduction made from:@ %a"
+                    Fmt.(list ~sep:cut Atom.pp_clause |> box) !l
+                );
         let uc = HUC.create 17 in
         let rec roots todo =
           match todo with
@@ -1303,8 +1297,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             | prems -> roots prems; roots r
         in roots !l;
         let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-        Printer.print_dbg ~header:false "@[<v 2>UNSAT_CORE:@ %a@]"
-          (Printer.pp_list_no_space print_aux) unsat_core;
+        P.debug (fun k -> k"unsat core:@ %a"
+                    Fmt.(list ~sep:cut Atom.pp_clause |> box) unsat_core
+                );
         env.is_unsat <- true;
         let unsat_core = Some unsat_core in
         env.unsat_core <- unsat_core;
@@ -1331,9 +1326,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
              | _ -> assert false (* TODO *)
           ) dep []
       in
-      Printer.print_dbg ~header:false
-        "@[<v 2>T-UNSAT Deduction made from:@ %a@]"
-        (Printer.pp_list_no_space print_aux) l;
+      P.debug (fun k -> k"T-UNSAT Deduction made from:@ %a"
+                  Fmt.(list ~sep:cut Atom.pp_clause |> box) l
+              );
       let uc = HUC.create 17 in
       let rec roots todo =
         match todo with
@@ -1351,9 +1346,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           | prems -> roots prems; roots r
       in roots l;
       let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-      Printer.print_dbg ~header:false
-        "@[<v 2>T-UNSAT_CORE:@ %a@]"
-        (Printer.pp_list_no_space print_aux) unsat_core;
+      P.debug (fun k -> k"t-unsat core:@ %a"
+                  Fmt.(list ~sep:cut Atom.pp_clause |> box) unsat_core
+              );
       env.is_unsat <- true;
       let unsat_core = Some unsat_core in
       env.unsat_core <- unsat_core;
@@ -1421,8 +1416,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (* report possible propagation conflict *)
     report_conflict env (all_propagations env);
     if nb_assigns env <> env.simpDB_assigns && env.simpDB_props <= 0 then begin
-      if Options.get_debug_sat () then
-        Printer.print_dbg ~module_name:"Satml" ~function_name:"simplify" "";
+      P.debug (fun k -> k"simplify");
       (*theory_simplify ();*)
       if Vec.size env.learnts > 0 then remove_satisfied env env.learnts;
       if env.remove_satisfied then remove_satisfied env env.clauses;
@@ -1773,7 +1767,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       env.cpt_current_propagations <- 0;
       assert (atom.var.level < 0);
       if Options.get_debug_sat () then
-        Printer.print_dbg "[satml] decide: %a" Atom.pr_atom atom;
+        Printer.print_dbg "[satml] decide: %a" Atom.pp_atom atom;
       enqueue env atom current_level None
     | Some (c, _) ->
       (* right decision level will be set inside record_learnt_clause *)
@@ -1993,9 +1987,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let clause = Atom.make_clause name atoms vraie_form false init in
         attach_clause env clause;
         Vec.push env.clauses clause;
-        if Options.(get_debug_sat () && get_verbose ()) then
-          Printer.print_dbg ~module_name:"Satml" ~function_name:"add_clause"
-            "add_clause: %a" Atom.pr_clause clause;
+        P.debug (fun k -> k"add clause:@ %a" Atom.pp_clause clause);
 
         if a.neg.is_true then begin (* clause is false *)
           let lvl =
@@ -2015,9 +2007,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                              are well set, unit and bottom are \
                              detected ..."]
       | [a]   ->
-        if Options.(get_debug_sat () && get_verbose ()) then
-          Printer.print_dbg ~module_name:"Satml" ~function_name:"add_clause"
-            "add_atom: %a" Atom.pr_atom a;
+        P.debug (fun k -> k"add atom:@ %a" Atom.pp_atom a);
         let lvl = a.var.level in
         assert (lvl <> 0);
         begin
@@ -2136,10 +2126,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         List.iter (add_clause env f ~cnumber) nunit_cnf;
 
         if Options.get_verbose () then
-          Printer.print_dbg
-            "%d clauses@ %d learnts"
-            (Vec.size env.clauses)
-            (Vec.size env.learnts);
+          P.debug (fun k -> k"%d clauses, %d learnts"
+                      (Vec.size env.clauses)
+                      (Vec.size env.learnts)
+                  )
     end;
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf env ~do_bcp:false sff ~dec_lvl;
@@ -2209,10 +2199,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       List.iter (add_clause env vraie_form ~cnumber:0) cnf;
 
       if Options.get_verbose () then
-        Printer.print_dbg
-          "%d clauses@ %d learnts"
-          (Vec.size env.clauses)
-          (Vec.size env.learnts);
+        P.debug (fun k -> k"%d clauses, %d learnts"
+                    (Vec.size env.clauses)
+                    (Vec.size env.learnts)
+                );
 
       (* do it after add clause and before T-propagate, disable bcp*)
       (* do bcp globally *)

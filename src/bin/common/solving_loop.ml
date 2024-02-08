@@ -180,8 +180,8 @@ let main () =
         begin
           let mdl = Model ((module SAT), partial_model) in
           if Options.(get_interpretation () && get_dump_models ()) then begin
-            Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
-              FE.print_model partial_model
+            Logs.app ~src:Printer.mdl_src
+              (fun k -> k"%a" FE.print_model partial_model)
           end;
           Sat mdl
         end

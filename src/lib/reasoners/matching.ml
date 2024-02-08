@@ -29,6 +29,8 @@ module E = Expr
 module ME = E.Map
 module SubstE = Var.Map
 
+module P = Printer.Make (struct let mod_ = Self.M_Match end)
+
 module type S = sig
   type t
   type theory
@@ -93,9 +95,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     open Printer
     let add_term t =
       if Options.get_debug_matching() >= 3 then
-        print_dbg
-          ~module_name:"Matching" ~function_name:"add_term"
-          "add_term:  %a" E.print t
+        P.debug ~fn:Self.F_add_terms (fun k -> k"add the term %a" E.print t)
 
     let matching tr =
       if Options.get_debug_matching() >= 3 then
@@ -541,7 +541,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       raise e
 
   let query env tbox =
-    Timers.with_timer Modules.M_Match Timers.F_query @@ fun () ->
+    Timers.with_timer Self.M_Match Self.F_query @@ fun () ->
     query env tbox
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}

@@ -131,77 +131,55 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     }
 
 
+  module P = Printer.Make (struct let mod_ = Self.M_Sat end)
+
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
-    open Printer
-
-    let pred_def f =
-      if Options.get_debug_sat () then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"pred_def"
-          "I assume a predicate: %a" E.print f
-
-    let unsat gf =
-      if Options.get_debug_sat () then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"unsat"
-          "unsat of %a ?" E.print gf.E.ff
-
     let assume gf =
       let { E.ff = f; lem; from_terms = terms; _ } = gf in
-      if Options.get_debug_sat () then begin
-        match E.form_view f with
-        | E.Unit _ -> ()
+      match E.form_view f with
+      | E.Unit _ -> ()
 
-        | E.Clause _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a clause %a" E.print f
+      | E.Clause _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume clause:@ %a" E.print f)
 
-        | E.Lemma _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a [%d-atom] lemma: %a"
-            (E.size f) E.print f
+      | E.Lemma _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume [%d-atom] lemma:@ %a" (E.size f) E.print f)
 
-        | E.Literal a ->
-          let n = match lem with
-            | None -> ""
-            | Some ff -> begin
-                match E.form_view ff with
-                | E.Lemma xx -> xx.E.name
-                | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-                | E.Let _ | E.Iff _ | E.Xor _ -> ""
-              end
-          in
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "@[<v 0>I assume a literal (%s : %a) %a@,\
-             ================================================@]"
-            n E.print_list terms E.print a;
+      | E.Literal a ->
+        let n = match lem with
+          | None -> ""
+          | Some ff -> begin
+              match E.form_view ff with
+              | E.Lemma xx -> xx.E.name
+              | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+              | E.Let _ | E.Iff _ | E.Xor _ -> ""
+            end
+        in
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume literal:@ (%s : %a)@ %a"
+              n
+              Fmt.(list ~sep:sp E.print |> box) terms
+              E.print a
+          )
 
-        | E.Skolem _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a skolem %a" E.print f
+      | E.Skolem _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume skolem:@ %a" E.print f)
 
-        | E.Let _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a let-In %a" E.print f
+      | E.Let _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume let binding:@ %a" E.print f)
 
-        | E.Iff _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume an equivalence %a" E.print f
+      | E.Iff _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume the equivalence:@ %a" E.print f)
 
-        | E.Xor _ ->
-          print_dbg ~module_name:"Satml_frontend" ~function_name:"assume"
-            "I assume a neg-equivalence/Xor %a" E.print f
-
-      end
-
-    let simplified_form f f' =
-      if Options.(get_debug_sat () && get_verbose ()) then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"simplified_form"
-          "@[<v 2>Simplified form of: %a@,is: %a@]"
-          E.print f
-          FF.print f'
+      | E.Xor _ ->
+        P.debug ~fn:Self.F_assume
+          (fun k -> k"assume the xor:@ %a" E.print f)
 
     (* unused --
        let cnf_form f unit non_unit =
@@ -221,31 +199,22 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        end
     *)
 
-    let model fmt env =
-      if Options.get_debug_sat () then
-        let model = SAT.boolean_model env.satml in
-        let print fmt a =
-          Format.fprintf fmt " %f | %a@,"
-            (Atom.weight a)
-            Atom.pr_atom a
-        in
-        Format.fprintf fmt
-          "@[<v 2>(2) satML's model:@,%a@]"
-          (pp_list_no_space print) (List.rev model)
+    let pp_model ppf env =
+      let model = SAT.boolean_model env.satml in
+      let pp_atom ppf a =
+        Fmt.pf ppf "%a, %.2f" Atom.pp_atom a (Atom.weight a)
+      in
+      Fmt.pf ppf "model:@, %a"
+        Fmt.(list ~sep:sp (pp_atom |> braces) |> box) (List.rev model)
 
     let new_instances mode env =
-      if Options.get_debug_sat () then begin
-        print_dbg ~flushed:false
-          ~module_name:"Satml_frontend" ~function_name:"new_instances"
-          "@[<v 2>I GENERATE NEW INSTANCES (%s)#################@,\
-           @[<v 2>(1) ground problem:@,"
-          mode;
-        FF.Map.iter (fun f (md, _) ->
-            print_dbg ~flushed:false ~header:false
-              "-> %d : %a@," md FF.print f) env.conj;
-        print_dbg ~header:false "@]@,%a"
-          model env;
-      end
+      P.debug (fun k -> k"ground problem (%s):@,%a"
+                  mode
+                  Fmt.(iter_bindings ~sep:cut FF.Map.iter
+                         (pair ~sep:(const string ":") FF.pp (pair int nop))
+                      ) env.conj
+              );
+      P.debug (fun k -> k"%a" pp_model env)
 
     (* unused --
        let generated_instances l =
@@ -277,20 +246,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let atoms_from_sat_branch f =
-      if Options.(get_verbose () && get_debug_sat ()) then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"atoms_from_sat_branch"
-          "[extract_and_add_terms from] %a" FF.print f
+      if Options.get_verbose () then
+        P.debug (fun k -> k"extract_and_add_terms from %a" FF.pp f)
 
     let add_terms_of src terms =
-      if Options.(get_verbose () && get_debug_sat ()) then begin
-        print_dbg ~flushed:false ~module_name:"Satml_frontend"
-          ~function_name:"add_terms_of"
-          "@[<v 2>[%s] add_terms_of:@," src;
-        SE.iter (fun e ->
-            print_dbg ~flushed:false ~header:false
-              ">> %a@," E.print e) terms;
-        print_dbg ~header:false "@]"
+      if Options.get_verbose () then begin
+        P.debug (fun k -> k"[%s] add terms of:@, %a"
+                    src
+                    Fmt.(iter ~sep:cut SE.iter E.print) terms)
       end
 
     (* unused --
@@ -301,13 +264,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     *)
 
     let internal_axiom_def f a at =
-      if Options.get_debug_sat () then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"internal_axiom_def"
-          "I assume an internal axiom: %a <-> %a@,\
-           at of a is %a"
-          E.print a E.print f
-          Atom.pr_atom at
+      P.debug (fun k -> k"assume internal axiom: %a <-> %a@, at of a is %a"
+                  E.print a E.print f Atom.pp_atom at)
 
     (* unused --
        let in_mk_theories_instances () =
@@ -325,24 +283,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         print_dbg "exit mk_theories_instances with Inconsistency."
     *)
 
-    let print_f_conj fmt hyp =
+    let print_f_conj ppf hyp =
       match hyp with
-      | [] -> Format.fprintf fmt "True";
-      | e::l ->
-        Format.fprintf fmt "%a" E.print e;
-        List.iter (fun f -> Format.fprintf fmt " /\\  %a" E.print f) l
+      | [] -> Fmt.pf ppf "true"
+      | l -> Fmt.(list ~sep:(const string "/\\") E.print) ppf l
 
     let print_theory_instance hyp gf =
-      if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
-        print_dbg
-          ~module_name:"Satml_frontend" ~function_name:"theory_instance"
-          "@[<v 2>%s >@,\
-           hypotheses: %a@,\
-           conclusion: %a@]"
-          (E.name_of_lemma_opt gf.E.lem)
-          print_f_conj hyp
-          E.print gf.E.ff;
-
+      if Options.get_debug_fpa () > 1 then
+        P.debug (fun k -> k"%s >@, hypotheses: %a@, conclusion: %a"
+                    (E.name_of_lemma_opt gf.E.lem)
+                    print_f_conj hyp
+                    E.print gf.E.ff
+                )
   end
   (*BISECT-IGNORE-END*)
 
@@ -455,7 +407,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
-    Debug.pred_def f;
+    P.debug (fun k -> k"assume predicate definition: %a" E.print f);
     let guard = env.guards.current_guard in
     env.inst <- Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep
 
@@ -472,7 +424,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if Options.(get_debug_sat () && get_verbose ()) then
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"register_abstraction"
-        "abstraction of %a is %a" E.print f FF.print af;
+        "abstraction of %a is %a" E.print f FF.pp af;
     let lat =
       match Shostak.Literal.view @@ Atom.literal at with
       | LTerm at -> at
@@ -521,10 +473,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let expand_skolems env acc sa inst_quantif =
     List.fold_left
       (fun acc a ->
-         if Options.(get_debug_sat () && get_verbose ()) then
-           Printer.print_dbg
-             ~module_name:"Satml_frontend" ~function_name:"expand_skolems"
-             "expand skolem of %a" E.print a;
+         if Options.get_verbose () then
+           P.debug (fun k -> k"expand skolem of@ %a" E.print a);
          try
            if inst_quantif a then
              let { E.ff = f; _ } as gf = ME.find a env.skolems in
@@ -541,10 +491,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun (inst, acc) a ->
          let gf = mk_gf E.vrai in
-         if Options.(get_debug_sat () && get_verbose ()) then
-           Printer.print_dbg
-             ~module_name:"Satml_frontend" ~function_name:"inst_env_from_atoms"
-             "terms_of_atom %a" E.print a;
+         if Options.get_verbose () then
+           P.debug (fun k -> k"terms of atom@ %a" E.print a);
          let inst = Inst.add_terms inst (E.max_ground_terms_of_lit a) gf in
          (* ax <-> a, if ax exists in axs_of_abstr *)
          try
@@ -667,11 +615,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         try FF.Map.find ff env.conj |> snd
         with Not_found ->
           if FF.equal ff FF.vrai then SE.empty
-          else begin
-            Printer.print_err
-              "%a not found in env.conj" FF.print ff;
-            assert false
-          end
+          else
+            Fmt.failwith "%a not found in env.conj" FF.pp ff
       in
       SE.fold (E.atoms_rec_of_form ~only_ground:false) sf accu
     in
@@ -749,10 +694,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let pre_assume env acc gf =
     let { E.ff = f; _ } = gf in
-    if Options.(get_debug_sat () && get_verbose ()) then
-      Printer.print_dbg
-        ~module_name:"Satml_frontend" ~function_name:"pre_assume"
-        "Entry of pre_assume: Given %a" E.print f;
+    if Options.get_verbose () then
+      P.debug (fun k -> k"entry of pre_assume:@ %a" E.print f);
     if SE.mem f acc.seen_f then acc
     else
       let acc = {acc with seen_f = SE.add f acc.seen_f} in
@@ -795,7 +738,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           env.gamma <- ME.add f (env.nb_mrounds, Some ff) env.gamma;
           env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
-          Debug.simplified_form f ff;
+          P.debug (fun k -> k"simplified form of@ %a@ is@ %a" E.print f
+                      FF.pp ff);
           let new_abstr_vars =
             List.fold_left (register_abstraction env) acc.new_abstr_vars axs
           in
@@ -1121,12 +1065,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             "We assert the formula %a to explore another branch."
             E.print neg;
         let updated = assume_aux ~dec_lvl:0 env l in
-        if not updated then begin
-          Printer.print_dbg
-            "env not updated after injection of neg! termination \
-             issue.@.@.";
-          assert false
-        end;
+        if not updated then
+          Fmt.failwith "env not updated after injection of neg!";
         Options.Time.unset_timeout ();
         Options.Time.set_timeout (Options.get_timelimit ());
         unsat_rec_prem env ~first_call:false
@@ -1216,7 +1156,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let checks_implemented_features () =
     let fails msg =
       let msg =
-        Format.sprintf
+        Fmt.str
           "%S is not implemented in CDCL solver ! \
            Please use the old Tableaux-like SAT solver instead."
           msg
@@ -1299,8 +1239,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat env gf =
     checks_implemented_features ();
     let gf = add_guard env gf in
-    Debug.unsat gf;
-    (*fprintf fmt "FF.unsat@.";*)
+    P.debug
+      (fun k -> k"the formula@ %a@ is unsatisfiable?" E.print gf.E.ff);
     (* In dfs_sat goals' terms are added to env.inst *)
     env.inst <-
       Inst.add_terms env.inst
@@ -1340,11 +1280,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
-    Timers.with_timer Modules.M_Sat Timers.F_assume @@ fun () ->
+    Timers.with_timer Self.M_Sat Self.F_assume @@ fun () ->
     assume t ff dep
 
   let unsat t ff =
-    Timers.with_timer Modules.M_Sat Timers.F_unsat @@ fun () ->
+    Timers.with_timer Self.M_Sat Self.F_unsat @@ fun () ->
     unsat t ff
 
   let assume_th_elt env th_elt dep =
@@ -1386,7 +1326,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Id.Namespace.reinit ();
     Symbols.clear_labels ();
     Var.reinit_cnt ();
-    Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
     Inst.reinit_em_cache ();

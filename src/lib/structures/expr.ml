@@ -329,27 +329,27 @@ module SmtPrinter = struct
   let rec pp_formula ppf form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(and %a %a@])" pp_boxed f1 pp_boxed f2
+      Fmt.pf ppf "@[<1>(and %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Iff, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(= %a %a@])" pp_boxed f1 pp_boxed f2
+      Fmt.pf ppf "@[<1>(= %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Xor, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(xor %a %a@])" pp_boxed f1 pp_boxed f2
+      Fmt.pf ppf "@[<1>(xor %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Clause _, [f1; f2], _ ->
-      Fmt.pf ppf "@[<2>(or %a %a@])" pp_boxed f1 pp_boxed f2
+      Fmt.pf ppf "@[<1>(or %a %a@])" pp_boxed f1 pp_boxed f2
 
     | Sy.F_Lemma, [], B_lemma { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! @[<2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
+        Fmt.pf ppf "@[<1>(! @[<2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
           pp_binders binders pp_boxed main pp_triggers user_trs name
       else
         Fmt.string ppf name
 
     | Sy.F_Skolem, [], B_skolem { user_trs; main; name; binders; _ } ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! @[<2>(exists (%a) %a %a@])@ :named %s@])"
+        Fmt.pf ppf "@[<1>(! @[<2>(exists (%a) %a %a@])@ :named %s@])"
           pp_binders binders pp_boxed main pp_triggers user_trs name
       else
         Fmt.string ppf name
@@ -358,34 +358,32 @@ module SmtPrinter = struct
 
   and pp_lit ppf lit xs =
     match lit, xs with
-    | Sy.L_eq, a::l ->
-      Fmt.pf ppf "@[<2>(= %a %a@])"
-        pp a (fun ppf -> List.iter (Fmt.pf ppf " %a" pp)) l
+    | Sy.L_eq, [a; b] ->
+      Fmt.pf ppf "@[<1>(= %a@ %a@])" pp a pp b
 
     | Sy.L_neg_eq, _ :: _ ->
-      Fmt.pf ppf "@[<2>(distinct %a@])" Fmt.(list ~sep:sp pp) xs
+      Fmt.pf ppf "@[(distinct@ %a@])" Fmt.(list ~sep:sp pp) xs
 
     | Sy.L_built Sy.LE, [a;b] ->
-      Fmt.pf ppf "@[<2>(<= %a %a@])" pp a pp b
+      Fmt.pf ppf "@[<1>(<= %a@ %a@])" pp a pp b
 
     | Sy.L_built Sy.LT, [a;b] ->
-      Fmt.pf ppf "@[<2>(< %a %a@])" pp a pp b
+      Fmt.pf ppf "@[<1>(< %a@ %a@])" pp a pp b
 
     | Sy.L_neg_built Sy.LE, [a; b] ->
-      Fmt.pf ppf "@[<2>(> %a %a@])" pp a pp b
+      Fmt.pf ppf "@[<1>(> %a@ %a@])" pp a pp b
 
     | Sy.L_neg_built Sy.LT, [a; b] ->
-      Fmt.pf ppf "@[<2>(>= %a %a@])" pp a pp b
+      Fmt.pf ppf "@[<1>(>= %a@ %a@])" pp a pp b
 
     | Sy.L_neg_pred, [a] ->
-      Fmt.pf ppf "@[<2>(not@ %a@])" pp a
+      Fmt.pf ppf "@[<1>(not@ %a@])" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" Uid.pp hs pp e
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))"
-        Uid.pp hs pp e
+      Fmt.pf ppf "@[<1>(not @[((_ is %a)@ %a@])@])" Uid.pp hs pp e
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -402,7 +400,7 @@ module SmtPrinter = struct
 
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
-      Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])"
+      Fmt.pf ppf "@[<1>(let@ ((%a@ %a))@ %a@])"
         Var.print x.let_v
         pp x.let_e
         pp_boxed x.in_e
@@ -412,7 +410,7 @@ module SmtPrinter = struct
         match ty with
         | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
           assert (List.compare_lengths xs lbs = 0);
-          Fmt.pf ppf "@[<2>(%a %a@])"
+          Fmt.pf ppf "@[<1>(%a %a@])"
             Uid.pp record_constr
             Fmt.(list ~sep:sp pp |> box) xs
 
@@ -427,10 +425,10 @@ module SmtPrinter = struct
       pp_rational ppf (Q.neg q)
 
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
-      Fmt.pf ppf "@[<2>(- %a@])" pp e2
+      Fmt.pf ppf "@[<1>(- %a@])" pp e2
 
     | Sy.Op op, _ :: _ ->
-      Fmt.pf ppf "@[<2>(%a %a@])"
+      Fmt.pf ppf "@[<1>(%a@ %a@])"
         Symbols.pp_smtlib_operator op
         Fmt.(list ~sep:sp pp |> box) xs
 
@@ -444,7 +442,7 @@ module SmtPrinter = struct
     | Sy.Name { hs = n; _ }, [] -> Id.pp ppf n
 
     | Sy.Name { hs = n; _ }, _ :: _ ->
-      Fmt.pf ppf "@[<2>(%a %a@])"
+      Fmt.pf ppf "@[<1>(%a@ %a@])"
         Id.pp n
         Fmt.(list ~sep:sp pp |> box) xs
 
@@ -1565,7 +1563,7 @@ let apply_subst, clear_subst_cache =
   apply_subst, clear_subst_cache
 
 let apply_subst s t =
-  Timers.with_timer Modules.M_Expr Timers.F_apply_subst @@ fun () ->
+  Timers.with_timer Self.M_Expr Self.F_apply_subst @@ fun () ->
   apply_subst s t
 
 (** Subterms, and related stuff *)

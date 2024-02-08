@@ -25,28 +25,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type ty_function =
-  | F_add
-  | F_add_lemma
-  | F_add_predicate
-  | F_add_terms
-  | F_are_equal
-  | F_assume
-  | F_class_of
-  | F_leaves
-  | F_make
-  | F_m_lemmas
-  | F_m_predicates
-  | F_query
-  | F_solve
-  | F_subst
-  | F_union
-  | F_unsat
-  | F_none
-  | F_new_facts
-  | F_apply_subst
-  | F_instantiate
-
 (** environment of internal timers **)
 type t
 
@@ -56,35 +34,31 @@ val empty : unit -> t
 (** reset the given env to empty *)
 val reset : t -> unit
 
-(** save the current timer and start the timer "Modules.t x ty_function" **)
-val start : t -> Modules.t -> ty_function -> unit
+(** save the current timer and start the timer "Self.mod_ x Self.fn" **)
+val start : t -> Self.mod_ -> Self.fn -> unit
 
-(** pause the timer "Modules.t x ty_function" and restore the former timer **)
-val pause : t -> Modules.t -> ty_function -> unit
+(** pause the timer "Self.mod_ x Self.fn" and restore the former timer **)
+val pause : t -> Self.mod_ -> Self.fn -> unit
 
 (** update the value of the current timer **)
 val update : t -> unit
 
-(** get the value of the timer "Modules.t x ty_function" **)
-val get_value : t -> Modules.t -> ty_function -> float
+(** get the value of the timer "Self.mod_ x Self.fn" **)
+val get_value : t -> Self.mod_ -> Self.fn -> float
 
-(** get the sum of the "ty_function" timers for the given "Modules.t" **)
-val get_sum : t -> Modules.t -> float
+(** get the sum of the "Self.fn" timers for the given "Self.mod_" **)
+val get_sum : t -> Self.mod_ -> float
 
-val current_timer : t -> Modules.t * ty_function * int
+val current_timer : t -> Self.mod_ * Self.fn * int
 
-val show_ty_function : ty_function -> string
-
-val get_stack : t -> (Modules.t * ty_function * int) list
-
-val all_functions : ty_function list
+val get_stack : t -> (Self.mod_ * Self.fn * int) list
 
 (** This functions assumes (asserts) that timers() yields true **)
-val set_timer_start : (Modules.t -> ty_function -> unit) -> unit
+val set_timer_start : (Self.mod_ -> Self.fn -> unit) -> unit
 
 (** This functions assumes (asserts) that timers() yields true **)
-val set_timer_pause : (Modules.t -> ty_function -> unit) -> unit
+val set_timer_pause : (Self.mod_ -> Self.fn -> unit) -> unit
 
-val with_timer : Modules.t -> ty_function -> (unit -> 'a) -> 'a
+val with_timer : Self.mod_ -> Self.fn -> (unit -> 'a) -> 'a
 (** [with_timer mod_ fun_ f] wraps the call [f ()] with the timer
     [(mod_, fun_)]. *)

@@ -84,7 +84,7 @@ module Shostak
 
   let name = "arith"
 
-  let timer = Modules.M_Arith
+  let timer = Self.M_Arith
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct

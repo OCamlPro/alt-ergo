@@ -179,4 +179,13 @@ val print_smtlib_err :
   ?flushed:bool ->
   ('a, Format.formatter, unit) format -> 'a
 
-val reporter : Format.formatter -> Logs.reporter
+val mdl_src : Logs.src
+(** Source to print models. *)
+
+val reporter : Logs.reporter
+
+module Make (M : sig val mod_ : Self.mod_ end) : sig
+  val err : ?fn:Self.fn -> 'a Logs.log
+  val debug : ?fn:Self.fn -> 'a Logs.log
+  val warn : ?fn:Self.fn -> 'a Logs.log
+end

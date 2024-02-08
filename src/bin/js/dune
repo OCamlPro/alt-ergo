@@ -15,6 +15,7 @@
  (libraries
    js_of_ocaml
    data-encoding
+   alt_ergo_common
  )
  (modules worker_interface)
 )

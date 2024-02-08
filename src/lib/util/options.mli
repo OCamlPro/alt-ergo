@@ -96,24 +96,6 @@ type known_status =
 (** Set [debug] accessible with {!val:get_debug} *)
 val set_debug : bool -> unit
 
-(**Set [debug_ac] accessible with {!val:get_debug_ac} *)
-val set_debug_ac : bool -> unit
-
-(** Set [debug_adt] accessible with {!val:get_debug_adt} *)
-val set_debug_adt : bool -> unit
-
-(** Set [debug_arith] accessible with {!val:get_debug_arith} *)
-val set_debug_arith : bool -> unit
-
-(** Set [debug_arrays] accessible with {!val:get_debug_arrays} *)
-val set_debug_arrays : bool -> unit
-
-(** Set [debug_bitv] accessible with {!val:get_debug_bitv} *)
-val set_debug_bitv : bool -> unit
-
-(** Set [debug_cc] accessible with {!val:get_debug_cc} *)
-val set_debug_cc : bool -> unit
-
 (** Set [debug_combine] accessible with {!val:get_debug_combine} *)
 val set_debug_combine : bool -> unit
 
@@ -142,9 +124,6 @@ val set_debug_gc : bool -> unit
     {!val:get_debug_interpretation} *)
 val set_debug_interpretation : bool -> unit
 
-(** Set [debug_ite] accessible with {!val:get_debug_ite} *)
-val set_debug_ite : bool -> unit
-
 (** Set [debug_matching] accessible with {!val:get_debug_matching}
 
     Possible values are
@@ -152,26 +131,11 @@ val set_debug_ite : bool -> unit
 *)
 val set_debug_matching : int -> unit
 
-(** Set [debug_sat] accessible with {!val:get_debug_sat} *)
-val set_debug_sat : bool -> unit
-
 (** Set [debug_split] accessible with {!val:get_debug_split} *)
 val set_debug_split : bool -> unit
 
-(** Set [debug_sum] accessible with {!val:get_debug_sum} *)
-val set_debug_sum : bool -> unit
-
-(** Set [debug_triggers] accessible with {!val:get_debug_triggers} *)
-val set_debug_triggers : bool -> unit
-
 (** Set [debug_types] accessible with {!val:get_debug_types} *)
 val set_debug_types : bool -> unit
-
-(** Set [debug_typing] accessible with {!val:get_debug_typing} *)
-val set_debug_typing : bool -> unit
-
-(** Set [debug_uf] accessible with {!val:get_debug_uf} *)
-val set_debug_uf : bool -> unit
 
 (** Set [debug_unsat_core] accessible with {!val:get_debug_unsat_core} *)
 val set_debug_unsat_core : bool -> unit

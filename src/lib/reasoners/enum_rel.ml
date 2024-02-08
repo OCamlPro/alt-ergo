@@ -33,7 +33,7 @@ module SX = Shostak.SXH
 module LR = Uf.LX
 module Th = Shostak.Enum
 
-let timer = Modules.M_Sum
+let timer = Self.M_Sum
 
 module Domain = struct
   type t = {
@@ -213,8 +213,27 @@ type t = {
      [Options.get_max_split ()]. *)
 }
 
+<<<<<<< HEAD
+||||||| parent of 0448389c1 (Use logs for debug printing)
+let empty classes = {
+  mx = MX.empty;
+  classes = classes;
+  size_splits = Numbers.Q.one
+}
+
+=======
+let empty classes = {
+  mx = MX.empty;
+  classes = classes;
+  size_splits = Numbers.Q.one
+}
+
+module P = Printer.Make (struct let mod_ = Self.M_Sum end)
+
+>>>>>>> 0448389c1 (Use logs for debug printing)
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
+<<<<<<< HEAD
   let assume l =
     if Options.get_debug_sum () then
       Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"assume"
@@ -240,6 +259,87 @@ module Debug = struct
     if Options.get_debug_sum () then
       Printer.print_dbg ~module_name:"Enum_rel"
         "The environment before assuming:@ @[%a@]" Domains.pp domains
+||||||| parent of 0448389c1 (Use logs for debug printing)
+  open Printer
+
+  let assume bol r1 r2 =
+    if Options.get_debug_sum () then
+      print_dbg
+        ~module_name:"Enum_rel" ~function_name:"assume"
+        "we assume %a %s %a"
+        X.print r1 (if bol then "=" else "<>") X.print r2
+
+  let print_env env =
+    if Options.get_debug_sum () then begin
+      Printer.print_dbg ~flushed:false
+        ~module_name:"Enum_rel" ~function_name:"print_env"
+        "@[<v 2>--SUM env ---------------------------------@ ";
+      MX.iter
+        (fun r (hss, ex) ->
+           Printer.print_dbg  ~flushed:false ~header:false
+             "%a ::= " X.print r;
+           begin
+             match HSS.elements hss with
+               []      -> ()
+             | hs :: l ->
+               Printer.print_dbg  ~flushed:false ~header:false
+                 " %s" (Hs.view hs);
+               L.iter (fun hs ->
+                   Printer.print_dbg  ~flushed:false ~header:false
+                     " | %s" (Hs.view hs)) l
+           end;
+           Printer.print_dbg ~flushed:false ~header:false
+             " : %a@ " Ex.print ex;
+        ) env.mx;
+      Printer.print_dbg ~header:false
+        "@ -------------------------------------------";
+    end
+
+  let case_split r r' =
+    if Options.get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"case_split"
+        "%a = %a" X.print r X.print r'
+
+  let no_case_split () =
+    if Options.get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"no_case_split"
+        "sum: nothing"
+
+  let add r =
+    if Options.get_debug_sum () then
+      Printer.print_dbg
+        ~module_name:"Enum_rel" ~function_name:"add"
+        "%a" X.print r
+
+=======
+  let print_env env =
+    if Options.get_debug_sum () then begin
+      Printer.print_dbg ~flushed:false
+        ~module_name:"Enum_rel" ~function_name:"print_env"
+        "@[<v 2>--SUM env ---------------------------------@ ";
+      MX.iter
+        (fun r (hss, ex) ->
+           Printer.print_dbg  ~flushed:false ~header:false
+             "%a ::= " X.print r;
+           begin
+             match HSS.elements hss with
+               []      -> ()
+             | hs :: l ->
+               Printer.print_dbg  ~flushed:false ~header:false
+                 " %s" (Hs.view hs);
+               L.iter (fun hs ->
+                   Printer.print_dbg  ~flushed:false ~header:false
+                     " | %s" (Hs.view hs)) l
+           end;
+           Printer.print_dbg ~flushed:false ~header:false
+             " : %a@ " Ex.print ex;
+        ) env.mx;
+      Printer.print_dbg ~header:false
+        "@ -------------------------------------------";
+    end
+>>>>>>> 0448389c1 (Use logs for debug printing)
 end
 (*BISECT-IGNORE-END*)
 
@@ -259,8 +359,30 @@ let count_splits env la =
   in
   {size_splits = nb}
 
+<<<<<<< HEAD
 let tighten_domain rr nd domains =
   Domains.tighten rr nd domains
+||||||| parent of 0448389c1 (Use logs for debug printing)
+(* Add the uninterpreted semantic value [r] to the environment [env] with
+   all the constructors of its type as domain. *)
+let add_aux env r =
+  Debug.add r;
+  match Sh.embed r, values_of r with
+  | Alien r, Some hss ->
+    if MX.mem r env.mx then env else
+      { env with mx = MX.add r (hss, Ex.empty) env.mx }
+  | _ -> env
+=======
+(* Add the uninterpreted semantic value [r] to the environment [env] with
+   all the constructors of its type as domain. *)
+let add_aux env r =
+  P.debug ~fn:Self.F_add (fun k -> k"add %a" X.print r);
+  match Sh.embed r, values_of r with
+  | Alien r, Some hss ->
+    if MX.mem r env.mx then env else
+      { env with mx = MX.add r (hss, Ex.empty) env.mx }
+  | _ -> env
+>>>>>>> 0448389c1 (Use logs for debug printing)
 
 (* Update the domains of the semantic values [r1] and [r2] according to the
    disequality [r1 <> r2].
@@ -346,11 +468,38 @@ let assume env uf la =
   let domains = Uf.GlobalDomains.find (module Domains) ds in
   Debug.pp_domains domains;
   let env = count_splits env la in
+<<<<<<< HEAD
   let domains =
     try
       assume_literals la uf domains
     with Domain.Inconsistent ex ->
       raise_notrace (Ex.Inconsistent (ex, Uf.cl_extract uf))
+||||||| parent of 0448389c1 (Use logs for debug printing)
+  let classes = Uf.cl_extract uf in
+  let env = { env with classes = classes } in
+  let aux bol r1 r2 dep env eqs = function
+    | None     -> env, eqs
+    | Some hss ->
+      Debug.assume bol r1 r2;
+      if bol then
+        add_eq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
+      else
+        add_diseq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
+=======
+  let classes = Uf.cl_extract uf in
+  let env = { env with classes = classes } in
+  let aux bol r1 r2 dep env eqs = function
+    | None     -> env, eqs
+    | Some hss ->
+      P.debug ~fn:Self.F_assume
+        (fun k -> k"assume@ %a %s %a"
+            X.print r1 (if bol then "=" else "<>") X.print r2
+        );
+      if bol then
+        add_eq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
+      else
+        add_diseq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
+>>>>>>> 0448389c1 (Use logs for debug printing)
   in
   let assume, domains = propagate_domains domains in
   env,
@@ -383,14 +532,33 @@ let case_split env uf ~for_model =
   match best with
   | Some (n, r, c) ->
     let n = Numbers.Q.from_int n in
+<<<<<<< HEAD
     if for_model || can_split env n then
       let nr = Th.is_mine (Cons (c, X.type_info r)) in
       Debug.case_split r nr;
       [LR.mkv_eq r nr, true, Th_util.CS (Th_util.Th_sum, n)]
+||||||| parent of 0448389c1 (Use logs for debug printing)
+    if for_model ||
+       Numbers.Q.compare
+         (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
+       Numbers.Q.sign  (Options.get_max_split ()) < 0 then
+      let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
+      Debug.case_split r r';
+      [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+=======
+    if for_model ||
+       Numbers.Q.compare
+         (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
+       Numbers.Q.sign  (Options.get_max_split ()) < 0 then
+      let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
+      P.debug ~fn:Self.F_case_split
+        (fun k -> k"case split:@ %a = %a" X.print r X.print r');
+      [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+>>>>>>> 0448389c1 (Use logs for debug printing)
     else
       []
   | None ->
-    Debug.no_case_split ();
+    P.debug ~fn:Self.F_case_split (fun k -> k"no case split found");
     []
 
 let optimizing_objective _env _uf _o = None

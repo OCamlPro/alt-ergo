@@ -59,91 +59,75 @@ struct
 
   type r = {v : rview ; id : int}
 
+  module P = Printer.Make (struct let mod_ = Self.M_Combine end)
+
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
-    open Printer
-
-    let print fmt r =
-      let open Format in
+    let print ppf r =
       if Options.get_term_like_pp () then begin
         match r.v with
-        | Arith t -> fprintf fmt "%a" ARITH.print t
-        | Records t -> fprintf fmt "%a" RECORDS.print t
-        | Bitv t -> fprintf fmt "%a" BITV.print t
-        | Adt t -> fprintf fmt "%a" ADT.print t
-        | Term t -> fprintf fmt "%a" Expr.print t
-        | Ac t -> fprintf fmt "%a" AC.print t
+        | Arith t -> ARITH.print ppf t
+        | Records t -> RECORDS.print ppf t
+        | Bitv t -> BITV.print ppf t
+        | Adt t -> ADT.print ppf t
+        | Term t -> Expr.print ppf t
+        | Ac t -> AC.print ppf t
       end
       else begin
         match r.v with
         | Arith t ->
-          fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
+          Fmt.pf ppf "%s:@,[%a]" ARITH.name ARITH.print t
         | Records t ->
-          fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
+          Fmt.pf ppf "%s:@,[%a]" RECORDS.name RECORDS.print t
         | Bitv t ->
-          fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
+          Fmt.pf ppf "Bitv(%s):[%a]" BITV.name BITV.print t
         | Adt t ->
-          fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
+          Fmt.pf ppf "%s:@,[%a]" ADT.name ADT.print t
         | Term t ->
-          fprintf fmt "FT:[%a]" Expr.print t
+          Fmt.pf ppf "FT:@,[%a]" Expr.print t
         | Ac t ->
-          fprintf fmt "Ac:[%a]" AC.print t
+          Fmt.pf ppf "Ac:@,[%a]" AC.print t
       end
 
     let print_sbt msg sbs =
-      let c = ref 0 in
-      let print fmt (p,v) =
-        incr c;
-        Format.fprintf fmt "<%d) %a |-> %a@ "
-          !c print p print v
-      in
-      if Options.get_debug_combine () then
-        print_dbg
-          ~module_name:"Shostak" ~function_name:"print_sbt"
-          "@[<v 2>%s subst:@ %a@]"
-          msg
-          (pp_list_no_space print) sbs
+      let pp_index ppf i = Fmt.pf ppf "<%d" i in
+      let pp_binding ppf (p, v) = Fmt.pf ppf "%a |-> %a" print p print v in
+      P.debug (fun k -> k"%s subst:@ %a" msg
+                  Fmt.(iter_bindings List.iteri
+                         (pair ~sep:(const string ") ") pp_index pp_binding)
+                       |> box)
+                  sbs)
 
     let debug_abstraction_result oa ob a b acc =
-      let c = ref 0 in
-      let print fmt (p,v) =
-        incr c;
-        Format.fprintf fmt "(%d) %a |-> %a@ "
-          !c CX.print p CX.print v
-      in
-      if Options.get_debug_combine () then
-        print_dbg
-          ~module_name:"Shostak" ~function_name:"abstraction_result"
-          "@[<v 0>== get_debug_abstraction_result ==@ \
-           Initial equaliy:   %a = %a@ \
-           abstracted equality: %a = %a@ \
-           @[<v 2>selectors elimination result:@ \
-           %a@]@]"
-          CX.print oa CX.print ob CX.print a CX.print b
-          (pp_list_no_space print) acc
+      let pp_index ppf i = Fmt.pf ppf "(%d)" i in
+      let pp_binding ppf (p, v) = Fmt.pf ppf "%a |-> %a" print p print v in
+      P.debug (fun k -> k
+                  "@[<v 0>abstract result:@ \
+                   initial equality: @[%a = %a@]@ \
+                   abstracted equality: @[%a = %a@]@ \
+                   selector elimination result:@ @[<v 2>%a@]@]"
+                  CX.print oa CX.print ob
+                  CX.print a CX.print b
+                  Fmt.(iter_bindings List.iteri
+                         (pair ~sep:sp pp_index pp_binding) |> box)
+                  acc
+              )
 
     let solve_one a b =
-      if Options.get_debug_combine () then
-        print_dbg
-          ~module_name:"Shostak" ~function_name:"solve_one"
-          "solve one %a = %a" CX.print a CX.print b
+      P.debug (fun k -> k"solve one@ %a = %a" CX.print a CX.print b)
 
     let debug_abstract_selectors a =
-      if Options.get_debug_combine () then
-        print_dbg
-          ~module_name:"Shostak" ~function_name:"abstract_selectors"
-          "abstract selectors of %a" CX.print a
+      P.debug (fun k -> k"abstract selectors of@ %a" CX.print a)
 
     let assert_have_mem_types tya tyb =
       Options.heavy_assert (fun () ->
           if not (Ty.compare tya tyb = 0) then begin
-            print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
+            Fmt.pr "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
               Ty.print tya Ty.print tyb;
             false
           end
           else true
         )
-
   end
   (*BISECT-IGNORE-END*)
 
@@ -361,23 +345,23 @@ struct
       AC.is_mine_symb sb ty
     with
     | true, false, false, false, false ->
-      Timers.with_timer Modules.M_Arith Timers.F_make @@ fun () ->
+      Timers.with_timer Self.M_Arith Self.F_make @@ fun () ->
       ARITH.make t
 
     | false, true, false, false, false ->
-      Timers.with_timer Modules.M_Records Timers.F_make @@ fun () ->
+      Timers.with_timer Self.M_Records Self.F_make @@ fun () ->
       RECORDS.make t
 
     | false, false, true, false, false ->
-      Timers.with_timer Modules.M_Bitv Timers.F_make @@ fun () ->
+      Timers.with_timer Self.M_Bitv Self.F_make @@ fun () ->
       BITV.make t
 
     | false, false, false, true, false ->
-      Timers.with_timer Modules.M_Adt Timers.F_make @@ fun () ->
+      Timers.with_timer Self.M_Adt Self.F_make @@ fun () ->
       ADT.make t
 
     | false, false, false, false, true  ->
-      Timers.with_timer Modules.M_AC Timers.F_make @@ fun () ->
+      Timers.with_timer Self.M_AC Self.F_make @@ fun () ->
       AC.make t
 
     | false, false, false, false, false ->
@@ -525,25 +509,25 @@ struct
         Debug.assert_have_mem_types tya tyb;
         let pb = match tya with
           | Ty.Tint | Ty.Treal ->
-            Timers.with_timer ARITH.timer Timers.F_solve @@ fun () ->
+            Timers.with_timer ARITH.timer Self.F_solve @@ fun () ->
             ARITH.solve ra rb pb
 
           | Ty.Trecord _       ->
-            Timers.with_timer RECORDS.timer Timers.F_solve @@ fun () ->
+            Timers.with_timer RECORDS.timer Self.F_solve @@ fun () ->
             RECORDS.solve ra rb pb
 
           | Ty.Tbitv _         ->
-            Timers.with_timer BITV.timer Timers.F_solve @@ fun () ->
+            Timers.with_timer BITV.timer Self.F_solve @@ fun () ->
             BITV.solve ra rb pb
 
           (*| Ty.Tunit           -> pb *)
 
           | Ty.Tadt _ when not (Options.get_disable_adts()) ->
-            Timers.with_timer ADT.timer Timers.F_solve @@ fun () ->
+            Timers.with_timer ADT.timer Self.F_solve @@ fun () ->
             ADT.solve ra rb pb
 
           | _                  ->
-            Timers.with_timer Modules.M_Combine Timers.F_solve @@ fun () ->
+            Timers.with_timer Self.M_Combine Self.F_solve @@ fun () ->
             solve_uninterpreted ra rb pb
         in
         solve_list pb

@@ -78,7 +78,7 @@ module TBS = struct
   let add k v mp = add k (S.add v (find k mp)) mp
 end
 
-let timer = Modules.M_Arrays
+let timer = Self.M_Arrays
 
 module H = Ephemeron.K1.Make (Expr)
 

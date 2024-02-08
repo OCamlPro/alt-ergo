@@ -68,8 +68,11 @@ module type ATOM = sig
   val copy_hcons_env : hcons_env -> hcons_env
   val nb_made_vars : hcons_env -> int
 
-  val pr_atom : Format.formatter -> atom -> unit
-  val pr_clause : Format.formatter -> clause -> unit
+  val pp_atom : atom Fmt.t
+  val pp_dump_atom : atom  Fmt.t
+  val pp_clause : clause Fmt.t
+  val pp_dump_clause : clause Fmt.t
+
   val get_atom : hcons_env -> Expr.t ->  atom
 
   val literal : atom -> Shostak.Literal.t
@@ -138,8 +141,7 @@ module type FLAT_FORMULA = sig
 
   val equal   : t -> t -> bool
   val compare : t -> t -> int
-  val print   : Format.formatter -> t -> unit
-  val print_stats : Format.formatter -> unit
+  val pp   : t Fmt.t
   val vrai    : t
   val faux    : t
   val view    : t -> view
@@ -192,9 +194,6 @@ module type FLAT_FORMULA = sig
       and the definition [p <=> l_1 /\ ... /\ l_n] is expanded into:
 
         [(p \/ ~l_1 \/ ... \/ ~l_n) /\ (~p \/ l_1) /\ ... /\ (~p \/ l_n)] *)
-
-  val reinit_cpt : unit -> unit
-  (** Resets to 0 the counter *)
 
   module Set : Set.S with type elt = t
   module Map : Map.S with type key = t

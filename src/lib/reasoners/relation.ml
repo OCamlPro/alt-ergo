@@ -42,7 +42,7 @@ module Rel5 : Sig_rel.RELATION = Adt_rel
 module Rel6 : Sig_rel.RELATION = Ite_rel
 
 (* This value is unused. *)
-let timer = Modules.M_None
+let timer = Self.M_None
 
 type t = {
   r1: Rel1.t;
@@ -70,27 +70,27 @@ let (|@|) l1 l2 =
 let assume env uf sa =
   Options.exec_thread_yield ();
   let env1, doms1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
-    Timers.with_timer Rel1.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel1.timer Self.F_assume @@ fun () ->
     Rel1.assume env.r1 uf sa
   in
   let env2, doms2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
-    Timers.with_timer Rel2.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel2.timer Self.F_assume @@ fun () ->
     Rel2.assume env.r2 (Uf.set_domains uf doms1) sa
   in
   let env3, doms3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
-    Timers.with_timer Rel3.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel3.timer Self.F_assume @@ fun () ->
     Rel3.assume env.r3 (Uf.set_domains uf doms2) sa
   in
   let env4, doms4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
-    Timers.with_timer Rel4.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel4.timer Self.F_assume @@ fun () ->
     Rel4.assume env.r4 (Uf.set_domains uf doms3) sa
   in
   let env5, doms5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
-    Timers.with_timer Rel5.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel5.timer Self.F_assume @@ fun () ->
     Rel5.assume env.r5 (Uf.set_domains uf doms4) sa
   in
   let env6, doms6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
-    Timers.with_timer Rel6.timer Timers.F_assume @@ fun () ->
+    Timers.with_timer Rel6.timer Self.F_assume @@ fun () ->
     Rel6.assume env.r6 (Uf.set_domains uf doms5) sa
   in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6},
@@ -111,7 +111,7 @@ let assume_th_elt env th_elt dep =
 
 let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
     k =
-  match Timers.with_timer R.timer Timers.F_query
+  match Timers.with_timer R.timer Self.F_query
     @@ fun () -> R.query env uf a with
   | Some r -> Some r
   | None -> k ()
