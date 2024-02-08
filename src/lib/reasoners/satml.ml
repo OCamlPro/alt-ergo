@@ -168,6 +168,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   module Matoms = Atom.Map
 
   type th = Th.t
+
+  module VH = Hashtbl.Make(struct
+      type t = Atom.var
+
+      let equal = Atom.equal_var
+
+      let hash = Atom.hash_var
+    end)
+
   type t =
     {
       hcons_env : Atom.hcons_env;
@@ -358,6 +367,24 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (** Checkpoint of the [lazy_cnf] field at each decision level. Only used
           with the CDCL-Tableaux solver. *)
 
+      irrelevants : unit VH.t;
+      (** Variables that have been removed from the set of possible decisions
+          due to no longer being relevant to the original formula (i.e. they are
+          undecided but also no longer in the [lazy_cnf]).
+
+          We maintain the following invariants:
+
+          - Any *unknown* variable is either in the [order] heap, or in the
+             [irrelevants] set
+          - Any variable in the [irrelevants] set is not relevant (i.e. neither
+             [v.na] nor [v.pa] is in the [lazy_cnf] -- this invariant is locally
+             broken inside [try_to_backjump_further], but we don't make
+             decisions there, so it is fine)
+
+          Variables from the [irrelevants] set are added back to the [order]
+          heap upon backtracking if they become relevant at the backtracked
+          level, otherwise they stay in the [irrelevants] set. *)
+
       mutable relevants : SFF.t;
       (** Set of relevant flat formulas. These are the formulas that have been
           added to the lazy CNF (i.e. asserted), including sub-formulas that are
@@ -513,6 +540,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       lazy_cnf_queue =
         Vec.make 100
           ~dummy:(Matoms.singleton (Atom.faux_atom) (MFF.empty, FF.faux));
+
+      irrelevants = VH.create 17;
 
       relevants = SFF.empty;
       relevants_queue = Vec.make 100 ~dummy:(SFF.singleton (FF.faux));
@@ -702,7 +731,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       );
       env.next_decisions <- [];
       env.next_split <- None;
-      env.next_objective <- None
+      env.next_objective <- None;
+      (* Some variables that were irrelevant because of canceled
+         decisions/propagations may become relevant again. Add them back to the
+         heap. *)
+      if Options.get_cdcl_tableaux_inst () then
+        VH.filter_map_inplace (fun v () ->
+            if
+              Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf
+            then (
+              insert_var_order env v; None
+            ) else
+              Some ()
+          ) env.irrelevants;
     end;
     if Options.get_profiling() then Profiling.reset_dlevel (decision_level env);
     assert (Vec.size env.trail_lim = Vec.size env.tenv_queue);
@@ -919,6 +960,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            let ctt =
              try Matoms.find child ma |> fst with Not_found -> MFF.empty
            in
+           (* The variable becomes relevant and is not decided: add it back to
+              the heap in case it has been removed. *)
+           VH.remove env.irrelevants child.var;
+           insert_var_order env child.var;
            Matoms.add child (MFF.add f_a l ctt, fchild) ma
         )ma l
     in
@@ -1735,7 +1780,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if v.level >= 0 then begin
       assert (v.pa.is_true || v.na.is_true);
       pick_branch_lit env
-    end else
+    end else if Options.get_cdcl_tableaux_inst () then
+      (* Do not decide on irrelevant variables (e.g. if we know [P] is true and
+         the only relevant formula involving [Q] is [P \/ Q], deciding on [Q] is
+         unlikely to be helpful -- especially since irrelevant decision won't be
+         propagated to the theory).
+
+         Note that we can only do this if [get_cdcl_tableaux_inst ()] is [true],
+         because otherwise instanciation requires a complete boolean model. *)
+      if Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf then
+        make_decision env atom
+      else (
+        VH.add env.irrelevants v ();
+        pick_branch_lit env
+      )
+    else
       make_decision env atom
 
   and pick_branch_lit env =
@@ -1766,7 +1825,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         | None ->
           match Vheap.remove_min env.order with
           | v -> pick_branch_aux env v.na
-          | exception Not_found -> raise_notrace Sat
+          | exception Not_found ->
+            if Options.get_cdcl_tableaux_inst () then
+              assert (Matoms.is_empty env.lazy_cnf);
+            raise_notrace Sat
 
   let pick_branch_lit env =
     if env.next_dec_guard < Vec.size env.increm_guards then
@@ -1914,7 +1976,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                  else a::atoms, init
               ) ([], init0) atoms in
           List.fast_sort (fun a b ->
-              Atom.cmp_var a.Atom.var b.Atom.var
+              Atom.compare_var a.Atom.var b.Atom.var
             ) atoms, init
         else partition atoms init0
       in
