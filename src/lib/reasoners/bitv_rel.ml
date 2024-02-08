@@ -34,6 +34,8 @@ module Sy = Symbols
 module X = Shostak.Combine
 module L = Xliteral
 
+let timer = Timers.M_Bitv
+
 (* Currently we only compute, but in the future we may want to perform the same
    simplifications as in [Bitv.make]. We currently don't, because we don't
    really have a way to share code that uses polynome between the theory and the
@@ -715,11 +717,3 @@ let assume_th_elt t th_elt _ =
   | Util.Bitv ->
     failwith "This Theory does not support theories extension"
   | _ -> t
-
-include Rel_utils.Instrumentation (struct
-    type nonrec t = t
-
-    let mod_ = Timers.M_Bitv
-    let assume = assume
-    let query = query
-  end)

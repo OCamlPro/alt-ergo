@@ -30,6 +30,8 @@
 
 type t = unit
 
+let timer = Timers.M_Records
+
 let empty _ = ()
 let assume _ _ _ =
   (), { Sig_rel.assume = []; remove = []}

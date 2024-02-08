@@ -32,6 +32,8 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
+let timer = Timers.M_Sum
+
 type 'a abstract = 'a Enum.abstract =
   | Cons of Hs.t * Ty.t
   | Alien of 'a
@@ -346,11 +348,3 @@ let assume_th_elt t th_elt _ =
   | Util.Sum ->
     failwith "This Theory does not support theories extension"
   | _ -> t
-
-include Rel_utils.Instrumentation (struct
-    type nonrec t = t
-
-    let mod_ = Timers.M_Sum
-    let assume = assume
-    let query = query
-  end)

@@ -54,6 +54,8 @@ module TB =
         if c <> 0 then c else Stdlib.compare b1 b2
     end)
 
+let timer = Timers.M_Ite
+
 (* The present theory simplifies the ite terms t of the form
     ite(pred, t1, t2)
    where pred is an assumed predicate by introducing the equation
@@ -219,11 +221,3 @@ let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
 let assume_th_elt t _ _ = t
-
-include Rel_utils.Instrumentation (struct
-    type nonrec t = t
-
-    let mod_ = Timers.M_Ite
-    let assume = assume
-    let query = query
-  end)

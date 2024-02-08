@@ -81,6 +81,8 @@ module TBS = struct
   let add k v mp = add k (S.add v (find k mp)) mp
 end
 
+let timer = Timers.M_Arrays
+
 type t =
   {gets  : G.t;               (* l'ensemble des "get" croises*)
    tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
@@ -439,11 +441,3 @@ let assume_th_elt t th_elt _ =
   | Util.Arrays ->
     failwith "This Theory does not support theories extension"
   | _ -> t
-
-include Rel_utils.Instrumentation (struct
-    type nonrec t = t
-
-    let mod_ = Timers.M_Arrays
-    let assume = assume
-    let query = query
-  end)

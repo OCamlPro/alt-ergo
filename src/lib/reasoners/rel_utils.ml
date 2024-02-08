@@ -376,23 +376,3 @@ end = struct
     let dom = CS.fold Constraint.propagate bcs.fresh dom in
     { bcs with fresh = CS.empty }, dom
 end
-
-module Instrumentation (R : sig
-    open Sig_rel
-    type t
-
-    val mod_ : Timers.ty_module
-
-    val assume : t ->
-      Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
-
-    val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
-  end) = struct
-  let assume env uf la =
-    Timers.with_timer R.mod_ Timers.F_assume @@ fun () ->
-    R.assume env uf la
-
-  let query env uf la =
-    Timers.with_timer R.mod_ Timers.F_query @@ fun () ->
-    R.query env uf la
-end

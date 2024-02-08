@@ -100,6 +100,8 @@ end
 
 module Sim = OcplibSimplex.Basic.Make(SimVar)(Numbers.Q)(Explanation)
 
+let timer = Timers.M_Arith
+
 type t = {
   inequations : P.t Inequalities.t MPL.t;
   monomes: (I.t * SX.t) MX0.t;
@@ -2535,19 +2537,13 @@ let assume_th_elt t th_elt dep =
 
   | _ -> t
 
+let assume = assume ~query:false
+
 let instantiate ~do_syntactic_matching env uf selector =
-  Timers.with_timer Timers.M_Arith Timers.F_instantiate @@ fun () ->
+  Timers.with_timer timer Timers.F_instantiate @@ fun () ->
   instantiate ~do_syntactic_matching env uf selector
 
 let reinit_cache () =
   let module Oracle = (val get_oracle ()) in
   Oracle.reset_age_cpt ();
   EM.reinit_caches ()
-
-include Rel_utils.Instrumentation (struct
-    type nonrec t = t
-
-    let mod_ = Timers.M_Arith
-    let assume = assume ~query:false
-    let query = query
-  end)
