@@ -32,7 +32,7 @@ jobs:
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Update apt-get database
       - name: Update apt-get database
@@ -43,7 +43,7 @@ jobs:
       # if we use another ocaml version
       # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         id: cache-opam
         with:
           path: ~/.opam
@@ -86,7 +86,7 @@ jobs:
       # This is only done if this workflow is triggered in a PR or on the
       # following branches : next, main
       - name: Upload ocaml documentation
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
         with:
           name: ocaml_doc
@@ -111,7 +111,7 @@ jobs:
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the sphinx documentation
       # and automatically print any error or warning
@@ -124,7 +124,7 @@ jobs:
       # Create and upload an artifact `sphinx_doc` that contains the sphinx
       # documentation in html format.
       - name: Upload sphinx documentation
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: sphinx_doc
           path: docs/sphinx_docs/_build
@@ -145,14 +145,14 @@ jobs:
     steps:
       # Retrieve ocaml documentation artifact
       - name: Download ocaml documentation
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: ocaml_doc
           path: _build/odoc/dev
 
       # Retrieve sphinx documentation artifact
       - name: Download sphinx documentation
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: sphinx_doc
           path: _build
