@@ -359,16 +359,12 @@ val reinit_cache: unit -> unit
     https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
 module Core : sig
   val not : t -> t
-
   val eq : t -> t -> t
-
   val xor : t -> t -> t
-
   val and_ : t -> t -> t
-
   val or_ : t -> t -> t
-
   val ite : t -> t -> t -> t
+  val of_bool : bool -> t
 end
 
 (** Constructors from the smtlib theory of integers.

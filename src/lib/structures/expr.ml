@@ -2856,6 +2856,7 @@ module Core = struct
   let and_ s t = mk_and s t false
   let or_ s t = mk_or s t false
   let ite c t e = mk_ite c t e
+  let of_bool b = if b then vrai else faux
 end
 
 (** Constructors from the smtlib theory of integers.

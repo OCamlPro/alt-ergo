@@ -133,13 +133,10 @@ let get_value_in_model (type a) (module SAT : S with type t = a) env mdl e =
   let { Expr.f; xs; ty; _ } = Expr.term_view e in
   match f, ty with
   | _, Ty.Tbool ->
-    begin
-      (* Values of boolean expressions are decided by the SAT solver. *)
-      match get_value_in_boolean_model (module SAT) env e with
-      | Some true -> Some Expr.vrai
-      | Some false -> Some Expr.faux
-      | None -> None
-    end
+    (* Values of boolean expressions are decided by the SAT solver. *)
+    Option.map Expr.Core.of_bool @@
+    get_value_in_boolean_model (module SAT) env e
+
   | Symbols.Name name, _ ->
     let arg_tys = List.map Expr.type_info xs in
     let typed_name = (name, arg_tys, ty) in
