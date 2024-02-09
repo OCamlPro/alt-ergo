@@ -49,7 +49,7 @@ exception Sat
 exception Unsat of Explanation.t
 exception I_dont_know
 
-module type Internal = sig
+module type S = sig
   type t
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
@@ -139,32 +139,6 @@ module type Internal = sig
 
       @return [None] if there is no objective or the environment is
       unsatisfiable. *)
-end
-
-type lbool = False | True | Unknown
-
-val pp_lbool : lbool Fmt.t
-
-module type S = sig
-  include Internal
-
-  val get_value : t -> Expr.t list -> Expr.t list option
-  (** [get_value env l] returns the model values of the expressions of [l]
-      in the current generated model of [env].
-
-      @return [None] if the model generation is not enabled or the
-              environment is already unsatisfiable before calling this function.
-      @raise Unsat if the solver found a contradiction. *)
-
-  val get_assignment : t -> Expr.t list -> lbool list
-  (** [get_assignment env l] returns the status of the literals [l] in the
-      current boolean model of [env].
-
-      The status is [unknown] if the literal isn't a subformula of the user
-      input.
-
-      @raise invalid_argument if one of the expressions of [l] isn't a
-             literal. *)
 end
 
 module type SatContainer = sig

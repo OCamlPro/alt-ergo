@@ -28,53 +28,52 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Make (Th : Theory.S) : Sat_solver_sig.S = Sat_solver_util.Make
-    (struct
-      open Sat_solver_sig
+module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+  open Sat_solver_sig
 
-      module FS = Fun_sat.Make(Th)
+  module FS = Fun_sat.Make(Th)
 
-      type t = FS.t ref
+  type t = FS.t ref
 
-      let empty ?selector () = ref (FS.empty ?selector ())
+  let empty ?selector () = ref (FS.empty ?selector ())
 
-      let exn_handler f env =
-        try f !env with
-        | FS.Sat e -> env := e; raise Sat
-        | FS.Unsat expl -> raise (Unsat expl)
-        | FS.I_dont_know e -> env := e; raise I_dont_know
+  let exn_handler f env =
+    try f !env with
+    | FS.Sat e -> env := e; raise Sat
+    | FS.Unsat expl -> raise (Unsat expl)
+    | FS.I_dont_know e -> env := e; raise I_dont_know
 
-      let declare t id =
-        t := FS.declare !t id
+  let declare t id =
+    t := FS.declare !t id
 
-      let push t i = exn_handler (fun env -> t := FS.push env i) t
+  let push t i = exn_handler (fun env -> t := FS.push env i) t
 
-      let pop t i = exn_handler (fun env -> t := FS.pop env i) t
+  let pop t i = exn_handler (fun env -> t := FS.pop env i) t
 
-      let assume t g expl = exn_handler (fun env -> t := FS.assume env g expl) t
+  let assume t g expl = exn_handler (fun env -> t := FS.assume env g expl) t
 
-      let assume_th_elt t th expl =
-        exn_handler (fun env -> t := FS.assume_th_elt env th expl) t
+  let assume_th_elt t th expl =
+    exn_handler (fun env -> t := FS.assume_th_elt env th expl) t
 
-      let pred_def t expr n expl loc =
-        exn_handler (fun env -> t := FS.pred_def env expr n expl loc) t
+  let pred_def t expr n expl loc =
+    exn_handler (fun env -> t := FS.pred_def env expr n expl loc) t
 
-      let unsat t g =
-        exn_handler (fun env -> FS.unsat env g) t
+  let unsat t g =
+    exn_handler (fun env -> FS.unsat env g) t
 
-      let optimize _env ~is_max:_ _obj =
-        raise (Util.Not_implemented "optimization is not supported by FunSAT.")
+  let optimize _env ~is_max:_ _obj =
+    raise (Util.Not_implemented "optimization is not supported by FunSAT.")
 
-      let reset_refs = FS.reset_refs
+  let reset_refs = FS.reset_refs
 
-      let reinit_ctx = FS.reinit_ctx
+  let reinit_ctx = FS.reinit_ctx
 
-      let get_boolean_model t = FS.get_boolean_model !t
+  let get_boolean_model t = FS.get_boolean_model !t
 
-      let get_model t = FS.get_model !t
+  let get_model t = FS.get_model !t
 
-      let get_unknown_reason t = FS.get_unknown_reason !t
+  let get_unknown_reason t = FS.get_unknown_reason !t
 
-      let get_objectives _env =
-        raise (Util.Not_implemented "optimization is not supported by FunSAT.")
-    end)
+  let get_objectives _env =
+    raise (Util.Not_implemented "optimization is not supported by FunSAT.")
+end

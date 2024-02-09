@@ -45,15 +45,11 @@ let is_solver_ctx_empty = function
     { ctx = []; local = []; global = [] } -> true
   | _ -> false
 
-type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
-
-type any_sat_module = (module Sat_solver_sig.S)
-
 (* Internal state while iterating over input statements *)
 type 'a state = {
   env : 'a;
   solver_ctx: solver_ctx;
-  sat_solver : any_sat_module;
+  sat_solver : Sat_solver_util.any_sat_module;
 }
 
 let empty_solver_ctx = {
@@ -132,7 +128,7 @@ let add_if_named
     acc
 
 (* We currently use the full state of the solver as model. *)
-type model = Model : 'a sat_module * 'a -> model
+type model = Model : 'a Sat_solver_util.sat_module * 'a -> model
 
 type solve_res =
   | Sat of model
@@ -194,8 +190,12 @@ let main () =
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
-          if Options.get_verify_models () then
-            verify_model ~get_value:(SAT.get_value partial_model) ();
+          if Options.get_verify_models () then begin
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            verify_model ~get_value ()
+          end;
           Sat mdl
         end
       | `Unknown ->
@@ -209,8 +209,12 @@ let main () =
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
-          if Options.get_verify_models () then
-            verify_model ~get_value:(SAT.get_value partial_model) ();
+          if Options.get_verify_models () then begin
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            verify_model ~get_value ()
+          end;
           Unknown (Some mdl)
         end
       | `Unsat -> Unsat
@@ -846,7 +850,7 @@ let main () =
     Printer.print_std
       "(@[<v 0>%a@])@,"
       Fmt.(iter ~sep:cut Lists.iter_pair
-             ((pair ~sep:sp string Sat_solver_sig.pp_lbool) |> parens))
+             ((pair ~sep:sp string Sat_solver_util.pp_lbool) |> parens))
       (names, values)
   in
 
@@ -989,9 +993,10 @@ let main () =
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
             if DO.ProduceAssignment.get st then
-              handle_get_assignment
-                ~get_assignment:(SAT.get_assignment partial_model)
-                st
+              let get_assignment =
+                Sat_solver_util.get_assignment (module SAT) partial_model
+              in
+              handle_get_assignment ~get_assignment st
             else
               recoverable_error
                 "Produce assignments disabled; \
@@ -1011,8 +1016,10 @@ let main () =
           | Some Model ((module SAT), partial_model) ->
             let file = (State.get State.logic_file st).loc in
             let loc = dl_to_ael file loc in
-            handle_get_value loc
-              ~get_value:(SAT.get_value  partial_model) l;
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            handle_get_value loc ~get_value l;
             st
           | None ->
             (* TODO: add the location of the statement. *)
