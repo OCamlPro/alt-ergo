@@ -11,18 +11,55 @@ fi
 # Redirect output to stderr.
 exec 1>&2
 
-# Reindent files using ocp-indent
+# Check that we have ocp-checker
+repo_root=$(git rev-parse --show-toplevel)
+ocp_checker="$repo_root/rsc/extra/ocpchecker/ocp-checker"
+has_ocp_checker=$(test -f "$ocp_checker")
+
+warning() {
+  # Displays [WARNING] in bold (\033[1m), where WARNING is yellow (\033[33m)
+  echo -e "\033[1m[\033[33mWARNING\033[0m\033[1m]\033[0m $1"
+}
+
+if [[ -f "$ocp_checker" ]]; then
+	if echo "" | $ocp_checker >/dev/null 2>/dev/null; then
+		has_ocp_checker=1
+	else
+		warning "old ocp-checker; skipping style checks"
+	fi
+else
+	warning "ocp-checker is missing, will not check style"
+	warning "hint: make bin -C $repo_root/rsc/extra/ocpchecker"
+fi
+
 errors=0
-files=$(git diff --cached --name-only --diff-filter=ACMR -z HEAD | grep -Ez '\.ml[ily]?$' | xargs -0)
+
+# Reindent files using ocp-indent
+# Keep the pattern in sync with check_indentation.sh used by CI
+files=$(git diff --cached --name-only --diff-filter=ACMR -z HEAD | grep -Ez '\.ml[i]?$' | xargs -0)
 for f in $files; do
 	cmp -s <(git show ":$f") <(git show ":$f" | ocp-indent)
 	if [[ $? -ne 0 ]]; then
-		echo "$f: indentation errors."
+		echo "File $f: indentation errors."
 		ocp-indent -i "$f"
 		git diff -- "$f"
 		errors=$((errors+1))
 	fi
 done
+
+# Check files using ocp-checker
+# Keep the pattern in sync with check_style.sh used by CI
+if [[ $has_ocp_checker ]]; then
+	files=$(git diff --cached --name-only --diff-filter=ACMR -z HEAD | grep -Ez '\.ml[ily]?$' | xargs -0)
+	for f in $files; do
+		if ! (git show ":$f" | $ocp_checker >/dev/null 2>/dev/null); then
+			echo "File $f: style errors."
+			$ocp_checker "$f"
+			git diff -- "$f"
+			errors=$((errors+1))
+		fi
+	done
+fi
 
 if [[ $errors -ne 0 ]]; then
 	exit 1

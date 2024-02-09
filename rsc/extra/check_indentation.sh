@@ -10,6 +10,7 @@
 git_repo=`git rev-parse --show-toplevel`
 
 # List source files to check
+# Keep this pattern in sync with the pre-commit hook
 files=`find $git_repo/src -regex .*[.]ml[i]?`
 
 # Save the state before ocp-indent

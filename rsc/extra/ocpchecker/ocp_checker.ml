@@ -44,7 +44,11 @@ let remove_trailing_whitespaces line =
   if !new_len <> len then Some (String.sub line 0 !new_len)
   else None
 
-let check_buffer file cin =
+let print_err file_opt =
+  Option.iter (Format.eprintf "File %s: ") file_opt;
+  Format.eprintf
+
+let check_buffer file_opt cin =
   let spacesRemoved = ref false in
   let longLines = ref false in
   let lines = Queue.create () in
@@ -59,21 +63,14 @@ let check_buffer file cin =
         | Some line2 -> Queue.push line2 lines; spacesRemoved := true; line2
       in
       if String.length line > 80 then begin
-        Format.eprintf "File %s: line %d too long@." file !cpt;
+        print_err file_opt "line %d too long@." !cpt;
         longLines := true;
       end
     done;
     assert false
   with End_of_file -> lines, !spacesRemoved, !longLines
 
-let update_file file lines =
-  let cout =
-    try open_out file
-    with e ->
-      Format.eprintf "Error while opening (out) file: %s@.%s@."
-        file (Printexc.to_string e);
-      exit 2
-  in
+let update_file cout lines =
   Queue.iter (fun line ->
       Stdlib.output_string cout line;
       Stdlib.output_string cout "\n"
@@ -81,30 +78,42 @@ let update_file file lines =
   Stdlib.flush cout;
   close_out cout
 
-
-let check_file file =
+let check_file file_opt =
   let cin =
-    try open_in file
-    with e ->
-      Format.eprintf "Error while opening (in) file: %s@.%s@."
-        file (Printexc.to_string e);
-      exit 2
+    match file_opt with
+    | None -> stdin
+    | Some file ->
+      try open_in file
+      with e ->
+        Format.eprintf "Error while opening (in) file: %s@.%s@."
+          file (Printexc.to_string e);
+        exit 2
   in
-  let lines, spacesRemoved, longLines = check_buffer file cin in
+  let lines, spacesRemoved, longLines = check_buffer file_opt cin in
   close_in cin;
-  if spacesRemoved then begin
-    update_file file lines;
-    exit 10
+  if spacesRemoved || Option.is_none file_opt then begin
+    let cout =
+      match file_opt with
+      | None -> stdout
+      | Some file ->
+        try open_out file
+        with e ->
+          Format.eprintf "Error while opening (out) file: %s@.%s@."
+            file (Printexc.to_string e);
+          exit 2
+    in
+    update_file cout lines
   end;
+  if spacesRemoved then exit 10;
   if longLines then exit 11
 
 
 let () =
   match Array.length Sys.argv with
   | 0 | 1 ->
-    Format.eprintf "%s: Too few arguments!@." Sys.argv.(0); exit 3
+    check_file None
   | 2 ->
-    check_file Sys.argv.(1)
+    check_file @@ Some Sys.argv.(1)
 
   | _ ->
     Format.eprintf "%s: Too many arguments!@." Sys.argv.(0); exit 4

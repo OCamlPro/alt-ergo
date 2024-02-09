@@ -14,6 +14,7 @@ cd $git_repo/rsc/extra/ocpchecker
 make bin
 
 # List source files to check
+# Keep this pattern in sync with the pre-commit hook
 files=`find $git_repo/src -regex .*[.]ml[ily]?`
 
 # Counter for the number of files that fail the check
