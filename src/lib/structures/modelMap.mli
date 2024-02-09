@@ -31,12 +31,31 @@
 type t
 (** Type of model. *)
 
+(** Representation of a value in the model by a finite set of constraints.
+
+    More precisely, the value of a name [f] will be represented by a
+    finite set of constraint of the form:
+      f(a1, ..., an) = b
+    where a1,...,an,b are model term in the sense of [Expr.is_model_term]. *)
 module Graph : sig
   type t
+  (** Type of graph. *)
 
   val is_constant : t -> bool
+  (** [is_constant graph] checks if the graph [graph] represents a
+      constant function. *)
+
   val iter : (Expr.t list -> Expr.t -> unit) -> t -> unit
+  (** [iter f graph] iterates on the constraints of the [graph], that is on
+      couples of the form ((a1, ..., an), b) such that the function [f]
+      represented by [graph] has to satisfied [f(a1, ..., an) = b]. *)
+
   val pp : t Fmt.t
+  (** [pp ppf graph] prints the graph [graph] on the formatter [ppf]
+      using the SMT-LIB format.
+
+      As functions are total in the SMT-LIB standard, one of the rhs in the
+      constraints of [graph] is choosen to complete its definition. *)
 end
 
 val add : Symbols.typed_name -> Expr.t list -> Expr.t -> t -> t
