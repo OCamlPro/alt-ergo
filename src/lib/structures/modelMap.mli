@@ -44,7 +44,7 @@ val add : Symbols.typed_name -> Expr.t list -> Expr.t -> t -> t
     associated with the symbol [sy]. *)
 
 val iter : (Symbols.typed_name -> Graph.t -> unit) -> t -> unit
-(** [iter f mdl] iterates over all the graphes of the model [mdl]. *)
+(** [iter f mdl] iterates over all the graphs of the model [mdl]. *)
 
 val get_value : Symbols.typed_name -> Expr.t list -> t -> Expr.t option
 (** [get_value f args mdl] returns the value of the declared name [f]
