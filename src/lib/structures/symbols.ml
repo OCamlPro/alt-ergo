@@ -75,31 +75,7 @@ type form =
 type name_kind = Ac | Other [@@deriving ord, eq]
 
 type name_space =
-    User | Internal | Fresh | Skolem | Abstract | GetValue [@@deriving eq]
-
-let compare_name_space ns1 ns2 =
-  match ns1, ns2 with
-  | User, User -> 0
-  | User, _ -> -1
-  | _, User -> 1
-
-  | Internal, Internal -> 0
-  | Internal, _ -> -1
-  | _, Internal -> 1
-
-  | Fresh, Fresh -> 0
-  | Fresh, _ -> -1
-  | _, Fresh -> 1
-
-  | Skolem, Skolem -> 0
-  | Skolem, _ -> -1
-  | _, Skolem -> 1
-
-  | Abstract, Abstract -> 0
-  | Abstract, _ -> -1
-  | _, Abstract -> 1
-
-  | GetValue, GetValue -> 0
+    User | Internal | Fresh | Skolem | Abstract | GetValue [@@deriving ord, eq]
 
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
