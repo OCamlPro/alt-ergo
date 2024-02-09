@@ -811,9 +811,13 @@ let main () =
       unsupported_opt name
   in
 
-  let handle_get_value ~get_value l =
+  let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
+    DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
+  in
+
+  let handle_get_value loc ~get_value l =
     let l =
-      List.map (D_cnf.mk_expr ~loc:Loc.dummy ~toplevel:false
+      List.map (D_cnf.mk_expr ~loc ~toplevel:false
                   ~decl_kind:Daxiom) l
     in
     match get_value l with
@@ -1000,13 +1004,15 @@ let main () =
             st
         end
 
-      | {contents = `Get_value l; _} ->
+      | {contents = `Get_value l; loc; _} ->
         begin
           cmd_on_modes st [Sat] "get-value";
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
-            handle_get_value
-              ~get_value:(SAT.get_value partial_model) l;
+            let file = (State.get State.logic_file st).loc in
+            let loc = dl_to_ael file loc in
+            handle_get_value loc
+              ~get_value:(SAT.get_value  partial_model) l;
             st
           | None ->
             (* TODO: add the location of the statement. *)
