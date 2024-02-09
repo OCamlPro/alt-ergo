@@ -127,6 +127,7 @@ let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
   | None -> k ()
 
 let query env uf a =
+  Options.exec_thread_yield ();
   try_query (module Rel1) env.r1 uf a @@ fun () ->
   try_query (module Rel2) env.r2 uf a @@ fun () ->
   try_query (module Rel3) env.r3 uf a @@ fun () ->
