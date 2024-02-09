@@ -68,5 +68,6 @@ module Namespace = struct
   let reinit () =
     Internal.reset_fresh_cpt ();
     Skolem.reset_fresh_cpt ();
-    Abstract.reset_fresh_cpt ()
+    Abstract.reset_fresh_cpt ();
+    GetValue.reset_fresh_cpt ()
 end
