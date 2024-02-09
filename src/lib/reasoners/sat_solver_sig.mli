@@ -141,7 +141,7 @@ module type Internal = sig
       unsatisfiable. *)
 end
 
-type lbool = True | False | Unknown
+type lbool = False | True | Unknown
 
 val pp_lbool : lbool Fmt.t
 
