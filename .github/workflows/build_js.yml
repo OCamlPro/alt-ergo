@@ -24,7 +24,7 @@ jobs:
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Update apt-get database
       - name: Update apt-get database
@@ -35,7 +35,7 @@ jobs:
       # if we use another ocaml version
       # This action only retrieve de .opam/ directory
       - name: Retrieve opam cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-opam
         with:
           path: ~/.opam
@@ -58,7 +58,7 @@ jobs:
         run: opam exec -- make js-node
 
       # Use Node Js actions
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
           node-version: '14'
 
@@ -71,7 +71,7 @@ jobs:
       # the artifact name contains the system is builded on and the ocaml
       # compiler version used
       - name: Upload alt-ergo.js
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
         with:
           name: alt-ergo-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
@@ -85,7 +85,7 @@ jobs:
       # the artifact name contains the system is builded on and the ocaml
       # compiler version used
       - name: Upload alt-ergo-worker.js
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
         with:
           name: alt-ergo-worker-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}

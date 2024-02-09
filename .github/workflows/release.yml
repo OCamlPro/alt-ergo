@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -35,7 +35,7 @@ jobs:
         run: opam exec -- dune-release distrib
 
       - name: Upload the artefact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: alt-ergo-${{github.sha}}.tbz
           path: _build/alt-ergo-*.tbz
