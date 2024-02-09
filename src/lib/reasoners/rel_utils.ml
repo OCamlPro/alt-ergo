@@ -249,15 +249,12 @@ module Constraints_make(Constraint : Constraint) : sig
   val empty : t
   (** The empty constraint set. *)
 
-  val add : ?pending:bool -> ex:Explanation.t -> Constraint.t -> t -> t
+  val add : ex:Explanation.t -> Constraint.t -> t -> t
   (** [add ~ex c t] adds the constraint [c] to the set [t].
 
-      The explanation [ex] justifies that the constraint [c] holds.
-
-      The constraint is only added to the pending set if it was not already
-      active (i.e. previously added). Setting the [pending] optional argument to
-      [true] forces the constraint to be marked as pending even if it is already
-      active. *)
+      The explanation [ex] justifies that the constraint [c] holds. If the same
+       constraint is added multiple times with different explanations, only one
+       of the explanations for the constraint will be kept. *)
 
   val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
   (** [subst ~ex p v t] replaces all instances of [p] with [v] in the
@@ -307,7 +304,8 @@ end = struct
     (** Mapping from semantic values to constraints they are a leaf of *)
 
     active : CS.t ;
-    (** Set of all currently active constraints *)
+    (** Set of all currently active constraints, i.e. constraints that must
+        hold in a model and will be propagated.  *)
 
     pending : CS.t ;
     (** Set of active constraints that have not yet been propagated *)
@@ -339,14 +337,11 @@ end = struct
         List.fold_left (fun acc r -> f r acc) acc (X.leaves r)
       ) c acc
 
-  let add ?(pending = false) ~ex c t =
+  let add ~ex c t =
     let c = explained ~ex c in
     (* Note: use [CS.find] here, not [CS.mem], to ensure we use the same
        explanation for [c] in the [pending] and [active] sets. *)
-    match CS.find c t.active with
-    | c ->
-      if pending then { t with pending = CS.add c t.pending } else t
-    | exception Not_found ->
+    if CS.mem c t.active then t else
       let active = CS.add c t.active in
       let args_map =
         Constraint.fold_args (cs_add c) c.value t.args_map
@@ -379,7 +374,7 @@ end = struct
           let pending = CS.mem c t.pending in
           let t = remove c t  in
           let ex = Explanation.union ex c.explanation in
-          add ~pending ~ex (Constraint.subst rr nrr c.value) t
+          add ~ex (Constraint.subst rr nrr c.value) t
         ) cs t
     | exception Not_found -> t
 
