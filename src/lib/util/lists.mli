@@ -56,4 +56,4 @@ val iter_pair : (('a * 'b) -> unit) -> ('a list * 'b list) -> unit
 (** [iter_pair f (l1, l2)] iterates simultany on the pair of elements of the
     lists [l1] and [l2].
 
-    @raise Invalid_arg if the lists haven't the same length. *)
+    @raise Invalid_arg if the lists don't have the same length. *)
