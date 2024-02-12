@@ -371,7 +371,6 @@ end = struct
     match MX.find rr t.leaves_map with
     | cs ->
       CS.fold (fun c t ->
-          let pending = CS.mem c t.pending in
           let t = remove c t  in
           let ex = Explanation.union ex c.explanation in
           add ~ex (Constraint.subst rr nrr c.value) t
