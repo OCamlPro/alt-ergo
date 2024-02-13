@@ -46,6 +46,7 @@ module Rel6 : Sig_rel.RELATION = Adt_rel
 
 module Rel7 : Sig_rel.RELATION = Ite_rel
 
+(* This value is unused. *)
 let timer = Timers.M_None
 
 type t = {

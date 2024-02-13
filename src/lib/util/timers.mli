@@ -30,6 +30,7 @@
 
 type ty_module =
   | M_None
+  | M_Combine
   | M_Typing
   | M_Sat
   | M_Match

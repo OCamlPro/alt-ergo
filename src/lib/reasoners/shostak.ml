@@ -407,7 +407,6 @@ struct
       AC.make t
 
     | false , false , false , false, false, false ->
-      Timers.with_timer Timers.M_None Timers.F_make @@ fun () ->
       term_embed t, []
 
     | _ -> assert false
@@ -581,7 +580,7 @@ struct
             ADT.solve ra rb pb
 
           | _                  ->
-            Timers.with_timer Timers.M_None Timers.F_solve @@ fun () ->
+            Timers.with_timer Timers.M_Combine Timers.F_solve @@ fun () ->
             solve_uninterpreted ra rb pb
         in
         solve_list pb

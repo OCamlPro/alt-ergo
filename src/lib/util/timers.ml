@@ -34,6 +34,7 @@
 (* The type of modules, followed by the list of every element. *)
 type ty_module =
   | M_None
+  | M_Combine
   | M_Typing
   | M_Sat
   | M_Match
@@ -55,6 +56,7 @@ type ty_module =
 let all_modules =
   let l = [
     M_None;
+    M_Combine;
     M_Typing;
     M_Sat;
     M_Match;
@@ -129,6 +131,7 @@ let all_functions =
 
 let string_of_ty_module k = match k with
   | M_None     -> "None"
+  | M_Combine  -> "Combine"
   | M_Typing   -> "Typing"
   | M_Sat      -> "Sat"
   | M_Match    -> "Match"
