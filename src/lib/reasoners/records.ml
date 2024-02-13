@@ -49,6 +49,8 @@ module Shostak (X : ALIEN) = struct
 
   let name = "records"
 
+  let timer = Timers.M_Records
+
   type t = X.r abstract
   type r = X.r
 
@@ -385,30 +387,6 @@ module Shostak (X : ALIEN) = struct
     | Record _, Other _  -> orient_solved r2 r1 pb
     | Access _ , _ -> assert false
     | _ , Access _ -> assert false
-
-  let make t =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Records Timers.F_make;
-        let res = make t in
-        Timers.exec_timer_pause Timers.M_Records Timers.F_make;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Records Timers.F_make;
-        raise e
-    else make t
-
-  let solve r1 r2 pb =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_Records Timers.F_solve;
-        let res = solve r1 r2 pb in
-        Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_Records Timers.F_solve;
-        raise e
-    else solve r1 r2 pb
 
   let assign_value t _ eq =
     match embed t with

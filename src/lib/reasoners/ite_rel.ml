@@ -54,6 +54,8 @@ module TB =
         if c <> 0 then c else Stdlib.compare b1 b2
     end)
 
+let timer = Timers.M_Ite
+
 (* The present theory simplifies the ite terms t of the form
     ite(pred, t1, t2)
    where pred is an assumed predicate by introducing the equation
@@ -208,18 +210,6 @@ let assume env _ la =
     in
     let env, deds = extract_pending_deductions env in
     env, { Sig_rel.assume = deds; remove = [] }
-
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Ite Timers.F_assume;
-      let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Ite Timers.F_assume;
-      raise e
-  else assume env uf la
 
 let case_split _env _uf ~for_model:_ = []
 

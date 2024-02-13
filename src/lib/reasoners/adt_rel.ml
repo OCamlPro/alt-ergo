@@ -46,6 +46,8 @@ module LR = Uf.LX
 module SLR = Set.Make(LR)
 module MHs = Hs.Map
 
+let timer = Timers.M_Adt
+
 type t =
   {
     classes : E.Set.t list;
@@ -852,6 +854,5 @@ let query env uf (ra, _, ex, _) =
         None
     with
     | Ex.Inconsistent (expl, classes) -> Some (expl, classes)
-
 
 (* ################################################################ *)

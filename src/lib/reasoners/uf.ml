@@ -777,17 +777,8 @@ let union env r1 r2 dep =
   env, res
 
 let union env r1 r2 dep =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_UF Timers.F_union;
-      let res = union env r1 r2 dep in
-      Timers.exec_timer_pause Timers.M_UF Timers.F_union;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_UF Timers.F_union;
-      raise e
-  else union env r1 r2 dep
-
+  Timers.with_timer Timers.M_UF Timers.F_union @@ fun () ->
+  union env r1 r2 dep
 
 let rec distinct env rl dep =
   Debug.all env;
@@ -918,17 +909,8 @@ let make uf t = ME.find t uf.make
 (*** add wrappers to profile exported functions ***)
 
 let add env t =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_UF Timers.F_add_terms;
-      let res = add env t  in
-      Timers.exec_timer_pause Timers.M_UF Timers.F_add_terms;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_UF Timers.F_add_terms;
-      raise e
-  else add env t
-
+  Timers.with_timer Timers.M_UF Timers.F_add_terms @@ fun () ->
+  add env t
 
 let is_normalized env r =
   List.for_all

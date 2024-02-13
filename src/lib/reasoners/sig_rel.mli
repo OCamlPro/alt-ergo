@@ -52,6 +52,8 @@ type 'a result = {
 module type RELATION = sig
   type t
 
+  val timer : Timers.ty_module
+
   val empty : Expr.Set.t list -> t
 
   val assume : t ->

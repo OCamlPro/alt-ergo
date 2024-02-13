@@ -32,6 +32,8 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
+let timer = Timers.M_Sum
+
 type 'a abstract = 'a Enum.abstract =
   | Cons of Hs.t * Ty.t
   | Alien of 'a
@@ -336,31 +338,6 @@ let optimizing_objective _env _uf _o = None
 let query env uf a_ex =
   try ignore(assume env uf [a_ex]); None
   with Ex.Inconsistent (expl, classes) -> Some (expl, classes)
-
-let assume env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Sum Timers.F_assume;
-      let res =assume env uf la in
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_assume;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_assume;
-      raise e
-  else assume env uf la
-
-let query env uf la =
-  if Options.get_timers() then
-    try
-      Timers.exec_timer_start Timers.M_Sum Timers.F_query;
-      let res = query env uf la  in
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_query;
-      res
-    with e ->
-      Timers.exec_timer_pause Timers.M_Sum Timers.F_query;
-      raise e
-  else query env uf la
-
 
 let new_terms _ = Expr.Set.empty
 

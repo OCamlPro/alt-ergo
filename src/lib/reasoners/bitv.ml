@@ -343,6 +343,8 @@ module Shostak(X : ALIEN) = struct
 
   let name = "bitv"
 
+  let timer = Timers.M_Bitv
+
   let is_mine_symb sy _ =
     match sy with
     | Sy.Bitv _

@@ -856,28 +856,12 @@ module Main_Default : S = struct
   let cl_extract env = CC_X.cl_extract env.gamma
 
   let assume ?(ordered=true) facts t =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_CC Timers.F_assume;
-        let res = assume ordered facts t in
-        Timers.exec_timer_pause Timers.M_CC Timers.F_assume;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_CC Timers.F_assume;
-        raise e
-    else assume ordered facts t
+    Timers.with_timer Timers.M_CC Timers.F_assume @@ fun () ->
+    assume ordered facts t
 
   let query a t =
-    if Options.get_timers() then
-      try
-        Timers.exec_timer_start Timers.M_CC Timers.F_query;
-        let res = query a t in
-        Timers.exec_timer_pause Timers.M_CC Timers.F_query;
-        res
-      with e ->
-        Timers.exec_timer_pause Timers.M_CC Timers.F_query;
-        raise e
-    else query a t
+    Timers.with_timer Timers.M_CC Timers.F_query @@ fun () ->
+    query a t
 
   let extract_ground_terms env = env.terms
 

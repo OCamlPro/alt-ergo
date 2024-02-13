@@ -383,19 +383,32 @@ struct
       AC.is_mine_symb sb ty
     with
     | true  , false , false, false, false, false ->
+      Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () ->
       ARITH.make t
+
     | false , true  , false, false, false, false ->
+      Timers.with_timer Timers.M_Records Timers.F_make @@ fun () ->
       RECORDS.make t
+
     | false , false , true  , false, false, false ->
+      Timers.with_timer Timers.M_Bitv Timers.F_make @@ fun () ->
       BITV.make t
+
     | false , false , false , true , false, false ->
+      Timers.with_timer Timers.M_Sum Timers.F_make @@ fun () ->
       ENUM.make t
+
     | false , false , false , false, true , false ->
+      Timers.with_timer Timers.M_Adt Timers.F_make @@ fun () ->
       ADT.make t
+
     | false , false , false , false, false, true  ->
+      Timers.with_timer Timers.M_AC Timers.F_make @@ fun () ->
       AC.make t
+
     | false , false , false , false, false, false ->
       term_embed t, []
+
     | _ -> assert false
 
   let fully_interpreted sb ty =
@@ -544,14 +557,31 @@ struct
         let tyb = CX.type_info rb in
         Debug.assert_have_mem_types tya tyb;
         let pb = match tya with
-          | Ty.Tint | Ty.Treal -> ARITH.solve ra rb pb
-          | Ty.Trecord _       -> RECORDS.solve ra rb pb
-          | Ty.Tbitv _         -> BITV.solve ra rb pb
-          | Ty.Tsum _          -> ENUM.solve ra rb pb
+          | Ty.Tint | Ty.Treal ->
+            Timers.with_timer ARITH.timer Timers.F_solve @@ fun () ->
+            ARITH.solve ra rb pb
+
+          | Ty.Trecord _       ->
+            Timers.with_timer RECORDS.timer Timers.F_solve @@ fun () ->
+            RECORDS.solve ra rb pb
+
+          | Ty.Tbitv _         ->
+            Timers.with_timer BITV.timer Timers.F_solve @@ fun () ->
+            BITV.solve ra rb pb
+
+          | Ty.Tsum _          ->
+            Timers.with_timer ENUM.timer Timers.F_solve @@ fun () ->
+            ENUM.solve ra rb pb
+
           (*| Ty.Tunit           -> pb *)
+
           | Ty.Tadt _ when not (Options.get_disable_adts()) ->
+            Timers.with_timer ADT.timer Timers.F_solve @@ fun () ->
             ADT.solve ra rb pb
-          | _                  -> solve_uninterpreted ra rb pb
+
+          | _                  ->
+            Timers.with_timer Timers.M_Combine Timers.F_solve @@ fun () ->
+            solve_uninterpreted ra rb pb
         in
         solve_list pb
         [@ocaml.ppwarning "TODO: a simple way of handling equalities \

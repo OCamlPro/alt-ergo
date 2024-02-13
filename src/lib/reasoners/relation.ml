@@ -46,6 +46,9 @@ module Rel6 : Sig_rel.RELATION = Adt_rel
 
 module Rel7 : Sig_rel.RELATION = Ite_rel
 
+(* This value is unused. *)
+let timer = Timers.M_None
+
 type t = {
   r1: Rel1.t;
   r2: Rel2.t;
@@ -74,19 +77,33 @@ let (|@|) l1 l2 =
 let assume env uf sa =
   Options.exec_thread_yield ();
   let env1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
-    Rel1.assume env.r1 uf sa in
+    Timers.with_timer Rel1.timer Timers.F_assume @@ fun () ->
+    Rel1.assume env.r1 uf sa
+  in
   let env2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
-    Rel2.assume env.r2 uf sa in
+    Timers.with_timer Rel2.timer Timers.F_assume @@ fun () ->
+    Rel2.assume env.r2 uf sa
+  in
   let env3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
-    Rel3.assume env.r3 uf sa in
+    Timers.with_timer Rel3.timer Timers.F_assume @@ fun () ->
+    Rel3.assume env.r3 uf sa
+  in
   let env4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
-    Rel4.assume env.r4 uf sa in
+    Timers.with_timer Rel4.timer Timers.F_assume @@ fun () ->
+    Rel4.assume env.r4 uf sa
+  in
   let env5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
-    Rel5.assume env.r5 uf sa in
+    Timers.with_timer Rel5.timer Timers.F_assume @@ fun () ->
+    Rel5.assume env.r5 uf sa
+  in
   let env6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
-    Rel6.assume env.r6 uf sa in
+    Timers.with_timer Rel6.timer Timers.F_assume @@ fun () ->
+    Rel6.assume env.r6 uf sa
+  in
   let env7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
-    Rel7.assume env.r7 uf sa in
+    Timers.with_timer Rel7.timer Timers.F_assume @@ fun () ->
+    Rel7.assume env.r7 uf sa
+  in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
   ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
      remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
@@ -103,26 +120,22 @@ let assume_th_elt env th_elt dep =
   let env7 = Rel7.assume_th_elt env.r7 th_elt dep in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7}
 
+let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
+    k =
+  match Timers.with_timer R.timer Timers.F_query
+    @@ fun () -> R.query env uf a with
+  | Some r -> Some r
+  | None -> k ()
+
 let query env uf a =
   Options.exec_thread_yield ();
-  match Rel1.query env.r1 uf a with
-  | Some _ as ans -> ans
-  | None ->
-    match Rel2.query env.r2 uf a with
-    | Some _ as ans -> ans
-    | None ->
-      match Rel3.query env.r3 uf a with
-      | Some _ as ans -> ans
-      | None ->
-        match Rel4.query env.r4 uf a with
-        | Some _ as ans -> ans
-        | None ->
-          match Rel5.query env.r5 uf a with
-          | Some _ as ans -> ans
-          | None ->
-            match Rel6.query env.r6 uf a with
-            | Some _ as ans -> ans
-            | None -> Rel7.query env.r7 uf a
+  try_query (module Rel1) env.r1 uf a @@ fun () ->
+  try_query (module Rel2) env.r2 uf a @@ fun () ->
+  try_query (module Rel3) env.r3 uf a @@ fun () ->
+  try_query (module Rel4) env.r4 uf a @@ fun () ->
+  try_query (module Rel5) env.r5 uf a @@ fun () ->
+  try_query (module Rel6) env.r6 uf a @@ fun () ->
+  try_query (module Rel7) env.r7 uf a @@ fun () -> None
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();

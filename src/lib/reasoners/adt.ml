@@ -80,6 +80,8 @@ module Shostak (X : ALIEN) = struct
 
   let name = "Adt"
 
+  let timer = Timers.M_Adt
+
   [@@ocaml.ppwarning "XXX: IsConstr not interpreted currently. Maybe \
                       it's OK"]
   let is_mine_symb sy ty =
