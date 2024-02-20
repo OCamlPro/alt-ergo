@@ -114,9 +114,9 @@ module type ATOM = sig
   val hash_atom  : atom -> int
   val tag_atom   : atom -> int
 
-  val add_lit_atom :
+  val add_atom :
     hcons_env -> Shostak.Literal.t -> var list -> atom * var list
-  val add_atom : hcons_env -> E.t -> var list -> atom * var list
+  val add_expr_atom : hcons_env -> E.t -> var list -> atom * var list
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom
@@ -330,12 +330,12 @@ module Atom : ATOM = struct
       incr hcons.cpt;
       var, negated, var :: acc
 
-  let add_lit_atom hcons lit acc =
+  let add_atom hcons lit acc =
     let var, negated, acc = make_var hcons lit acc in
     (if negated then var.na else var.pa), acc
 
-  let add_atom hcons lit acc =
-    add_lit_atom hcons (Shostak.Literal.make @@ LTerm lit) acc
+  let add_expr_atom hcons lit acc =
+    add_atom hcons (Shostak.Literal.make @@ LTerm lit) acc
 
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
@@ -344,7 +344,7 @@ module Atom : ATOM = struct
 
   let empty_hcons_env, vrai_atom =
     let empty_hcons = { tbl= HT.create 5048 ; cpt = ref (-1) } in
-    let a, _ = add_atom empty_hcons E.vrai [] in
+    let a, _ = add_expr_atom empty_hcons E.vrai [] in
     a.is_true <- true;
     a.var.level <- 0;
     a.var.reason <- None;
@@ -638,7 +638,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   let complements f1 f2 = f1.tag == f2.neg.tag
 
   let mk_lit hcons a acc =
-    let at, acc = Atom.add_atom hcons.atoms a acc in
+    let at, acc = Atom.add_expr_atom hcons.atoms a acc in
     let at =
       if Options.get_disable_flat_formulas_simplification () then at
       else
@@ -895,7 +895,7 @@ module Flat_Formula : FLAT_FORMULA = struct
       else
         let lit = E.fresh_name Ty.Tbool in
         let xlit, new_v = mk_lit hcons lit !new_vars in
-        let at_lit, new_v = Atom.add_atom hcons.atoms lit new_v in
+        let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit new_v in
         new_vars := new_v;
         lem := (f, (xlit, at_lit)) :: !lem
                [@ocaml.ppwarning "xlit or at_lit is probably redundant"]
@@ -954,7 +954,7 @@ module Flat_Formula : FLAT_FORMULA = struct
   (* CNF_ABSTR a la Tseitin *)
 
   let atom_of_lit hcons lit is_neg new_vars =
-    let a, l = Atom.add_atom hcons.atoms lit new_vars in
+    let a, l = Atom.add_expr_atom hcons.atoms lit new_vars in
     if is_neg then a.Atom.neg,l else a,l
 
   let mk_new_proxy n =
@@ -1021,7 +1021,7 @@ module Proxy_formula = struct
     with Not_found -> None
 
   let atom_of_lit hcons lit is_neg new_vars =
-    let a, l = Atom.add_atom hcons lit new_vars in
+    let a, l = Atom.add_expr_atom hcons lit new_vars in
     if is_neg then a.Atom.neg,l else a,l
 
   let mk_new_proxy n =

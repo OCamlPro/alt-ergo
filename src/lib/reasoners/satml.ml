@@ -840,7 +840,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     Vec.shrink watched !new_sz_w
 
   let acts_add_decision_lit env lit =
-    let atom, _ = Atom.add_lit_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
     if atom.var.level < 0 then (
       assert (not atom.is_true && not atom.neg.is_true);
       env.next_decisions <- atom :: env.next_decisions
@@ -848,7 +848,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       assert (atom.is_true || atom.neg.is_true)
 
   let acts_add_split env lit =
-    let atom, _ = Atom.add_lit_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
     if atom.var.level < 0 then (
       assert (not atom.is_true && not atom.neg.is_true);
       env.next_split <- Some atom
@@ -861,7 +861,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
        We can't update the theory inside this function, because it is called
        from within the theory. *)
-    let atom, _ = Atom.add_lit_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
     env.next_objective <- Some (fn, value, atom)
 
   let[@inline] theory_slice env : _ Th_util.acts = {
