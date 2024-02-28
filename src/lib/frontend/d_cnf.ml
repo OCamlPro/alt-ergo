@@ -1578,12 +1578,11 @@ let rec mk_expr
           (*  All the triggers that are encoutered at this level are assumed
               to be user-defined. *)
           let triggers =
-            List.rev_map (
+            List.map (
               fun t ->
                 make_trigger ~loc ~name_base ~decl_kind ~in_theory
                   name hyp (t, true)
             ) trgs
-            (* double reverse to produce expressions with the right tags. *)
           in
 
           let mk = begin match e with
