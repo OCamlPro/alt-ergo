@@ -3,13 +3,13 @@
   (mld_files :standard))
 
 (library
+ (public_name alt-ergo.plugins.fm-simplex)
  (name FmSimplexPlugin)
  (libraries alt-ergo-lib)
  (modules Simplex Simplex_cache FmSimplexIneqs))
 
-(install
+(plugin
  (package alt-ergo)
- (section (site (alt-ergo plugins)))
- (files
-  FmSimplexPlugin.cma
-  FmSimplexPlugin.cmxs))
+ (name fm-simplex)
+ (libraries alt-ergo.plugins.fm-simplex)
+ (site (alt-ergo plugins)))
