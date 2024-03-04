@@ -26,7 +26,8 @@ case "$LINK_MODE" in
       linux)
         for lib in $LIBS; do
           CCLIB="$CCLIB -l$lib"
-        done;;
+        done
+	CCLIB="-Wl,-Bstatic $CCLIB -Wl,-Bdynamic";;
       macosx)
         for lib in $LIBS; do
           if [[ $lib == lib* ]]; then
