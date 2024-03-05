@@ -294,15 +294,21 @@ module type Domains = sig
 
       @raise Inconsistent if this causes any domain in [d] to become empty. *)
 
-  val choose_changed : t -> X.r * t
-  (** [choose_changed d] returns a pair [r, d'] such that:
+  val has_changed : t -> bool
+  (** Returns [true] if any element is marked as changed.
 
-      - The domain associated with [r] has changed since the last time
-        [choose_changed] was called.
-      - [r] has (by definition) not changed in [d']
+      Elements are marked as changed when their domain shrinks due to a call to
+      either [subst] or [update], and are unmarked by [clear_changed]. *)
 
-      Moreover, prior to returning [r], structural propagation is
-      automatically performed.
+  val iter_changed : (X.r -> unit) -> t -> unit
+  (** Iterate over the changed elements. See [has_changed]. *)
+
+  val clear_changed : t -> t
+  (** Returns an identical domain, except that no elements are marked as
+      changed. *)
+
+  val structural_propagation : X.r -> t -> t
+  (** Perform structural propagation for the given representative.
 
       More precisely, if [r] is a leaf, the domain of [r] is propagated to any
       semantic value that contains [r] as a leaf according to the structure of
@@ -489,10 +495,12 @@ struct
     else
       Domain.fold_leaves update r (get r t) t
 
-  let choose_changed t =
-    let r = SX.choose t.changed in
-    let t = { t with changed = SX.remove r t.changed } in
-    r, structural_propagation r t
+  let has_changed t =
+    not @@ SX.is_empty t.changed
+
+  let iter_changed f t = SX.iter f t.changed
+
+  let clear_changed t = { t with changed = SX.empty }
 end
 
 module type Constraint = sig
@@ -564,31 +572,28 @@ module Constraints_make(Constraint : Constraint) : sig
 
       The explanation [ex] justifies the equality [p = v]. *)
 
-  val notify : X.r -> t -> t
-  (** [notify r t] marks all constraints involving [r] (i.e. all constraints
-      that have [r] as one of their arguments) as pending.
+  val iter_parents : (Constraint.t explained -> unit) -> X.r -> t -> unit
+  (** [iter_parents f r t] calls [f] on all the constraints that apply directly
+      to [r] (precisely, all the constraints [r] is an argument of). *)
 
-      This function should be used when the domain of [r] is updated, if
-      domains are tracked for all representatives. *)
+  val iter_pending : (Constraint.t explained -> unit) -> t -> unit
+  (** [iter_pending f t] calls [f] on all the constraints currently marked as
+      pending. Constraints are marked as pending when they are added, including
+      when a new constraint is added due to substitution of an old constraint
+      (whether the old constraint was pending or not). *)
 
-  val notify_leaf : X.r -> t -> t
-  (** [notify_leaf r t] marks all constraints that have [r] as a leaf (i.e.
-      all constraints that have at least one argument [a] such that [r] is in
-      [X.leaves a]) as pending.
+  val clear_pending : t -> t
+  (** [clear_pending t] returns a copy of [t] except that no constraints are
+      marked as pending. *)
 
-      This function should be used when the domain of [r] is updated, if
-      domains are tracked for leaves only. *)
+  val has_pending : t -> bool
+  (** [has_pending t] returns [true] if there is any constraint marked as
+      pending, in which case [iter_pending] and [clear_pending] are guaranteed
+      to be no-ops. Should only be used for optimization. *)
 
   val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold_args f t acc] folds [f] over all the term representatives that are
       arguments of at least one constraint. *)
-
-  val next_pending : t -> Constraint.t explained * t
-  (** [next_pending t] returns a pair [c, t'] where [c] was pending in [t] and
-      [t'] is identical to [t], except that [c] is no longer a pending
-      constraint.
-
-      @raise Not_found if there are no pending constraints. *)
 end = struct
   module CS = Set.Make(struct
       type t = Constraint.t explained
@@ -677,24 +682,21 @@ end = struct
         ) cs t
     | exception Not_found -> t
 
-  let notify r t =
+  let iter_parents f r t =
     match MX.find r t.args_map with
-    | cs ->
-      CS.fold (fun c t -> { t with pending = CS.add c t.pending }) cs t
-    | exception Not_found -> t
+    | cs -> CS.iter f cs
+    | exception Not_found -> ()
 
-  let notify_leaf r t =
-    match MX.find r t.leaves_map with
-    | cs ->
-      CS.fold (fun c t -> { t with pending = CS.add c t.pending }) cs t
-    | exception Not_found -> t
+  let iter_pending f t =
+    CS.iter f t.pending
+
+  let clear_pending t =
+    { t with pending = CS.empty }
+
+  let has_pending t = not @@ CS.is_empty t.pending
 
   let fold_args f c acc =
     MX.fold (fun r _ acc ->
         f r acc
       ) c.args_map acc
-
-  let next_pending t =
-    let c = CS.choose t.pending in
-    c, { t with pending = CS.remove c t.pending }
 end

@@ -135,6 +135,10 @@ module Domains = Rel_utils.Domains_make(Domain)
 module Constraint : sig
   include Rel_utils.Constraint
 
+  val equal : t -> t -> bool
+
+  val hash : t -> int
+
   val bvand : X.r -> X.r -> X.r -> t
   (** [bvand x y z] is the constraint [x = y & z] *)
 
@@ -237,6 +241,10 @@ end = struct
   let pp ppf { repr; _ } = pp_repr ppf repr
 
   let compare { tag = t1; _ } { tag = t2; _ } = Stdlib.compare t1 t2
+
+  let equal t1 t2 = Int.equal t1.tag t2.tag
+
+  let hash t1 = Hashtbl.hash t1.tag
 
   let subst rr nrr c =
     hcons @@ subst_repr rr nrr c.repr
@@ -387,6 +395,24 @@ let add_eqs =
   fun acc x bl ->
     aux x (Bitlist.width bl) acc bl
 
+type any_constraint =
+  | Constraint of Constraint.t Rel_utils.explained
+  | Structural of X.r
+
+module QC = Uqueue.Make(struct
+    type t = any_constraint
+
+    let equal a b =
+      match a, b with
+      | Constraint ca, Constraint cb -> Constraint.equal ca.value cb.value
+      | Constraint _, Structural _ | Structural _, Constraint _ -> false
+      | Structural xa, Structural xb -> X.equal xa xb
+
+    let hash = function
+      | Constraint c -> 2 * Constraint.hash c.value
+      | Structural r -> 2 * X.hash r + 1
+  end)
+
 (* Propagate:
 
    - The constraints that were never propagated since they were added
@@ -395,23 +421,39 @@ let add_eqs =
 
    Iterate until fixpoint is reached. *)
 let propagate =
-  let rec propagate changed bcs dom =
-    match Constraints.next_pending bcs with
-    | { value; explanation = ex }, bcs ->
+  let touch bcs queue r =
+    QC.push queue (Structural r);
+    Constraints.iter_parents (fun c -> QC.push queue (Constraint c)) r bcs
+  in
+  let rec propagate queue changed bcs dom =
+    match QC.pop queue with
+    | Constraint { Rel_utils.value; explanation = ex } ->
       let dom = Constraint.propagate ~ex value dom in
-      propagate changed bcs dom
-    | exception Not_found ->
-      match Domains.choose_changed dom with
-      | r, dom ->
-        propagate (SX.add r changed) (Constraints.notify r bcs) dom
-      | exception Not_found ->
-        changed, bcs, dom
+      Domains.iter_changed (touch bcs queue) dom;
+      propagate queue changed bcs (Domains.clear_changed dom)
+    | Structural r ->
+      let dom = Domains.structural_propagation r dom in
+      Domains.iter_changed (touch bcs queue) dom;
+      let changed = SX.add r changed in
+      propagate queue changed bcs (Domains.clear_changed dom)
+    | exception QC.Empty ->
+      assert (not (Domains.has_changed dom));
+      changed, dom
   in
   fun eqs bcs dom ->
-    let changed, bcs, dom = propagate SX.empty bcs dom in
-    SX.fold (fun r acc ->
-        add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
-      ) changed eqs, bcs, dom
+    (* Optimization to avoid unnecessary allocations *)
+    if Constraints.has_pending bcs || Domains.has_changed dom then
+      let queue = QC.create 17 in
+      Constraints.iter_pending (fun c -> QC.push queue (Constraint c)) bcs;
+      let bcs = Constraints.clear_pending bcs in
+      Domains.iter_changed (touch bcs queue) dom;
+      let dom = Domains.clear_changed dom in
+      let changed, dom = propagate queue SX.empty bcs dom in
+      SX.fold (fun r acc ->
+          add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
+        ) changed eqs, bcs, dom
+    else
+      eqs, bcs, dom
 
 type t =
   { delayed : Rel_utils.Delayed.t
