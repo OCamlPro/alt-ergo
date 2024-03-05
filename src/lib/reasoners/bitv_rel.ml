@@ -33,6 +33,7 @@ module Ex = Explanation
 module Sy = Symbols
 module X = Shostak.Combine
 module SX = Shostak.SXH
+module HX = Shostak.HX
 module L = Xliteral
 
 let timer = Timers.M_Bitv
@@ -148,7 +149,7 @@ module Constraint : sig
   val bvxor : X.r -> X.r -> X.r -> t
   (** [bvxor x y z] is the constraint [x ^ y ^ z = 0] *)
 
-  val propagate : ex:Ex.t -> t -> Domains.t -> Domains.t
+  val propagate : ex:Ex.t -> t -> Domains.Ephemeral.t -> unit
   (** [propagate ~ex t dom] propagates the constraint [t] in domain [dom].
 
       The explanation [ex] justifies that the constraint [t] applies, and must
@@ -259,67 +260,45 @@ end = struct
     | Bxor xs -> SX.fold f xs acc
 
   let propagate ~ex { repr; _ } dom =
+    let open Domains.Ephemeral in
+    let get r = handle dom r in
     Steps.incr CP;
     match repr with
     | Band (x, y, z) ->
-      let dx = Domains.get x dom
-      and dy = Domains.get y dom
-      and dz = Domains.get z dom
-      in
-      let dom =
-        Domains.update x Bitlist.(add_explanation ~ex (logand dy dz)) dom
-      in
+      let dx = get x and dy = get y and dz = get z in
+      update ~ex dx (Bitlist.logand !!dy !!dz);
       (* Reverse propagation for y: if [x = y & z] then:
          - Any [1] in [x] must be a [1] in [y]
          - Any [0] in [x] that is also a [1] in [z] must be a [0] in [y]
       *)
-      let dom =
-        Domains.update y Bitlist.(
-            intersect ~ex (ones dx) (logor (zeroes dx) (lognot (ones dz)))
-          ) dom
-      in
-      let dom =
-        Domains.update z Bitlist.(
-            intersect ~ex (ones dx) (logor (zeroes dx) (lognot (ones dy)))
-          ) dom
-      in
-      dom
+      update ~ex dy (Bitlist.ones !!dx);
+      update ~ex dy Bitlist.(logor (zeroes !!dx) (lognot (ones !!dz)));
+      update ~ex dz (Bitlist.ones !!dx);
+      update ~ex dz Bitlist.(logor (zeroes !!dx) (lognot (ones !!dy)))
     | Bor (x, y, z) ->
-      let dx = Domains.get x dom
-      and dy = Domains.get y dom
-      and dz = Domains.get z dom
-      in
-      let dom =
-        Domains.update x Bitlist.(add_explanation ~ex (logor dy dz)) dom
-      in
+      let dx = get x and dy = get y and dz = get z in
+      update ~ex dx (Bitlist.logor !!dy !!dz);
       (* Reverse propagation for y: if [x = y | z] then:
          - Any [0] in [x] must be a [0] in [y]
          - Any [1] in [x] that is also a [0] in [z] must be a [1] in [y]
       *)
-      let dom =
-        Domains.update y Bitlist.(
-            intersect ~ex (zeroes dx) (logand (ones dx) (lognot (zeroes dz)))
-          ) dom
-      in
-      let dom =
-        Domains.update z Bitlist.(
-            intersect ~ex (zeroes dx) (logand (ones dx) (lognot (zeroes dy)))
-          ) dom
-      in
-      dom
+      update ~ex dy (Bitlist.zeroes !!dx);
+      update ~ex dy Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
+      update ~ex dz (Bitlist.zeroes !!dx);
+      update ~ex dz Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
     | Bxor xs ->
-      SX.fold (fun x dom ->
-          let dx = Domains.get x dom in
+      SX.iter (fun x ->
+          let dx = get x in
           let dx' =
             SX.fold (fun y acc ->
                 if X.equal x y then
                   acc
                 else
-                  Bitlist.logxor (Domains.get y dom) acc
-              ) xs (Bitlist.exact (Bitlist.width dx) Z.zero Ex.empty)
+                  Bitlist.logxor !!(get y) acc
+              ) xs (Bitlist.exact (Bitlist.width !!dx) Z.zero Ex.empty)
           in
-          Domains.update x (Bitlist.add_explanation ~ex dx') dom
-        ) xs dom
+          update ~ex dx dx'
+        ) xs
 
   let bvand x y z = hcons @@ Band (x, y, z)
   let bvor x y z = hcons @@ Bor (x, y, z)
@@ -395,25 +374,32 @@ let add_eqs =
   fun acc x bl ->
     aux x (Bitlist.width bl) acc bl
 
-type any_constraint =
-  | Constraint of Constraint.t Rel_utils.explained
-  | Structural of X.r
-  (** Structural constraint associated with [X.r]. See
-      {!Rel_utils.Domains.structural_propagation}. *)
+module Any_constraint = struct
+  type t =
+    | Constraint of Constraint.t Rel_utils.explained
+    | Structural of X.r
+    (** Structural constraint associated with [X.r]. See
+        {!Rel_utils.Domains.structural_propagation}. *)
 
-module QC = Uqueue.Make(struct
-    type t = any_constraint
+  let equal a b =
+    match a, b with
+    | Constraint ca, Constraint cb -> Constraint.equal ca.value cb.value
+    | Constraint _, Structural _ | Structural _, Constraint _ -> false
+    | Structural xa, Structural xb -> X.equal xa xb
 
-    let equal a b =
-      match a, b with
-      | Constraint ca, Constraint cb -> Constraint.equal ca.value cb.value
-      | Constraint _, Structural _ | Structural _, Constraint _ -> false
-      | Structural xa, Structural xb -> X.equal xa xb
+  let hash = function
+    | Constraint c -> 2 * Constraint.hash c.value
+    | Structural r -> 2 * X.hash r + 1
 
-    let hash = function
-      | Constraint c -> 2 * Constraint.hash c.value
-      | Structural r -> 2 * X.hash r + 1
-  end)
+  let propagate c d =
+    match c with
+    | Constraint { value; explanation = ex } ->
+      Constraint.propagate ~ex value d
+    | Structural r ->
+      Domains.Ephemeral.structural_propagation d r
+end
+
+module QC = Uqueue.Make(Any_constraint)
 
 (* Propagate:
 
@@ -422,40 +408,34 @@ module QC = Uqueue.Make(struct
       propagation
 
    Iterate until fixpoint is reached. *)
-let propagate =
-  let touch bcs queue r =
-    QC.push queue (Structural r);
-    Constraints.iter_parents (fun c -> QC.push queue (Constraint c)) r bcs
-  in
-  let rec propagate queue changed bcs dom =
-    match QC.pop queue with
-    | Constraint { Rel_utils.value; explanation = ex } ->
-      let dom = Constraint.propagate ~ex value dom in
-      Domains.iter_changed (touch bcs queue) dom;
-      propagate queue changed bcs (Domains.clear_changed dom)
-    | Structural r ->
-      let dom = Domains.structural_propagation r dom in
-      Domains.iter_changed (touch bcs queue) dom;
-      let changed = SX.add r changed in
-      propagate queue changed bcs (Domains.clear_changed dom)
-    | exception QC.Empty ->
-      assert (not (Domains.has_changed dom));
-      changed, dom
-  in
-  fun eqs bcs dom ->
-    (* Optimization to avoid unnecessary allocations *)
-    if Constraints.has_pending bcs || Domains.has_changed dom then
-      let queue = QC.create 17 in
-      Constraints.iter_pending (fun c -> QC.push queue (Constraint c)) bcs;
-      let bcs = Constraints.clear_pending bcs in
-      Domains.iter_changed (touch bcs queue) dom;
-      let dom = Domains.clear_changed dom in
-      let changed, dom = propagate queue SX.empty bcs dom in
-      SX.fold (fun r acc ->
-          add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
-        ) changed eqs, bcs, dom
-    else
-      eqs, bcs, dom
+let propagate eqs bcs dom =
+  (* Optimization to avoid unnecessary allocations *)
+  if Constraints.has_pending bcs || Domains.has_changed dom then
+    let queue = QC.create 17 in
+    Constraints.iter_pending (fun c -> QC.push queue (Constraint c)) bcs;
+    let bcs = Constraints.clear_pending bcs in
+    let changed = HX.create 17 in
+    let touch r =
+      HX.replace changed r ();
+      QC.push queue (Structural r);
+      Constraints.iter_parents (fun c -> QC.push queue (Constraint c)) r bcs
+    in
+    let dom = Domains.edit dom in
+    (
+      try
+        while true do
+          Domains.Ephemeral.iter_changed touch dom;
+          Domains.Ephemeral.clear_changed dom;
+          Any_constraint.propagate (QC.pop queue) dom
+        done
+      with QC.Empty -> ()
+    );
+    HX.fold (fun r () acc ->
+        let d = Domains.Ephemeral.(!!(handle dom r)) in
+        add_eqs acc (Shostak.Bitv.embed r) d
+      ) changed eqs, bcs, Domains.snapshot dom
+  else
+    eqs, bcs, dom
 
 type t =
   { delayed : Rel_utils.Delayed.t

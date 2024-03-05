@@ -781,3 +781,9 @@ module L = Xliteral.Make(struct
   end)
 
 module Literal = Literal.Make(L)
+
+module HX = Hashtbl.Make(struct
+    type t = Combine.r
+    let equal = Combine.equal
+    let hash = Combine.hash
+  end)
