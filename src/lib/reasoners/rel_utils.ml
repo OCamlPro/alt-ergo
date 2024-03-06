@@ -619,6 +619,17 @@ struct
       ) t.Ephemeral.dirty_cache t.persistent
 end
 
+(** The ['c acts] type is used to register new facts and constraints in
+    [Constraint.simplify]. *)
+type 'c acts =
+  { acts_add_lit_view : X.r L.view -> unit
+  (** Assert a semantic literal. *)
+  ; acts_add_eq : X.r -> X.r -> unit
+  (** Assert equality between two semantic values. *)
+  ; acts_add_constraint : 'c -> unit
+  (** Assert a new constraint. *)
+  }
+
 module type Constraint = sig
   type t
   (** The type of constraints.
@@ -648,6 +659,21 @@ module type Constraint = sig
       constraint.
 
       Substitution can perform constraint simplification. *)
+
+  val simplify : t -> t acts -> bool
+  (** [simplify c acts] simplifies the constraint [c] by calling appropriate
+      functions on [acts].
+
+      {b Note}: All the facts and constraints added through [acts] must be
+      logically implied by [c] {b only}. Doing otherwise is a {b soundness bug}.
+
+      Returns [true] if the constraint has been fully simplified and can
+      be removed, and [false] otherwise.
+
+      {b Note}: Returning [true] will cause the constraint to be removed, even
+      if it was re-added with [acts_add_constraint]. If you want to add new
+      facts/constraints but keep the existing constraint (usually a bad idea),
+      return [false] instead. *)
 end
 
 type 'a explained = { value : 'a ; explanation : Explanation.t }
@@ -711,6 +737,14 @@ module Constraints_make(Constraint : Constraint) : sig
   val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold_args f t acc] folds [f] over all the term representatives that are
       arguments of at least one constraint. *)
+
+  val simplify_pending :
+    (X.r L.view * Explanation.t) list -> t ->
+    (X.r L.view * Explanation.t) list * t
+    (** Simplify the pending constraints. This takes as argument a list of
+        (explained) literals, and returns a list of (explained) literals, so
+        that constraint simplification is able to propagate new literals
+        (typically equalities) to the UF module. *)
 end = struct
   module CS = Set.Make(struct
       type t = Constraint.t explained
@@ -816,4 +850,44 @@ end = struct
     MX.fold (fun r _ acc ->
         f r acc
       ) c.args_map acc
+
+  let simplify_pending =
+    (* Recursion needed because adding new constraints changes the pending set
+       and they also need to be simplified *)
+    let rec simplify_aux eqs t to_simplify =
+      let eqs = ref eqs in
+      let to_add = ref CS.empty in
+      let t =
+        CS.fold (fun ({ value; explanation } as c) t ->
+            let acts_add_lit_view l =
+              eqs := (l, explanation) :: !eqs
+            in
+            let acts_add_eq u v =
+              acts_add_lit_view (Uf.LX.mkv_eq u v)
+            in
+            let acts_add_constraint c =
+              let c = { value = c; explanation } in
+              if not (CS.mem c t.active) then
+                to_add := CS.add c !to_add
+            in
+            let acts =
+              { acts_add_lit_view
+              ; acts_add_eq
+              ; acts_add_constraint } in
+            if Constraint.simplify value acts then
+              remove c t
+            else
+              t
+          ) to_simplify t
+      in
+      let to_add = !to_add in
+      if CS.is_empty to_add then
+        !eqs, t
+      else
+        let t = CS.fold (fun c t -> add ~ex:c.explanation c.value t) to_add t in
+        simplify_aux !eqs t to_add
+    in
+    fun eqs t ->
+      if CS.is_empty t.pending then eqs, t else
+        simplify_aux eqs t t.pending
 end

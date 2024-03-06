@@ -160,20 +160,25 @@ end = struct
     (** [Band (x, y, z)] represents [x = y & z] *)
     | Bor of X.r * X.r * X.r
     (** [Bor (x, y, z)] represents [x = y | z] *)
-    | Bxor of SX.t
-    (** [Bxor {x1, ..., xn}] represents [x1 ^ ... ^ xn = 0] *)
+    | Bxor of X.r * X.r * X.r
+    (** [Bxor (x, y, z)] represents [x = y ^ z] *)
 
   let normalize_repr = function
     | Band (x, y, z) when X.hash_cmp y z > 0 -> Band (x, z, y)
     | Bor (x, y, z) when X.hash_cmp y z > 0 -> Bor (x, z, y)
+    | Bxor (x, y, z) -> (
+        match List.fast_sort X.hash_cmp [x; y; z] with
+        | [x; y; z] -> Bxor (x, y, z)
+        | _ -> assert false
+      )
     | repr -> repr
 
   let equal_repr r1 r2 =
     match r1, r2 with
     | Band (x1, y1, z1), Band (x2, y2, z2)
-    | Bor (x1, y1, z1), Bor (x2, y2, z2) ->
+    | Bor (x1, y1, z1), Bor (x2, y2, z2)
+    | Bxor (x1, y1, z1), Bxor (x2, y2, z2) ->
       X.equal x1 x2 && X.equal y1 y2 && X.equal z1 z2
-    | Bxor xs1, Bxor xs2 -> SX.equal xs1 xs2
     | Band _, _
     | Bor _, _
     | Bxor _, _ -> false
@@ -181,8 +186,7 @@ end = struct
   let hash_repr = function
     | Band (x, y, z) -> Hashtbl.hash (0, X.hash x, X.hash y, X.hash z)
     | Bor (x, y, z) -> Hashtbl.hash (1, X.hash x, X.hash y, X.hash z)
-    | Bxor xs ->
-      Hashtbl.hash (2, SX.fold (fun r acc -> X.hash r :: acc) xs [])
+    | Bxor (x, y, z) -> Hashtbl.hash (2, X.hash x, X.hash y, X.hash z)
 
   type t = { repr : repr ; mutable tag : int }
 
@@ -211,14 +215,8 @@ end = struct
       Fmt.pf ppf "%a & %a = %a" X.print y X.print z X.print x
     | Bor (x, y, z) ->
       Fmt.pf ppf "%a | %a = %a" X.print y X.print z X.print x
-    | Bxor xs ->
-      Fmt.(iter ~sep:(any " ^@ ") SX.iter X.print |> box) ppf xs;
-      Fmt.pf ppf " = 0"
-
-  (* TODO: for bitwise constraints (eg Band, Bor, Bxor)
-      on initialisation and also after substitution
-      we should split the domain
-  *)
+    | Bxor (x, y, z) ->
+      Fmt.pf ppf "%a ^ %a = %a" X.print y X.print z X.print x
 
   let subst_repr rr nrr = function
     | Band (x, y, z) ->
@@ -231,13 +229,11 @@ end = struct
       and y = X.subst rr nrr y
       and z = X.subst rr nrr z in
       Bor (x, y, z)
-    | Bxor xs ->
-      Bxor (
-        SX.fold (fun r xs ->
-            let r = X.subst rr nrr r in
-            if SX.mem r xs then SX.remove r xs else SX.add r xs
-          ) xs SX.empty
-      )
+    | Bxor (x, y, z) ->
+      let x = X.subst rr nrr x
+      and y = X.subst rr nrr y
+      and z = X.subst rr nrr z in
+      Bxor (x, y, z)
 
   let pp ppf { repr; _ } = pp_repr ppf repr
 
@@ -252,12 +248,29 @@ end = struct
 
   let fold_args f { repr; _ } acc =
     match repr with
-    | Band (x, y, z) | Bor (x, y, z) ->
+    | Band (x, y, z) | Bor (x, y, z) | Bxor (x, y, z) ->
       let acc = f x acc in
       let acc = f y acc in
       let acc = f z acc in
       acc
-    | Bxor xs -> SX.fold f xs acc
+
+  let simplify { repr; _ } acts =
+    (* TODO: for bitwise constraint we might want to split the constraint into
+       constraints of smaller bit-width depending on the domains of the args *)
+    match repr with
+    (* TODO: [x = y & 1] and [x = y | 0] become [x = y] *)
+    | Band (x, y, z) | Bor (x, y, z) when X.equal y z ->
+      acts.Rel_utils.acts_add_eq x y;
+      true
+    | Bxor (x, y, z) when X.equal x y || X.equal x z || X.equal y z ->
+      let zero =
+        if X.equal x y then z else if X.equal x z then y else x
+      in
+      let sz = match X.type_info zero with Tbitv n -> n | _ -> assert false in
+      acts.acts_add_eq zero
+        (Shostak.Bitv.is_mine [ { bv = Cte Z.zero ; sz }]);
+      true
+    | Band _ | Bor _ | Bxor _ -> false
 
   let propagate ~ex { repr; _ } dom =
     let open Domains.Ephemeral in
@@ -286,27 +299,15 @@ end = struct
       update ~ex dy Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
       update ~ex dz (Bitlist.zeroes !!dx);
       update ~ex dz Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
-    | Bxor xs ->
-      SX.iter (fun x ->
-          let dx = get x in
-          let dx' =
-            SX.fold (fun y acc ->
-                if X.equal x y then
-                  acc
-                else
-                  Bitlist.logxor !!(get y) acc
-              ) xs (Bitlist.exact (Bitlist.width !!dx) Z.zero Ex.empty)
-          in
-          update ~ex dx dx'
-        ) xs
+    | Bxor (x, y, z) ->
+      let dx = get x and dy = get y and dz = get z in
+      update ~ex dx (Bitlist.logxor !!dy !!dz);
+      update ~ex dy (Bitlist.logxor !!dx !!dz);
+      update ~ex dz (Bitlist.logxor !!dx !!dy)
 
   let bvand x y z = hcons @@ Band (x, y, z)
   let bvor x y z = hcons @@ Bor (x, y, z)
-  let bvxor x y z =
-    let xs = SX.singleton x in
-    let xs = if SX.mem y xs then SX.remove y xs else SX.add y xs in
-    let xs = if SX.mem z xs then SX.remove z xs else SX.add z xs in
-    hcons @@ Bxor xs
+  let bvxor x y z = hcons @@ Bxor (x, y, z)
 end
 
 module Constraints = Rel_utils.Constraints_make(Constraint)
@@ -409,16 +410,20 @@ module QC = Uqueue.Make(Any_constraint)
 
    Iterate until fixpoint is reached. *)
 let propagate eqs bcs dom =
+  (* Call [simplify_pending] first because it can remove constraints from the
+     pending set. *)
+  let eqs, bcs = Constraints.simplify_pending eqs bcs in
   (* Optimization to avoid unnecessary allocations *)
   if Constraints.has_pending bcs || Domains.has_changed dom then
     let queue = QC.create 17 in
-    Constraints.iter_pending (fun c -> QC.push queue (Constraint c)) bcs;
+    let touch_c c = QC.push queue (Constraint c) in
+    Constraints.iter_pending touch_c bcs;
     let bcs = Constraints.clear_pending bcs in
     let changed = HX.create 17 in
     let touch r =
       HX.replace changed r ();
       QC.push queue (Structural r);
-      Constraints.iter_parents (fun c -> QC.push queue (Constraint c)) r bcs
+      Constraints.iter_parents touch_c r bcs
     in
     let dom = Domains.edit dom in
     (
