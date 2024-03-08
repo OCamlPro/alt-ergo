@@ -1,0 +1,11 @@
+logic P : int -> bool
+logic f : int -> int
+
+(* This quantifier is explicitly annotated with a f(x) trigger and should cause
+   the problem to be unsat *)
+axiom trig : forall x : int [f(x)]. P(x)
+
+(* Use f(0) *)
+axiom f_0 : f(0) = 0
+
+goal g : P(0)

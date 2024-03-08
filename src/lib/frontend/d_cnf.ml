@@ -1558,7 +1558,7 @@ let rec mk_expr
 
           (* filters *)
           let hyp =
-            begin match DStd.Tag.get root_tags DE.Tags.filters with
+            begin match DStd.Tag.get body.term_tags DE.Tags.filters with
               | Some t -> t
               | _ -> []
             end
@@ -1567,7 +1567,7 @@ let rec mk_expr
 
           (* triggers *)
           let trgs =
-            begin match DStd.Tag.get root_tags DE.Tags.triggers with
+            begin match DStd.Tag.get body.term_tags DE.Tags.triggers with
               | Some t -> t
               | _ -> []
             end
