@@ -155,47 +155,123 @@ module Constraint : sig
       The explanation [ex] justifies that the constraint [t] applies, and must
       be added to any domain that gets updated during propagation. *)
 end = struct
+  type binop =
+    (* Bitwise operations *)
+    | Band | Bor | Bxor
+
+  let pp_binop ppf = function
+    | Band -> Fmt.pf ppf "bvand"
+    | Bor -> Fmt.pf ppf "bvor"
+    | Bxor -> Fmt.pf ppf "bvxor"
+
+  let equal_binop : binop -> binop -> bool = Stdlib.(=)
+
+  let hash_binop : binop -> int = Hashtbl.hash
+
+  let is_commutative = function
+    | Band | Bor | Bxor -> true
+
+  let propagate_binop ~ex dx op dy dz =
+    let open Domains.Ephemeral in
+    match op with
+    | Band ->
+      update ~ex dx (Bitlist.logand !!dy !!dz);
+      (* Reverse propagation for y: if [x = y & z] then:
+         - Any [1] in [x] must be a [1] in [y]
+         - Any [0] in [x] that is also a [1] in [z] must be a [0] in [y]
+      *)
+      update ~ex dy (Bitlist.ones !!dx);
+      update ~ex dy Bitlist.(logor (zeroes !!dx) (lognot (ones !!dz)));
+      update ~ex dz (Bitlist.ones !!dx);
+      update ~ex dz Bitlist.(logor (zeroes !!dx) (lognot (ones !!dy)))
+    | Bor ->
+      update ~ex dx (Bitlist.logor !!dy !!dz);
+      (* Reverse propagation for y: if [x = y | z] then:
+         - Any [0] in [x] must be a [0] in [y]
+         - Any [1] in [x] that is also a [0] in [z] must be a [1] in [y]
+      *)
+      update ~ex dy (Bitlist.zeroes !!dx);
+      update ~ex dy Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
+      update ~ex dz (Bitlist.zeroes !!dx);
+      update ~ex dz Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
+    | Bxor ->
+      update ~ex dx (Bitlist.logxor !!dy !!dz);
+      (* x = y ^ z <-> y = x ^ z *)
+      update ~ex dy (Bitlist.logxor !!dx !!dz);
+      update ~ex dz (Bitlist.logxor !!dx !!dy)
+
+  type fun_t =
+    | Fbinop of binop * X.r * X.r
+
+  let pp_fun_t ppf = function
+    | Fbinop (op, x, y) ->
+      Fmt.pf ppf "%a@[(%a,@ %a)@]" pp_binop op X.print x X.print y
+
+  let equal_fun_t f1 f2 =
+    match f1, f2 with
+    | Fbinop (op1, x1, y1), Fbinop (op2, x2, y2) ->
+      equal_binop op1 op2 && X.equal x1 x2 && X.equal y1 y2
+
+  let hash_fun_t = function
+    | Fbinop (op, x, y) -> Hashtbl.hash (hash_binop op, X.hash x, X.hash y)
+
+  let normalize_fun_t = function
+    | Fbinop (op, x, y) when is_commutative op && X.hash_cmp x y > 0 ->
+      Fbinop (op, y, x)
+    | Fbinop _ as e -> e
+
+  let fold_args_fun_t f fn acc =
+    match fn with
+    | Fbinop (_, x, y) -> f y (f x acc)
+
+  let subst_fun_t rr nrr = function
+    | Fbinop (op, x, y) -> Fbinop (op, X.subst rr nrr x, X.subst rr nrr y)
+
+  let propagate_fun_t ~ex dom r f =
+    let open Domains.Ephemeral in
+    let get r = handle dom r in
+    match f with
+    | Fbinop (op, x, y) ->
+      propagate_binop ~ex (get r) op (get x) (get y)
+
   type repr =
-    | Band of X.r * X.r * X.r
-    (** [Band (x, y, z)] represents [x = y & z] *)
-    | Bor of X.r * X.r * X.r
-    (** [Bor (x, y, z)] represents [x = y | z] *)
-    | Bxor of X.r * X.r * X.r
-    (** [Bxor (x, y, z)] represents [x = y ^ z] *)
+    | Cfun of X.r * fun_t
 
-  let normalize_repr = function
-    | Band (x, y, z) when X.hash_cmp y z > 0 -> Band (x, z, y)
-    | Bor (x, y, z) when X.hash_cmp y z > 0 -> Bor (x, z, y)
-    | Bxor (x, y, z) -> (
-        match List.fast_sort X.hash_cmp [x; y; z] with
-        | [x; y; z] -> Bxor (x, y, z)
-        | _ -> assert false
-      )
-    | repr -> repr
+  let pp_repr ppf = function
+    | Cfun (r, fn) ->
+      Fmt.(pf ppf "%a =@ %a" (box X.print) r (box pp_fun_t) fn)
 
-  let equal_repr r1 r2 =
-    match r1, r2 with
-    | Band (x1, y1, z1), Band (x2, y2, z2)
-    | Bor (x1, y1, z1), Bor (x2, y2, z2)
-    | Bxor (x1, y1, z1), Bxor (x2, y2, z2) ->
-      X.equal x1 x2 && X.equal y1 y2 && X.equal z1 z2
-    | Band _, _
-    | Bor _, _
-    | Bxor _, _ -> false
+  let equal_repr c1 c2 =
+    match c1, c2 with
+    | Cfun (r1, f1), Cfun (r2, f2) ->
+      X.equal r1 r2 && equal_fun_t f1 f2
 
   let hash_repr = function
-    | Band (x, y, z) -> Hashtbl.hash (0, X.hash x, X.hash y, X.hash z)
-    | Bor (x, y, z) -> Hashtbl.hash (1, X.hash x, X.hash y, X.hash z)
-    | Bxor (x, y, z) -> Hashtbl.hash (2, X.hash x, X.hash y, X.hash z)
+    | Cfun (r, f) -> Hashtbl.hash (X.hash r, hash_fun_t f)
+
+  let normalize_repr = function
+    | Cfun (r, f) -> Cfun (r, normalize_fun_t f)
+
+  let fold_args_repr f c acc =
+    match c with
+    | Cfun (r, fn) -> fold_args_fun_t f fn (f r acc)
+
+  let subst_repr rr nrr = function
+    | Cfun (r, f) -> Cfun (X.subst rr nrr r, subst_fun_t rr nrr f)
+
+  let propagate_repr ~ex dom = function
+    | Cfun (r, f) -> propagate_fun_t ~ex dom r f
 
   type t = { repr : repr ; mutable tag : int }
+
+  let pp ppf { repr; _ } = pp_repr ppf repr
 
   module W = Weak.Make(struct
       type nonrec t = t
 
-      let equal { repr = lhs; _ } { repr = rhs; _ } = equal_repr lhs rhs
+      let equal c1 c2 = equal_repr c1.repr c2.repr
 
-      let hash { repr; _ } = hash_repr repr
+      let hash c = hash_repr c.repr
     end)
 
   let hcons =
@@ -210,122 +286,78 @@ end = struct
       );
       tagged
 
-  let pp_repr ppf = function
-    | Band (x, y, z) ->
-      Fmt.pf ppf "%a & %a = %a" X.print y X.print z X.print x
-    | Bor (x, y, z) ->
-      Fmt.pf ppf "%a | %a = %a" X.print y X.print z X.print x
-    | Bxor (x, y, z) ->
-      Fmt.pf ppf "%a ^ %a = %a" X.print y X.print z X.print x
+  let cfun r f = hcons @@ Cfun (r, f)
 
-  let subst_repr rr nrr = function
-    | Band (x, y, z) ->
-      let x = X.subst rr nrr x
-      and y = X.subst rr nrr y
-      and z = X.subst rr nrr z in
-      Band (x, y, z)
-    | Bor (x, y, z) ->
-      let x = X.subst rr nrr x
-      and y = X.subst rr nrr y
-      and z = X.subst rr nrr z in
-      Bor (x, y, z)
-    | Bxor (x, y, z) ->
-      let x = X.subst rr nrr x
-      and y = X.subst rr nrr y
-      and z = X.subst rr nrr z in
-      Bxor (x, y, z)
+  let cbinop op r x y = cfun r (Fbinop (op, x, y))
 
-  let pp ppf { repr; _ } = pp_repr ppf repr
+  let bvand = cbinop Band
+  let bvor = cbinop Bor
+  let bvxor = cbinop Bxor
 
-  let compare { tag = t1; _ } { tag = t2; _ } = Stdlib.compare t1 t2
+  let equal c1 c2 = c1.tag = c2.tag
 
-  let equal t1 t2 = Int.equal t1.tag t2.tag
+  let hash c = Hashtbl.hash c.tag
 
-  let hash t1 = Hashtbl.hash t1.tag
+  let compare c1 c2 = Int.compare c1.tag c2.tag
+
+  let fold_args f c acc = fold_args_repr f c.repr acc
 
   let subst rr nrr c =
     hcons @@ subst_repr rr nrr c.repr
 
-  let fold_args f { repr; _ } acc =
-    match repr with
-    | Band (x, y, z) | Bor (x, y, z) | Bxor (x, y, z) ->
-      let acc = f x acc in
-      let acc = f y acc in
-      let acc = f z acc in
-      acc
+  let propagate ~ex c dom =
+    propagate_repr ~ex dom c.repr
 
-  let simplify { repr; _ } acts =
-    (* TODO: for bitwise constraint we might want to split the constraint into
-       constraints of smaller bit-width depending on the domains of the args *)
-    match repr with
-    (* TODO: [x = y & 1] and [x = y | 0] become [x = y] *)
-    | Band (x, y, z) | Bor (x, y, z) when X.equal y z ->
-      acts.Rel_utils.acts_add_eq x y;
-      true
-    | Bxor (x, y, z) when X.equal x y || X.equal x z || X.equal y z ->
-      let zero =
-        if X.equal x y then z else if X.equal x z then y else x
-      in
-      let sz = match X.type_info zero with Tbitv n -> n | _ -> assert false in
-      acts.acts_add_eq zero
-        (Shostak.Bitv.is_mine [ { bv = Cte Z.zero ; sz }]);
-      true
-    | Band _ | Bor _ | Bxor _ -> false
+  let simplify_binop acts op r x y =
+    let acts_add_zero r =
+      let sz = match X.type_info r with Tbitv n -> n | _ -> assert false in
+      acts.Rel_utils.acts_add_eq r
+        (Shostak.Bitv.is_mine [ { bv = Cte Z.zero ; sz }])
+    in
+    match op with
+    | Band | Bor when X.equal x y ->
+      acts.acts_add_eq r x; true
 
-  let propagate ~ex { repr; _ } dom =
-    let open Domains.Ephemeral in
-    let get r = handle dom r in
-    Steps.incr CP;
-    match repr with
-    | Band (x, y, z) ->
-      let dx = get x and dy = get y and dz = get z in
-      update ~ex dx (Bitlist.logand !!dy !!dz);
-      (* Reverse propagation for y: if [x = y & z] then:
-         - Any [1] in [x] must be a [1] in [y]
-         - Any [0] in [x] that is also a [1] in [z] must be a [0] in [y]
-      *)
-      update ~ex dy (Bitlist.ones !!dx);
-      update ~ex dy Bitlist.(logor (zeroes !!dx) (lognot (ones !!dz)));
-      update ~ex dz (Bitlist.ones !!dx);
-      update ~ex dz Bitlist.(logor (zeroes !!dx) (lognot (ones !!dy)))
-    | Bor (x, y, z) ->
-      let dx = get x and dy = get y and dz = get z in
-      update ~ex dx (Bitlist.logor !!dy !!dz);
-      (* Reverse propagation for y: if [x = y | z] then:
-         - Any [0] in [x] must be a [0] in [y]
-         - Any [1] in [x] that is also a [0] in [z] must be a [1] in [y]
-      *)
-      update ~ex dy (Bitlist.zeroes !!dx);
-      update ~ex dy Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
-      update ~ex dz (Bitlist.zeroes !!dx);
-      update ~ex dz Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
-    | Bxor (x, y, z) ->
-      let dx = get x and dy = get y and dz = get z in
-      update ~ex dx (Bitlist.logxor !!dy !!dz);
-      update ~ex dy (Bitlist.logxor !!dx !!dz);
-      update ~ex dz (Bitlist.logxor !!dx !!dy)
+    (* r ^ x ^ x = 0 <-> r = 0 *)
+    | Bxor when X.equal x y ->
+      acts_add_zero r; true
+    | Bxor when X.equal r x ->
+      acts_add_zero y; true
+    | Bxor when X.equal r y ->
+      acts_add_zero x; true
 
-  let bvand x y z = hcons @@ Band (x, y, z)
-  let bvor x y z = hcons @@ Bor (x, y, z)
-  let bvxor x y z = hcons @@ Bxor (x, y, z)
+    | _ -> false
+
+  let simplify_fun_t acts r = function
+    | Fbinop (op, x, y) -> simplify_binop acts op r x y
+
+  let simplify_repr acts = function
+    | Cfun (r, f) -> simplify_fun_t acts r f
+
+  let simplify c acts =
+    simplify_repr acts c.repr
 end
 
 module Constraints = Rel_utils.Constraints_make(Constraint)
 
+let extract_binop =
+  let open Constraint in function
+    | Sy.BVand -> Some bvand
+    | BVor -> Some bvor
+    | BVxor -> Some bvxor
+    | _ -> None
+
 let extract_constraints bcs uf r t =
   match E.term_view t with
-  | { f = Op BVand; xs = [ x; y ]; _ } ->
-    let rx, exx = Uf.find uf x
-    and ry, exy = Uf.find uf y in
-    Constraints.add ~ex:(Ex.union exx exy) (Constraint.bvand r rx ry) bcs
-  | { f = Op BVor; xs = [ x; y ]; _ } ->
-    let rx, exx = Uf.find uf x
-    and ry, exy = Uf.find uf y in
-    Constraints.add ~ex:(Ex.union exx exy) (Constraint.bvor r rx ry) bcs
-  | { f = Op BVxor; xs = [ x; y ]; _ } ->
-    let rx, exx = Uf.find uf x
-    and ry, exy = Uf.find uf y in
-    Constraints.add ~ex:(Ex.union exx exy) (Constraint.bvxor r rx ry) bcs
+  | { f = Op op; xs = [ x; y ]; _ } -> (
+      match extract_binop op with
+      | Some mk ->
+        let rx, exx = Uf.find uf x
+        and ry, exy = Uf.find uf y in
+        Constraints.add
+          ~ex:(Ex.union exx exy) (mk r rx ry) bcs
+      | _ -> bcs
+    )
   | _ -> bcs
 
 let rec mk_eq ex lhs w z =
