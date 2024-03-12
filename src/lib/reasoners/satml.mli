@@ -46,6 +46,10 @@ module type SAT_ML = sig
   type t
 
   val solve : t -> unit
+  val compute_concrete_model :
+    declared_ids:Id.typed list ->
+    t ->
+    Models.t Lazy.t * Objective.Model.t
 
   val set_new_proxies : t -> Flat_Formula.proxies -> unit
 
@@ -70,7 +74,7 @@ module type SAT_ML = sig
     t -> Satml_types.Flat_Formula.hcons_env -> Satml_types.Atom.Set.t
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
-  val empty : unit -> t
+  val create : Atom.hcons_env -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int

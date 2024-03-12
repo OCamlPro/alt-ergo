@@ -91,6 +91,10 @@ module type SAT_ML = sig
   type t
 
   val solve : t -> unit
+  val compute_concrete_model :
+    declared_ids:Id.typed list ->
+    t ->
+    Models.t Lazy.t * Objective.Model.t
 
   val set_new_proxies : t -> FF.proxies -> unit
 
@@ -113,7 +117,7 @@ module type SAT_ML = sig
     t -> FF.hcons_env -> Satml_types.Atom.Set.t
   val current_tbox : t -> th
   val set_current_tbox : t -> th -> unit
-  val empty : unit -> t
+  val create : Atom.hcons_env -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
@@ -154,6 +158,11 @@ module Vheap = Heap.Make(struct
     let compare (a : t) (b : t) = Stdlib.compare b.weight a.weight
   end)
 
+let is_semantic (a : Atom.atom) =
+  match Shostak.Literal.view a.lit with
+  | LTerm _ -> false
+  | LSem _ -> true
+
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   module Matoms = Atom.Map
@@ -161,6 +170,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   type th = Th.t
   type t =
     {
+      hcons_env : Atom.hcons_env;
+
       (* si vrai, les contraintes sont deja fausses *)
       mutable is_unsat : bool;
 
@@ -186,6 +197,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       (* une pile qui pointe vers les niveaux de decision dans trail *)
       mutable trail_lim : int Vec.t;
+
+      mutable nchoices : int ;
+      (** Number of semantic choices (case splits) that have been made. Semantic
+          literals are not counted as assignments but are still part of the
+          trail; we keep track of this number to properly compute the number of
+          assignments to boolean literals in [nb_assigns]. *)
+
+      mutable nchoices_stack : int Vec.t;
+      (** Stack for [nchoices] values. *)
 
       (* Tete de la File des faits unitaires a propager.
          C'est un index vers le trail *)
@@ -368,13 +388,41 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable increm_guards : Atom.atom Vec.t;
 
       mutable next_dec_guard : int;
+
+      mutable next_decisions : Atom.atom list;
+      (** Literals that must be decided on before the solver can answer [Sat].
+
+          These are added by the theory through calls to [acts_add_decision]. *)
+
+      mutable next_split : Atom.atom option;
+      (** Literal that should be decided on before the solver answers [Sat].
+
+          These are added by the theory through calls to [acts_add_split]. The
+          difference with [next_decisions] is that the [splits] are optional
+          (i.e. they can be dropped, and the solver is allowed to answer [Sat]
+          without deciding on the splits if it chooses so) whereas once added,
+          the [decisions] are guaranteed to be decided on at some point (unless
+          backtracking occurs). *)
+
+      mutable next_objective :
+        (Objective.Function.t * Objective.Value.t * Atom.atom) option;
+      (** Objective functions that must be optimized before the solver can
+          answer [Sat].
+
+          The provided [Atom.atom] correspond to a decision forcing the
+          [Function.t] to the corresponding [Value.t] (or nudging the model
+          towards "more optimal" values if the objective is not reachable); once
+          the decision is made by the solver, the optimized value is sent back
+          to the theory through [Th.add_objective]. *)
     }
 
   exception Conflict of Atom.clause
   (*module Make (Dummy : sig end) = struct*)
 
-  let empty () =
+  let create hcons_env =
     {
+      hcons_env;
+
       is_unsat = false;
 
       unsat_core = None;
@@ -395,6 +443,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       trail = Vec.make 601 ~dummy:Atom.dummy_atom;
 
       trail_lim = Vec.make 601 ~dummy:(-105);
+
+      nchoices = 0;
+
+      nchoices_stack = Vec.make 100 ~dummy:(-105);
 
       qhead = 0;
 
@@ -472,6 +524,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       increm_guards = Vec.make 1 ~dummy:Atom.dummy_atom;
 
       next_dec_guard = 0;
+
+      next_decisions = [];
+
+      next_split = None;
+
+      next_objective = None;
     }
 
   let insert_var_order env (v : Atom.var) =
@@ -506,7 +564,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let decision_level env = Vec.size env.trail_lim
 
-  let nb_assigns env = Vec.size env.trail
+  let nb_choices env = env.nchoices
+  let nb_assigns env = Vec.size env.trail - nb_choices env
   let nb_clauses env = Vec.size env.clauses
   (* unused -- let nb_learnts env = Vec.size env.learnts *)
   let nb_vars    env = Vec.size env.vars
@@ -514,6 +573,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let new_decision_level env =
     env.decisions <- env.decisions + 1;
     Vec.push env.trail_lim (Vec.size env.trail);
+    Vec.push env.nchoices_stack env.nchoices;
     if Options.get_profiling() then
       Profiling.decision (decision_level env) "<none>";
     Vec.push env.tenv_queue env.tenv; (* save the current tenv *)
@@ -579,7 +639,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       a.neg.timp <- -1
     end;
     assert (a.var.level >= 0);
-    Vec.push env.trail a
+    Vec.push env.trail a;
+    if is_semantic a then
+      env.nchoices <- env.nchoices + 1
 
   let cancel_ff_lvls_until env lvl =
     for i = decision_level env downto lvl + 1 do
@@ -609,18 +671,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           unassign_atom a;
           if a.is_guard then
             env.next_dec_guard <- env.next_dec_guard - 1;
-          insert_var_order env a.var
+          if not (is_semantic a) then
+            insert_var_order env a.var
         end
       done;
       Queue.clear env.tatoms_queue;
       Queue.clear env.th_tableaux;
       env.tenv <- Vec.get env.tenv_queue lvl; (* recover the right tenv *)
+      env.nchoices <- Vec.get env.nchoices_stack lvl;
       if Options.get_cdcl_tableaux () then begin
         env.lazy_cnf <- Vec.get env.lazy_cnf_queue lvl;
         env.relevants <- Vec.get env.relevants_queue lvl;
       end;
       Vec.shrink env.trail env.qhead;
       Vec.shrink env.trail_lim lvl;
+      Vec.shrink env.nchoices_stack lvl;
       Vec.shrink env.tenv_queue lvl;
       if Options.get_cdcl_tableaux () then begin
         Vec.shrink
@@ -635,33 +700,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          env.cpt_current_propagations <- (Vec.size env.trail) - last_dec
        with _ -> assert false
       );
+      env.next_decisions <- [];
+      env.next_split <- None;
+      env.next_objective <- None
     end;
     if Options.get_profiling() then Profiling.reset_dlevel (decision_level env);
     assert (Vec.size env.trail_lim = Vec.size env.tenv_queue);
+    assert (Vec.size env.trail_lim = Vec.size env.nchoices_stack);
     assert (Options.get_minimal_bj () || (!repush == []));
     List.iter (enqueue_assigned env) !repush
-
-  let rec pick_branch_var env =
-    if Vheap.size env.order = 0 then raise Sat;
-    let v = Vheap.remove_min env.order in
-    if v.level>= 0 then begin
-      assert (v.pa.is_true || v.na.is_true);
-      pick_branch_var env
-    end
-    else v
-
-  let pick_branch_lit env =
-    if env.next_dec_guard < Vec.size env.increm_guards then
-      begin
-        let a = Vec.get env.increm_guards env.next_dec_guard in
-        (assert (not (a.neg.is_guard || a.neg.is_true)));
-        env.next_dec_guard <- env.next_dec_guard + 1;
-        a
-      end
-    else
-      let v = pick_branch_var env in
-      v.na
-
 
   let debug_enqueue_level a lvl reason =
     match reason with
@@ -700,6 +747,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if Options.get_debug_sat () then
       Printer.print_dbg "[satml] enqueue: %a@." Atom.pr_atom a;
     Vec.push env.trail a;
+    if is_semantic a then
+      env.nchoices <- env.nchoices + 1;
     a.var.index <- Vec.size env.trail;
     if Options.get_enable_assertions() then  debug_enqueue_level a lvl reason
 
@@ -790,10 +839,41 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     end;
     Vec.shrink watched !new_sz_w
 
+  let acts_add_decision_lit env lit =
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    if atom.var.level < 0 then (
+      assert (not atom.is_true && not atom.neg.is_true);
+      env.next_decisions <- atom :: env.next_decisions
+    ) else
+      assert (atom.is_true || atom.neg.is_true)
+
+  let acts_add_split env lit =
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    if atom.var.level < 0 then (
+      assert (not atom.is_true && not atom.neg.is_true);
+      env.next_split <- Some atom
+    ) else
+      assert (atom.is_true || atom.neg.is_true)
+
+  let acts_add_objective env fn value lit =
+    (* Note: we must store the objective even if the atom is already true,
+       because we must send back the objective to the theory afterwards.
+
+       We can't update the theory inside this function, because it is called
+       from within the theory. *)
+    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    env.next_objective <- Some (fn, value, atom)
+
+  let[@inline] theory_slice env : _ Th_util.acts = {
+    acts_add_decision_lit = acts_add_decision_lit env ;
+    acts_add_split = acts_add_split env ;
+    acts_add_objective = acts_add_objective env ;
+  }
 
   let do_case_split env origin =
     try
-      let tenv, _terms = Th.do_case_split env.tenv origin in
+      let acts = theory_slice env in
+      let tenv, _terms = Th.do_case_split ~acts env.tenv origin in
       (* TODO: terms not added to matching !!! *)
       env.tenv <- tenv;
       C_none
@@ -879,29 +959,36 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       formula that [a] was a proxy for to the [lazy_cnf] (see
       [add_form_to_lazy_cnf]). *)
   let relevancy_propagation env ma a =
-    try
-      let parents, f_a = Matoms.find a ma in
-      let ma = Matoms.remove a ma in
-      let ma =
-        MFF.fold
-          (fun fp lp ma ->
-             List.fold_left
-               (fun ma bf ->
-                  let b = get_atom_or_proxy bf env.proxies in
-                  if Atom.eq_atom a b then ma
-                  else
-                    let mf_b, fb =
-                      try Matoms.find b ma with Not_found -> assert false in
-                    assert (FF.equal bf fb);
-                    let mf_b = MFF.remove fp mf_b in
-                    if MFF.is_empty mf_b then Matoms.remove b ma
-                    else Matoms.add b (mf_b, fb) ma
-               )ma lp
-          )parents ma
-      in
-      assert (let a = get_atom_or_proxy f_a env.proxies in a.is_true);
-      add_form_to_lazy_cnf env ma f_a
-    with Not_found -> ma
+    match Shostak.Literal.view @@ Atom.literal a with
+    | LSem _ ->
+      (* Always propagate back semantic literals to the theory. *)
+      Queue.push a env.th_tableaux;
+      ma
+
+    | LTerm _ ->
+      try
+        let parents, f_a = Matoms.find a ma in
+        let ma = Matoms.remove a ma in
+        let ma =
+          MFF.fold
+            (fun fp lp ma ->
+               List.fold_left
+                 (fun ma bf ->
+                    let b = get_atom_or_proxy bf env.proxies in
+                    if Atom.eq_atom a b then ma
+                    else
+                      let mf_b, fb =
+                        try Matoms.find b ma with Not_found -> assert false in
+                      assert (FF.equal bf fb);
+                      let mf_b = MFF.remove fp mf_b in
+                      if MFF.is_empty mf_b then Matoms.remove b ma
+                      else Matoms.add b (mf_b, fb) ma
+                 )ma lp
+            )parents ma
+        in
+        assert (let a = get_atom_or_proxy f_a env.proxies in a.is_true);
+        add_form_to_lazy_cnf env ma f_a
+      with Not_found -> ma
 
 
   (* Note: although this seems to only update [env.lazy_cnf], the call to
@@ -941,7 +1028,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            assert (ta.var.level >= 0);
            if ta.var.level = 0 then begin
              incr nb_f;
-             (ta.lit, Ex.empty, 0, env.cpt_current_propagations) :: acc
+             (ta.lit, Th_util.Other, Ex.empty, 0, env.cpt_current_propagations)
+             :: acc
            end
            else acc
         )[] lazy_q
@@ -996,22 +1084,26 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
-        assert (E.is_ground ta.lit);
+        assert (Shostak.Literal.is_ground ta.lit);
         let th_imp =
           if ta.timp = -1 then
-            let lit = Atom.literal a in
-            match Th.query lit env.tenv with
-            | Some _ ->
-              a.timp <- 1;
-              a.neg.timp <- 1;
-              true
-            | None ->
-              false
+            match Shostak.Literal.view @@ Atom.literal a with
+            | LSem _ -> false
+            | LTerm lit ->
+              match Th.query lit env.tenv with
+              | Some _ ->
+                a.timp <- 1;
+                a.neg.timp <- 1;
+                true
+              | None ->
+                false
           else
             ta.timp = 1
         in
         if not th_imp then
-          facts := (ta.lit, ex, dlvl,env.cpt_current_propagations) :: !facts;
+          facts :=
+            (ta.lit, Th_util.Other, ex, dlvl,env.cpt_current_propagations) ::
+            !facts;
         env.cpt_current_propagations <- env.cpt_current_propagations + 1
       done;
       if Options.get_debug_sat () then
@@ -1300,15 +1392,35 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | [] -> assert false
       | [(fuip : Atom.atom)] ->
         fuip.var.vpremise <- history;
+        (* Note: there could potentially be semantic values that are no longer
+           valid in the union-find at level 0 contained in [fuip] if [fuip] is
+           a semantic literal, which could cause crashes -- although it is not
+           clear to me that it can really happen since if we learn it at level
+           0 it must be explainable by facts at level 0. *)
         enqueue env fuip 0 None
       | fuip :: _ ->
         let name = Atom.fresh_lname () in
         let lclause =
           Atom.make_clause name learnt vraie_form true history
         in
-        Vec.push env.learnts lclause;
-        attach_clause env lclause;
-        clause_bump_activity env lclause;
+        (* Do not learn clauses involving semantic literals (but still record
+           them as a reason for the propagated literal). Learned clauses are
+           valid at level 0, but semantic literals can contain terms created by
+           the Shostak module that are only useful in a portion of the search
+           tree, and in particular would not exist (in Uf) at lower levels.
+
+           Note that we try to avoid semantic literals as much as possible in
+           [conflict_analyze_aux], but we can still have semantic decisions
+           that would end up in clauses.
+
+           Note that if the [fuip] is itself a semantic literal, it will act as
+           a (local) learned clause (see [semantic_expansion]). *)
+        let has_split = Vec.exists is_semantic lclause.atoms in
+        if not has_split then (
+          Vec.push env.learnts lclause;
+          attach_clause env lclause;
+          clause_bump_activity env lclause
+        );
         let propag_lvl = best_propagation_level env lclause in
         enqueue env fuip propag_lvl (Some lclause)
     end;
@@ -1316,6 +1428,33 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       var_decay_activity env;
       clause_decay_activity env
     end
+
+  (* If [a] is a semantic literal that is not a decision, we ideally would
+     like to replace it with its reason.
+
+     For instance, if [x = 0] is implied by [a1 /\ .. /\ an] (i.e.  the
+     reason for [x = 0] is [x <> 0 \/ not a1 \/ .. \/ not an]) and [x = 0] is
+     in conflict with [b] (i.e. we are learning [x <> 0 \/ not b]) we can
+     apply resolution to learn [not a1 \/ .. \/ not an \/ not b] instead,
+     eliminating the semantic literal [x = 0] in the process. *)
+  let rec semantic_expansion env max_lvl blevel learnt seen (a : Atom.atom) =
+    assert (a.is_true || a.neg.is_true && a.var.level >= 0);
+    assert (a.var.level <= max_lvl);
+    if not a.var.seen && a.var.level > 0 then (
+      var_bump_activity env a.var;
+      a.var.seen <- true;
+      seen := a :: !seen;
+      match a.var.reason with
+      | Some c when is_semantic a ->
+        assert a.neg.is_true;
+        Vec.iter (fun (b : Atom.atom) ->
+            assert (b.neg == a || b.neg.is_true);
+            semantic_expansion env max_lvl blevel learnt seen b
+          ) c.atoms
+      | _ ->
+        learnt := SA.add a !learnt;
+        blevel := max !blevel a.var.level
+    )
 
   let conflict_analyze_aux env c_clause max_lvl =
     let pathC = ref 0 in
@@ -1332,13 +1471,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Vec.iter (fun (a : Atom.atom) ->
           assert (a.is_true || a.neg.is_true && a.var.level >= 0);
           if not a.var.seen && a.var.level > 0 then begin
-            var_bump_activity env a.var;
-            a.var.seen <- true;
-            seen := a :: !seen;
-            if a.var.level >= max_lvl then incr pathC
-            else begin
-              learnt := SA.add a !learnt;
-              blevel := max !blevel a.var.level
+            if a.var.level >= max_lvl then begin
+              var_bump_activity env a.var;
+              a.var.seen <- true;
+              seen := a :: !seen;
+              incr pathC
+            end else begin
+              semantic_expansion env a.var.level blevel learnt seen a;
             end
           end
         ) !c.atoms;
@@ -1352,8 +1491,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       decr pathC;
       let p = Vec.get env.trail !tr_ind in
       decr tr_ind;
+      (* Do not use semantic literals as UIPs unless forced to (i.e. there is
+         no term UIP and the decision was a semantic literal) *)
+      let is_good_uip (p : Atom.atom) =
+        match p.var.reason with
+        | None -> true
+        | Some _ -> not (is_semantic p)
+      in
       match !pathC,p.var.reason with
-      | 0, _ ->
+      | 0, _ when is_good_uip p ->
         cond := false;
         learnt := SA.add p.neg !learnt
       | _, None -> assert false
@@ -1404,6 +1550,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Exit -> None
 
   let conflict_analyze_and_fix env confl =
+    env.next_decisions <- [];
+    env.next_split <- None;
+    env.next_objective <- None;
     env.conflicts <- env.conflicts + 1;
     if decision_level env = 0 then report_conflict env confl;
     match confl with
@@ -1553,17 +1702,90 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let th_entailed tenv a =
     if Options.get_no_tcp () || not (Options.get_minimal_bj ()) then None
     else
-      let lit = Atom.literal a in
-      match Th.query lit tenv with
-      | Some (d,_) ->
-        a.timp <- 1;
-        Some (clause_of_dep d a)
-      | None  ->
-        match Th.query (E.neg lit) tenv with
+      match Shostak.Literal.view @@ Atom.literal a with
+      | LSem _ -> None
+      | LTerm lit ->
+        match Th.query lit tenv with
         | Some (d,_) ->
-          a.neg.timp <- 1;
-          Some (clause_of_dep d a.Atom.neg)
-        | None -> None
+          a.timp <- 1;
+          Some (clause_of_dep d a)
+        | None  ->
+          match Th.query (E.neg lit) tenv with
+          | Some (d,_) ->
+            a.neg.timp <- 1;
+            Some (clause_of_dep d a.Atom.neg)
+          | None -> None
+
+  let make_decision env atom =
+    match th_entailed env.tenv atom with
+    | None ->
+      new_decision_level env;
+      let current_level = decision_level env in
+      env.cpt_current_propagations <- 0;
+      assert (atom.var.level < 0);
+      if Options.get_debug_sat () then
+        Printer.print_dbg "[satml] decide: %a" Atom.pr_atom atom;
+      enqueue env atom current_level None
+    | Some (c, _) ->
+      (* right decision level will be set inside record_learnt_clause *)
+      record_learnt_clause env ~is_T_learn:true (decision_level env) c []
+
+  let rec pick_branch_aux env (atom : Atom.atom) =
+    let v = atom.var in
+    if v.level >= 0 then begin
+      assert (v.pa.is_true || v.na.is_true);
+      pick_branch_lit env
+    end else
+      make_decision env atom
+
+  and pick_branch_lit env =
+    match env.next_objective with
+    | Some (fn, value, atom) ->
+      env.next_objective <- None;
+      let v = atom.var in
+      if v.level >= 0 then (
+        assert (v.pa.is_true || v.na.is_true);
+        if atom.is_true then
+          env.tenv <- Th.add_objective env.tenv fn value;
+        pick_branch_lit env
+      ) else (
+        make_decision env atom;
+        if atom.is_true then
+          env.tenv <- Th.add_objective env.tenv fn value
+      )
+    | None ->
+      match env.next_decisions with
+      | atom :: tl ->
+        env.next_decisions <- tl;
+        pick_branch_aux env atom
+      | [] ->
+        match env.next_split with
+        | Some atom ->
+          env.next_split <- None;
+          pick_branch_aux env atom
+        | None ->
+          match Vheap.remove_min env.order with
+          | v -> pick_branch_aux env v.na
+          | exception Not_found -> raise_notrace Sat
+
+  let pick_branch_lit env =
+    if env.next_dec_guard < Vec.size env.increm_guards then
+      begin
+        let a = Vec.get env.increm_guards env.next_dec_guard in
+        (assert (not (a.neg.is_guard || a.neg.is_true)));
+        env.next_dec_guard <- env.next_dec_guard + 1;
+        make_decision env a
+      end
+    else
+      pick_branch_lit env
+
+  let is_sat env =
+    Option.is_none env.next_objective &&
+    Lists.is_empty env.next_decisions &&
+    Option.is_none env.next_split && (
+      nb_assigns env = nb_vars env ||
+      (Options.get_cdcl_tableaux_inst () &&
+       Matoms.is_empty env.lazy_cnf))
 
   let search env strat n_of_conflicts n_of_learnts =
     let conflictC = ref 0 in
@@ -1571,9 +1793,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     while true do
       propagate_and_stabilize env all_propagations conflictC !strat;
 
-      if nb_assigns env = nb_vars env ||
-         (Options.get_cdcl_tableaux_inst () &&
-          Matoms.is_empty env.lazy_cnf) then
+      if is_sat env then
         raise Sat;
       if Options.get_enable_restarts ()
       && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
@@ -1587,26 +1807,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          Vec.size env.learnts - nb_assigns env >= n_of_learnts then
         reduce_db();
 
-      let next =
-        match !strat with
-        | Auto -> pick_branch_lit env
-        | Stop -> raise Stopped
-        | Interactive f ->
-          strat := Stop; f
-      in
-
-      match th_entailed env.tenv next with
-      | None ->
-        new_decision_level env;
-        let current_level = decision_level env in
-        env.cpt_current_propagations <- 0;
-        assert (next.var.level < 0);
-        if Options.get_debug_sat () then
-          Printer.print_dbg "[satml] decide: %a" Atom.pr_atom next;
-        enqueue env next current_level None
-      | Some(c, _) ->
-        record_learnt_clause env ~is_T_learn:true (decision_level env) c []
-        (* right decision level will be set inside record_learnt_clause *)
+      match !strat with
+      | Auto -> pick_branch_lit env
+      | Stop -> raise Stopped
+      | Interactive f ->
+        strat := Stop;
+        make_decision env f
     done
 
   (* unused --
@@ -1649,6 +1855,22 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | (Unsat _) as e ->
       (* check_unsat_core cl; *)
       raise e
+
+  let rec compute_concrete_model ~declared_ids env =
+    let acts = theory_slice env in
+    match Th.compute_concrete_model ~acts env.tenv with
+    | () -> (
+        if is_sat env then
+          Th.extract_concrete_model ~declared_ids env.tenv
+        else
+          try
+            solve env; assert false
+          with Sat ->
+            compute_concrete_model ~declared_ids env
+      )
+    | exception Ex.Inconsistent (ex, _) ->
+      conflict_analyze_and_fix env (C_theory ex);
+      compute_concrete_model ~declared_ids env
 
   exception Trivial
 
@@ -1777,6 +1999,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         List.fold_left
           (fun ((unit_cnf, nunit_cnf) as accu) (v : Atom.var) ->
              Vec.push env.vars v;
+             assert (not (is_semantic v.pa));
              insert_var_order env v;
              match th_entailed tenv0 v.pa with
              | None -> accu
@@ -1789,7 +2012,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                        if minimal-bj is ON"]
           ) (unit_cnf, nunit_cnf) new_v
       in
-      assert (nbv = Vec.size env.vars);
+      (* This assert is no longer true because some of the vars in the
+         [hcons_env] are now semantic literals.
+         assert (nbv = Vec.size env.vars); *)
       accu
 
   let set_new_proxies env proxies =
@@ -1797,10 +2022,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let try_to_backjump_further =
     let rec better_bj env sf =
+      (* If we *don't* backjump further, we need to restore any part of the
+         environment that depends on the theory. *)
       let old_dlvl = decision_level env in
       let old_lazy = env.lazy_cnf in
       let old_relevants = env.relevants in
       let old_tenv = env.tenv in
+      let old_decisions = env.next_decisions in
+      let old_split = env.next_split in
+      let old_objective = env.next_objective in
       let fictive_lazy =
         SFF.fold (fun ff acc -> add_form_to_lazy_cnf env acc ff)
           sf old_lazy
@@ -1814,7 +2044,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           assert (old_dlvl == new_dlvl);
           env.lazy_cnf <- old_lazy;
           env.relevants <- old_relevants;
-          env.tenv     <- old_tenv
+          env.tenv     <- old_tenv;
+          env.next_decisions <- old_decisions;
+          env.next_split <- old_split;
+          env.next_objective <- old_objective
         end
     in
     fun env sff ->
@@ -1961,5 +2194,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       assert (env.next_dec_guard <= Vec.size env.increm_guards);
     enqueue env g.neg 0 None
 
-  let optimize env ~is_max obj = env.tenv <- Th.optimize env.tenv ~is_max obj
+  let optimize env ~is_max obj =
+    let fn = Objective.Function.mk ~is_max obj in
+    env.tenv <- Th.add_objective env.tenv fn Objective.Value.Unknown
 end

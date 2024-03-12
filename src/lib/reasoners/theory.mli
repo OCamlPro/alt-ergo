@@ -38,25 +38,30 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (Expr.t * Explanation.t * int * int) list -> t ->
-    t * Expr.Set.t * int
+    (Shostak.Literal.t * Th_util.lit_origin * Explanation.t * int * int) list
+    -> t -> t * Expr.Set.t * int
 
-  val optimize : t -> is_max:bool -> Expr.t -> t
-  (** [optimize env ~is_max e] registers the expression [e] to be optimized
-      during the model generation. *)
+  val add_objective :
+    t -> Objective.Function.t -> Objective.Value.t -> t
+  (** [add_objective env fn value] indicates that the objective [fn] has been
+      optimized to [value]. *)
 
   val query : Expr.t -> t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
+  val do_case_split :
+    ?acts:Shostak.Literal.t Th_util.acts ->
+    t -> Util.case_split_policy -> t * Expr.Set.t
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
 
   val compute_concrete_model :
-    t ->
+    acts:Shostak.Literal.t Th_util.acts -> t -> unit
+  val extract_concrete_model :
     declared_ids:Id.typed list ->
+    t ->
     Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t

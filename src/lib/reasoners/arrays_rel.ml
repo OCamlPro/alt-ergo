@@ -426,7 +426,7 @@ let assume env uf la =
   Debug.new_equalities atoms;
   let l =
     Conseq.fold (fun (a,ex) l ->
-        ((Sig_rel.LTerm a, ex, Th_util.Other)::l)) atoms []
+        ((Literal.LTerm a, ex, Th_util.Other)::l)) atoms []
   in
   env, { Sig_rel.assume = l; remove = [] }
 

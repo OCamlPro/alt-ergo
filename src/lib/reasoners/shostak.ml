@@ -771,3 +771,13 @@ module MXH =
 (** set of semantic values using Combine.hash_cmp *)
 module SXH =
   Set.Make(struct type t = Combine.r let compare = Combine.hash_cmp end)
+
+module L = Xliteral.Make(struct
+    type t = Combine.r
+
+    include Combine
+
+    let compare = hash_cmp
+  end)
+
+module Literal = Literal.Make(L)

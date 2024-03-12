@@ -846,9 +846,11 @@ module Make (Th : Theory.S) = struct
                  "%a is not ground" E.print a;
                assert false
              end;
-             let facts = (a, ex, dlvl, plvl) :: facts in
+             let alit = Shostak.Literal.make (LTerm a) in
+             let facts = (alit, Th_util.Other, ex, dlvl, plvl) :: facts in
              let ufacts =
-               if Ex.has_no_bj ex then (a, ex, dlvl, plvl) :: ufacts
+               if Ex.has_no_bj ex then
+                 (alit, Th_util.Other, ex, dlvl, plvl) :: ufacts
                else ufacts
              in
              if not ff.E.mf then begin
@@ -1129,9 +1131,8 @@ module Make (Th : Theory.S) = struct
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let model, _ =
-          Th.compute_concrete_model ~declared_ids:!(env.declare_top) env.tbox
-        in
+        let declared_ids = !(env.declare_top) in
+        let model, _ = Th.extract_concrete_model ~declared_ids env.tbox in
         env.last_saved_model := Some model;
         env
       with Ex.Inconsistent (expl, classes) ->

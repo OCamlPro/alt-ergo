@@ -172,7 +172,7 @@ let extract_pending_deductions env =
              ~module_name:"Ite_rel" ~function_name:"assume"
              "deduce that %a with expl %a"
              E.print a Ex.print ex;
-         (Sig_rel.LTerm a, ex, Th_util.Other) :: acc)
+         (Literal.LTerm a, ex, Th_util.Other) :: acc)
       env.pending_deds []
   in
   {env with pending_deds = ME2.empty}, l

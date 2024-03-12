@@ -55,11 +55,12 @@ module Make (Th : Theory.S) = struct
   exception Bottom of Explanation.t * E.Set.t list * t
 
   let empty () =
-    {sat = SAT.empty ();
+    let hcons_env = Atom.empty_hcons_env () in
+    {sat = SAT.create hcons_env;
      assumed = SE.empty;
      proxies = ME.empty;
      inv_proxies = MA.empty;
-     hcons_env = Atom.empty_hcons_env ();
+     hcons_env ;
      decisions=[];
      pending=[]}
 

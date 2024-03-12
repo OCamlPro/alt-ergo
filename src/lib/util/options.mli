@@ -321,6 +321,9 @@ val set_case_split_policy : Util.case_split_policy -> unit
 (** Set [enable_adts_cs] accessible with {!val:get_enable_adts_cs} *)
 val set_enable_adts_cs : bool -> unit
 
+(** Set [enable_sat_cs] accessible with {!val:get_enable_sat_cs} *)
+val set_enable_sat_cs : bool -> unit
+
 (** Set [replay] accessible with {!val:get_replay} *)
 val set_replay : bool -> unit
 
@@ -570,6 +573,11 @@ val get_case_split_policy : unit -> Util.case_split_policy
 
 (** [true] if case-split for Algebraic Datatypes theory is enabled. *)
 val get_enable_adts_cs : unit -> bool
+(** Default to [false] *)
+
+(** [true] if case-split are performed in the SAT solver rather than the theory
+    solver (only for CDCL solver and for select theories). *)
+val get_enable_sat_cs : unit -> bool
 (** Default to [false] *)
 
 (** Valuget_e specifying the maximum size of case-split. *)

@@ -109,36 +109,17 @@ module Model = struct
          | Value _ | Unknown -> true
       ) mdl
 
-  exception Found of Function.t * int
+  exception Found of Function.t
 
-  let next_unknown ~for_model mdl =
+  let next_unknown mdl =
     try
-      M.iter (fun { f; order } v ->
+      M.iter (fun { f; order = _ } v ->
           match (v : Value.t) with
-          | Value _ -> ()
-          | Limit _ | Pinfinity | Minfinity when for_model ->
-            (* While generating models, keeps optimizing values with
-               lower priority even if we see a limit value. *)
-            ()
-          | _ ->
-            (* While doing CS, we try again to optimize a bound even if
-               the last result was a limit. As CS can be performed in
-               Assert mode, a unboundd problem can become bounded after
-               a new assert. *)
-            raise (Found (f, order))
+          | Unknown -> raise (Found f)
+          | Value _ | Limit _ | Pinfinity | Minfinity -> ()
         ) mdl;
       None
     with
-    | Found (f, order) -> Some (f, order)
+    | Found f -> Some f
     | Exit -> None
-
-  let reset_until mdl o =
-    M.fold
-      (fun { f; order } _v acc ->
-         if order >= o then
-           M.add { f; order } Value.Unknown acc
-         else
-           acc
-      )
-      mdl mdl
 end

@@ -39,6 +39,8 @@ module Sy = Symbols
 
 module CC_X = Ccx.Main
 
+module L = Shostak.Literal
+
 module type S = sig
   type t
 
@@ -49,21 +51,25 @@ module type S = sig
      decreasing order with respect to (dlvl, plvl) *)
   val assume :
     ?ordered:bool ->
-    (E.t * Explanation.t * int * int) list -> t ->
+    (L.t * Th_util.lit_origin * Explanation.t * int * int) list -> t ->
     t * Expr.Set.t * int
 
-  val optimize : t -> is_max:bool -> Expr.t -> t
+  val add_objective : t -> Objective.Function.t -> Objective.Value.t -> t
   val query : E.t -> t -> Th_util.answer
   val cl_extract : t -> Expr.Set.t list
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
-  val do_case_split : t -> Util.case_split_policy -> t * Expr.Set.t
+  val do_case_split :
+    ?acts:Shostak.Literal.t Th_util.acts ->
+    t -> Util.case_split_policy -> t * Expr.Set.t
 
   val add_term : t -> Expr.t -> add_in_cs:bool -> t
   val compute_concrete_model :
-    t ->
+    acts:Shostak.Literal.t Th_util.acts -> t -> unit
+  val extract_concrete_model :
     declared_ids:Id.typed list ->
+    t ->
     Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
@@ -86,21 +92,16 @@ module Main_Default : S = struct
 
 
   type choice =
-    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t * int option
+    X.r Xliteral.view * Th_util.lit_origin * choice_sign * Ex.t
   (** the choice, the size, choice_sign,  the explication set,
         the explication for this choice. *)
 
-  let pp_choice ppf (sem_lit, lit_orig, _, ex, ord) =
-    let pp_ord ppf ord =
-      match ord with
-      | Some o -> Fmt.pf ppf "Optim-cs(ord=%d)" o
-      | None -> ()
-    in
+  let pp_choice ppf (sem_lit, lit_orig, _, ex) =
     let sem_lit = LR.make sem_lit in
     match (lit_orig : Th_util.lit_origin) with
     | CS (k, _) ->
-      Fmt.pf ppf "%a %a cs: %a (because %a)"
-        Th_util.pp_theory k pp_ord ord LR.print sem_lit Ex.print ex
+      Fmt.pf ppf "%a cs: %a (because %a)"
+        Th_util.pp_theory k LR.print sem_lit Ex.print ex
     | NCS (k, _) ->
       Fmt.pf ppf "%a ncs: %a (because %a)"
         Th_util.pp_theory k LR.print sem_lit Ex.print ex
@@ -113,7 +114,11 @@ module Main_Default : S = struct
     let subterms_of_assumed l =
       List.fold_left
         (List.fold_left
-           (fun st (a, _, _) -> Expr.Set.union st (E.sub_terms SE.empty a))
+           (fun st (a, _, _) ->
+              match L.view a with
+              | LTerm a ->
+                Expr.Set.union st (E.sub_terms SE.empty a)
+              | LSem _ -> st)
         )SE.empty l
 
     let types_of_subterms st =
@@ -264,13 +269,13 @@ module Main_Default : S = struct
                  print_dbg ~flushed:false ~header:false
                    "( (* %d , %d *) %a "
                    dlvl plvl
-                   E.print a;
+                   L.pp a;
                  List.iter
                    (fun (a, dlvl, plvl) ->
                       print_dbg ~flushed:false ~header:false
                         " and@ (* %d , %d *) %a "
                         dlvl plvl
-                        E.print a
+                        L.pp a
                    ) l;
                  print_dbg ~flushed:false ~header:false ") ->@ "
             ) (List.rev l);
@@ -347,8 +352,9 @@ module Main_Default : S = struct
 
   type t = {
     assumed_set : E.Set.t;
-    assumed : (E.t * int * int) list list;
-    cs_pending_facts : (E.t * Ex.t * int * int) list list;
+    assumed : (L.t * int * int) list list;
+    cs_pending_facts :
+      (L.t * Th_util.lit_origin * Ex.t * int * int) list list;
     terms : Expr.Set.t;
     gamma : CC_X.t;
     gamma_finite : CC_X.t;
@@ -356,14 +362,14 @@ module Main_Default : S = struct
     objectives : Objective.Model.t;
   }
 
-  let add_explanations_to_split ?order (c, is_cs, size) =
+  let add_explanations_to_split (c, is_cs, size) =
     Steps.incr_cs_steps ();
     let exp = Ex.fresh_exp () in
     let ex_c_exp =
       if is_cs then Ex.add_fresh exp Ex.empty else Ex.empty
     in
     (* A new explanation in order to track the choice *)
-    (c, size, CPos exp, ex_c_exp, order)
+    (c, size, CPos exp, ex_c_exp)
 
   let look_for_sat ~for_model env sem_facts new_choices =
     let rec generate_choices env sem_facts acc_choices =
@@ -382,71 +388,23 @@ module Main_Default : S = struct
         let new_choices =
           List.map add_explanations_to_split new_splits
         in
-        aux env sem_facts acc_choices new_choices
-
-    and optimizing_objective env sem_facts acc_choices obj order =
-      let opt_split =
-        Option.get (CC_X.optimizing_objective env.gamma_finite obj)
-      in
-      let objectives =
-        Objective.Model.add obj opt_split.value env.objectives
-      in
-      let env = { env with objectives } in
-      match opt_split.value with
-      | Unknown ->
-        (* In the current implementation of optimization, the function
-           [CC_X.optimizing_objective] cannot fail to optimize the objective
-           function [obj]. First of all, the legacy parser only accepts
-           optimization clauses on expressions of type [Real] or [Int].
-           For the [Real] or [Int] expressions, we have two cases:
-           - If the objective function is a linear functions of variables, the
-             decision procedure implemented in Ocplib-simplex cannot fail to
-             optimize the split. For instance, if we try to maximize the
-             expression:
-               5 * x + 2 * y + 3 where x and y are real variables,
-             the procedure will success to produce the upper bound of [x] and
-             [y] modulo the other constraints on it.
-           - If the objective function isn't linear, the nonlinear part of the
-             expression have seen as uninterpreted term of the arithemic theory.
-             Let's imagine we try to maximize the expression:
-               5 * x * x + 2 * y + 3,
-             The objective function given to Ocplib-simplex looks like:
-               5 * U + 2 * y + 3 where U = x * x
-             and the procedure will optimize the problem in terms of U and y. *)
-        assert false
-
-      | Pinfinity | Minfinity | Limit _ ->
-        (* We stop optimizing the objective function [obj] in this case, but
-           we continue to produce a model if the flag [for_model] is up. *)
-        if for_model then
-          let new_choice =
-            add_explanations_to_split ~order opt_split.case_split
-          in
-          propagate_choices env sem_facts acc_choices [new_choice]
-        else
-          { env with choices = List.rev acc_choices }, sem_facts
-
-      | Value _ ->
-        begin
-          let new_choice =
-            add_explanations_to_split ~order opt_split.case_split
-          in
-          propagate_choices env sem_facts acc_choices [new_choice]
-        end
+        propagate_choices env sem_facts acc_choices new_choices
 
     (* Propagates the choice made by case-splitting to the environment
        [gamma_finite] of the CC(X) algorithm. If there is no more choices
-       to propagate, we call the dispatcher [aux] to leave the function.
+       to propagate, we call the [generate_choices] to either generate more
+       choices or leave the function.
 
        @raise [Inconsistent] if we detect an inconsistent with the choice
               on the top of [new_choices] but this choice doesn't
               participate to the inconsistency. *)
     and propagate_choices env sem_facts acc_choices new_choices =
       Options.exec_thread_yield ();
+      Options.tool_req 3 "TR-CCX-CS-Case-Split";
       match new_choices with
-      | [] -> aux env sem_facts acc_choices new_choices
+      | [] -> generate_choices env sem_facts acc_choices
 
-      | ((c, lit_orig, CNeg, ex_c, _order) as a) :: new_choices ->
+      | ((c, lit_orig, CNeg, ex_c) as a) :: new_choices ->
         let facts = CC_X.empty_facts () in
         CC_X.add_fact facts (LSem c, ex_c, lit_orig);
         let base_env, sem_facts =
@@ -455,7 +413,7 @@ module Main_Default : S = struct
         let env = { env with gamma_finite = base_env } in
         propagate_choices env sem_facts (a :: acc_choices) new_choices
 
-      | ((c, lit_orig, CPos exp, ex_c_exp, order) as a) :: new_choices ->
+      | ((c, lit_orig, CPos exp, ex_c_exp) as a) :: new_choices ->
         try
           Debug.split_assume c ex_c_exp;
           let facts = CC_X.empty_facts () in
@@ -496,33 +454,14 @@ module Main_Default : S = struct
             Printer.print_dbg
               "bottom (case-split):%a"
               Expr.print_tagged_classes classes;
-          let env =
-            match order with
-            | Some i ->
-              { env with
-                objectives = Objective.Model.reset_until env.objectives i }
-            | None -> env
-          in
           propagate_choices env sem_facts acc_choices
-            [neg_c, lit_orig, CNeg, dep, order]
+            [neg_c, lit_orig, CNeg, dep]
 
-    and aux env sem_facts acc_choices new_choices =
-      Options.tool_req 3 "TR-CCX-CS-Case-Split";
-      match new_choices with
-      | [] ->
-        begin match Objective.Model.next_unknown env.objectives ~for_model with
-          | Some (obj, order) ->
-            optimizing_objective env sem_facts acc_choices obj order
-          | None ->
-            generate_choices env sem_facts acc_choices
-        end
-      | _ ->
-        propagate_choices env sem_facts acc_choices new_choices
     in
-    aux env sem_facts (List.rev env.choices) new_choices
+    propagate_choices env sem_facts (List.rev env.choices) new_choices
 
   (* remove old choices involving fresh variables that are no longer in UF *)
-  let filter_valid_choice uf (ra, _, _, _, _) =
+  let filter_valid_choice uf (ra, _, _, _) =
     let l = match ra with
       | A.Eq (r1, r2) -> [r1; r2]
       | A.Distinct (_, l) -> l
@@ -548,7 +487,7 @@ module Main_Default : S = struct
       List.partition (filter_valid_choice uf) choices in
     let ignored_decisions =
       List.fold_left
-        (fun ex (_, _, ch, _, _) ->
+        (fun ex (_, _, ch, _) ->
            match ch with
            | CPos (Ex.Fresh _ as e) -> Ex.add_fresh e ex
            | CPos _ -> assert false
@@ -556,7 +495,7 @@ module Main_Default : S = struct
         ) Ex.empty to_ignore
     in
     List.filter
-      (fun (_ ,_ ,_ ,ex , _) ->
+      (fun (_ ,_ ,_ ,ex) ->
          try
            Ex.iter_atoms
              (function
@@ -570,7 +509,6 @@ module Main_Default : S = struct
 
   let reset_case_split_env t =
     { t with
-      objectives = Objective.Model.reset_until t.objectives 0;
       cs_pending_facts = []; (* be sure it's always correct when this
                                 function is called *)
       gamma_finite = t.gamma; (* we'll take gamma directly *)
@@ -613,14 +551,6 @@ module Main_Default : S = struct
                  safely ignore the explanation which is not useful. *)
               let uf =  CC_X.get_union_find t.gamma in
               let filt_choices = filter_choices uf t.choices in
-              let filt_choices =
-                if  Objective.Model.is_empty t.objectives ||
-                    Objective.Model.has_no_limit t.objectives
-                    (* otherwise, we may be unsound because infty optims
-                       are not propagated *)
-                then filt_choices
-                else []
-              in
               Debug.split_sat_contradicts_cs filt_choices;
               let t = reset_case_split_env t in
               look_for_sat ~for_model
@@ -640,15 +570,17 @@ module Main_Default : S = struct
          match X.term_extract r with
          | Some t, _ -> SE.add t acc | _ -> acc) acc l
 
-  let extract_terms_from_choices =
+  let extract_terms_from_xliteral acc = function
+    | A.Eq (r1, r2) -> extract_from_semvalues acc [r1; r2]
+    | Distinct (_, l) -> extract_from_semvalues acc l
+    | Pred (p, _) -> extract_from_semvalues acc [p]
+    | _ -> acc
+
+  let extract_terms_from_choices acc choices =
     List.fold_left
-      (fun acc (a, _, _, _, _) ->
-         match a with
-         | A.Eq(r1, r2) -> extract_from_semvalues acc [r1; r2]
-         | A.Distinct (_, l) -> extract_from_semvalues acc l
-         | A.Pred(p, _) -> extract_from_semvalues acc [p]
-         | _ -> acc
-      )
+      (fun acc (a, _, _, _) ->
+         extract_terms_from_xliteral acc a
+      ) acc choices
 
   let extract_terms_from_assumed =
     List.fold_left
@@ -681,8 +613,13 @@ module Main_Default : S = struct
     let facts = CC_X.empty_facts () in
     List.iter
       (List.iter
-         (fun (a,ex,_dlvl,_plvl) ->
-            CC_X.add_fact facts (LTerm a, ex, Th_util.Other))
+         (fun (a, o, ex,_dlvl,_plvl) ->
+            let a =
+              match L.view a with
+              | LTerm _ as a -> a
+              | LSem a -> LSem (LR.view a)
+            in
+            CC_X.add_fact facts (a, ex, o))
       ) in_facts_l;
 
     let t, ch = try_it t facts ~for_model in
@@ -691,32 +628,143 @@ module Main_Default : S = struct
 
     {t with terms = Expr.Set.union t.terms choices_terms}, choices_terms
 
-  let do_case_split t origin =
-    if Options.get_case_split_policy () == origin then
+  let optimize_obj ~for_model add_objective obj t =
+    let opt_split =
+      Option.get (CC_X.optimizing_objective t.gamma obj)
+    in
+    match opt_split.value with
+    | Unknown ->
+      (* In the current implementation of optimization, the function
+         [CC_X.optimizing_objective] cannot fail to optimize the objective
+         function [obj]. First of all, the legacy parser only accepts
+         optimization clauses on expressions of type [Real] or [Int].
+         For the [Real] or [Int] expressions, we have two cases:
+         - If the objective function is a linear functions of variables, the
+           decision procedure implemented in Ocplib-simplex cannot fail to
+           optimize the split. For instance, if we try to maximize the
+           expression:
+             5 * x + 2 * y + 3 where x and y are real variables,
+           the procedure will success to produce the upper bound of [x] and
+           [y] modulo the other constraints on it.
+         - If the objective function isn't linear, the nonlinear part of the
+           expression is seen as uninterpreted term of the arithmetic theory.
+           Let's imagine we try to maximize the expression:
+             5 * x * x + 2 * y + 3,
+           The objective function given to Ocplib-simplex looks like:
+             5 * U + 2 * y + 3 where U = x * x
+           and the procedure will optimize the problem in terms of U and y. *)
+      assert false
+
+    | Pinfinity | Minfinity | Limit _ when not for_model ->
+      (* We stop optimizing the objective function [obj] in this case, but
+         we continue to produce a model if the flag [for_model] is up. *)
+      ()
+
+    | Pinfinity | Minfinity | Limit _ | Value _ ->
+      let (lview, is_cs, _) = opt_split.case_split in
+      assert is_cs;
+
+      if Options.get_debug_optimize () then
+        Printer.print_dbg "Objective for %a is %a [split: %a]"
+          Objective.Function.pp obj
+          Objective.Value.pp opt_split.value
+          Shostak.L.print (Shostak.L.make lview);
+
+      add_objective
+        obj opt_split.value
+        (Shostak.(Literal.make @@ LSem (L.make lview)))
+
+  let sat_splits t =
+    if Options.get_enable_sat_cs () then
+      let splits, gamma = CC_X.case_split t.gamma ~for_model:false in
+      let splits =
+        List.filter (fun (_, is_cs, origin) ->
+            is_cs &&
+            match origin with
+            | Th_util.CS (Th_arrays, _) -> true
+            | _ -> false
+          ) splits
+      in
+      splits, { t with gamma }
+    else
+      [], t
+
+  let do_optimize acts objectives t =
+    match Objective.Model.next_unknown objectives with
+    | Some obj ->
+      let add_objective = acts.Th_util.acts_add_objective in
+      optimize_obj ~for_model:false add_objective obj t;
+      t, SE.empty
+    | None ->
+      let splits, t = sat_splits t in
+      match splits with
+      | [] ->
+        do_case_split_aux t ~for_model:false
+      | (lview, _, _) :: _ ->
+        let lit = Shostak.(Literal.make @@ LSem (L.make lview)) in
+        acts.Th_util.acts_add_split lit;
+        t, SE.empty
+
+  let do_case_split_or_optimize ?acts t =
+    match acts with
+    | Some acts ->
+      do_optimize acts t.objectives t
+    | None ->
       do_case_split_aux t ~for_model:false
+
+
+  let do_case_split ?acts t origin =
+    if Options.get_case_split_policy () == origin then
+      do_case_split_or_optimize ?acts t
     else
       t, SE.empty
 
   (* facts are sorted in decreasing order with respect to (dlvl, plvl) *)
   let assume ordered in_facts t =
     let facts = CC_X.empty_facts () in
-    let assumed, assumed_set, cpt =
+    let assumed, assumed_set, cpt, gamma =
       List.fold_left
-        (fun ((assumed, assumed_set, cpt) as accu) ((a, ex, dlvl, plvl)) ->
-           if E.Set.mem a assumed_set
-           then accu
-           else
-             begin
-               CC_X.add_fact facts (LTerm a, ex, Th_util.Other);
-               (a, dlvl, plvl) :: assumed,
-               E.Set.add a assumed_set,
-               cpt+1
-             end
-        )([], t.assumed_set, 0) in_facts
+        (fun
+          ((assumed, assumed_set, cpt, gamma) as accu)
+          ((a, o, ex, dlvl, plvl))
+          ->
+            match L.view a with
+            | Literal.LTerm a when E.Set.mem a assumed_set -> accu
+            | aview ->
+              let gamma, aview =
+                match aview with
+                | LTerm t -> gamma, Literal.LTerm t
+                | LSem a ->
+                  (* When assuming a semantic literal (typically a case split),
+                     we may end up in cases where they contain terms that have
+                     not been added.
+
+                     One reason this can happen is when (the negation of)
+                     semantic literals are pushed onto the trail at lower
+                     levels than they were initially created (notably with
+                     with minimal backjumps). *)
+                  let aview = LR.view a in
+                  let trms = extract_terms_from_xliteral SE.empty aview in
+                  let gamma = SE.fold (fun t gamma ->
+                      fst @@ CC_X.add_term gamma facts t Ex.empty
+                    ) trms gamma in
+                  gamma, LSem aview
+              in
+              CC_X.add_fact facts (aview, ex, o);
+              let assumed_set =
+                match aview with
+                | LTerm a -> E.Set.add a assumed_set
+                | _ -> assumed_set
+              in
+              (a, dlvl, plvl) :: assumed,
+              assumed_set,
+              cpt+1,
+              gamma
+        )([], t.assumed_set, 0, t.gamma) in_facts
     in
     if assumed == [] then t, E.Set.empty, 0
     else
-      let t = {t with assumed_set; assumed = assumed :: t.assumed;
+      let t = {t with assumed_set; assumed = assumed :: t.assumed; gamma;
                       cs_pending_facts = in_facts :: t.cs_pending_facts} in
       if Options.get_profiling() then Profiling.assume cpt;
       Debug.assumed t.assumed;
@@ -850,7 +898,9 @@ module Main_Default : S = struct
       }
     in
     let a = E.mk_distinct ~iff:false [E.vrai; E.faux] in
-    let t, _, _ = assume true [a, Ex.empty, 0, -1] t in
+    let t, _, _ =
+      assume true [L.make @@ Literal.LTerm a, Th_util.Other, Ex.empty, 0, -1] t
+    in
     t
 
   let cl_extract env = CC_X.cl_extract env.gamma
@@ -868,7 +918,15 @@ module Main_Default : S = struct
   let get_real_env t = t.gamma
   let get_case_split_env t = t.gamma_finite
 
-  let compute_concrete_model env ~declared_ids =
+  let compute_concrete_model ~acts t =
+    let add_objective = acts.Th_util.acts_add_objective in
+    match Objective.Model.next_unknown t.objectives with
+    | Some obj ->
+      optimize_obj ~for_model:true add_objective obj t
+    | None ->
+      ()
+
+  let extract_concrete_model ~declared_ids env =
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
     in
@@ -884,21 +942,16 @@ module Main_Default : S = struct
 
   let get_assumed env = env.assumed_set
 
-  let optimize env ~is_max f =
-    (* We have to add the term [f] and its subterms as the MaxSMT
+  let get_objectives env = env.objectives
+
+  let add_objective env fn value =
+    (* We have to add the term [fn] and its subterms as the MaxSMT
        syntax allows to optimize expressions that aren't part of
        the current context. *)
-    let env = add_term env ~add_in_cs:false f in
-    let obj = Objective.Function.mk ~is_max f in
-    let objectives =
-      Objective.Model.add obj Objective.Value.Unknown env.objectives
-    in
-    (* As we may do casesplits after each `assume`, we may start
-       model generations before registering all the optimization constraints. *)
-    let env = reset_case_split_env env in
+    let expr = fn.Objective.Function.e in
+    let env = add_term env ~add_in_cs:false expr in
+    let objectives = Objective.Model.add fn value env.objectives in
     { env with objectives }
-
-  let get_objectives env = env.objectives
 
   let reinit_cpt () =
     Debug.reinit_cpt ()
@@ -914,9 +967,10 @@ module Main_Empty : S = struct
   let assume ?ordered:(_=true) in_facts t =
     let assumed_set =
       List.fold_left
-        (fun assumed_set ((a, _, _, _)) ->
-           if E.Set.mem a assumed_set then assumed_set
-           else E.Set.add a assumed_set
+        (fun assumed_set ((a, _, _, _, _)) ->
+           match L.view a with
+           | LTerm a -> E.Set.add a assumed_set
+           | LSem _ -> assumed_set
         ) t.assumed_set in_facts
     in
     {assumed_set}, E.Set.empty, 0
@@ -928,15 +982,16 @@ module Main_Empty : S = struct
 
   let get_real_env _ = CC_X.empty
   let get_case_split_env _ = CC_X.empty
-  let do_case_split env _ = env, E.Set.empty
+  let do_case_split ?acts:_ env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
-  let compute_concrete_model _env ~declared_ids:_ =
+  let compute_concrete_model ~acts:_ _env = ()
+  let extract_concrete_model ~declared_ids:_ _env =
     lazy Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []
   let get_assumed env = env.assumed_set
-  let optimize env ~is_max:_ _obj = env
+  let add_objective env _fn _value = env
   let reinit_cpt () = ()
 
   let get_objectives _env = Objective.Model.empty

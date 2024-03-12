@@ -28,7 +28,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type 'a literal = LTerm of Expr.t | LSem of 'a Xliteral.view
+type 'a literal = 'a Xliteral.view Literal.view
 
 type instances = (Expr.t list * Expr.gformula * Explanation.t) list
 

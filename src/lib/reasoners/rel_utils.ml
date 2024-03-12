@@ -40,7 +40,7 @@ let assume_nontrivial_eqs
          if SR.mem sa m then acc else e :: eqs, SR.add sa m
       )([], la) eqs
   in
-  List.rev_map (fun (sa, _, ex, orig) -> Sig_rel.LSem sa, ex, orig) eqs
+  List.rev_map (fun (sa, _, ex, orig) -> Literal.LSem sa, ex, orig) eqs
 
 (* The type of delayed functions. A delayed function is given an [Uf.t] instance
    for resolving expressions to semantic values, the operator to compute, and a

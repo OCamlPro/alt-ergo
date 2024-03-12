@@ -37,8 +37,7 @@ module E = Expr
 module ME = Expr.Map
 module SE = Expr.Set
 
-module LX =
-  Xliteral.Make(struct type t = X.r let compare = X.hash_cmp include X end)
+module LX = Shostak.L
 module MapL = Emap.Make(LX)
 
 module MapX = struct

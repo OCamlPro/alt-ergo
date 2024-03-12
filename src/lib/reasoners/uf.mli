@@ -34,7 +34,7 @@ type t
 
 type r = Shostak.Combine.r
 
-module LX : Xliteral.S with type elt = r
+module LX = Shostak.L
 
 val empty : t
 val add : t -> Expr.t -> t * Expr.t list
