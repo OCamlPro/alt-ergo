@@ -523,6 +523,8 @@ let main () =
       ~size_limit ~response_file
     |> Parser.init
     |> Typer.init
+      ~additional_builtins:D_cnf.builtins
+      ~extension_builtins:[Typer.Ext.bv2nat]
     |> Typer_Pipe.init ~type_check
   in
 
@@ -1052,7 +1054,6 @@ let main () =
       let g =
         Parser.parse_logic ~preludes logic_file
       in
-      let st = State.set Typer.additional_builtins D_cnf.builtins st in
       let all_used_context = Frontend.init_all_used_context () in
       let finally = finally ~handle_exn in
       let st =

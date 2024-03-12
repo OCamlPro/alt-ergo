@@ -88,15 +88,15 @@ conflicts: [
 pin-depends: [
   [
     "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
   ]
   [
     "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
   ]
   [
     "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
   ]
   [
     "js_of_ocaml.5.4.0"
