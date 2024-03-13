@@ -240,8 +240,10 @@ The Fm-Simplex plugin can be used as follows:
 
         $ alt-ergo --inequalities-plugin fm-simplex [other-options] file.<ext>
 
-The inequalities plugins are [Dune-site plugins] registered in the `(alt-ergo
-plugins)` site. The `fm-simplex` plugin comes built-in with Alt-Ergo.
+The `fm-simplex` inequality plugin comes built-in with Alt-Ergo and no further
+installation is required. External inequality plugins are supported through the
+[Dune-site plugins] mechanism; developers of these plugins must register them
+in the `(alt-ergo plugins)`.
 
 ### Preludes
 
