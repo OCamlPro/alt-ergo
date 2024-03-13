@@ -1,4 +1,8 @@
-## unreleased
+## v2.5.3
+
+### Build
+* Require dolmen 0.9 #1050
+* Test compatibility for OCaml 5.2 #1059
 
 ## v2.5.2
 
