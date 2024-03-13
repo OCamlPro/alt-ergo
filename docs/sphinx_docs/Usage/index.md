@@ -238,16 +238,12 @@ See the [AB-Why3 README] file for the documentation of the AB-Why3 plugin
 
 The Fm-Simplex plugin can be used as follows:
 
-        $ alt-ergo --inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.<ext>
-        $ alt-ergo --inequalities-plugin some-path/fm-simplex-plugin.cmxs [other-options] file.<ext>
+        $ alt-ergo --inequalities-plugin fm-simplex [other-options] file.<ext>
 
-   Alt-Ergo will try to load a local plugin called
-   "fm-simplex-plugin.cmxs". If this fails, Alt-Ergo tries to load it
-   from the default plugins directory (run `alt-ergo --where plugins`
-   to see its absolute path). You can also provide a relative or an
-   absolute path as shown by the second command above. Also, you
-   should replace ".cmxs" by ".cma" if you are working with bytcode
-   binaries.
+The `fm-simplex` inequality plugin comes built-in with Alt-Ergo and no further
+installation is required. External inequality plugins are supported through the
+[Dune-site plugins] mechanism; developers of these plugins must register them
+in the `(alt-ergo plugins)`.
 
 ### Preludes
 
@@ -339,3 +335,4 @@ A small example of how to use the Alt-Ergo web worker can be build with the comm
 [API documentation]: ../API/index.md
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index
+[Dune-site plugins]: https://dune.readthedocs.io/en/stable/sites.html#plugins

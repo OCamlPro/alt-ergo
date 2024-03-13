@@ -1318,12 +1318,14 @@ let parse_theory_opt =
       | "" ->
         if debug then
           Printer.print_dbg
-            "[Dynlink] Using the 'FM module' for arithmetic inequalities";
+            "Using the 'FM module' for arithmetic inequalities";
         Ok ()
       | path ->
         try
-          MyDynlink.load debug path
-            "'inequalities' reasoner (FM module)";
+          Config.load_plugin path;
+          if debug then
+            Printer.print_dbg
+              "Using the 'inequalities' reasoner (FM module) %S" path;
           Ok ()
         with Errors.Error e ->
           Error (Format.asprintf "%a" Errors.report e)

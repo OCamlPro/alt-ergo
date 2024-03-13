@@ -20,3 +20,14 @@ let lookup_file locations filename =
 let lookup_prelude = lookup_file preludes_locations
 
 let lookup_plugin = lookup_file plugins_locations
+
+let load_plugin plugin =
+  try
+    AltErgoSites.Plugins.Plugins.load plugin
+  with e ->
+    AltErgoLib.Errors.run_error
+      (Dynlink_error
+         (Format.asprintf
+            "@[<v>Loading the plugin %S failed!@,\
+             >> Failure message: %s"
+            plugin (Printexc.to_string e)))

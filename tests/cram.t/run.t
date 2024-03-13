@@ -1,6 +1,5 @@
-  $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | sed -E 's/(error loading shared library):.*/\1/'
-  alt-ergo: Fatal Error: [Dynlink] Loading the 'inequalities' reasoner (FM module) plugin in "does-not-exist" failed!
-            >> Failure message: error loading shared library
+  $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | sed -e '/^[[:space:]]*>>/d'
+  alt-ergo: Fatal Error: [Dynlink] Loading the plugin "does-not-exist" failed!
 
 Now we will have some tests for the models. Note that it is okay if the format
 changes slightly, you should be concerned with ensuring the semantic is

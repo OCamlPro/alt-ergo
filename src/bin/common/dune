@@ -12,6 +12,7 @@
    stdlib-shims
    cmdliner
    dune-site
+   dune-site.plugins
  )
  (modules
    Config
@@ -25,4 +26,6 @@
 
 (generate_sites_module
  (module AltErgoSites)
- (sites alt-ergo))
+ (sites alt-ergo)
+ (plugins
+  (alt-ergo plugins)))

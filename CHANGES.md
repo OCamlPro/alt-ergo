@@ -6,6 +6,9 @@
 
 ### Build
 * use OCaml 4.08.1 as the minimal supported version (PR #803)
+* Use dune-site plugin mechanism for inequalities plugin (PR #1049)
+  External plugins must now be registered through the dune-site plugin
+  mechanism in the `(alt-ergo plugins)` site to be picked up by Alt-Ergo.
 
 ## v2.5.2
 
