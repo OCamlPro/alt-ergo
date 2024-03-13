@@ -38,23 +38,14 @@ jobs:
       - name: Update apt-get database
         run: sudo apt-get update
 
-      # Retrieve the opam cache with unique key
-      # A new cache is created/used if the `.opam` files changes or
-      # if we use another ocaml version
-      # This action only retrieve de .opam/ directory
-      - name: Retrieve opam cache
-        uses: actions/cache@v4
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-odoc-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prerelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          dune-cache: true
 
       # Pin the packages, this is needed for opam depext
       # remove this step when opam 2.1 will be used

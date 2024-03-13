@@ -27,23 +27,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Retrieve the opam cache with unique key
-      # A new cache is created/used if the `.opam` files changes or
-      # if we use another ocaml version
-      # This action only retrieve de .opam/ directory
-      - name: Retrieve opam cache
-        uses: actions/cache@v4
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-indentation-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prerelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          dune-cache: true
 
       # Install ocp-indent with the fixed version
       # Do nothing if ocp-indent is already installed
@@ -67,23 +58,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Retrieve the opam cache with unique key
-      # A new cache is created/used if the `.opam` files changes or
-      # if we use another ocaml version
-      # This action only retrieve de .opam/ directory
-      - name: Retrieve opam cache
-        uses: actions/cache@v4
-        id: cache-opam
-        with:
-          path: ~/.opam
-          key: v1-${{ runner.os }}-alt-ergo-style-${{ env.OCAML_DEFAULT_VERSION }}-${{ hashFiles('*.opam') }}
-
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
+          allow-prerelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
+          dune-cache: true
 
       # Install dependencies of the ocpchecker executable
       # Dune and stdlib-shims is needed to build the executable
