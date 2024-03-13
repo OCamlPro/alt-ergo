@@ -47,16 +47,6 @@ jobs:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 
-      # Pin the packages, this is needed for opam depext
-      # remove this step when opam 2.1 will be used
-      - name: opam pin no action
-        run: opam pin add . --no-action
-
-      # Install external dependencies
-      # remove this step when opam 2.1 will be used
-      - name: opam install depext
-        run: opam depext alt-ergo-lib alt-ergo-parsers alt-ergo
-
       # Install dependencies if the cache is not retrieved
       # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
