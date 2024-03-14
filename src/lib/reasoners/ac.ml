@@ -192,7 +192,13 @@ module Make (X : Sig.X) = struct
      correctness of the corresponding abstraction process has not been proven.
      See also https://github.com/OCamlPro/alt-ergo/issues/989
 
-     [1]: https://arxiv.org/pdf/1207.3262.pdf *)
+     [1]: Canonized Rewriting and Ground AC Completion Modulo Shostak Theories:
+            Design and Implementation.
+          Sylvain Conchon, Evelyne Contejean, Mohamed Iguernelala.
+          lmcs:1034 - Logical Methods in Computer Science, September 14, 2012,
+            Volume 8, Issue 3.
+          doi:10.2168/LMCS-8(3:16)2012
+          https://arxiv.org/pdf/1207.3262.pdf *)
   let abstract2 sy t r acc =
     if List.exists (is_other_ac_symbol sy) (X.leaves r) then
       match X.ac_extract r, Expr.term_view t with
