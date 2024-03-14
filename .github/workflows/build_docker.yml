@@ -43,7 +43,7 @@ jobs:
 
       # Create a switch with the system compiler (no compilation needed).
       # And then, install external (no need for depext with opam 2.1) and libs deps.
-      - run: opam switch create . ocaml-system --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+      - run: opam switch create . ocaml-system --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
       # Install the project packages
       - run: opam install . --locked
