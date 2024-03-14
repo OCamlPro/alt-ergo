@@ -1,0 +1,4 @@
+logic ac u : int, int -> int
+logic ac v : int, int -> int
+
+goal g : v(0, 1) = u(-v(0, 1), 2)

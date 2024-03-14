@@ -163,25 +163,66 @@ module Make (X : Sig.X) = struct
   let fold_flatten sy f =
     List.fold_left (fun z (rt,n) -> flatten sy ((f rt),n) z) []
 
-  let abstract2 sy t r acc =
+  let is_other_ac_symbol sy r =
     match X.ac_extract r with
-    | Some ac when Sy.equal sy ac.h -> r, acc
-    | None -> r, acc
-    | Some _ -> match Expr.term_view t with
-      | { Expr.f = Sy.Name { hs; kind = Sy.Ac; _ }; xs; ty; _ } ->
+    | Some ac -> not (Sy.equal sy ac.h)
+    | None -> false
+
+  (* This implements a variant of the term abstraction process described in
+     section 6 of the AC(X) paper [1].
+
+     The abstraction process given in the paper requires to abstract all AC
+     symbols appearing in a non-AC context, but the implementation does not
+     know about the context at the time the abstraction is performed (note that
+     rules Abstract1 and Abstract2 are concerned with *equations* while the
+     abstraction process here occurs at the time of building semantic values,
+     which is earlier). Further, the implementation seems to implicitly rely on
+     term ordering (older terms are ordered before newer terms, so in
+     particular subterms are always smaller than terms that contains them) to
+     cheaply prevent loops rather than introducing all the abstracted variables
+     that the theoretical presentation in the paper would require.
+
+     So the implementation below of the Abstract2 rules deviates from the
+     presentation in the paper to accomodate those differences, globally,
+     between the implementation and theoretical description of AC(X).
+
+     More precisely, `abstract2` will abstract terms that *contain* AC leaves
+     when they appear as argument of an AC symbol. This ensures that AC terms
+     satisfy the T_AC definition from page 22 of the paper, although
+     correctness of the corresponding abstraction process has not been proven.
+     See also https://github.com/OCamlPro/alt-ergo/issues/989
+
+     [1]: Canonized Rewriting and Ground AC Completion Modulo Shostak Theories:
+            Design and Implementation.
+          Sylvain Conchon, Evelyne Contejean, Mohamed Iguernelala.
+          lmcs:1034 - Logical Methods in Computer Science, September 14, 2012,
+            Volume 8, Issue 3.
+          doi:10.2168/LMCS-8(3:16)2012
+          https://arxiv.org/pdf/1207.3262.pdf *)
+  let abstract2 sy t r acc =
+    if List.exists (is_other_ac_symbol sy) (X.leaves r) then
+      match X.ac_extract r, Expr.term_view t with
+      | Some ac, { f = Name { hs; kind = Ac; _ } ; xs; ty; _ } ->
+        (* It should have been abstracted when building [r] *)
+        assert (not (Sy.equal sy ac.h));
         let aro_sy = Sy.name ~ns:Internal ("@" ^ (HS.view hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | { Expr.f = Sy.Op Sy.Mult; xs; ty; _ } ->
+      | Some ac, { f = Op Mult; xs; ty; _ } ->
+        (* It should have been abstracted when building [r] *)
+        assert (not (Sy.equal sy ac.h));
         let aro_sy = Sy.name ~ns:Internal "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
-      | { Expr.ty; _ } ->
+      | _, { ty; _ } ->
         let k = Expr.fresh_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
+
+    else
+      r, acc
 
   let make t =
     match Expr.term_view t with
