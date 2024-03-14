@@ -1,0 +1,8 @@
+logic P : int -> bool
+logic f : int -> int
+
+(* This quantifier is explicitly annotated with a f(x) trigger and should not
+   cause the problem to be unsat. *)
+axiom trig : forall x : int [f(x)]. P(x)
+
+goal g : P(0)
