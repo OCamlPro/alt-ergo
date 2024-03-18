@@ -153,8 +153,8 @@ let get_value (type a) (module SAT : S with type t = a) env l =
      If we don't find the model term for an expression of [l], we assert a
      new equation to force the solver to produce a model term for this
      expression. *)
-  let res =
-    List.partition_map
+  let l =
+    List.map
       (fun e ->
          match get_value_in_model (module SAT) env mdl e with
          | Some v -> Either.Left v
@@ -186,22 +186,18 @@ let get_value (type a) (module SAT : S with type t = a) env l =
     let* mdl = SAT.get_model env in
     let values =
       List.map
-        (fun (v, name) ->
-           match v, name with
-           | Some v, None -> v
-           | None, Some name ->
-             begin match get_value_in_model (module SAT) env mdl name with
-               | Some v -> v
-               | None ->
-                 (* The model generation has to produce a value for each
-                    declared names. If some declared names are missing in the
-                    model, it's a bug. *)
-                 assert false
-             end
-           | _ ->
-             (* This case is excluded by the construction of the list [res]. *)
-             assert false
-        ) res
+        (fun v ->
+           match v with
+           | Either.Left v -> v
+           | Either.Right name ->
+             match get_value_in_model (module SAT) env mdl name with
+             | Some v -> v
+             | None ->
+               (* The model generation has to produce a value for each
+                  declared names. If some declared names are missing in the
+                  model, it's a bug. *)
+               assert false
+        ) l
     in
     Some values
   with Unsat ex -> raise_notrace (Wrong_model ex)

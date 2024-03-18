@@ -58,7 +58,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable conj : (int * SE.t) FF.Map.t;
     mutable abstr_of_axs : (FF.t * Atom.atom) ME.t;
     mutable axs_of_abstr : (E.t * Atom.atom) ME.t;
-    mutable proxies : (Atom.atom * Atom.atom list * bool) Util.MI.t;
+    mutable proxies : FF.proxies;
     mutable inst : Inst.t;
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
@@ -88,8 +88,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     guards
 
   let empty ?(selector=fun _ -> true) () =
+    let ff_hcons_env = FF.empty_hcons_env () in
     { gamma = ME.empty;
-      satml = SAT.empty ();
+      satml = SAT.create (FF.atom_hcons_env ff_hcons_env);
       ff_hcons_env = FF.empty_hcons_env ();
       nb_mrounds = 0;
       last_forced_normal = 0;
@@ -97,7 +98,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       conj = FF.Map.empty;
       abstr_of_axs = ME.empty;
       axs_of_abstr = ME.empty;
-      proxies = Util.MI.empty;
+      proxies = FF.empty_proxies;
       inst = Inst.empty;
       skolems = ME.empty;
       guards = init_guards ();
@@ -280,8 +281,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let atoms_from_sat_branch f =
       if Options.(get_verbose () && get_debug_sat ()) then
         print_dbg
-          ~module_name:"Satml_frontend"
-          ~function_name:"atoms_from_sat_branch"
+          ~module_name:"Satml_frontend" ~function_name:"atoms_from_sat_branch"
           "[extract_and_add_terms from] %a" FF.print f
 
     let add_terms_of src terms =
@@ -386,20 +386,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let _tbox, l =
       Th.theories_instances
         ~do_syntactic_matching t_match tbox (selector env) env.nb_mrounds 0
-      [@ocaml.ppwarning
-        "TODO: modifications made in tbox are lost! improve?"]
+      [@ocaml.ppwarning "TODO: modifications made in tbox are lost! improve?"]
     in
-    List.fold_left reduce_filters acc l,
-    (match l with [] -> false | _ -> true)
+    List.fold_left reduce_filters acc l, (match l with [] -> false | _ -> true)
 
   let syntactic_th_inst remove_clauses env acc =
     mk_theories_instances true remove_clauses env acc
 
   let semantic_th_inst_rec =
     let rec aux_rec remove_clauses env rnd acc =
-      let acc, inst_made =
-        mk_theories_instances false remove_clauses env acc
-      in
+      let acc, inst_made = mk_theories_instances false remove_clauses env acc in
       if not inst_made || rnd <= 1 then acc
       else aux_rec remove_clauses env (rnd - 1) acc
     in
@@ -435,9 +431,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;
-    let l =
-      ((List.rev_append l2 l1) : (E.gformula * Explanation.t) list)
-    in
+    let l = ((List.rev_append l2 l1) : (E.gformula * Explanation.t) list) in
 
     let th_insts = mk_theories_inst_rec env 10 in
     let l = List.rev_append th_insts l in
@@ -445,11 +439,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       (fun acc (gf, dep) ->
          match literals_of_ex dep with
          | []  ->
+           (* Toplevel assertions from [axiom_def] have no literals *)
            gf :: acc
-         | [{ Atom.lit; _ }] ->
-           {gf with
-            E.ff =
-              E.mk_or gf.E.ff (E.neg lit) false} :: acc
+         | [{ Atom.lit; _ }] -> (
+             (* Instantiations from [internal_axiom_def] are justified by a
+                single syntaxic literal (from [axs_of_abstr]) *)
+             match Shostak.Literal.view lit with
+             | LTerm lit ->
+               {gf with
+                E.ff =
+                  E.mk_or gf.E.ff (E.neg lit) false} :: acc
+             | LSem _ -> assert false
+           )
          | _   -> assert false
       )acc l
 
@@ -474,15 +475,21 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Printer.print_dbg
         ~module_name:"Satml_frontend" ~function_name:"register_abstraction"
         "abstraction of %a is %a" E.print f FF.print af;
-    let lat = Atom.literal at in
+    let lat =
+      match Shostak.Literal.view @@ Atom.literal at with
+      | LTerm at -> at
+      | LSem _ ->
+        (* Abstractions are always fresh expressions, so `at` is always a
+           syntaxic literal *)
+        assert false
+    in
     let new_abstr_vars =
       if not (Atom.is_true at) then at :: new_abstr_vars else new_abstr_vars
     in
     assert (not (ME.mem f env.abstr_of_axs));
     assert (not (ME.mem lat env.axs_of_abstr));
     let () =
-      if not (Atom.eq_atom at Atom.vrai_atom ||
-              Atom.eq_atom at Atom.faux_atom)
+      if not (Atom.eq_atom at Atom.vrai_atom || Atom.eq_atom at Atom.faux_atom)
       then
         begin
           env.abstr_of_axs <- ME.add f (af, at) env.abstr_of_axs;
@@ -523,8 +530,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          try
            if inst_quantif a then
              let { E.ff = f; _ } as gf = ME.find a env.skolems in
-             if not (Options.get_cdcl_tableaux ())
-             && ME.mem f env.gamma then
+             if not (Options.get_cdcl_tableaux ()) && ME.mem f env.gamma then
                acc
              else
                gf :: acc
@@ -539,8 +545,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          let gf = mk_gf E.vrai in
          if Options.(get_debug_sat () && get_verbose ()) then
            Printer.print_dbg
-             ~module_name:"Satml_frontend"
-             ~function_name:"inst_env_from_atoms"
+             ~module_name:"Satml_frontend" ~function_name:"inst_env_from_atoms"
              "terms_of_atom %a" E.print a;
          let inst = Inst.add_terms inst (E.max_ground_terms_of_lit a) gf in
          (* ax <-> a, if ax exists in axs_of_abstr *)
@@ -594,7 +599,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       match FF.view f with
       | FF.UNIT at ->
         if not (Atom.is_true at) then None
-        else Some [Atom.literal at]
+        else
+          Some [
+            match Shostak.Literal.view @@ Atom.literal at with
+            | LTerm at -> at
+            | LSem _ ->
+              (* Flat formulas only contain syntaxic literals. *)
+              assert false
+          ]
 
       | FF.AND l ->
         begin
@@ -644,7 +656,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if frugal then sa
         else add_reasons_graph (SA.elements sa) SA.empty
       in
-      SA.fold (fun a s -> SE.add (Atom.literal a) s) sa SE.empty
+      let add_elit a s =
+        match Shostak.Literal.view @@ Atom.literal a with
+        | LTerm a -> SE.add a s
+        | LSem _ -> s
+      in
+      SA.fold add_elit sa SE.empty
 
   let atoms_from_lazy_greedy env =
     let aux accu ff =
@@ -762,8 +779,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             try FF.Map.find ff env.conj with Not_found -> 0, SE.empty
           in
           env.gamma <- ME.add f (env.nb_mrounds, None) env.gamma;
-          env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf)
-              env.conj;
+          env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
           (* This assert is not true assert (dec_lvl = 0); *)
           axiom_def env gf Ex.empty;
           {acc with updated = true}
@@ -780,8 +796,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             try FF.Map.find ff env.conj with Not_found -> 0, SE.empty
           in
           env.gamma <- ME.add f (env.nb_mrounds, Some ff) env.gamma;
-          env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf)
-              env.conj;
+          env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
           Debug.simplified_form f ff;
           let new_abstr_vars =
             List.fold_left (register_abstraction env) acc.new_abstr_vars axs
@@ -836,8 +851,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     else
       try
         let f = E.vrai
-                [@ocaml.ppwarning "TODO: should fix for unsat cores \
-                                   generation"]
+                [@ocaml.ppwarning "TODO: should fix for unsat cores generation"]
         in
         SAT.set_new_proxies env.satml env.proxies;
         let nbv = FF.nb_made_vars env.ff_hcons_env in
@@ -862,10 +876,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let rec assume_aux ~dec_lvl env l =
     let updated, new_abstr_vars = assume_aux_bis ~dec_lvl env l in
+    let elit a =
+      match Shostak.Literal.view @@ Atom.literal a with
+      | LTerm a -> a
+      | LSem _ ->
+        (* This is only called on newly added skolems, which are always
+           syntaxic literals *)
+        assert false
+    in
     let bot_abstr_vars = (* try to immediately expand newly added skolems *)
       List.fold_left (fun acc at ->
           let neg_at = Atom.neg at in
-          if Atom.is_true neg_at then (Atom.literal neg_at) :: acc else acc
+          if Atom.is_true neg_at then (elit neg_at) :: acc else acc
         )[] new_abstr_vars
     in
     match bot_abstr_vars with
@@ -935,22 +957,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let nb_mrounds = env.nb_mrounds in
     match inst_strat with
     | Force_normal ->
-      let mconf = frugal_mconf () in
-      (* take frugal_mconf if normal is forced *)
+      let mconf = frugal_mconf () in (* take frugal_mconf if normal is forced *)
       env.last_forced_normal <- nb_mrounds;
       let sa, inst_quantif =
         instantiation_context env ~greedy_round:false ~frugal:false in
-      do_instantiation env sa inst_quantif mconf "normal-inst (forced)"
-        ~dec_lvl
+      do_instantiation env sa inst_quantif mconf "normal-inst (forced)" ~dec_lvl
 
     | Force_greedy ->
-      let mconf = normal_mconf () in
-      (*take normal_mconf if greedy is forced*)
+      let mconf = normal_mconf () in (*take normal_mconf if greedy is forced*)
       env.last_forced_greedy <- nb_mrounds;
       let sa, inst_quantif =
         instantiation_context env ~greedy_round:true ~frugal:true in
-      do_instantiation env sa inst_quantif mconf "greedy-inst (forced)"
-        ~dec_lvl
+      do_instantiation env sa inst_quantif mconf "greedy-inst (forced)" ~dec_lvl
 
     | Auto ->
       List.fold_left
@@ -989,9 +1007,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
+        let declared_names = env.declare_top in
         let model, objectives =
-          Th.compute_concrete_model ~declared_names:env.declare_top
-            (SAT.current_tbox env.satml)
+          SAT.compute_concrete_model ~declared_names env.satml
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;
@@ -1011,10 +1029,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      - We produce a model of the formulas.
 
      In the latter case, we optimized our objective functions during the
-     exploration of this branch of the SAT solver. It doesn't mean there is
-     no other branch of the SAT solver in which all the formulas are
-     satisfiable and the objective functions have bigger values in some
-     models of this branch.
+     exploration of this branch of the SAT solver. It doesn't mean there is no
+     other branch of the SAT solver in which all the formulas are satisfiable
+     and the objective functions have bigger values in some models of this
+     branch.
 
      For instance, consider the SMT-LIB problem:
        (declare-const x Int)
@@ -1025,15 +1043,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        (check-sat)
        (get-model)
 
-     Assume that the solver explores the first branch (<= x 2) of the or
-     gate:
+     Assume that the solver explores the first branch (<= x 2) of the or gate:
        (or (<= x 2) (<= x 4)).
 
-     Let's imagine it discovers that [0] is a model of the first formula.
-     After optimization, it find that [2] is the best model for [x] and [3]
-     is the best model for [y] it can got in this branch. Still we have to
-     explore the second branch [(<= x 4)] to realize that [4] is actually
-     the best model for [x].
+     Let's imagine it discovers that [0] is a model of the first formula. After
+     optimization, it find that [2] is the best model for [x] and [3] is the
+     best model for [y] it can got in this branch. Still we have to explore
+     the second branch [(<= x 4)] to realize that [4] is actually the best
+     model for [x].
 
      The following function ensures to explore adequate branches of the SAT
      solver in order to get the best model, if the problem is SAT.
@@ -1096,9 +1113,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         if Options.get_debug_optimize () then
           Printer.print_dbg
             "The objective function %a has an optimum. We should continue \
-             to explore other branches to try to find a better optimum \
-             than %a."
-            Expr.print e Expr.print tv;
+             to explore other branches to try to find a better optimum than \
+             %a." Expr.print e Expr.print tv;
         let l = [mk_gf neg] in
         (* TODO: Can we add the clause without 'cancel_until 0' ? *)
         SAT.cancel_until env.satml 0;
@@ -1135,13 +1151,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                               "TODO: first intantiation a la DfsSAT before \
                                searching ..."]
         in
-        if Options.get_profiling() then
-          Profiling.instantiation env.nb_mrounds;
+        if Options.get_profiling() then Profiling.instantiation env.nb_mrounds;
         let strat =
-          if env.nb_mrounds - env.last_forced_greedy > 1000 then
-            Force_greedy
-          else if env.nb_mrounds - env.last_forced_normal > 50 then
-            Force_normal
+          if env.nb_mrounds - env.last_forced_greedy > 1000 then Force_greedy
+          else
+          if env.nb_mrounds - env.last_forced_normal > 50 then Force_normal
           else Auto
         in
         (*let strat = Auto in*)
@@ -1149,8 +1163,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let updated = instantiation env strat dec_lvl in
         do_case_split env Util.AfterMatching;
         let updated =
-          if not updated && strat != Auto then
-            instantiation env Auto dec_lvl
+          if not updated && strat != Auto then instantiation env Auto dec_lvl
           else updated
         in
         let dec_lvl' = SAT.decision_level env.satml in
@@ -1169,8 +1182,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       with
       | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-      | Ex.Inconsistent (expl, _cls) ->
-        (*may be raised during matching or CS*)
+      | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
         begin
           try
             SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
@@ -1333,15 +1345,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
-    if not (Options.get_timers ()) then assume t ff dep
-    else
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_assume;
-        assume t ff dep;
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-      with exn ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_assume;
-        raise exn
+    Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
+    assume t ff dep
 
   (* HOTFIX: we can assert new formula in [env.satml] only at the level of
      decision [0]. After performing [unsat], this wrapper ensures that the
@@ -1356,17 +1361,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       SAT.cancel_until env.satml 0;
       raise exn
 
-  let unsat env gf =
-    if not (Options.get_timers()) then unsat env gf
-    else
-      try
-        Timers.exec_timer_start Timers.M_Sat Timers.F_unsat;
-        let ex = unsat env gf in
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        ex
-      with exn ->
-        Timers.exec_timer_pause Timers.M_Sat Timers.F_unsat;
-        raise exn
+  let unsat t ff =
+    Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
+    unsat t ff
 
   let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep
@@ -1374,8 +1371,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
 
   let get_boolean_model env =
-    Option.map (fun mdl -> List.map (fun Atom.{ lit; _ } -> lit) mdl)
-      env.last_saved_boolean_model
+    Option.map (fun mdl ->
+        List.map (fun Atom.{ lit; _ } ->
+            match Shostak.Literal.view lit with
+            | Literal.LTerm e -> e
+            | LSem _ -> assert false
+          ) mdl
+      ) env.last_saved_boolean_model
 
   let get_model env =
     Option.map Lazy.force env.last_saved_model
