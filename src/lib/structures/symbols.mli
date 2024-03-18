@@ -188,6 +188,13 @@ type t =
   | Let
 
 val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
+(** Create a new symbol with the given name.
+    By default, names are created in the [User] name space.
+    Note that names are pre-mangled: the [hs] field of the resulting name may
+    not be exactly the name that was passed to this function (however, calling
+    `name` with the same string but two different name spaces is guaranteed to
+    return two [Name]s with distinct [hs] fields). *)
+
 val var : Var.t -> t
 val int : string -> t
 val bitv : string -> t
