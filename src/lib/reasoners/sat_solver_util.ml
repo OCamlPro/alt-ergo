@@ -157,7 +157,7 @@ let get_value (type a) (module SAT : S with type t = a) env l =
     List.map
       (fun e ->
          match get_value_in_model (module SAT) env mdl e with
-         | Some v -> Either.Left v
+         | Some v -> Stdcompat.Either.Left v
          | None ->
            (* For each expression [e] of the list [l], we assert an equality
               of the form [n = e] where [n] is a fresh name. *)
@@ -175,7 +175,7 @@ let get_value (type a) (module SAT : S with type t = a) env l =
              | _ -> assert false
            in
            internal_assume (module SAT) env id t;
-           Either.Right name
+           Stdcompat.Either.Right name
       ) l
   in
   (* We have to check the satisfability of the new environment [env] in order
@@ -188,8 +188,8 @@ let get_value (type a) (module SAT : S with type t = a) env l =
       List.map
         (fun v ->
            match v with
-           | Either.Left v -> v
-           | Either.Right name ->
+           | Stdcompat.Either.Left v -> v
+           | Stdcompat.Either.Right name ->
              match get_value_in_model (module SAT) env mdl name with
              | Some v -> v
              | None ->
