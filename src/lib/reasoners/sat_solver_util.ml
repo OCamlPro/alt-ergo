@@ -64,8 +64,7 @@ let check (type a) (module SAT : S with type t = a) env =
   try
     let ex = SAT.unsat env
         {Expr.ff=Expr.vrai;
-         (* Another vrai form ;) *)
-         origin_name = "vrey";
+         origin_name = "";
          hdist = -1;
          gdist = 0;
          trigger_depth = max_int;
