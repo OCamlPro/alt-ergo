@@ -81,6 +81,8 @@ let check (type a) (module SAT : S with type t = a) env =
   with
   | I_dont_know | Sat -> ()
 
+exception Wrong_model of Explanation.t
+
 (* Assert the last computed model in the environment [env].
 
    @raise Unsat if the solver found a contradiction, which means the model
@@ -179,28 +181,30 @@ let get_value (type a) (module SAT : S with type t = a) env l =
   (* We have to check the satisfability of the new environment [env] in order
      to produce a new model. If this call raise [Unsat], the model is wrong
      and we cannot produce model terms for the expressions of [l]. *)
-  check (module SAT) env;
-  let* mdl = SAT.get_model env in
-  let values =
-    List.map
-      (fun (v, name) ->
-         match v, name with
-         | Some v, None -> v
-         | None, Some name ->
-           begin match get_value_in_model (module SAT) env mdl name with
-             | Some v -> v
-             | None ->
-               (* The model generation has to produce a value for each
-                  declared names. If some declared names are missing in the
-                  model, it's a bug. *)
-               assert false
-           end
-         | _ ->
-           (* This case is excluded by the construction of the list [res]. *)
-           assert false
-      ) res
-  in
-  Some values
+  try
+    check (module SAT) env;
+    let* mdl = SAT.get_model env in
+    let values =
+      List.map
+        (fun (v, name) ->
+           match v, name with
+           | Some v, None -> v
+           | None, Some name ->
+             begin match get_value_in_model (module SAT) env mdl name with
+               | Some v -> v
+               | None ->
+                 (* The model generation has to produce a value for each
+                    declared names. If some declared names are missing in the
+                    model, it's a bug. *)
+                 assert false
+             end
+           | _ ->
+             (* This case is excluded by the construction of the list [res]. *)
+             assert false
+        ) res
+    in
+    Some values
+  with Unsat ex -> raise_notrace (Wrong_model ex)
 
 let get_assignment (type a) (module SAT : S with type t = a) env =
   List.map

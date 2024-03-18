@@ -36,13 +36,16 @@ type lbool = False | True | Unknown
 
 val pp_lbool : lbool Fmt.t
 
+exception Wrong_model of Explanation.t
+
 val get_value : 'a sat_module -> 'a -> Expr.t list -> Expr.t list option
 (** [get_value (module SAT) env l] returns the model values of the expressions
     of [l] in the current generated model of [env].
 
     @return [None] if the model generation is not enabled or the
             environment is already unsatisfiable before calling this function.
-    @raise Unsat if the solver found a contradiction. *)
+    @raise Wrong_model if the solver found a contradiction in the current
+           model. *)
 
 val get_assignment : 'a sat_module -> 'a -> Expr.t list -> lbool list
 (** [get_assignment (module SAT) env l] returns the status of the literals [l]
