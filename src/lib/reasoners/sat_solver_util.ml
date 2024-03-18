@@ -153,10 +153,10 @@ let get_value (type a) (module SAT : S with type t = a) env l =
      new equation to force the solver to produce a model term for this
      expression. *)
   let res =
-    List.map
+    List.partition_map
       (fun e ->
          match get_value_in_model (module SAT) env mdl e with
-         | Some v -> Some v, None
+         | Some v -> Either.Left v
          | None ->
            (* For each expression [e] of the list [l], we assert an equality
               of the form [n = e] where [n] is a fresh name. *)
@@ -174,7 +174,7 @@ let get_value (type a) (module SAT : S with type t = a) env l =
              | _ -> assert false
            in
            internal_assume (module SAT) env id t;
-           None, Some name
+           Either.Right name
       ) l
   in
   (* We have to check the satisfability of the new environment [env] in order
