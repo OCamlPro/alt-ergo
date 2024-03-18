@@ -8,4 +8,3 @@
 (assert (= (first x) (second x)))
 (check-sat)
 (get-model)
-(get-value (true))

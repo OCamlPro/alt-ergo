@@ -6,5 +6,3 @@ unknown
   (define-fun f ((_arg_0 Int)) Int 0)
   (define-fun a1 () Int 0)
 )
-((true true))
-

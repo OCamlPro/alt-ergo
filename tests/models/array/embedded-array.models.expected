@@ -6,5 +6,3 @@ unknown
    (pair (store (as @a3 (Array Int S)) 0 s)
          (store (as @a3 (Array Int S)) 0 s)))
 )
-((true true))
-

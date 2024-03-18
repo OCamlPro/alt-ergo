@@ -8,5 +8,3 @@ unknown
   (define-fun y3 () Real (/ 16 5))
   (define-fun y4 () Real (/ (- 3) 2))
 )
-((true true))
-

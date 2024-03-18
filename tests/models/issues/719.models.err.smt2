@@ -16,5 +16,4 @@
     (=> (and (<= 0 p) (< p q) (<= q 10)) (<= (select a p) (select a q))))))
 (check-sat)
 (get-model)
-(get-value (true))
 ; (get-model) should fail because the problem is UNSAT.

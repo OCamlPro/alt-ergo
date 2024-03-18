@@ -6,5 +6,3 @@ unknown
   (define-fun c () (_ BitVec 6) #b111011)
   (define-fun z () (_ BitVec 1) #b0)
 )
-((true true))
-

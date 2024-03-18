@@ -6,4 +6,3 @@
 (assert (= (first (f 0)) 5))
 (check-sat)
 (get-model)
-(get-value (true))

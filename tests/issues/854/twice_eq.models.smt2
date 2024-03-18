@@ -11,4 +11,3 @@
 (assert (not (and (<= 5 a1) (<= a1 15))))
 (check-sat)
 (get-model)
-(get-value (true))

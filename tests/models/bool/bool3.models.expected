@@ -7,5 +7,3 @@ unknown
 ((foo true)
  (bar false))
 
-((true true))
-

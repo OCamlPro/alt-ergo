@@ -5,5 +5,3 @@ unknown
   (define-fun a () Int 0)
   (define-fun a1 () Int 0)
 )
-((true true))
-

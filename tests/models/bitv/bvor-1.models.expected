@@ -4,5 +4,3 @@ unknown
   (define-fun x () (_ BitVec 8) #b11111111)
   (define-fun y () (_ BitVec 8) #b11111111)
 )
-((true true))
-

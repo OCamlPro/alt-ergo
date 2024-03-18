@@ -5,4 +5,3 @@
 (assert (= x (bvxor #b10100101 y)))
 (check-sat)
 (get-model)
-(get-value (true))

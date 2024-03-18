@@ -3,5 +3,3 @@ unknown
 (
   (define-fun x () Int (as @a0 Int))
 )
-((true true))
-

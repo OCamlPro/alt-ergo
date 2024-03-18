@@ -4,4 +4,3 @@
 (assert (<= x 42))
 (check-sat)
 (get-model)
-(get-value (true))

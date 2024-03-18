@@ -7,4 +7,3 @@
 (check-sat)
 (get-model)
 (get-assignment)
-(get-value (true))

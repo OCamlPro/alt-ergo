@@ -6,4 +6,3 @@
 (assert (distinct (f a) (f b)))
 (check-sat)
 (get-model)
-(get-value (true))

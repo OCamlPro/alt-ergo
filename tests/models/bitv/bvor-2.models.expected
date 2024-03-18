@@ -3,5 +3,3 @@ unknown
 (
   (define-fun x () (_ BitVec 8) #b11110101)
 )
-((true true))
-

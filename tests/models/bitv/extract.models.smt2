@@ -16,4 +16,3 @@
 
 (check-sat)
 (get-model)
-(get-value (true))

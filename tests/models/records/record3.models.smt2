@@ -10,4 +10,3 @@
 (assert (= x 0))
 (check-sat)
 (get-model)
-(get-value (true))
