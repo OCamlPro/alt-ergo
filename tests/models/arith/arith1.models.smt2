@@ -1,5 +1,6 @@
 (set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models true)
 (declare-const x Int)
 (assert (<= x 42))
 (check-sat)

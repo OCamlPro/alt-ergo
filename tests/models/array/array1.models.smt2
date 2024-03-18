@@ -1,5 +1,6 @@
 (set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models true)
 (declare-const x Int)
 (declare-const y Int)
 (declare-const a1 (Array Int Int))

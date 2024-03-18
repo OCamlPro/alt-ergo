@@ -700,6 +700,12 @@ let main () =
         | None -> print_wrn_opt ~name st_loc "integer" value; st
         | Some i -> set_steps_bound i st
       end
+    | ":verify-models", Symbol { name = Simple "true"; _ } ->
+      Options.set_verify_models true;
+      st
+    | ":verify-models", Symbol { name = Simple "false"; _ } ->
+      Options.set_verify_models false;
+      st
     | _ ->
       unsupported_opt name; st
   in

@@ -1,5 +1,6 @@
 (set-logic BV)
 (set-option :produce-models true)
+(set-option :verify-models true)
 
 ; We used to be able to reply 'unsat' here, but using unsound reasoning.
 ; We should be able to reply 'unsat' again when we start propagating [distinct]

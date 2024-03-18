@@ -1,5 +1,6 @@
 (set-logic BV)
 (set-option :produce-models true)
+(set-option :verify-models true)
 
 (declare-const x (_ BitVec 4))
 (assert (= ((_ extract 0 0) x) #b1))

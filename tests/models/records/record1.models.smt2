@@ -1,5 +1,6 @@
 (set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models true)
 (declare-datatype Pair
 ((pair (first Int) (second Int))))
 (declare-const a Pair)

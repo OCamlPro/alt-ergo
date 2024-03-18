@@ -1,5 +1,6 @@
 (set-logic BV)
 (set-option :produce-models true)
+(set-option :verify-models true)
 
 (declare-const a (_ BitVec 2))
 (declare-const b (_ BitVec 3))
