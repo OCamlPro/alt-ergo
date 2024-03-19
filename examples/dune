@@ -6,6 +6,7 @@
 
 (rule
  (alias runtest)
+ (package alt-ergo-lib)
  (action
   (ignore-stdout
    (ignore-stderr
