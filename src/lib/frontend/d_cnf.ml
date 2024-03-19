@@ -176,8 +176,6 @@ type _ DStd.Builtin.t +=
   | Integer_round
   | Abs_real
   | Sqrt_real
-  | Int2BV of int
-  | BV2Nat of int
   | Sqrt_real_default
   | Sqrt_real_excess
   | Ceiling_to_int of [ `Real ]
@@ -235,18 +233,6 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
 module Const = struct
   open DE
 
-  let bv2nat =
-    with_cache (fun n ->
-        let name = "bv2nat" in
-        DE.Id.mk ~name ~builtin:(BV2Nat n)
-          (DStd.Path.global name) Ty.(arrow [bitv n] int))
-
-  let int2bv =
-    with_cache (fun n ->
-        let name = "int2bv" in
-        DE.Id.mk ~name ~builtin:(Int2BV n)
-          (DStd.Path.global name) Ty.(arrow [int] (bitv n)))
-
   let smt_round =
     with_cache (fun (n, m) ->
         let name = "ae.round" in
@@ -257,40 +243,8 @@ module Const = struct
           Ty.(arrow [fpa_rounding_mode; real] real))
 end
 
-let bv2nat t =
-  let n =
-    match DT.view (DE.Term.ty t) with
-    | `Bitv n -> n
-    | _ -> raise (DE.Term.Wrong_type (t, DT.bitv 0))
-  in
-  DE.Term.apply_cst (Const.bv2nat n) [] [t]
-
-let int2bv n t =
-  DE.Term.apply_cst (Const.int2bv n) [] [t]
-
 let smt_round n m rm t =
   DE.Term.apply_cst (Const.smt_round (n, m)) [] [rm; t]
-
-let bv_builtins env s =
-  let term_app1 f =
-    Dl.Typer.T.builtin_term @@
-    Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
-  in
-  match s with
-  | Dl.Typer.T.Id {
-      ns = Term  ;
-      name = Simple "bv2nat" } ->
-    term_app1 bv2nat
-  | Id {
-      ns = Term ;
-      name = Indexed {
-          basename = "int2bv" ;
-          indexes = [ n ] } } ->
-    begin match int_of_string n with
-      | n -> term_app1 (int2bv n)
-      | exception Failure _ -> `Not_found
-    end
-  | _ -> `Not_found
 
 (** Takes a dolmen identifier [id] and injects it in Alt-Ergo's registered
     identifiers.
@@ -493,18 +447,11 @@ let smt_fpa_builtins =
       end
     | _ -> `Not_found
 
-(** Concatenation of builtins handlers. *)
-let (++) bt1 bt2 =
-  fun a b ->
-  match bt1 a b with
-  | `Not_found -> bt2 a b
-  | res -> res
-
 let builtins =
   fun _st (lang : Typer.lang) ->
   match lang with
   | `Logic Alt_ergo -> ae_fpa_builtins
-  | `Logic (Smtlib2 _) -> bv_builtins ++ smt_fpa_builtins
+  | `Logic (Smtlib2 _) -> smt_fpa_builtins
   | _ -> fun _ _ -> `Not_found
 
 (** Translates dolmen locs to Alt-Ergo's locs *)
@@ -1460,8 +1407,8 @@ let rec mk_expr
           | Integer_round, _ -> op Integer_round
           | Abs_real, _ -> op Abs_real
           | Sqrt_real, _ -> op Sqrt_real
-          | Int2BV n, _ -> op (Int2BV n)
-          | BV2Nat _, _ -> op BV2Nat
+          | B.Bitv_of_int { n }, _ -> op (Int2BV n)
+          | B.Bitv_to_nat { n = _ }, _ -> op BV2Nat
           | Sqrt_real_default, _ -> op Sqrt_real_default
           | Sqrt_real_excess, _ -> op Sqrt_real_excess
           | B.Abs, _ -> op Abs_int

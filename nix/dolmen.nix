@@ -15,7 +15,7 @@ ocamlPackages.buildDunePackage {
   src = dolmen;
 
   nativeBuildInputs = [ ocamlPackages.menhir ];
-  propagatedBuildInputs = [ ocamlPackages.menhirLib ocamlPackages.fmt ];
+  propagatedBuildInputs = with ocamlPackages; [ hmap menhirLib fmt ];
 
   meta = with lib; {
     inherit (dolmen) homepage description;
