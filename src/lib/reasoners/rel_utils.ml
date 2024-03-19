@@ -313,8 +313,7 @@ module type Domains = sig
         @raise Domain.Inconsistent if the intersection is empty. *)
 
     type t
-    (** The type of ephemeral domains, a mutable mapping of semantic values to
-        [domain]s. *)
+    (** Mutable mappings from semantic values to [domain]s. *)
 
     val handle : t -> X.r -> handle
     (** [handle t r] returns the [handle] associated with [r].
@@ -322,8 +321,9 @@ module type Domains = sig
         There is a unique handle associated with each semantic value [r] that is
         created on-the-fly when [handle t r] is called for the first time.
 
-        The domain associated with the handle is initialized with [default r]
-        the first time it is created, and updated with [update]. *)
+        The domain associated with the handle is initialized from the
+        underlying persistent domain the first time it is accessed, and updated
+        with [update]. *)
 
     val structural_propagation : t -> X.r -> unit
     (** Perform structural propagation for the given representative.
