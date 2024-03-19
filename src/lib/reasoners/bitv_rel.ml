@@ -398,6 +398,8 @@ let add_eqs =
 type any_constraint =
   | Constraint of Constraint.t Rel_utils.explained
   | Structural of X.r
+  (** Structural constraint associated with [X.r]. See
+      {!Rel_utils.Domains.structural_propagation}. *)
 
 module QC = Uqueue.Make(struct
     type t = any_constraint

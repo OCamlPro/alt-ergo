@@ -544,14 +544,14 @@ module Constraints_make(Constraint : Constraint) : sig
       constraints that applies to semantic values, and remembers the relation
       between constraints and semantic values.
 
-      The constraints associated with specific semantic values can be notified
-      (see [notify]), which is used to only propagate constraints involving
-      semantic values whose domain has changed.
+      The constraints applying to a given semantic value can be recovered using
+      the [iter_pending] functions.
 
-      The constraints that have been notified are called "pending
-      constraints", and the set thereof is the "pending set". These are
-      constraints that need to be propagated, and can be recovered using
-      [next_pending]. *)
+      New constraints are marked as "pending" when added to the constraint set
+      (whether by a call to [add] or following a substitution). These
+      constraints should ultimately be propagated; they can be accessed through
+      the [iter_pending]. Once pending constraints have been propagated, the
+      "pending" constraints should be cleared with [clear_pending]. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for constraint sets. *)
@@ -588,8 +588,9 @@ module Constraints_make(Constraint : Constraint) : sig
 
   val has_pending : t -> bool
   (** [has_pending t] returns [true] if there is any constraint marked as
-      pending, in which case [iter_pending] and [clear_pending] are guaranteed
-      to be no-ops. Should only be used for optimization. *)
+      pending. Hence if [has_pending t] returns [false], [iter_pending] and
+      [clear_pending] are guaranteed to be no-ops. Should only be used for
+      optimization. *)
 
   val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold_args f t acc] folds [f] over all the term representatives that are
