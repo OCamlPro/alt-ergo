@@ -63,7 +63,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
-    mutable last_saved_boolean_model : Satml_types.Atom.atom list option;
     mutable last_saved_model : Models.t Lazy.t option;
     mutable last_saved_objectives : Objective.Model.t option;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
@@ -103,7 +102,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       skolems = ME.empty;
       guards = init_guards ();
       add_inst = selector;
-      last_saved_boolean_model = None;
       last_saved_model = None;
       last_saved_objectives = None;
       unknown_reason = None;
@@ -1142,7 +1140,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Satml.Sat ->
       try
         do_case_split env Util.BeforeMatching;
-        env.last_saved_boolean_model <- Some (SAT.boolean_model env.satml);
         may_update_last_saved_model env
           (Options.get_every_interpretation ());
         let () =
@@ -1280,7 +1277,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           assert (not (Stack.is_empty env.guards.stack_guard));
           let b = Stack.top env.guards.stack_guard in
           Steps.pop_steps ();
-          env.last_saved_boolean_model <- None;
           env.last_saved_model <- None;
           env.last_saved_objectives <- None;
           env.inst <- inst;
@@ -1348,19 +1344,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Timers.with_timer Timers.M_Sat Timers.F_assume @@ fun () ->
     assume t ff dep
 
-  (* HOTFIX: we can assert new formula in [env.satml] only at the level of
-     decision [0]. After performing [unsat], this wrapper ensures that the
-     the current level of [env.satml] is [0]. In particular, we lost the
-     boolean model of [env.satml] but we save it after the last [assume]
-     before this call of [unsat] in [env.last_saved_boolean_model]. *)
-  let unsat env gf =
-    try unsat env gf
-    with
-    | Sat_solver_sig.Sat
-    | Sat_solver_sig.I_dont_know as exn ->
-      SAT.cancel_until env.satml 0;
-      raise exn
-
   let unsat t ff =
     Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () ->
     unsat t ff
@@ -1371,13 +1354,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
 
   let get_boolean_model env =
-    Option.map (fun mdl ->
-        List.map (fun Atom.{ lit; _ } ->
-            match Shostak.Literal.view lit with
-            | Literal.LTerm e -> e
-            | LSem _ -> assert false
-          ) mdl
-      ) env.last_saved_boolean_model
+    List.map (fun Atom.{ lit; _ } ->
+        match Shostak.Literal.view lit with
+        | Literal.LTerm e -> e
+        | LSem _ -> assert false
+      ) (SAT.boolean_model env.satml)
 
   let get_model env =
     Option.map Lazy.force env.last_saved_model
@@ -1400,6 +1381,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();
     Uf.reinit_cache ()
+
+  let reset_decisions env = SAT.cancel_until env.satml 0
 
   let () =
     Steps.save_steps ();

@@ -59,7 +59,7 @@ module Make (Th : Theory.S) : sig
 
   val reinit_ctx : unit -> unit
 
-  val get_boolean_model : t -> Expr.t list option
+  val get_boolean_model : t -> Expr.t list
 
   val get_model : t -> Models.t option
 

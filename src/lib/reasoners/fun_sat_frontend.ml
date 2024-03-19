@@ -76,4 +76,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let get_objectives _env =
     raise (Util.Not_implemented "optimization is not supported by FunSAT.")
+
+  let reset_decisions _env = ()
 end

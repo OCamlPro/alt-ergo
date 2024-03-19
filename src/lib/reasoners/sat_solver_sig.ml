@@ -137,7 +137,7 @@ module type S = sig
   val reinit_ctx : unit -> unit
   (** [reinit_ctx ()] reinitializes the solving context. *)
 
-  val get_boolean_model : t -> Expr.t list option
+  val get_boolean_model : t -> Expr.t list
 
   val get_model : t -> Models.t option
   (** [get_model t] produces the current first-order model.
@@ -155,6 +155,8 @@ module type S = sig
 
       @return [None] if there is no objective or the environment is
       unsatisfiable. *)
+
+  val reset_decisions : t -> unit
 end
 
 module type SatContainer = sig

@@ -102,8 +102,6 @@ let assert_model (type a) (module SAT : S with type t = a) env mdl =
     mdl.Models.model;
   check (module SAT) env
 
-let (let*) = Option.bind
-
 (* [get_value_in_boolean_model env e] retrieves the assignment of the boolean
    expression [e] in the last boolean model of [env].
 
@@ -113,7 +111,7 @@ let get_value_in_boolean_model (type a) (module SAT : S with type t = a) env e =
   match Expr.type_info e with
   | Ty.Tbool ->
     begin
-      let* bmodel = SAT.get_boolean_model env in
+      let bmodel = SAT.get_boolean_model env in
       Stdcompat.List.find_map
         (fun lit ->
            if Expr.equal e lit then
@@ -144,8 +142,15 @@ let get_value_in_model (type a) (module SAT : S with type t = a) env mdl e =
     ModelMap.get_value typed_name xs mdl.Models.model
   | _ -> None
 
+let (let*) = Option.bind
+
 let get_value (type a) (module SAT : S with type t = a) env l =
   let* mdl = SAT.get_model env in
+  (* HOTFIX for SatML: we can assert new formula in [env.satml] only at the
+     level of decision [0]. After performing [unsat], the decision level isn't
+     necessary [0] and the SMT statement `get-value` can be called only in
+     SAT mode, so we have to reset all the decisions of the solver here. *)
+  SAT.reset_decisions env;
   assert_model (module SAT) env mdl;
   (* First, we attempt to retrieve each model term in the last computed
      boolean and first-order models.

@@ -1859,7 +1859,7 @@ module Make (Th : Theory.S) = struct
   let get_unknown_reason env = env.unknown_reason
 
   let get_boolean_model env =
-    Some (ME.fold (fun e _ acc -> e :: acc) env.gamma [])
+    ME.fold (fun e _ acc -> e :: acc) env.gamma []
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)
