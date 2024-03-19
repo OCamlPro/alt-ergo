@@ -149,7 +149,9 @@ let get_value (type a) (module SAT : S with type t = a) env l =
      necessary [0] and the SMT statement `get-value` can be called only in
      SAT mode, so we have to reset all the decisions of the solver here.
      Before resetting the decisions, we save the boolean model for sake
-     of optimization. *)
+     of optimization.
+
+     See issue: https://github.com/OCamlPro/alt-ergo/issues/1063 *)
   let bmdl = SAT.get_boolean_model env in
   SAT.reset_decisions env;
   assert_model (module SAT) env mdl;
