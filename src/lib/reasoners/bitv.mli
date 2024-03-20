@@ -54,6 +54,8 @@ type 'a abstract = 'a simple_term list
     [size - 1 .. size - sz] inclusive. *)
 val extract : int -> int -> int -> 'a abstract -> 'a abstract
 
+val lognot : 'a abstract -> 'a abstract
+
 (** [to_Z_opt r] evaluates [r] to an integer if possible. *)
 val to_Z_opt : 'a abstract -> Z.t option
 

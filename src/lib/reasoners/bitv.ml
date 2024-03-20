@@ -285,6 +285,8 @@ let hash_abstract hash =
 
 let negate_abstract xs = List.map negate_simple_term xs
 
+let lognot = negate_abstract
+
 type solver_simple_term = tvar alpha_term
 
 let pp_solver_simple_term = pp_alpha_term pp_tvar

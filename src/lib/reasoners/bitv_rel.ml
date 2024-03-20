@@ -32,6 +32,7 @@ module E = Expr
 module Ex = Explanation
 module Sy = Symbols
 module X = Shostak.Combine
+module SX = Shostak.SXH
 module L = Xliteral
 
 let timer = Timers.M_Bitv
@@ -75,180 +76,61 @@ let is_bv_ty = function
 
 let is_bv_r r = is_bv_ty @@ X.type_info r
 
-module SX = Shostak.SXH
-module MX = Shostak.MXH
+module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
+  (* Note: these functions are not in [Bitlist] proper in order to avoid a
+     (direct) dependency from [Bitlist] to the [Shostak] module. *)
 
-module Domains : sig
-  type t
-  (** The type of domain maps. A domain map maps each representative (semantic
-      value, of type [X.r]) to its associated domain.
+  include Bitlist
 
-      The keys of the domain maps are expected to be current *class
-      representatives*, i.e.  normal forms wrt to the `Uf` module, in which
-      case we say the domain map is *normalized*. Use `subst` to ensure that
-      domain maps stay normalized. *)
+  let fold_signed f { Bitv.value; negated } bl acc =
+    let bl = if negated then lognot bl else bl in
+    f value bl acc
 
-  val pp : t Fmt.t
-  (** Pretty-printer for domain maps. *)
-
-  val empty : t
-  (** Returns an empty domain map. *)
-
-  val update : Ex.t -> X.r -> t -> Bitlist.t -> t
-  (** [update ex r d bl] intersects the domain of [r] with bitlist [bl].
-
-      The explanation [ex] justifies that [bl] applies to [r].
-
-      @raise Bitlist.Inconsistent if the new domain is empty. *)
-
-  val get : X.r -> t -> Bitlist.t
-  (** [get r d] returns the bitlist currently associated with [r] in [d].
-
-      @raise Not_found if there is no bitlist associated with [r] in [d]. *)
-
-  val subst : Ex.t -> X.r -> X.r -> t -> t
-  (** [subst ex p v d] replaces all the instances of [p] with [v] in any domain,
-      and merges the corresponding bitlists.
-
-      Use this to ensure that the representation is always normalized.
-
-      The explanation [ex] justifies the equality [p = v].
-
-      @raise Bitlist.Inconsistent if this causes any domain in [d] to become
-        empty. *)
-
-  val choose_changed : t -> X.r * t
-  (** [choose_changed d] returns a pair [r, d'] such that:
-
-      - The domain associated with [r] has changed since the last time
-         [choose_changed] was called,
-      - [r] has (by definition) not changed in [d'] *)
-
-  val fold : (X.r -> Bitlist.t -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold f d acc] folds [f] over all the domains associated with variables *)
-end = struct
-  type t =
-    { bitlists : Bitlist.t MX.t
-    (** Mapping from semantic values to their bitlist domain.
-
-        Note: this mapping only contains domain for leaves (i.e. uninterpreted
-        terms or AC symbols); domains associated with more complex semantic
-        values are rebuilt on-the-fly using the structure of said semantic
-        values. *)
-    ; changed : SX.t
-    (** Elements whose domain has changed since last propagation. *)
-    }
-
-  let pp ppf t =
-    Fmt.(iter_bindings ~sep:semi MX.iter
-           (box @@ pair ~sep:(any " ->@ ") X.print Bitlist.pp)
-         |> braces
-        )
-      ppf t.bitlists
-  let empty = { bitlists = MX.empty ; changed = SX.empty }
-
-  let update_leaf ex r t bl =
-    let changed = ref false in
-    let bitlists =
-      MX.update r (function
-          | Some bl' as o ->
-            let bl'' = Bitlist.intersect bl bl' ex in
-            (* Keep simpler explanations, and don't loop adding the domain to
-               the changed set infinitely. *)
-            if Bitlist.equal bl' bl'' then
-              o
-            else (
-              if Options.get_debug_bitv () then
-                Printer.print_dbg
-                  ~module_name:"Bitv_rel" ~function_name:"Domain.update"
-                  "domain shrunk for %a: %a -> %a"
-                  X.print r Bitlist.pp bl' Bitlist.pp bl'';
-              changed := true;
-              Some bl''
-            )
-          | None ->
-            changed := true;
-            Some (Bitlist.add_explanation bl ex)
-        ) t.bitlists
-    in
-    let changed = if !changed then SX.add r t.changed else t.changed in
-    { changed; bitlists }
-
-  let update_signed ex { Bitv.value; negated } t bl =
-    let bl = if negated then Bitlist.lognot bl else bl in
-    update_leaf ex value t bl
-
-  let update ex r t bl =
-    fst @@ List.fold_left (fun (t, bl) { Bitv.bv; sz } ->
+  let fold_leaves f r bl acc =
+    fst @@ List.fold_left (fun (acc, bl) { Bitv.bv; sz } ->
         (* Extract the bitlist associated with the current component *)
-        let mid = Bitlist.width bl - sz in
+        let mid = width bl - sz in
         let bl_tail =
-          if mid = 0 then Bitlist.empty else
-            Bitlist.extract bl 0 (mid - 1)
+          if mid = 0 then empty else
+            extract bl 0 (mid - 1)
         in
-        let bl = Bitlist.extract bl mid (Bitlist.width bl - 1) in
+        let bl = extract bl mid (width bl - 1) in
 
         match bv with
         | Bitv.Cte z ->
           (* Nothing to update, but still check for consistency! *)
-          ignore @@ Bitlist.intersect bl (Bitlist.exact sz z Ex.empty) ex;
-          t, bl_tail
-        | Other r -> update_signed ex r t bl, bl_tail
+          ignore @@ intersect ~ex:Ex.empty bl (exact sz z Ex.empty);
+          acc, bl_tail
+        | Other r -> fold_signed f r bl acc, bl_tail
         | Ext (r, r_size, i, j) ->
           (* r<i, j> = bl -> r = ?^(r_size - j - 1) @ bl @ ?^i *)
-          assert (i + r_size - j - 1 + Bitlist.width bl = r_size);
+          assert (i + r_size - j - 1 + width bl = r_size);
           let hi = Bitlist.unknown (r_size - j - 1) Ex.empty in
           let lo = Bitlist.unknown i Ex.empty in
-          update_signed ex r t Bitlist.(hi @ bl @ lo), bl_tail
-      ) (t, bl) (Shostak.Bitv.embed r)
+          fold_signed f r (hi @ bl @ lo) acc, bl_tail
+      ) (acc, bl) (Shostak.Bitv.embed r)
 
-  let get_leaf r t =
-    try MX.find r t.bitlists with
-    | Not_found ->
-      match X.type_info r with
-      | Tbitv n -> Bitlist.unknown n Explanation.empty
-      | _ -> assert false
+  let map_signed f { Bitv.value; negated } t =
+    let bl = f value t in
+    if negated then lognot bl else bl
 
-  let get_signed { Bitv.value; negated } t =
-    let bl = get_leaf value t in
-    if negated then Bitlist.lognot bl else bl
-
-  let get r t =
+  let map_leaves f r acc =
     List.fold_left (fun bl { Bitv.bv; sz } ->
-        Bitlist.concat bl @@
+        concat bl @@
         match bv with
-        | Bitv.Cte z -> Bitlist.exact sz z Ex.empty
-        | Other r -> get_signed r t
-        | Ext (r, _r_size, i, j) -> Bitlist.extract (get_signed r t) i j
-      ) Bitlist.empty (Shostak.Bitv.embed r)
+        | Bitv.Cte z -> exact sz z Ex.empty
+        | Other r -> map_signed f r acc
+        | Ext (r, _r_size, i, j) -> extract (map_signed f r acc) i j
+      ) empty (Shostak.Bitv.embed r)
 
-  let subst ex rr nrr t =
-    match MX.find rr t.bitlists with
-    | bl ->
-      (* The substitution code for constraints requires that we properly update
-         the [changed] field here: if the domain of [rr] has changed,
-         constraints that applied to [rr] will apply to [nrr] after
-         substitution and must be propagated again. *)
-      let changed =
-        if SX.mem rr t.changed then
-          SX.add nrr t.changed
-        else
-          t.changed
-      in
-      let t =
-        { changed = SX.remove rr changed
-        ; bitlists = MX.remove rr t.bitlists
-        }
-      in
-      update ex nrr t bl
-    | exception Not_found -> t
-
-  let choose_changed t =
-    let r = SX.choose t.changed in
-    r, { t with changed = SX.remove r t.changed }
-
-  let fold f t = MX.fold f t.bitlists
+  let unknown = function
+    | Ty.Tbitv n -> unknown n Ex.empty
+    | _ ->
+      (* Only bit-vector values can have bitlist domains. *)
+      invalid_arg "unknown"
 end
+
+module Domains = Rel_utils.Domains_make(Domain)
 
 module Constraint : sig
   include Rel_utils.Constraint
@@ -261,9 +143,6 @@ module Constraint : sig
 
   val bvxor : X.r -> X.r -> X.r -> t
   (** [bvxor x y z] is the constraint [x ^ y ^ z = 0] *)
-
-  val bvnot : X.r -> X.r -> t
-  (** [bvnot x y] is the constraint [x = not y] *)
 
   val propagate : ex:Ex.t -> t -> Domains.t -> Domains.t
   (** [propagate ~ex t dom] propagates the constraint [t] in domain [dom].
@@ -278,8 +157,6 @@ end = struct
     (** [Bor (x, y, z)] represents [x = y | z] *)
     | Bxor of SX.t
     (** [Bxor {x1, ..., xn}] represents [x1 ^ ... ^ xn = 0] *)
-    | Bnot of X.r * X.r
-    (** [Bnot (x, y)] represents [x = not y] *)
 
   let normalize_repr = function
     | Band (x, y, z) when X.hash_cmp y z > 0 -> Band (x, z, y)
@@ -292,19 +169,15 @@ end = struct
     | Bor (x1, y1, z1), Bor (x2, y2, z2) ->
       X.equal x1 x2 && X.equal y1 y2 && X.equal z1 z2
     | Bxor xs1, Bxor xs2 -> SX.equal xs1 xs2
-    | Bnot (x1, y1), Bnot (x2, y2) ->
-      (X.equal x1 x2 && X.equal y1 y2)
     | Band _, _
     | Bor _, _
-    | Bxor _, _
-    | Bnot _, _ -> false
+    | Bxor _, _ -> false
 
   let hash_repr = function
     | Band (x, y, z) -> Hashtbl.hash (0, X.hash x, X.hash y, X.hash z)
     | Bor (x, y, z) -> Hashtbl.hash (1, X.hash x, X.hash y, X.hash z)
     | Bxor xs ->
       Hashtbl.hash (2, SX.fold (fun r acc -> X.hash r :: acc) xs [])
-    | Bnot (x, y) -> Hashtbl.hash (2, X.hash x, X.hash y)
 
   type t = { repr : repr ; mutable tag : int }
 
@@ -336,8 +209,6 @@ end = struct
     | Bxor xs ->
       Fmt.(iter ~sep:(any " ^@ ") SX.iter X.print |> box) ppf xs;
       Fmt.pf ppf " = 0"
-    | Bnot (x, y) ->
-      Fmt.pf ppf "%a = ~%a" X.print x X.print y
 
   (* TODO: for bitwise constraints (eg Band, Bor, Bxor)
       on initialisation and also after substitution
@@ -362,10 +233,6 @@ end = struct
             if SX.mem r xs then SX.remove r xs else SX.add r xs
           ) xs SX.empty
       )
-    | Bnot (x, y) ->
-      let x = X.subst rr nrr x
-      and y = X.subst rr nrr y in
-      Bnot (x, y)
 
   let pp ppf { repr; _ } = pp_repr ppf repr
 
@@ -382,10 +249,6 @@ end = struct
       let acc = f z acc in
       acc
     | Bxor xs -> SX.fold f xs acc
-    | Bnot (x, y) ->
-      let acc = f x acc in
-      let acc = f y acc in
-      acc
 
   let propagate ~ex { repr; _ } dom =
     Steps.incr CP;
@@ -395,18 +258,22 @@ end = struct
       and dy = Domains.get y dom
       and dz = Domains.get z dom
       in
-      let dom = Domains.update ex x dom @@ Bitlist.logand dy dz in
+      let dom =
+        Domains.update x Bitlist.(add_explanation ~ex (logand dy dz)) dom
+      in
       (* Reverse propagation for y: if [x = y & z] then:
          - Any [1] in [x] must be a [1] in [y]
          - Any [0] in [x] that is also a [1] in [z] must be a [0] in [y]
       *)
       let dom =
-        Domains.update ex y dom @@
-        Bitlist.(intersect (ones dx) (logor (zeroes dx) (lognot (ones dz))) ex)
+        Domains.update y Bitlist.(
+            intersect ~ex (ones dx) (logor (zeroes dx) (lognot (ones dz)))
+          ) dom
       in
       let dom =
-        Domains.update ex z dom @@
-        Bitlist.(intersect (ones dx) (logor (zeroes dx) (lognot (ones dy))) ex)
+        Domains.update z Bitlist.(
+            intersect ~ex (ones dx) (logor (zeroes dx) (lognot (ones dy)))
+          ) dom
       in
       dom
     | Bor (x, y, z) ->
@@ -414,20 +281,22 @@ end = struct
       and dy = Domains.get y dom
       and dz = Domains.get z dom
       in
-      let dom = Domains.update ex x dom @@ Bitlist.logor dy dz in
+      let dom =
+        Domains.update x Bitlist.(add_explanation ~ex (logor dy dz)) dom
+      in
       (* Reverse propagation for y: if [x = y | z] then:
          - Any [0] in [x] must be a [0] in [y]
          - Any [1] in [x] that is also a [0] in [z] must be a [1] in [y]
       *)
       let dom =
-        Domains.update ex y dom @@ Bitlist.(
-            intersect (zeroes dx) (logand (ones dx) (lognot (zeroes dz))) ex
-          )
+        Domains.update y Bitlist.(
+            intersect ~ex (zeroes dx) (logand (ones dx) (lognot (zeroes dz)))
+          ) dom
       in
       let dom =
-        Domains.update ex z dom @@ Bitlist.(
-            intersect (zeroes dx) (logand (ones dx) (lognot (zeroes dy))) ex
-          )
+        Domains.update z Bitlist.(
+            intersect ~ex (zeroes dx) (logand (ones dx) (lognot (zeroes dy)))
+          ) dom
       in
       dom
     | Bxor xs ->
@@ -441,13 +310,8 @@ end = struct
                   Bitlist.logxor (Domains.get y dom) acc
               ) xs (Bitlist.exact (Bitlist.width dx) Z.zero Ex.empty)
           in
-          Domains.update ex x dom dx'
+          Domains.update x (Bitlist.add_explanation ~ex dx') dom
         ) xs dom
-    | Bnot (x, y) ->
-      let dx = Domains.get x dom and dy = Domains.get y dom in
-      let dom = Domains.update ex x dom @@ Bitlist.lognot dy in
-      let dom = Domains.update ex y dom @@ Bitlist.lognot dx in
-      dom
 
   let bvand x y z = hcons @@ Band (x, y, z)
   let bvor x y z = hcons @@ Bor (x, y, z)
@@ -456,18 +320,12 @@ end = struct
     let xs = if SX.mem y xs then SX.remove y xs else SX.add y xs in
     let xs = if SX.mem z xs then SX.remove z xs else SX.add z xs in
     hcons @@ Bxor xs
-  let bvnot x y = hcons @@ Bnot (x, y)
 end
 
 module Constraints = Rel_utils.Constraints_make(Constraint)
 
 let extract_constraints bcs uf r t =
   match E.term_view t with
-  (* BVnot is already internalized in the Shostak but we want to know about it
-     without needing a round-trip through Uf *)
-  | { f = Op BVnot; xs = [ x ] ; _ } ->
-    let rx, exx = Uf.find uf x in
-    Constraints.add ~ex:exx (Constraint.bvnot r rx) bcs
   | { f = Op BVand; xs = [ x; y ]; _ } ->
     let rx, exx = Uf.find uf x
     and ry, exy = Uf.find uf y in
@@ -545,15 +403,15 @@ let propagate =
     | exception Not_found ->
       match Domains.choose_changed dom with
       | r, dom ->
-        propagate (SX.add r changed) (Constraints.notify_leaf r bcs) dom
+        propagate (SX.add r changed) (Constraints.notify r bcs) dom
       | exception Not_found ->
         changed, bcs, dom
   in
-  fun bcs dom ->
+  fun eqs bcs dom ->
     let changed, bcs, dom = propagate SX.empty bcs dom in
     SX.fold (fun r acc ->
         add_eqs acc (Shostak.Bitv.embed r) (Domains.get r dom)
-      ) changed [], bcs, dom
+      ) changed eqs, bcs, dom
 
 type t =
   { delayed : Rel_utils.Delayed.t
@@ -571,8 +429,8 @@ let assume env uf la =
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let (domain, constraints, eqs, size_splits) =
     try
-      let ((constraints, domain), size_splits) =
-        List.fold_left (fun ((bcs, dom), ss) (a, _root, ex, orig) ->
+      let ((constraints, domain), eqs, size_splits) =
+        List.fold_left (fun ((bcs, dom), eqs, ss) (a, _root, ex, orig) ->
             let ss =
               match orig with
               | Th_util.CS (Th_bitv, n) -> Q.(ss * n)
@@ -585,31 +443,25 @@ let assume env uf la =
             in
             match a, orig with
             | L.Eq (rr, nrr), Subst when is_bv_r rr ->
-              let dom = Domains.subst ex rr nrr dom in
+              let dom = Domains.subst ~ex rr nrr dom in
               let bcs = Constraints.subst ~ex rr nrr bcs in
-              ((bcs, dom), ss)
+              ((bcs, dom), eqs, ss)
             | L.Distinct (false, [rr; nrr]), _ when is_1bit rr ->
               (* We don't (yet) support [distinct] in general, but we must
                  support it for case splits to avoid looping.
 
                  We are a bit more general and support it for 1-bit vectors, for
-                 which `distinct` can be expressed using `bvnot`.
-
-                 Note that we are not guaranteed that the arguments are already
-                 in normal form! *)
-              let rr, exrr = Uf.find_r uf rr in
-              let nrr, exnrr = Uf.find_r uf nrr in
-              let ex = Ex.union ex (Ex.union exrr exnrr) in
-              let bcs =
-                Constraints.add ~ex (Constraint.bvnot rr nrr) bcs
+                 which `distinct` can be expressed using `bvnot`. *)
+              let not_nrr =
+                Shostak.Bitv.is_mine (Bitv.lognot (Shostak.Bitv.embed nrr))
               in
-              ((bcs, dom), ss)
-            | _ -> ((bcs, dom), ss)
+              ((bcs, dom), (Uf.LX.mkv_eq rr not_nrr, ex) :: eqs, ss)
+            | _ -> ((bcs, dom), eqs, ss)
           )
-          ((env.constraints, env.domain), env.size_splits)
+          ((env.constraints, env.domain), [], env.size_splits)
           la
       in
-      let eqs, constraints, domain = propagate constraints domain in
+      let eqs, constraints, domain = propagate eqs constraints domain in
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
@@ -667,7 +519,7 @@ let case_split env _uf ~for_model =
       with
       | Some (nunk, xs) -> nunk, xs
       | None ->
-        match Domains.fold f_acc env.domain None with
+        match Domains.fold_leaves f_acc env.domain None with
         | Some (nunk, xs) -> nunk, xs
         | None -> 0, SX.empty
     in
@@ -695,15 +547,13 @@ let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   let env, eqs =
     match X.type_info r with
-    | Tbitv n -> (
+    | Tbitv _ -> (
         try
-          let dr = Bitlist.unknown n Ex.empty in
-          let dom = Domains.update Ex.empty r env.domain dr in
+          let dom = Domains.add r env.domain in
           let bcs = extract_constraints env.constraints uf r t in
-          let eqs', bcs, dom = propagate bcs dom in
-          { env with constraints = bcs ; domain = dom },
-          List.rev_append eqs' eqs
-        with Bitlist.Inconsistent ex ->
+          let eqs, bcs, dom = propagate eqs bcs dom in
+          { env with constraints = bcs ; domain = dom }, eqs
+        with Domains.Inconsistent ex ->
           raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
       )
     | _ -> env, eqs
