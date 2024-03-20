@@ -17,6 +17,7 @@
 module X = Shostak.Combine
 module MX = Shostak.MXH
 module SX = Shostak.SXH
+module HX = Shostak.HX
 module L = Xliteral
 module LR = Uf.LX
 module SR = Set.Make(
@@ -273,15 +274,6 @@ module type Domains = sig
   val get : X.r -> t -> elt
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
 
-  val update : X.r -> elt -> t -> t
-  (** [update r d t] intersects the domain of [r] in [t] with the domain [d].
-
-      {b Soundness}: The domain [d] must already include the justification
-      that it applies to [r].
-
-      @raise Inconsistent if this causes the domain associated with [r] to
-      become empty. *)
-
   val fold_leaves : (X.r -> elt -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold f t acc] folds [f] over all the domains in [t] that are associated
       with leaves. *)
@@ -295,33 +287,78 @@ module type Domains = sig
       @raise Inconsistent if this causes any domain in [d] to become empty. *)
 
   val has_changed : t -> bool
-  (** Returns [true] if any element is marked as changed.
+  (** Returns [true] if any element is marked as changed. This can be used to
+      avoid unnecessary calls to [edit].
 
       Elements are marked as changed when their domain shrinks due to a call to
-      either [subst] or [update], and are unmarked by [clear_changed]. *)
+      [subst], or through the ephemeral API. Elements can be unmarked by
+      [clear_changed] in the ephemeral API. *)
 
-  val iter_changed : (X.r -> unit) -> t -> unit
-  (** Iterate over the changed elements. See [has_changed]. *)
+  module Ephemeral : sig
+    type handle
+    (** A mutable handle to the domain associated with a semantic value. Can be
+        used to access and update the domain. *)
 
-  val clear_changed : t -> t
-  (** Returns an identical domain, except that no elements are marked as
-      changed. *)
+    val (!!) : handle -> elt
+    (** Return the domain associated with the [handle]. *)
 
-  val structural_propagation : X.r -> t -> t
-  (** Perform structural propagation for the given representative.
+    val update : ex:Explanation.t -> handle -> elt -> unit
+    (** Intersect the domain associated with the [handle] with the provided
+        [domain]. The explanation [ex] justifies that the [domain] applies to
+        the [handle]'s representative.
 
-      More precisely, if [r] is a leaf, the domain of [r] is propagated to any
-      semantic value that contains [r] as a leaf according to the structure of
-      that semantic value (using [Domain.map_leaves]); if [r] is not a leaf,
-      its domain is propagated to any of the leaves it contains.
+        If this changes the domain associated with the handle, the handle is
+        marked as changed.
 
-      We only perform *forward* structural propagation: if structural
-      propagation causes a domain of a leaf or parent to be changed, then we
-      will perform structural propagation for that leaf or parent once it
-      itself is selected by [choose_changed].
+        @raise Domain.Inconsistent if the intersection is empty. *)
 
-      @raise Inconsistent if an inconsistency if detected during structural
-      propagation. *)
+    type t
+    (** Mutable mappings from semantic values to [domain]s. *)
+
+    val handle : t -> X.r -> handle
+    (** [handle t r] returns the [handle] associated with [r].
+
+        There is a unique handle associated with each semantic value [r] that is
+        created on-the-fly when [handle t r] is called for the first time.
+
+        The domain associated with the handle is initialized from the
+        underlying persistent domain the first time it is accessed, and updated
+        with [update]. *)
+
+    val structural_propagation : t -> X.r -> unit
+    (** Perform structural propagation for the given representative.
+
+        More precisely, if [r] is a leaf, the domain of [r] is propagated to any
+        semantic value that contains [r] as a leaf according to the structure of
+        that semantic value (using [Domain.map_leaves]); if [r] is not a leaf,
+        its domain is propagated to any of the leaves it contains.
+
+        We only perform *forward* structural propagation: if structural
+        propagation causes a domain of a leaf or parent to be changed, then we
+        only mark that leaf or parent as changed.
+
+        @raise Inconsistent if an inconsistency if detected during structural
+        propagation. *)
+
+    val iter_changed : (X.r -> unit) -> t -> unit
+    (** Iterate over all the semantic values that have been marked as changed
+        since the last call to [clear_changed]. Values are marked as changed by
+        [update] whenever their domain shrinks.
+
+        {b Warning}: The behavior is not specified if the ephemeral domain is
+        modified during iteration, such as by calling [update] or
+        [structural_propagation]. *)
+
+    val clear_changed : t -> unit
+    (** Remove the [changed] flag from all values. *)
+  end
+
+  val edit : t -> Ephemeral.t
+  (** [edit d] returns an ephemeral version of the domain that can be used for
+      editing. *)
+
+  val snapshot : Ephemeral.t -> t
+  (** [snapshot e] returns a persistent version of [e]. *)
 end
 
 module Domains_make(Domain : Domain) : Domains with type elt = Domain.t =
@@ -398,7 +435,8 @@ struct
         case, only structural constraints can apply to [r]. *)
     try MX.find r t.domains with Not_found -> create_domain r
 
-  let update r d t =
+  (* Marked as unsafe because we trust the [changed] flag from the caller. *)
+  let unsafe_update ?(changed = true) r d t =
     match MX.find r t.domains with
     | od ->
       (* Both domains are already valid for [r], we can intersect them
@@ -408,14 +446,14 @@ struct
         t
       else
         let domains = MX.add r d t.domains in
-        let changed = SX.add r t.changed in
+        let changed = if changed then SX.add r t.changed else t.changed in
         { t with domains; changed }
     | exception Not_found ->
       (* We need to catch [Not_found] because of fresh terms that can be added
           by the solver and for which we don't call [add]. *)
       let d = Domain.intersect ~ex:Explanation.empty d (create_domain r) in
       let domains = MX.add r d t.domains in
-      let changed = SX.add r t.changed in
+      let changed = if changed then SX.add r t.changed else t.changed in
       let leaves_map = r_add r t.leaves_map in
       { domains; changed; leaves_map }
 
@@ -480,27 +518,105 @@ struct
           have nothing to do. *)
       t
 
-  let structural_propagation r t =
-    if X.is_a_leaf r then
-      match MX.find r t.leaves_map with
-      | parents ->
-        SX.fold (fun parent t ->
-            if X.is_a_leaf parent then (
-              assert (X.equal r parent);
-              t
-            ) else
-              update parent (Domain.map_leaves get parent t) t
-          ) parents t
-      | exception Not_found -> t
-    else
-      Domain.fold_leaves update r (get r t) t
-
   let has_changed t =
     not @@ SX.is_empty t.changed
 
-  let iter_changed f t = SX.iter f t.changed
+  module Ephemeral = struct
+    type handle =
+      { repr : X.r
+      ; mutable domain : Domain.t
+      ; mutable dirty : bool
+      ; dirty_cache : handle HX.t
+      ; mutable changed : bool
+      ; changed_set : handle HX.t
+      }
 
-  let clear_changed t = { t with changed = SX.empty }
+    let (!!) handle = handle.domain
+
+    let set_dirty handle =
+      if not handle.dirty then (
+        handle.dirty <- true;
+        HX.replace handle.dirty_cache handle.repr handle
+      )
+
+    let set_changed handle =
+      if not handle.changed then (
+        set_dirty handle;
+        handle.changed <- true;
+        HX.replace handle.changed_set handle.repr handle
+      )
+
+    let update ~ex handle domain =
+      let domain = Domain.intersect ~ex handle.domain domain in
+      if not (Domain.equal domain handle.domain) then (
+        set_changed handle;
+        handle.domain <- domain
+      )
+
+    type nonrec t =
+      { persistent : t
+      ; handles : handle HX.t
+      ; dirty_cache : handle HX.t
+      ; changed_set : handle HX.t }
+
+    let handle t r =
+      try HX.find t.handles r with Not_found ->
+        let handle =
+          { repr = r
+          ; domain = get r t.persistent
+          ; dirty = false
+          ; dirty_cache = t.dirty_cache
+          ; changed = false
+          ; changed_set = t.changed_set }
+        in
+        HX.add t.handles r handle;
+        handle
+
+    let structural_propagation t r =
+      (* Structural propagation is always correct and does not require
+         explanations because it follows the structure of the semantic value
+         itself. *)
+      let get r = !!(handle t r) in
+      let update r d = update ~ex:Explanation.empty (handle t r) d in
+      if X.is_a_leaf r then
+        match MX.find r t.persistent.leaves_map with
+        | parents ->
+          SX.iter (fun parent ->
+              if X.is_a_leaf parent then
+                assert (X.equal r parent)
+              else
+                update parent (Domain.map_leaves (fun r () -> get r) parent ())
+            ) parents
+        | exception Not_found -> ()
+      else
+        Domain.fold_leaves (fun r d () -> update r d) r (get r) ()
+
+    let iter_changed f t = HX.iter (fun r _ -> f r) t.changed_set
+
+    let clear_changed t =
+      HX.iter (fun _ h -> h.changed <- false) t.changed_set;
+      HX.clear t.changed_set
+  end
+
+  let edit t =
+    let size = 17 in
+    let ephemeral =
+      { Ephemeral.persistent = { t with changed = SX.empty }
+      ; handles = HX.create size
+      ; dirty_cache = HX.create size
+      ; changed_set = HX.create size }
+    in
+    SX.iter (fun r ->
+        Ephemeral.set_changed (Ephemeral.handle ephemeral r)
+      ) t.changed;
+    ephemeral
+
+  let snapshot t =
+    assert (SX.is_empty t.Ephemeral.persistent.changed);
+    HX.fold (fun repr handle domains ->
+        unsafe_update
+          ~changed:handle.Ephemeral.changed repr handle.domain domains
+      ) t.Ephemeral.dirty_cache t.persistent
 end
 
 module type Constraint = sig

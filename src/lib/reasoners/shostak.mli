@@ -64,3 +64,5 @@ module SXH : Set.S with type elt = Combine.r
 module L : Xliteral.S with type elt = Combine.r
 
 module Literal : Literal.S with type elt = L.t
+
+module HX : Hashtbl.S with type key = Combine.r
