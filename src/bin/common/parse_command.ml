@@ -946,15 +946,14 @@ let parse_output_opt =
            info ["dump-models-on"] ~docv ~docs:s_models ~doc)
     in
 
-    let mk_interpretation interpretation produce_models dump_models
-        verify_models =
+    let mk_interpretation interpretation produce_models dump_models =
       match interpretation with
-      | INone when produce_models || dump_models || verify_models -> ILast
+      | INone when produce_models || dump_models -> ILast
       | interpretation -> interpretation
     in
     Term.(
       const mk_interpretation $ interpretation $
-      produce_models $ dump_models $ verify_models
+      produce_models $ dump_models
     ),
     dump_models,
     dump_models_on,

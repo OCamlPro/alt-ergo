@@ -1354,10 +1354,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
 
   let get_boolean_model env =
-    List.map (fun Atom.{ lit; _ } ->
+    List.filter_map (fun Atom.{ lit; _ } ->
         match Shostak.Literal.view lit with
-        | Literal.LTerm e -> e
-        | LSem _ -> assert false
+        | Literal.LTerm e -> Some e
+        | LSem _ -> None
       ) (SAT.boolean_model env.satml)
 
   let get_model env =

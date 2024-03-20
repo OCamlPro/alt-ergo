@@ -82,25 +82,28 @@ let check (type a) (module SAT : S with type t = a) env =
   | I_dont_know | Sat -> ()
 
 exception Wrong_model of Explanation.t
+exception No_model
 
 (* Assert the last computed model in the environment [env].
 
-   @raise Unsat if the solver found a contradiction, which means the model
+   @raise Wrong_model if the solver found a contradiction, which means the model
           is wrong. *)
 let assert_model (type a) (module SAT : S with type t = a) env mdl =
-  ModelMap.iter
-    (fun ({ hs; _ } as name, _, ret_ty) graph ->
-       ModelMap.Graph.iter
-         (fun val_args val_ret ->
-            let e = Expr.mk_app name val_args ret_ty in
-            let iff = match ret_ty with Ty.Tbool -> true | _ -> false in
-            let eq = Expr.mk_eq ~iff e val_ret in
-            internal_assume (module SAT) env (Hstring.view hs) eq
-         )
-         graph
-    )
-    mdl.Models.model;
-  check (module SAT) env
+  try
+    ModelMap.iter
+      (fun ({ hs; _ } as name, _, ret_ty) graph ->
+         ModelMap.Graph.iter
+           (fun val_args val_ret ->
+              let e = Expr.mk_app name val_args ret_ty in
+              let iff = match ret_ty with Ty.Tbool -> true | _ -> false in
+              let eq = Expr.mk_eq ~iff e val_ret in
+              internal_assume (module SAT) env (Hstring.view hs) eq
+           )
+           graph
+      )
+      mdl.Models.model;
+    check (module SAT) env
+  with Unsat ex -> raise_notrace (Wrong_model ex)
 
 (* [get_value_in_boolean_model bmdl e] retrieves the assignment of the boolean
    expression [e] in the boolean model [bmdl].

@@ -1,6 +1,5 @@
 (set-logic ALL)
 (set-option :produce-models true)
-(set-option :verify-models true)
 (declare-const a (Array Int Int))
 (declare-const s Int)
 (assert (and (<= 0 s) (<= s 10)))

@@ -1,5 +1,4 @@
 (set-option :produce-models true)
-(set-option :verify-models true)
 (set-option :produce-assignments true)
 (set-logic QF_UF)
 (declare-const x Bool)

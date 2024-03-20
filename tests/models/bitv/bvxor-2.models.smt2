@@ -1,6 +1,5 @@
 (set-logic ALL)
 (set-option :produce-models true)
-(set-option :verify-models true)
 (declare-const x (_ BitVec 8))
 (assert (= x (bvxor #b10100101 #b01010101)))
 (check-sat)

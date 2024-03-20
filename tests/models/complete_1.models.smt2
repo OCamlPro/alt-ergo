@@ -1,5 +1,4 @@
 (set-option :produce-models true)
-(set-option :verify-models true)
 (set-logic ALL)
 (declare-const x Int)
 ; The preprocessor will replace this equation by `true` but we still

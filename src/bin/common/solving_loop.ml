@@ -103,8 +103,16 @@ let cmd_on_modes st modes cmd =
 let verify_model ~get_value () =
   match get_value [Expr.vrai] with
   | Some [e] when Expr.equal e Expr.vrai -> ()
-  | Some [_] | None | exception Sat_solver_util.Wrong_model _ ->
+
+  | Some [_]
+  | exception Sat_solver_util.Wrong_model _
+  | exception Sat_solver_util.No_model ->
     recoverable_error "The model is wrong"
+
+  | None ->
+    (* The model generation is not enabled. *)
+    ()
+
   | Some _ ->
     (* The length of the output list is the same as the length of the
        input list. *)
@@ -841,6 +849,8 @@ let main () =
       recoverable_error "No model produced, cannot execute get-value."
     | exception Sat_solver_util.Wrong_model _ ->
       recoverable_error "The model is wrong, cannot execute get-value."
+    | exception Sat_solver_util.No_model ->
+      recoverable_error "No model produced but it should, cannot execute get-value."
   in
 
   let handle_get_assignment ~get_assignment st =

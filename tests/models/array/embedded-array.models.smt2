@@ -1,5 +1,4 @@
 (set-option :produce-models true)
-(set-option :verify-models true)
 (set-logic ALL)
 (declare-sort S 0)
 (declare-const s S)

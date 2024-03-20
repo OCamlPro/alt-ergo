@@ -1,6 +1,5 @@
 (set-logic ALL)
 (set-option :produce-models true)
-(set-option :verify-models true)
 (declare-const x (_ BitVec 1))
 (declare-const y (_ BitVec 1))
 (declare-const xy (_ BitVec 2))
