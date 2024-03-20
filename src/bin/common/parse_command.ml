@@ -369,7 +369,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
 
 let mk_output_opt
     interpretation use_underscore objectives_in_interpretation unsat_core
-    output_format model_type () () () ()
+    output_format model_type () () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
   let output_format = match output_format with
@@ -865,7 +865,7 @@ let parse_output_opt =
 
   (* Use the --interpretation and --produce-models (which is equivalent to
      --interpretation last) to determine the interpretation value. *)
-  let interpretation, dump_models, dump_models_on, frontend =
+  let interpretation, dump_models, dump_models_on, verify_models, frontend =
     let interpretation =
       let doc = Format.sprintf
           "Best effort support for counter-example generation. \
@@ -890,11 +890,19 @@ let parse_output_opt =
       Arg.(value & opt interpretation INone &
            info ["interpretation"] ~docv ~docs:s_models ~doc)
     in
+
     let produce_models =
       let doc =
         "Enable model generation (equivalent to --interpretation last)."
       in
       Arg.(value & flag & info ["produce-models"] ~doc ~docs:s_models)
+    in
+
+    let verify_models =
+      let doc =
+        "Verify generated models."
+      in
+      Arg.(value & flag & info ["verify-models"] ~doc ~docs:s_models)
     in
 
 
@@ -949,6 +957,7 @@ let parse_output_opt =
     ),
     dump_models,
     dump_models_on,
+    verify_models,
     frontend
   in
 
@@ -1115,6 +1124,10 @@ let parse_output_opt =
     Term.(const Output.set_dump_models $ dump_models_on)
   in
 
+  let set_verify_models =
+    Term.(const set_verify_models $ verify_models)
+  in
+
   let set_frontend =
     Term.(const set_frontend $ frontend)
   in
@@ -1123,7 +1136,7 @@ let parse_output_opt =
              interpretation $ use_underscore $
              objectives_in_interpretation $ unsat_core $
              output_format $ model_type $
-             set_dump_models $ set_dump_models_on $
+             set_dump_models $ set_dump_models_on $ set_verify_models $
              set_sat_options $ set_frontend
             ))
 

@@ -29,9 +29,7 @@
 (**************************************************************************)
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
+  open Sat_solver_sig
 
   module FS = Fun_sat.Make(Th)
 
@@ -70,12 +68,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reinit_ctx = FS.reinit_ctx
 
+  let get_boolean_model t = FS.get_boolean_model !t
+
   let get_model t = FS.get_model !t
 
   let get_unknown_reason t = FS.get_unknown_reason !t
 
-  let get_value t expr = FS.get_value !t expr
-
   let get_objectives _env =
     raise (Util.Not_implemented "optimization is not supported by FunSAT.")
+
+  let reset_decisions _env = ()
 end

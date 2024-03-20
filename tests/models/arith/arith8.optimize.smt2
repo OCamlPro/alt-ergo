@@ -1,6 +1,7 @@
 ; This test checks if the optimization doesn't stop after getting an optimized
 ; model in a fixed branch of the SAT solver.
 (set-option :produce-models true)
+(set-option :verify-models false)
 (set-logic ALL)
 (declare-const x Int)
 (declare-const y Int)
