@@ -30,11 +30,13 @@ RUN opam switch create . 4.14.1 --locked --deps-only --ignore-constraints-on alt
 
 RUN opam exec -- dune subst
 
-RUN LINK_MODE=mixed opam exec -- dune build --release src/bin/text/Main_text.exe
+RUN LINK_MODE=mixed opam exec -- dune build --release @install
+
+RUN opam exec -- dune install --relocatable --prefix /opt/alt-ergo/
 
 FROM scratch AS alt-ergo
-COPY --from=compilation /src/alt-ergo/src/bin/text/Main_text.exe /bin/alt-ergo
-ENTRYPOINT [ "/bin/alt-ergo" ]
+COPY --from=compilation /opt/alt-ergo/ /opt/alt-ergo/
+ENTRYPOINT [ "/opt/alt-ergo/bin/alt-ergo" ]
 
 # FROM ocamlpro/ocaml:4.14 AS compilation
 #
