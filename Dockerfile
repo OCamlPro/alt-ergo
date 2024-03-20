@@ -1,6 +1,17 @@
-FROM quay.io/pypa/manylinux_2_28_aarch64 AS compilation
+FROM quay.io/pypa/manylinux_2_28_x86_64 AS compilation
 
-ADD https://github.com/ocaml/opam/releases/download/2.2.0-beta1/opam-2.2.0-beta1-arm64-linux /bin/opam
+# Enable Devel repo (for gmp-static)
+RUN dnf -y install almalinux-release-devel
+
+# Install config-manager command (for enabling PowerTools repo)
+RUN dnf -y install 'dnf-command(config-manager)'
+
+# Enable PowerTools repo (for zlib-static)
+RUN dnf config-manager --set-enabled powertools
+
+RUN dnf -y install gmp-static zlib-static make patch unzip
+
+ADD https://github.com/ocaml/opam/releases/download/2.2.0-beta1/opam-2.2.0-beta1-x86_64-linux /bin/opam
 
 RUN chmod +x /bin/opam
 
@@ -14,8 +25,6 @@ ENV OPAMYES 1
 ENV OPAMDEPEXTYES 1
 ENV OPAMCONFIRMLEVEL unsafe-yes
 ENV OPAMERRLOGLEN 0
-
-RUN yum -y install gmp-static zlib-static
 
 RUN opam switch create . 4.14.1 --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
