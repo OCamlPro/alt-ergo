@@ -84,24 +84,18 @@ let typed, _env = Typechecker.type_file parsed
 
 let pbs = Typechecker.split_goals_and_cnf typed
 
-module SAT = Fun_sat.Make(Theory.Main_Default)
+module SAT = Fun_sat_frontend.Make(Theory.Main_Default)
 module FE = Frontend.Make(SAT)
 
 let () =
   List.iter
     (fun (pb, _goal_name) ->
        let ctxt = Frontend.init_all_used_context () in
-       let acc0 = SAT.empty (), `Unknown (SAT.empty ()), Explanation.empty in
-       let s = Stack.create () in
-       let _env, consistent, _ex =
-         List.fold_left
-           (fun acc d ->
-              FE.process_decl (fun _ _ -> ()) ctxt s acc d
-           ) acc0 pb
-       in
-       match consistent with
-       | `Sat _ | `Unknown _ ->
-         Format.printf "unknown"
+       let env = FE.init_env ctxt in
+       List.iter (FE.process_decl env) pb;
+       match env.res with
+       | `Sat | `Unknown ->
+         Format.printf "unknown@."
        | `Unsat ->
-         Format.printf "unsat"
-    )pbs
+         Format.printf "unsat@."
+    ) pbs
