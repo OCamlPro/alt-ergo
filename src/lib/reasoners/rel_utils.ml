@@ -503,8 +503,12 @@ struct
                 The only constraints that need to be notified are those that
                 were applying to [r], and they only need to be notified if the
                 new domain is different from the old domain of [r]. *)
-            let nd = Domain.intersect ~ex d (create_domain nr) in
+            let default = create_domain nr in
+            let nd = Domain.intersect ~ex d default in
             let r_changed = not (Domain.equal nd d) in
+            (* Make sure to not add more constraints than necessary for the
+               representative domain. *)
+            let nd = if Domain.equal nd default then default else nd in
             let domains = MX.add nr nd t.domains in
             let leaves_map = r_add nr t.leaves_map in
             let changed = changed || r_changed in
