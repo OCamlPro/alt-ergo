@@ -18,8 +18,6 @@ bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
   "base-bigarray" {= "base"}
   "base-bytes" {= "base"}
-  "base-domains" {= "base"}
-  "base-nnp" {= "base"}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
   "camlzip" {= "1.11"}
@@ -93,23 +91,23 @@ conflicts: [
 ]
 pin-depends: [
   [
-  "dolmen.dev"
-  "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
-]
+    "dolmen.dev"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
+  ]
   [
-  "dolmen_loop.dev"
-  "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
-]
+    "dolmen_loop.dev"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
+  ]
   [
-  "dolmen_type.dev"
-  "git+https://github.com/Gbury/dolmen.git#4637064b98d0af7e42e8a55845ca80cb19fe1f36"
-]
+    "dolmen_type.dev"
+    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
+  ]
   [
     "js_of_ocaml.5.4.0"
     "https://github.com/ocsigen/js_of_ocaml/releases/download/5.4.0/js_of_ocaml-5.4.0.tbz"
   ]
   [
   "ocplib-simplex.0.5"
-  "git+https://github.com/OCamlPro/ocplib-simplex.git#master"
+  "git+https://github.com/OCamlPro/ocplib-simplex.git#50996ec8142bf9deef383cbbc774cf46d639b371"
 ]
 ]
