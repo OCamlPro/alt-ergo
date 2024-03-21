@@ -13,7 +13,7 @@ jobs:
     name: Build statically linked macOS binaries
     # Only do this when explicitly requested since it takes a long time to
     # build on macOS; no need to waste resources
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    #if: ${{ github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         include:
@@ -39,14 +39,16 @@ jobs:
 
       - run: opam exec -- dune subst
 
-      - run: LINK_MODE=mixed opam exec -- dune build --release src/bin/text/Main_text.exe
+      - run: opam exec -- dune build --release @install --promote-install-files false
+        env:
+          LINK_MODE: mixed
 
-      - run: cp src/bin/text/Main_text.exe src/bin/text/alt-ergo
+      - run: opam exec -- dune install -p alt-ergo --create-install-files --prefix opt/alt-ergo --relocatable
 
       - uses: actions/upload-artifact@v4
         with:
           name: alt-ergo-${{ matrix.arch }}-macos
-          path: src/bin/text/alt-ergo
+          path: _destdir/opt/alt-ergo/bin/alt-ergo
 
   musl:
     name: Build statically linked binary with musl
@@ -83,11 +85,13 @@ jobs:
       - run: opam exec -- dune subst
 
       - name: Build statically linked binary
-        run: LINK_MODE=static opam exec -- dune build --release src/bin/text/Main_text.exe
+        run: opam exec -- dune build --release @install --promote-install-files false
+        env:
+          LINK_MODE: static
 
-      - run: cp src/bin/text/Main_text.exe src/bin/text/alt-ergo
+      - run: opam exec -- dune install -p alt-ergo --create-install-files --prefix opt/alt-ergo --relocatable
 
       - uses: actions/upload-artifact@v4
         with:
           name: alt-ergo-x86_64-linux-musl
-          path: src/bin/text/alt-ergo
+          path: _destdir/opt/alt-ergo/bin/alt-ergo

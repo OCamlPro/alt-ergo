@@ -20,6 +20,8 @@ case "$LINK_MODE" in
     esac;;
   mixed)
     FLAGS="-noautolink"
+    # Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
+    # https://github.com/ocaml/ocaml/issues/12562
     CCLIB="-lstdcompat_stubs -lcamlzip -lnums -lzarith -lcamlstr -lunix -lz"
     LIBS="gmp"
     case "$OS" in
