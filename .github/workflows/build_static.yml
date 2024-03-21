@@ -35,6 +35,8 @@ jobs:
           ocaml-compiler: 4.14.1
           dune-cache: true
 
+      - run: opam install . --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
       - run: opam exec -- dune subst
 
       - run: opam exec -- dune build --release @install --promote-install-files false
