@@ -1,0 +1,8 @@
+(set-option :produce-models true)
+(set-logic ALL)
+(declare-const x Int)
+(assert (<= x 10))
+(push 1)
+(check-sat)
+(pop 1)
+(get-model)

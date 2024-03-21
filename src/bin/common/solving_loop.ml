@@ -415,21 +415,23 @@ let main () =
           "The output format %s is not supported by the Dolmen frontend."
           s
   in
+  let set_mode ?model mode st =
+    let st = DO.Mode.set mode st in
+    match mode with
+    | Sat ->
+      State.set partial_model_key model st
+    | _ ->
+      State.set partial_model_key None st
+  in
   let set_partial_model_and_mode solve_res st =
     match solve_res with
     | Unsat ->
-      st
-      |> DO.Mode.set Util.Unsat
-      |> State.set partial_model_key None
+      set_mode Unsat st
     | Unknown None ->
-      st
-      |> DO.Mode.set Util.Sat
-      |> State.set partial_model_key None
-    | Unknown (Some m)
-    | Sat m ->
-      st
-      |> DO.Mode.set Util.Sat
-      |> State.set partial_model_key (Some m)
+      set_mode Sat st
+    | Unknown (Some model)
+    | Sat model ->
+      set_mode Sat ~model st
   in
   (* The function In_channel.input_all is not available before OCaml 4.14. *)
   let read_all ch =
@@ -998,9 +1000,13 @@ let main () =
         let st =
           match td.contents with
           | `Pop n ->
-            State.set incremental_depth (State.get incremental_depth st - n) st
+            st
+            |> State.set incremental_depth (State.get incremental_depth st - n)
+            |> set_mode Assert
           | `Push n ->
-            State.set incremental_depth (State.get incremental_depth st + n) st
+            st
+            |> State.set incremental_depth (State.get incremental_depth st + n)
+            |> set_mode Assert
           | _ -> st
         in
         (* TODO:
