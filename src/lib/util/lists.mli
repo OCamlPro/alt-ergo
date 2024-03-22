@@ -51,3 +51,7 @@ val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
 val try_map : ('a -> 'b option) -> 'a list -> 'b list option
 (** [try_map f l] is similar to [List.map f l] but the function [f]
     may fail and the iterator shortcuts the computation. *)
+
+val is_sorted : ('a -> 'a -> int) -> 'a list -> bool
+(** [is_sorted cmp l] checks that [l] is sorted for the comparison function
+    [cmp]. *)
