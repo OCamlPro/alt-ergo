@@ -638,7 +638,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let backward_triggers q =
       try HE.find trs_tbl q.E.main
       with Not_found ->
-        let trs = E.resolution_triggers ~is_back:true q in
+        let trs =
+          E.resolution_triggers ~is_back:true q
+          |> List.map sort_pats
+        in
         HE.add trs_tbl q.E.main trs;
         trs
     in
@@ -652,7 +655,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let forward_triggers q =
       try HE.find trs_tbl q.E.main
       with Not_found ->
-        let trs = E.resolution_triggers ~is_back:false q in
+        let trs =
+          E.resolution_triggers ~is_back:false q
+          |> List.map sort_pats
+        in
         HE.add trs_tbl q.E.main trs;
         trs
     in
