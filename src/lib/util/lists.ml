@@ -59,3 +59,8 @@ let rec try_map f l =
     Option.bind (f x) @@ fun y ->
     Option.bind (try_map f xs) @@ fun ys ->
     Some (y :: ys)
+
+let rec is_sorted cmp l =
+  match l with
+  | x :: y :: xs -> cmp x y <= 0 && is_sorted cmp (y :: xs)
+  | [_] | [] -> true
