@@ -482,18 +482,10 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_pats_modulo pat lsubsts;
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
-  let trig_weight s t =
-    let sf = E.(term_view s).f in
-    let tf = E.(term_view t).f in
-    match sf, tf with
-    | Symbols.Name _, Symbols.Op _ -> -1
-    | Symbols.Op _, Symbols.Name _ -> 1
-    | _ -> (E.depth t) - (E.depth s)
-
   let matching mconf env tbox pat_info =
     let open Matching_types in
     let pats = pat_info.trigger in
-    let pats_list = List.stable_sort trig_weight pats.E.content in
+    let pats_list = pats.E.content in
     Debug.matching pats;
     if List.length pats_list > Options.get_max_multi_triggers_size () then
       pat_info, []
@@ -609,15 +601,30 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   module HE = Hashtbl.Make (E)
 
+  let pat_weight s t =
+    let sf = (Expr.term_view s).f in
+    let tf = (Expr.term_view t).f in
+    match sf, tf with
+    | Symbols.Name _, Symbols.Op _ -> -1
+    | Symbols.Op _, Symbols.Name _ -> 1
+    | _ -> Expr.(depth t - depth s)
+
+  let sort_pats tr =
+    let content = List.stable_sort pat_weight tr.E.content in
+    { tr with content }
+
   let triggers_of, clear_triggers_of_trs_tbl =
     let trs_tbl = HEI.create 101 in
     let triggers_of q mconf =
       match q.E.user_trs with
-      | _::_ as l -> l
+      | _::_ as l -> List.map sort_pats l
       | [] ->
         try HEI.find trs_tbl (q.E.main, mconf)
         with Not_found ->
-          let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
+          let trs =
+            E.make_triggers q.E.main q.E.binders q.E.kind mconf
+            |> List.map sort_pats
+          in
           HEI.add trs_tbl (q.E.main, mconf) trs;
           trs
     in
