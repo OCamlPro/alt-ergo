@@ -246,8 +246,13 @@ dev-switch:
 	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
 js-deps:
-	opam pin add js_of_ocaml 5.4.0
-	opam install js_of_ocaml-lwt js_of_ocaml-ppx data-encoding zarith_stubs_js lwt_ppx -y
+	opam install \
+		js_of_ocaml>=5.4.0 \
+		js_of_ocaml-lwt \
+		js_of_ocaml-ppx \
+		data-encoding \
+		zarith_stubs_js>=v0.16.1 \
+		lwt_ppx -y
 
 deps:
 	opam install -y . --locked --deps-only
