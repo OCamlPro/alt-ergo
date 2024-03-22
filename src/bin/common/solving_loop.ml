@@ -121,6 +121,8 @@ let add_if_named
             names. *)
     acc
 
+type stmt = Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt
+
 (** Translates dolmen locs to Alt-Ergo's locs *)
 let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
   DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
@@ -1139,7 +1141,20 @@ let main () =
     set_partial_model_and_mode solve_res st
   in
 
-  let handle_stmt :
+  let handle_reset st =
+    let () = Steps.reset_steps () in
+    st
+    |> State.set partial_model_key None
+    |> State.set solver_ctx_key empty_solver_ctx
+    |> State.set is_decision_env false
+    |> DO.Mode.clear
+    |> DO.Optimize.clear
+    |> DO.ProduceAssignment.clear
+    |> DO.init
+    |> State.set named_terms Util.MS.empty
+  in
+
+  let handle_stmt_full_incremental :
     Frontend.used_context ->
     State.t ->
     [< Typer_Pipe.typechecked | `Check of 'a ] D_loop.Typer_Pipe.stmt ->
@@ -1248,17 +1263,7 @@ let main () =
             st
           end
 
-      | {contents = `Reset; _} ->
-        let () = Steps.reset_steps () in
-        st
-        |> State.set partial_model_key None
-        |> State.set solver_ctx_key empty_solver_ctx
-        |> State.set is_decision_env false
-        |> DO.Mode.clear
-        |> DO.Optimize.clear
-        |> DO.ProduceAssignment.clear
-        |> DO.init
-        |> State.set named_terms Util.MS.empty
+      | {contents = `Reset; _} -> handle_reset st
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -1319,15 +1324,85 @@ let main () =
           "Ignoring statement: %a" Typer_Pipe.print td;
         st
   in
-  let handle_stmts all_context st l =
+
+  let handle_stmts_full_incremental all_context st l =
     let rec aux named_map st = function
       | [] -> State.set named_terms named_map st
       | stmt :: tl ->
-        let st = handle_stmt all_context st stmt in
+        let st = handle_stmt_full_incremental all_context st stmt in
         let named_map = add_if_named ~acc:named_map stmt in
         aux named_map st tl
     in
     aux (State.get named_terms st) st l
+  in
+
+  let current_path_key : stmt list State.key =
+    State.create_key ~pipe:"" "current_path"
+  in
+  let pushed_paths_key : stmt list Vec.t State.key =
+    State.create_key ~pipe:"" "pushed_paths"
+  in
+  let state_get key ~default st =
+    try State.get key st with State.Key_not_found _ -> default
+  in
+  let get_current_path = state_get current_path_key ~default:[] in
+  let get_pushed_paths = state_get pushed_paths_key ~default:(Vec.create ~dummy:(Obj.magic 0))
+  in
+  let handle_stmt_pop_reinit all_context st l =
+    let rec aux named_map st = function
+      | [] -> State.set named_terms named_map st
+      | (stmt: stmt) :: tl ->
+        begin
+          let current_path = get_current_path st in
+          match stmt with
+          | {contents = `Push n; _} ->
+            let pushed_paths = get_pushed_paths st in
+            for _ = 0 to n - 1 do
+              Vec.push pushed_paths current_path
+            done;
+            aux named_map st tl
+          | {contents = `Pop n; _} ->
+            let pushed_paths = get_pushed_paths st in
+            Format.eprintf "Vec size: %i@." pushed_paths.sz;
+            let rec pop_until until res =
+              if until = 0 then res else pop_until (until - 1) (Vec.pop pushed_paths)
+            in
+            let prefix = pop_until (n - 1) (Vec.pop pushed_paths) in
+            let st = handle_reset st in
+            let whole_path = List.rev_append prefix tl in
+            Format.eprintf "Restarting with %i instructions@." (List.length whole_path);
+            aux (State.get named_terms st) st whole_path
+          | {contents; _ } ->
+            let st =
+              let new_current_path =
+                match contents with
+                | `Clause _
+                | `Decls _
+                | `Defs _
+                | `Hyp _
+                | `Other _
+                | `Reset
+                | `Reset_assertions
+                | `Set_info _
+                | `Set_logic _
+                | `Set_option _ -> stmt :: current_path
+                | _ -> current_path
+              in
+              State.set current_path_key new_current_path st
+            in
+            let st = handle_stmt_full_incremental all_context st stmt in
+            let named_map = add_if_named ~acc:named_map stmt in
+            aux named_map st tl
+        end
+    in
+    aux (State.get named_terms st) st l
+  in
+  let handle_stmts all_context st l =
+    begin
+      if Options.get_imperative_mode ()
+      then handle_stmts_full_incremental
+      else handle_stmt_pop_reinit
+    end all_context st l
   in
   let d_fe filename =
     let logic_file, st = mk_state filename in

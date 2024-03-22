@@ -298,6 +298,9 @@ val set_triggers_var : bool -> unit
 (** Set [type_smt2] accessible with {!val:get_type_smt2} *)
 val set_type_smt2 : bool -> unit
 
+(** Set [type_smt2] accessible with {!val:get_type_smt2} *)
+val set_imperative_mode : bool -> unit
+
 (** Set [unsat_core] accessible with {!val:get_unsat_core} *)
 val set_unsat_core : bool -> unit
 
@@ -658,6 +661,10 @@ val get_type_only : unit -> bool
 
 (** [true] if the program shall stop after SMT2 typing. *)
 val get_type_smt2 : unit -> bool
+(** Default to [false] *)
+
+(** [true] if the program shall stop after SMT2 typing. *)
+val get_imperative_mode : unit -> bool
 (** Default to [false] *)
 
 (** {4 Internal options} *)
