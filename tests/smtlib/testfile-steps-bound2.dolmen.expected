@@ -1,5 +1,5 @@
 
 unknown
-(:reason-unknown (:step-limit 3))
+(:reason-unknown (:step-limit 5))
 
 unsat

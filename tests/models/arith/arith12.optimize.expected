@@ -7,9 +7,8 @@ unknown
   (x 10))
 unknown
 (
-  (define-fun x () Int 10)
+  (define-fun x () Int 0)
 )
 (objectives 
-  (x 10)
-  (x 10)
+  (x 0)
 )
