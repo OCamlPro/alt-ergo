@@ -679,7 +679,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Forward  -> forward_triggers q, "Forward"
            in
            assert (List.for_all
-                     (fun E.{content; _} -> Lists.is_sorted pat_weight content) tgs);
+                     (fun E.{content; _} ->
+                        Lists.is_sorted pat_weight content
+                     ) tgs);
            if Options.get_debug_triggers () then
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
