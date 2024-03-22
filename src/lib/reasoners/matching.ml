@@ -482,10 +482,20 @@ module Make (X : Arg) : S with type theory = X.t = struct
     Debug.match_pats_modulo pat lsubsts;
     List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
 
+  let pat_weight s t =
+    let sf = (Expr.term_view s).f in
+    let tf = (Expr.term_view t).f in
+    match sf, tf with
+    | Symbols.Name _, Symbols.Op _ -> -1
+    | Symbols.Op _, Symbols.Name _ -> 1
+    | _ -> Expr.(depth t - depth s)
+
   let matching mconf env tbox pat_info =
     let open Matching_types in
     let pats = pat_info.trigger in
     let pats_list = pats.E.content in
+    if Options.get_enable_assertions () then
+      assert (Lists.is_sorted pat_weight pats_list);
     Debug.matching pats;
     if List.length pats_list > Options.get_max_multi_triggers_size () then
       pat_info, []
@@ -601,14 +611,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
   module HE = Hashtbl.Make (E)
 
-  let pat_weight s t =
-    let sf = (Expr.term_view s).f in
-    let tf = (Expr.term_view t).f in
-    match sf, tf with
-    | Symbols.Name _, Symbols.Op _ -> -1
-    | Symbols.Op _, Symbols.Name _ -> 1
-    | _ -> Expr.(depth t - depth s)
-
   let sort_pats tr =
     let content = List.stable_sort pat_weight tr.E.content in
     { tr with content }
@@ -678,10 +680,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
              | Util.Backward -> backward_triggers q, "Backward"
              | Util.Forward  -> forward_triggers q, "Forward"
            in
-           assert (List.for_all
-                     (fun E.{content; _} ->
-                        Lists.is_sorted pat_weight content
-                     ) tgs);
            if Options.get_debug_triggers () then
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
