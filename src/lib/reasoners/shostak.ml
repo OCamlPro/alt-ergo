@@ -440,7 +440,8 @@ struct
     not (Options.get_restricted ()) &&
     (RECORDS.is_mine_symb sb ty ||
      BITV.is_mine_symb sb ty ||
-     ENUM.is_mine_symb sb ty)
+     ENUM.is_mine_symb sb ty ||
+     ADT.is_mine_symb sb ty)
 
   let is_a_leaf r = match r.v with
     | Term _ | Ac _ -> true

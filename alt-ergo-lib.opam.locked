@@ -62,6 +62,7 @@ depends: [
   "uutf" {= "1.0.3"}
   "yojson" {= "2.1.1"}
   "zarith" {= "1.13"}
+  "bheap" {= "2.0.0"}
 ]
 build: [
   ["dune" "subst"] {dev}

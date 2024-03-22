@@ -36,6 +36,15 @@ module LR = Uf.LX
 module Th = Shostak.Adt
 module SLR = Set.Make(LR)
 
+module TSet = Set.Make
+    (struct
+      type t = Uid.t
+
+      (* We use a dedicated total order on the constructor to ensure
+         the termination of the model generation. *)
+      let compare = Nest.compare
+    end)
+
 let timer = Timers.M_Adt
 
 module Domain = struct
@@ -43,27 +52,37 @@ module Domain = struct
      assigned to the semantic value has to use a constructor lying in the
      domain. *)
   type t = {
-    constrs : Uid.Set.t;
+    constrs : TSet.t;
+    (* The constructors are sorted by the module [Topological_order]
+       in order to ensure the termination of the model generation. *)
+
     ex : Ex.t;
   }
 
   exception Inconsistent of Ex.t
 
+  let[@inline always] cardinal { constrs; _ } = TSet.cardinal constrs
+
+  let[@inline always] choose { constrs; _ } =
+    (* We choose the minimal element to ensure the termination of
+       model generation. *)
+    TSet.min_elt constrs
+
   let[@inline always] as_singleton { constrs; ex } =
-    if Uid.Set.cardinal constrs = 1 then
-      Some (Uid.Set.choose constrs, ex)
+    if TSet.cardinal constrs = 1 then
+      Some (TSet.choose constrs, ex)
     else
       None
 
   let domain ~constrs ex =
-    if Uid.Set.is_empty constrs then
+    if TSet.is_empty constrs then
       raise @@ Inconsistent ex
     else
       { constrs; ex }
 
-  let[@inline always] singleton ~ex c = { constrs = Uid.Set.singleton c; ex }
+  let[@inline always] singleton ~ex c = { constrs = TSet.singleton c; ex }
 
-  let[@inline always] subset d1 d2 = Uid.Set.subset d1.constrs d2.constrs
+  let[@inline always] subset d1 d2 = TSet.subset d1.constrs d2.constrs
 
   let unknown ty =
     match ty with
@@ -73,31 +92,31 @@ module Domain = struct
       let constrs =
         List.fold_left
           (fun acc Ty.{ constr; _ } ->
-             Uid.Set.add constr acc
-          ) Uid.Set.empty body
+             TSet.add constr acc
+          ) TSet.empty body
       in
-      assert (not @@ Uid.Set.is_empty constrs);
+      assert (not @@ TSet.is_empty constrs);
       { constrs; ex = Ex.empty }
     | _ ->
       (* Only ADT values can have a domain. This case shouldn't happen since
          we check the type of semantic values in both [add] and [assume]. *)
       assert false
 
-  let equal d1 d2 = Uid.Set.equal d1.constrs d2.constrs
+  let equal d1 d2 = TSet.equal d1.constrs d2.constrs
 
   let pp ppf d =
     Fmt.(braces @@
-         iter ~sep:comma Uid.Set.iter Uid.pp) ppf d.constrs;
+         iter ~sep:comma TSet.iter Uid.pp) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
   let intersect ~ex d1 d2 =
-    let constrs = Uid.Set.inter d1.constrs d2.constrs in
+    let constrs = TSet.inter d1.constrs d2.constrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
     domain ~constrs ex
 
   let remove ~ex c d =
-    let constrs = Uid.Set.remove c d.constrs in
+    let constrs = TSet.remove c d.constrs in
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
 end
@@ -209,6 +228,8 @@ module Domains = struct
         ) t.changed acc
     in
     acc, { t with changed = SX.empty }
+
+  let fold f t = MX.fold f t.domains
 end
 
 let calc_destructor d e uf =
@@ -568,43 +589,108 @@ exception Found of X.r * Uid.t
 
 (* Pick a delayed destructor application in [env.delayed]. Returns [None]
    if there is no delayed destructor. *)
-let pick_delayed_destructor env =
+let pick_delayed_destructor env uf =
+  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
   try
     Rel_utils.Delayed.iter_delayed
       (fun r sy _e ->
          match sy with
-         | Sy.Destruct d ->
-           raise_notrace @@ Found (r, d)
+         | Sy.Destruct destr ->
+           let d = Domains.get r ds in
+           if Domain.cardinal d > 1 then
+             raise_notrace @@ Found (r, destr)
+           else
+             ()
          | _ ->
            ()
       ) env.delayed;
     None
   with Found (r, d) -> Some (r, d)
 
+let is_enum ty c =
+  match ty with
+  | Ty.Tadt (name, params) ->
+    let Adt cases = Ty.type_body name params in
+    Lists.is_empty @@ Ty.assoc_destrs c cases
+  | _ -> assert false
+
+let pick_tightenable_domain ~for_model uf =
+  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+  Domains.fold
+    (fun r d best ->
+       let rr, _ = Uf.find_r uf r in
+       match Th.embed rr with
+       | Constr _ ->
+         best
+       | _ ->
+         let cd = Domain.cardinal d in
+         let c = Domain.choose d in
+         if for_model || is_enum (X.type_info r) c then
+           match best with
+           | Some (n, _, _) when n <= cd -> best
+           | Some _ | None -> Some (cd, r, c)
+         else
+           best
+    ) ds None
+
+let can_split env n =
+  let m = Options.get_max_split () in
+  Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
+
+let (let*) = Option.bind
+
 (* Do a case-split by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
+let case_split_destructor env uf =
+  if not @@ Options.get_enable_adts_cs () then
+    None
+  else
+    let* r, d = pick_delayed_destructor env uf in
+    let c = constr_of_destr (X.type_info r) d in
+    Some (LR.mkv_builtin false (Sy.IsConstr c) [r])
+
+(* Do a case-split by choosing a semantic value [r] whose the domain is as
+   small as possible.
+
+   If [for_model] is [false], we consider only constructors without payload. In
+   particular, if [r] has no constructors without payload in its domain, we
+   don't case-split on it. *)
+let case_split_best ~for_model env uf =
+  let* n, r, c = pick_tightenable_domain ~for_model uf in
+  let n = Numbers.Q.from_int n in
+  if for_model || can_split env n then
+    let _, cons = Option.get @@ build_constr_eq r c in
+    let nr, ctx = X.make cons in
+    assert (Lists.is_empty ctx);
+    Some (LR.mkv_eq r nr)
+  else
+    None
+
 let case_split env uf ~for_model =
-  if Options.get_disable_adts () || not (Options.get_enable_adts_cs())
-  then
+  if Options.get_disable_adts () then
     []
   else begin
-    assert (not for_model);
-    if Options.get_debug_adt () then
-      Debug.pp_domains "before cs"
-        (Uf.GlobalDomains.find (module Domains) (Uf.domains uf));
-    match pick_delayed_destructor env with
-    | Some (r, d) ->
-      if Options.get_debug_adt () then
+    let cs =
+      match case_split_destructor env uf with
+      | Some _ as cs ->
+        assert (not (Options.get_enable_adts_cs ()) || not for_model);
+        cs
+      | None -> case_split_best ~for_model env uf
+    in
+    match cs with
+    | Some cs ->
+      if Options.get_debug_adt () then begin
+        Debug.pp_domains "before cs"
+          (Uf.GlobalDomains.find (module Domains) (Uf.domains uf));
         Printer.print_dbg ~flushed:false
           ~module_name:"Adt_rel" ~function_name:"case_split"
-          "found r = %a and d = %a@ " X.print r Uid.pp d;
-      (* CS on negative version would be better in general. *)
-      let c = constr_of_destr (X.type_info r) d in
-      let cs =  LR.mkv_builtin false (Sy.IsConstr c) [r] in
-      [ cs, true, Th_util.CS (Th_util.Th_adt, two) ]
+          "Assume %a" (Xliteral.print_view X.print) cs;
+      end;
+      [ cs, true, Th_util.CS (Th_util.Th_adt, two)]
     | None ->
-      Debug.no_case_split ();
+      if Options.get_debug_adt () then
+        Debug.no_case_split ();
       []
   end
 

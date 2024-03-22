@@ -2567,6 +2567,11 @@ let rec type_decl (acc, env) d assertion_stack =
   | TypeDecl l ->
     let not_rec, are_rec = partition_non_rec l in
 
+    let not_rec, are_rec =
+      if Lists.is_empty are_rec then not_rec, are_rec
+      else [], List.rev_append not_rec are_rec
+    in
+
     (* A. Typing types that are not recursive *)
     let acc, env =
       List.fold_left
