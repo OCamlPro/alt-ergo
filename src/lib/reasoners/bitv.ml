@@ -1464,7 +1464,10 @@ module Shostak(X : ALIEN) = struct
       let compare = compare_mine
     end)
 *)
-  let fully_interpreted _ = true
+  let fully_interpreted sb =
+    match sb with
+    | Sy.Op (Concat | Extract _ | BVnot) -> true
+    | _ -> false
 
   let term_extract _ = None, false
 

@@ -92,6 +92,9 @@ module type SHOSTAK = sig
 
   val print : Format.formatter -> t -> unit
 
+  (** return true if the symbol is fully interpreted by the theory, i.e. it
+      is fully embedded into semantic values and does not need term-level
+      congruence *)
   val fully_interpreted : Symbols.t -> bool
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
