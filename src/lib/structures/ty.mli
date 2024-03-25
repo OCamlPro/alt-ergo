@@ -58,9 +58,9 @@ type t =
   (** Enumeration, with its name, and the list of its constructors. *)
 
   | Tadt of Hstring.t * t list
-  (** Algebraic types applied to arguments. [Tadt (s, args)] is
-      the application of the datatype constructor [s] to
-      arguments [args]. *)
+  (** Application of algebraic data types. [Tadt (a, params)] denotes
+      the application of the polymorphim datatype [a] to the types parameters
+      [params]. *)
 
   | Trecord of trecord
   (** Record type. *)
