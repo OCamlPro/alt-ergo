@@ -213,7 +213,9 @@ let builtin_enum = function
     let add_cstrs map =
       List.fold_left (fun map ((c : DE.term_cst), _) ->
           let name = get_basename c.path in
-          DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } (fun env _ ->
+          DStd.Id.Map.add
+            { name = DStd.Name.simple name; ns = Term }
+            (fun env _ ->
               builtin_term @@
               Dolmen_type.Base.term_app_cst
                 (module Dl.Typer.T) env c) map)
@@ -239,7 +241,7 @@ module Const = struct
         let name = "bv2nat" in
         Id.mk ~name ~builtin:(BV2Nat n)
           (DStd.Path.global name) Ty.(arrow [bitv n] int))
-  
+
   let int2bv =
     with_cache (fun n ->
         let name = "int2bv" in

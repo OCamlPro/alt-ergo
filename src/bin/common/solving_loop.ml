@@ -1389,14 +1389,15 @@ let main () =
             aux named_map st tl
           | {contents = `Pop n; _} ->
             let pushed_paths = get_pushed_paths st in
-            Format.eprintf "Vec size: %i@." pushed_paths.sz;
             let rec pop_until until res =
-              if until = 0 then res else pop_until (until - 1) (Vec.pop pushed_paths)
+              if until = 0 then
+                res
+              else
+                pop_until (until - 1) (Vec.pop pushed_paths)
             in
             let prefix = pop_until (n - 1) (Vec.pop pushed_paths) in
             let st = handle_reset st in
             let whole_path = List.rev_append prefix tl in
-            Format.eprintf "Restarting with %i instructions@." (List.length whole_path);
             aux Util.MS.empty st whole_path
           | {contents; _ } ->
             let st =
