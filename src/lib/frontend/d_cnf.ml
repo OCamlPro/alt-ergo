@@ -216,9 +216,9 @@ let builtin_enum = function
           DStd.Id.Map.add
             { name = DStd.Name.simple name; ns = Term }
             (fun env _ ->
-              builtin_term @@
-              Dolmen_type.Base.term_app_cst
-                (module Dl.Typer.T) env c) map)
+               builtin_term @@
+               Dolmen_type.Base.term_app_cst
+                 (module Dl.Typer.T) env c) map)
         map cstrs
     in
     Cache.store_ty (DE.Ty.Const.hash ty_cst) ty_;
