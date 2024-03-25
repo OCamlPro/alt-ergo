@@ -146,6 +146,8 @@ module type S = sig
 
   val init_env : ?sat_env:sat_env -> used_context -> env
 
+  val declare : Id.typed process
+
   val push : int process
 
   val pop : int process
@@ -435,6 +437,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
      exceptions. *)
   let wrap_f f ?loc x env =
     check_if_over (handle_sat_exn f ?loc x) env
+
+  let declare = wrap_f internal_decl
 
   let push = wrap_f internal_push
 

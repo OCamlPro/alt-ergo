@@ -21,8 +21,7 @@
    Parse_command
    Input_frontend
    Signals_profiling
-   Solving_loop
-   Solving_loop_imperative)
+   Solving_loop)
 )
 
 (generate_sites_module

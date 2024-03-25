@@ -1199,9 +1199,12 @@ let main () =
         in
         st
 
-      | {contents = `Decls l; _} ->
+      | {contents = `Decls l; loc; _} ->
         let st = DO.Mode.set Util.Assert st in
-        D_cnf.cache_decls l;
+        let decls = D_cnf.make_decls l in
+        let module Api = (val DO.SatSolverModule.get st) in
+        let loc = dl_to_ael file_loc loc in
+        List.iter (fun decl -> Api.FE.declare ~loc decl Api.env) decls;
         st
 
       (* When the next statement is a goal, the solver is called and provided
@@ -1371,7 +1374,7 @@ let main () =
             let st = handle_reset st in
             let whole_path = List.rev_append prefix tl in
             Format.eprintf "Restarting with %i instructions@." (List.length whole_path);
-            aux (State.get named_terms st) st whole_path
+            aux Util.MS.empty st whole_path
           | {contents; _ } ->
             let st =
               let new_current_path =

@@ -99,7 +99,7 @@ val pp_query :
 (** Registers the declarations in the cache. If there are more than one element
     in the list, it is assumed they are mutually recursive (but if it is not the
     case, it still work). *)
-val cache_decls : D_loop.Typer_Pipe.decl list -> unit
+val make_decls : D_loop.Typer_Pipe.decl list -> (Hstring.t * Ty.t list * Ty.t) list
 
 val builtins :
   Dolmen_loop.State.t ->

@@ -697,14 +697,14 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   in
   Cache.store_sy tcst sy;
   (* Adding polymorphic types to the cache. *)
-  Cache.store_ty_vars id_ty(* ;
-   * let arg_tys, ret_ty =
-   *   match DT.view id_ty with
-   *   | `Arrow (arg_tys, ret_ty) ->
-   *     List.map dty_to_ty arg_tys, dty_to_ty ret_ty
-   *   | _ -> [], dty_to_ty id_ty
-   * in
-   * (Hstring.make name, arg_tys, ret_ty) *)
+  Cache.store_ty_vars id_ty;
+  let arg_tys, ret_ty =
+    match DT.view id_ty with
+    | `Arrow (arg_tys, ret_ty) ->
+      List.map dty_to_ty arg_tys, dty_to_ty ret_ty
+    | _ -> [], dty_to_ty id_ty
+  in
+  (Hstring.make name, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -1898,16 +1898,16 @@ let make_form name_base f loc ~decl_kind =
   else
     E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
-let cache_decls = function
+let make_decls = function
   | [] -> assert false (* We could probably just return (). *)
   | [td] ->
     begin
       match td with
-      | `Type_decl (td, _def) -> mk_ty_decl td
-      | `Term_decl td -> mk_term_decl td;
+      | `Type_decl (td, _def) -> mk_ty_decl td; []
+      | `Term_decl td -> [mk_term_decl td];
     end
   | dcl ->
-    let rec aux acc tdl =
+    let rec aux term_acc acc tdl =
       (* for now, when acc has more than one element it is assumed that the
          types are mutually recursive. Which is not necessarily the case.
          But it doesn't affect the execution.
@@ -1919,20 +1919,21 @@ let cache_decls = function
           | [otd] -> mk_ty_decl otd
           | _ -> mk_mr_ty_decls (List.rev acc)
         end;
-        mk_term_decl td;
-        aux [] tl
+        let t = mk_term_decl td in
+        aux (t :: term_acc) [] tl
 
       | `Type_decl (td, _def) :: tl ->
-        aux (td :: acc) tl
+        aux term_acc (td :: acc) tl
 
       | [] ->
         begin match acc with
           | [] -> ()
           | [otd] -> mk_ty_decl otd
           | _ ->  mk_mr_ty_decls (List.rev acc)
-        end
+        end;
+        term_acc
     in
-    aux [] dcl
+    aux [] [] dcl
 
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
