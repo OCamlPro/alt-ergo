@@ -179,6 +179,11 @@ let print_solve_res loc goal_name r =
 
 exception StopProcessDecl
 
+(** Returns the value bound to the key in the state in argument: if it does not
+    exist, results default. *)
+let state_get ~default key st =
+  try State.get key st with State.Key_not_found _ -> default
+
 let main () =
   let () = Dolmen_loop.Code.init [] in
 
@@ -410,6 +415,18 @@ let main () =
      before starting to assert again. *)
   let is_decision_env : bool State.key =
     State.create_key ~pipe:"" "is_decision_env"
+  in
+
+  (* Key used only in handle_stmt_pop_reinit, registers the commands executed
+     to save them them if a push command is executed. *)
+  let current_path_key : stmt list State.key =
+    State.create_key ~pipe:"" "current_path"
+  in
+
+  (* Key used only in handle_stmt_pop_reinit, saves the commands executed
+     when a push is executed and replays them when a pop is met. *)
+  let pushed_paths_key : stmt list Vec.t State.key =
+    State.create_key ~pipe:"" "pushed_paths"
   in
 
   (* Before each query, we push the current environment. This allows to keep a
@@ -1141,6 +1158,7 @@ let main () =
     set_partial_model_and_mode solve_res st
   in
 
+  (* TODO: reset options to their initial value. *)
   let handle_reset st =
     let () = Steps.reset_steps () in
     st
@@ -1328,6 +1346,8 @@ let main () =
         st
   in
 
+  (* Handle each statement one after the other.
+     Still experimental due to push & pop issues. *)
   let handle_stmts_full_incremental all_context st l =
     let rec aux named_map st = function
       | [] -> State.set named_terms named_map st
@@ -1339,18 +1359,21 @@ let main () =
     aux (State.get named_terms st) st l
   in
 
-  let current_path_key : stmt list State.key =
-    State.create_key ~pipe:"" "current_path"
+  let get_current_path = state_get ~default:[] current_path_key in
+
+  let get_pushed_paths =
+    state_get ~default:(Vec.create ~dummy:[]) pushed_paths_key
   in
-  let pushed_paths_key : stmt list Vec.t State.key =
-    State.create_key ~pipe:"" "pushed_paths"
-  in
-  let state_get key ~default st =
-    try State.get key st with State.Key_not_found _ -> default
-  in
-  let get_current_path = state_get current_path_key ~default:[] in
-  let get_pushed_paths = state_get pushed_paths_key ~default:(Vec.create ~dummy:(Obj.magic 0))
-  in
+
+  (* Same as handle_stmts_full_incremental, but removes pops and pushes.
+     Instead, every command that perform an effect on the environment
+     (definitions, assertion, resets, set option, ...) are stored in a list of
+     commands. When a (push n) is performed, this list is stored n times in a
+     Vec. When a pop m occurs, we reset the analysis, the Vec is popped m times
+     and the list of commands is replayed before continuing the analysis.
+     /!\ Pop do not reset options, so there may be inconstencies between a first
+     execution and a reinitialized one. The handle_reset function should handle
+     this, but it is not the case yet. *)
   let handle_stmt_pop_reinit all_context st l =
     let rec aux named_map st = function
       | [] -> State.set named_terms named_map st
@@ -1379,17 +1402,40 @@ let main () =
             let st =
               let new_current_path =
                 match contents with
+                (* Statemets to keep *)
                 | `Clause _
                 | `Decls _
                 | `Defs _
+                | `Exit (* This case should not happen.*)
                 | `Hyp _
-                | `Other _
                 | `Reset
                 | `Reset_assertions
                 | `Set_info _
                 | `Set_logic _
                 | `Set_option _ -> stmt :: current_path
-                | _ -> current_path
+                (* Statements to remove *)
+                | `Echo _
+                | `Get_assertions
+                | `Get_info _
+                | `Get_model
+                | `Get_option _
+                | `Get_proof
+                | `Get_unsat_core
+                | `Get_value _
+                | `Get_assignment
+                | `Get_unsat_assumptions
+                | `Goal _
+                | `Push _
+                | `Pop _
+                | `Solve (_, _) -> current_path
+                (* Custom statement *)
+                | `Other (custom, _) ->
+                  begin
+                    match custom with
+                    | {name = Simple ("minimize" | "maximize"); _} ->
+                      stmt :: current_path
+                    | _ -> current_path
+                  end
               in
               State.set current_path_key new_current_path st
             in
