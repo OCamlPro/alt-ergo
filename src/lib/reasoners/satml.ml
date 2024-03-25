@@ -1038,21 +1038,28 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         (fun acc (ta : Atom.atom) ->
            assert (ta.is_true);
            assert (ta.var.level >= 0);
-           if ta.var.level <= Vec.size env.increm_guards then begin
-             incr nb_f;
-             let ex =
-               if ta.var.level = 0 then Ex.empty else
-                 let d =
-                   Vec.get env.trail (Vec.get env.trail_lim (ta.var.level - 1))
-                 in
-                 Ex.singleton (Ex.Literal d)
-             in
-             (ta.lit,
-              Th_util.Other,
-              ex,
-              ta.var.level,
-              env.cpt_current_propagations) :: acc
+           if ta.var.level = 0 then begin
+             (ta.lit, Th_util.Other, Ex.empty, 0, env.cpt_current_propagations)
+             :: acc
            end
+           (* This was first added by PR 1000, but it triggers a bug in
+              tests/cc/testfile-ac_cc002.ae with option
+              --no-tableaux-cdcl-in-instantiation *)
+           (* if ta.var.level <= Vec.size env.increm_guards then begin
+            *   incr nb_f;
+            *   let ex =
+            *     if ta.var.level = 0 then Ex.empty else
+            *       let d =
+            *         Vec.get env.trail (Vec.get env.trail_lim (ta.var.level - 1))
+            *       in
+            *       Ex.singleton (Ex.Literal d)
+            *   in
+            *   (ta.lit,
+            *    Th_util.Other,
+            *    ex,
+            *    ta.var.level,
+            *    env.cpt_current_propagations) :: acc
+            * end *)
            else acc
         )[] lazy_q
     in
