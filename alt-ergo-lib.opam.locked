@@ -53,6 +53,7 @@ depends: [
   "ppx_derivers" {= "1.2.1"}
   "ppx_deriving" {= "5.2.1"}
   "ppxlib" {= "0.31.0"}
+  "qcheck" {= "0.21.3"}
   "result" {= "1.5"}
   "seq" {= "base"}
   "sexplib0" {= "v0.16.0"}

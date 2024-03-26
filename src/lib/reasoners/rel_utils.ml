@@ -241,7 +241,7 @@ module type Domain = sig
 
       @raise Inconsistent if [r] cannot possibly be in the domain of [t]. *)
 
-  val map_leaves : (X.r -> 'a -> t) -> X.r -> 'a -> t
+  val map_leaves : (X.r -> t) -> X.r -> t
   (** [map_leaves f r acc] is the "inverse" of [fold_leaves] in the sense that
       it rebuilds a domain for [r] by using [f] to access the domain for each
       of [r]'s leaves. *)
@@ -397,9 +397,9 @@ struct
       ) leaves_map (X.leaves r)
 
   let create_domain r =
-    Domain.map_leaves (fun r () ->
+    Domain.map_leaves (fun r ->
         Domain.unknown (X.type_info r)
-      ) r ()
+      ) r
 
   let add r t =
     match MX.find r t.domains with
@@ -589,7 +589,7 @@ struct
               if X.is_a_leaf parent then
                 assert (X.equal r parent)
               else
-                update parent (Domain.map_leaves (fun r () -> get r) parent ())
+                update parent (Domain.map_leaves get parent)
             ) parents
         | exception Not_found -> ()
       else

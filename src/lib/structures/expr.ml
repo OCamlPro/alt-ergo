@@ -379,6 +379,12 @@ module SmtPrinter = struct
     | Sy.L_neg_built Sy.LT, [a; b] ->
       Fmt.pf ppf "@[<2>(>= %a %a@])" pp a pp b
 
+    | Sy.L_built Sy.BVULE, [a;b] ->
+      Fmt.pf ppf "@[<2>(bvule %a %a@])" pp a pp b
+
+    | Sy.L_neg_built Sy.BVULE, [a;b] ->
+      Fmt.pf ppf "@[<2>(bvugt %a %a@])" pp a pp b
+
     | Sy.L_neg_pred, [a] ->
       Fmt.pf ppf "@[<2>(not@ %a@])" pp a
 
@@ -389,7 +395,8 @@ module SmtPrinter = struct
       Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))"
         Hstring.print hs pp e
 
-    | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
+    | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
+      | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
       | Sy.L_built (Sy.IsConstr _)
       | Sy.L_neg_built (Sy.IsConstr _)), _ ->
@@ -562,6 +569,12 @@ module AEPrinter = struct
     | Sy.L_neg_built Sy.LT, [a; b] ->
       Fmt.pf ppf "(%a >= %a)" pp a pp b
 
+    | Sy.L_built Sy.BVULE, [a;b] ->
+      Fmt.pf ppf "(%a <= %a)" pp a pp b
+
+    | Sy.L_neg_built Sy.BVULE, [a;b] ->
+      Fmt.pf ppf "(%a > %a)" pp a pp b
+
     | Sy.L_neg_pred, [a] ->
       Fmt.pf ppf "(not %a)" pp a
 
@@ -571,7 +584,8 @@ module AEPrinter = struct
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "not (%a ? %a)" pp e Hstring.print hs
 
-    | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
+    | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
+      | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
       | Sy.L_built (Sy.IsConstr _)
       | Sy.L_neg_built (Sy.IsConstr _)), _ ->
@@ -3102,8 +3116,8 @@ module BV = struct
       (bvnot (bvlshr (bvnot s) t))
 
   (* Comparisons *)
-  let bvult s t = Ints.(bv2nat s < bv2nat t)
-  let bvule s t = Ints.(bv2nat s <= bv2nat t)
+  let bvult s t = mk_builtin ~is_pos:false BVULE [t; s]
+  let bvule s t = mk_builtin ~is_pos:true BVULE [s; t]
   let bvugt s t = bvult t s
   let bvuge s t = bvule t s
   let bvslt s t =

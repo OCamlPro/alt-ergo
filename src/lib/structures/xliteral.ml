@@ -29,8 +29,9 @@
 (**************************************************************************)
 
 type builtin = Symbols.builtin =
-    LE | LT | (* arithmetic *)
-    IsConstr of Hstring.t (* ADT tester *)
+    LE | LT (* arithmetic *)
+  | IsConstr of Hstring.t (* ADT tester *)
+  | BVULE (* unsigned bit-vector arithmetic *)
 
 type 'a view =
   | Eq of 'a * 'a
@@ -117,6 +118,15 @@ let print_view ?(lbl="") pr_elt fmt vw =
     Format.fprintf fmt "%s %a >= %a" lbl pr_elt v1 pr_elt v2
 
   | Builtin (_, (LE | LT), _) ->
+    assert false (* not reachable *)
+
+  | Builtin (true, BVULE, [v1;v2]) ->
+    Format.fprintf fmt "%s %a <= %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (false, BVULE, [v1;v2]) ->
+    Format.fprintf fmt "%s %a > %a" lbl pr_elt v1 pr_elt v2
+
+  | Builtin (_, BVULE, _) ->
     assert false (* not reachable *)
 
   | Builtin (pos, IsConstr hs, [e]) ->

@@ -38,5 +38,6 @@ pkgs.mkShell {
     odoc
     ppx_deriving
     stdcompat
+    qcheck
   ];
 }

@@ -24,3 +24,9 @@
 (rule
  (alias runtest-ci)
  (action (diff dune.inc dune.inc.gen)))
+
+(test
+ (package alt-ergo-lib)
+ (name bitvec_tests)
+ (modules bitvec_tests)
+ (libraries alt-ergo-lib qcheck zarith))

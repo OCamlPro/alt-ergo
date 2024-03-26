@@ -118,3 +118,23 @@ val extract : t -> int -> int -> t
 (** [extract b i j] returns the bitlist from index [i] to index [j] inclusive.
 
     The resulting bitlist has length [j - i + 1]. *)
+
+val increase_lower_bound : t -> Z.t -> Z.t
+(** [increase_lower_bound b lb] returns the smallest integer [lb' >= lb] that
+    matches the bit-pattern in [b].
+
+    @raise Not_found if no such integer exists. *)
+
+val decrease_upper_bound : t -> Z.t -> Z.t
+(** [decrease_upper_bound b ub] returns the largest integer [ub' >= ub] that
+    matches the bit-pattern in [b].
+
+    @raise Not_found if no such integer exists. *)
+
+(**/**)
+
+(** [fold_finite_domain f i acc] accumulates [f] on all the elements of [i] (in
+    an unspecified order). Intended for testing purposes only.
+
+    @raise Invalid_argument if the bitlist is [empty]. *)
+val fold_domain : (Z.t -> 'a -> 'a) -> t -> 'a -> 'a

@@ -145,6 +145,25 @@ val pick : is_max:bool -> t -> Numbers.Q.t option
     [is_max] is [true], we pick the largest element of [t], if it exists.
     We look for the smallest element if [is_max] is [false]. *)
 
+(** {2 Bit-vector helpers}
+
+    These functions are intended for the BV theory. They can only be used with
+    integer intervals. Some of these functions return intervals "of width [n]",
+    where [n] is computed from the parameters of the function. This means that
+    the returned interval is contained in the range [[0, n)] ([0] inclusive, [n]
+    exclusive). *)
+
+val extract : t -> int -> int -> t
+(** [extract s i j] returns the bits of [s] from position [i] to [j], inclusive.
+
+    Represents the function [fun x -> floor(x / 2^i) % 2^(j - i + 1)].
+
+    Requires [0 <= i <= j] and returns an interval of width [j - i + 1].
+
+    {b Note}: The interval [s] must be an integer interval, but is allowed to be
+    unbounded (in which case [extract s i j] returns the full interval
+    [[0, 2^(j - i + 1) - 1]]). *)
+
 type interval_matching =
   ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)
     Var.Map.t
@@ -156,3 +175,11 @@ type interval_matching =
 val match_interval:
   Symbols.bound -> Symbols.bound -> t -> interval_matching ->
   interval_matching option
+
+(**/**)
+
+(** [fold_finite_domain f i acc] accumulates [f] on all the elements of [i] (in
+    an unspecified order). Intended for testing purposes only.
+
+    @raise Invalid_argument if [i] contains rationals or is unbounded. *)
+val fold_finite_domain : (Z.t -> 'a -> 'a) -> t -> 'a -> 'a

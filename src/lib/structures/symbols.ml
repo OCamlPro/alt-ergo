@@ -31,6 +31,7 @@
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Hstring.t (* ADT tester *)
+  | BVULE (* unsigned bit-vector arithmetic *)
 
 type operator =
   | Tite
@@ -204,7 +205,7 @@ let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2
     (function
       | IsConstr h1, IsConstr h2 -> Hstring.compare h1 h2
-      | _, (LT | LE | IsConstr _) -> assert false
+      | _, (LT | LE | BVULE | IsConstr _) -> assert false
     )
 
 let compare_lits lit1 lit2 =
@@ -380,6 +381,8 @@ module AEPrinter = struct
     | L_neg_built LE -> Fmt.pf ppf ">"
     | L_neg_built LT -> Fmt.pf ppf ">="
     | L_neg_pred -> Fmt.pf ppf "not "
+    | L_built BVULE -> Fmt.pf ppf "<="
+    | L_neg_built BVULE -> Fmt.pf ppf ">"
     | L_built (IsConstr h) ->
       Fmt.pf ppf "? %a" Hstring.print h
     | L_neg_built (IsConstr h) ->

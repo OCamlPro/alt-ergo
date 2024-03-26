@@ -1197,6 +1197,150 @@ let pick ~is_max { ints; is_int; _ } =
     assert false
 
 (*****************)
+(*   Bit-vector  *)
+(*****************)
+
+(** Apply function [f] to the interval.
+
+    [f] *MUST* be monotone (either increasing or decreasing depending on the
+    value of the [increasing] labelled argument)
+
+    The [minfty] and [pinfty] optional arguments provide values for [map_bigint]
+    applied to [Minfty] and [Pinfty], i.e. the limits on negative and positive
+    infinities, respectively.
+
+    If no such value is provided, [Invalid_arg] is raised instead. *)
+let map_monotone ?minfty ?pinfty ~increasing f uints =
+  let get_infty = function
+    | Some infty -> infty
+    | None -> invalid_arg "Intervals.map"
+  in
+  let ints =
+    List.fold_left (fun l (lb, ub) ->
+        let f_lb =
+          match int_of_borne_inf lb with
+          | Large (lb, ex) -> Large (f lb, ex)
+          | Minfty -> get_infty minfty
+          | Strict _ | Pinfty -> assert false
+        in
+        let f_ub =
+          match int_of_borne_sup ub with
+          | Large (ub, ex) -> Large (f ub, ex)
+          | Pinfty -> get_infty pinfty
+          | Strict _ | Minfty -> assert false
+        in
+        let lb, ub = if increasing then f_lb, f_ub else f_ub, f_lb in
+        (lb, ub) :: l
+      ) [] uints.ints
+  in
+  let res = union_intervals { uints with ints } in
+  assert (res.ints != []);
+  res
+
+(** Wrapper around [map_monotone] for increasing functions.
+
+    The [minfty] and [pinfty] limits default to themselves. *)
+let map_increasing ?(minfty = Minfty) ?(pinfty = Pinfty) =
+  map_monotone ~minfty ~pinfty ~increasing:true
+
+(** Wrapper around [map_increasing] for [Z.t -> Z.t] functions.
+
+    [uints] must be an integer interval. *)
+let map_increasing_bigint ?minfty ?pinfty f uints =
+  assert uints.is_int;
+  map_increasing ?minfty ?pinfty
+    (fun n -> Q.of_bigint @@ f @@ Q.to_bigint n) uints
+
+(** [shift_right_int uints n] shifts the value of [uints] to the right by [n]
+    bits. [uints] must be a bounded integer union.
+
+    @raise Invalid_argument if [uints] is not bounded. *)
+let shift_right_int uints n =
+  (* For a fixed [n], [(· >> n)] is increasing. *)
+  map_increasing_bigint
+    (fun z -> Z.shift_right z n) uints
+
+(* Compute { (x % 2^n) | lb <= x <= ub } as an union of intervals in [Z.t] *)
+let trunc_int_large lb ub n =
+  (*  - If [ub - lb >= n - 1], then [0, 2^n - 1]
+      - If (ub % 2^n) >= (lb % 2^n) then [lb % 2^n, ub % 2^n]
+      - Else, [0, ub % 2^n] u [lb % 2^n, 2^n - 1] *)
+  let nm1 = Z.extract Z.minus_one 0 n in
+  if Z.(compare (ub - lb) nm1 >= 0) then
+    [Z.zero, nm1]
+  else
+    let umod = Z.extract ub 0 n in
+    let lmod = Z.extract lb 0 n in
+    if Z.(compare lmod umod <= 0) then
+      [lmod, umod]
+    else
+      [Z.zero, umod; lmod, nm1]
+
+(* Compute { (x % n) | lb <= x <= ub } as a list of (borne * borne) *)
+let trunc_int_borne lb ub n =
+  match int_of_borne_inf lb, int_of_borne_sup ub with
+  | Large (lb, exl), Large (ub, exu) ->
+    let ex = Ex.union exl exu in
+    List.map (fun (lo, hi) ->
+        (Large (Q.of_bigint lo, ex), Large (Q.of_bigint hi, ex))
+      ) @@
+    trunc_int_large (Q.to_bigint lb) (Q.to_bigint ub) n
+
+  | (Large _ | Minfty) , (Large _ | Pinfty) ->
+    let nm1 = Z.extract Z.minus_one 0 n in
+    [(Large (Q.zero, Ex.empty), Large (Q.of_bigint nm1, Ex.empty))]
+
+  (* Broken invariant *)
+  | _, Minfty | Pinfty, _
+  | Strict _, _ | _, Strict _ -> assert false
+
+(* Compute { (x % 2^n) | x \in uints } *)
+let trunc_int uints n =
+  assert (n > 0);
+  assert uints.is_int;
+  let ints =
+    Stdcompat.List.concat_map
+      (fun (lb, ub) -> trunc_int_borne lb ub n) uints.ints
+  in
+  let res = union_intervals { uints with ints } in
+  assert (res.ints != []);
+  res
+
+(* Arguably this should be the one we expose *)
+let extract uints ~ofs ~len =
+  assert (ofs >= 0 && len > 0);
+  let shifted =
+    if ofs = 0 then uints else
+      shift_right_int uints ofs
+  in
+  trunc_int shifted len
+
+let extract uints i j =
+  extract uints ~ofs:i ~len:(j - i + 1)
+
+(*****************)
+
+let fold_finite_domain f i acc =
+  if not i.is_int then
+    invalid_arg "fold_finite_domain";
+
+  List.fold_left (fun acc (lb, ub) ->
+      match int_of_borne_inf lb, int_of_borne_sup ub with
+      | Large (lb, _), Large (ub, _) ->
+        let lb = Q.to_bigint lb and ub = Q.to_bigint ub in
+        assert (Z.compare lb ub <= 0);
+        let v = ref lb in
+        let acc = ref acc in
+        while Z.compare !v ub <= 0 do
+          acc := f !v !acc;
+          v := Z.succ !v
+        done;
+        !acc
+      | _ ->
+        invalid_arg "Intervals.fold_finite_domain"
+    ) acc i.ints
+
+(*****************)
 
 (* Some debug code for Intervals: commented by default
 
