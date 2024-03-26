@@ -28,32 +28,81 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module A  = Xliteral
 module L  = List
-module Hs = Hstring
+module X = Shostak.Combine
+module Ex = Explanation
+module MX = Shostak.MXH
+module SX = Shostak.SXH
+module HSS = Set.Make (Hstring)
+module LR = Uf.LX
+module Th = Shostak.Enum
 
 let timer = Timers.M_Sum
 
-type 'a abstract = 'a Enum.abstract =
-  | Cons of Hs.t * Ty.t
-  | Alien of 'a
+module Domain = struct
+  type t = {
+    constrs : HSS.t;
+    ex : Ex.t;
+  }
 
-module X = Shostak.Combine
-module Sh = Shostak.Enum
+  exception Inconsistent of Ex.t
 
-module Ex = Explanation
+  let[@inline always] cardinal { constrs; _ } = HSS.cardinal constrs
 
-module MX = Shostak.MXH
-module HSS = Set.Make (struct type t=Hs.t let compare = Hs.compare end)
+  let[@inline always] choose { constrs; _ } = HSS.choose constrs
 
-module LR = Uf.LX
+  let domain ~constrs ex =
+    if HSS.is_empty constrs then
+      raise_notrace @@ Inconsistent ex
+    else
+      { constrs; ex }
+
+  let unknown r =
+    match Th.embed r with
+    | Cons (c, _) ->
+      domain ~constrs:(HSS.singleton c) Ex.empty
+    | _ ->
+      match X.type_info r with
+      | Ty.Tsum (_, constrs) ->
+        (* Return the list of all the constructors of the type of [r]. *)
+        let constrs = HSS.of_list constrs in
+        assert (not @@ HSS.is_empty constrs);
+        { constrs; ex = Ex.empty }
+      | _ ->
+        (* Only Enum values can have a domain. This case can happen since we
+           don't dispatch the literals processed in [assume] by their types in
+           the Relation module. *)
+        invalid_arg "unknown"
+
+  let equal d1 d2 = HSS.equal d1.constrs d2.constrs
+
+  let pp ppf d =
+    Fmt.pf ppf "%a"
+      Fmt.(iter ~sep:comma HSS.iter Hstring.print) d.constrs;
+    if Options.(get_verbose () || get_unsat_core ()) then
+      Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
+
+  let intersect ~ex d1 d2 =
+    let constrs = HSS.inter d1.constrs d2.constrs in
+    let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
+    domain ~constrs ex
+
+  let remove ~ex c d =
+    let constrs = HSS.remove c d.constrs in
+    let ex = Ex.union ex d.ex in
+    domain ~constrs ex
+
+  let fold_leaves _f _rr _d _ = assert false
+
+  let map_leaves _f _rr _ = assert false
+end
+
+module Domains = Rel_utils.SimpleDomains_make (Domain)
 
 type t = {
-  (* TODO: rename the field domains to be consistent with the ADT theory. *)
-  mx : (HSS.t * Ex.t) MX.t;
-  (* Map of uninterpreted enum semantic values to domains of their possible
-     values. The explanation justifies that any value assigned to the semantic
-     value has to lie in the domain. *)
+  domains : Domains.t;
+  (* Map of class representatives of enum semantic values to their
+     domains. *)
 
   classes : Expr.Set.t list;
   (* State of the union-find represented by all its equivalence classes.
@@ -68,265 +117,203 @@ type t = {
      [Options.get_max_split ()]. *)
 }
 
-let empty classes = {
-  mx = MX.empty;
-  classes = classes;
-  size_splits = Numbers.Q.one
-}
-
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
-  open Printer
-
-  let assume bol r1 r2 =
+  let assume l =
     if Options.get_debug_sum () then
-      print_dbg
-        ~module_name:"Enum_rel" ~function_name:"assume"
-        "we assume %a %s %a"
-        X.print r1 (if bol then "=" else "<>") X.print r2
+      Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"assume"
+        "assume %a"
+        (Xliteral.print_view X.print) l
 
-  let print_env env =
-    if Options.get_debug_sum () then begin
-      Printer.print_dbg ~flushed:false
-        ~module_name:"Enum_rel" ~function_name:"print_env"
-        "@[<v 2>--SUM env ---------------------------------@ ";
-      MX.iter
-        (fun r (hss, ex) ->
-           Printer.print_dbg  ~flushed:false ~header:false
-             "%a ::= " X.print r;
-           begin
-             match HSS.elements hss with
-               []      -> ()
-             | hs :: l ->
-               Printer.print_dbg  ~flushed:false ~header:false
-                 " %s" (Hs.view hs);
-               L.iter (fun hs ->
-                   Printer.print_dbg  ~flushed:false ~header:false
-                     " | %s" (Hs.view hs)) l
-           end;
-           Printer.print_dbg ~flushed:false ~header:false
-             " : %a@ " Ex.print ex;
-        ) env.mx;
-      Printer.print_dbg ~header:false
-        "@ -------------------------------------------";
-    end
-
-  let case_split r r' =
+  let case_split r1 r2 =
     if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"case_split"
-        "%a = %a" X.print r X.print r'
+      Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"case_split"
+        "%a = %a" X.print r1 X.print r2
 
   let no_case_split () =
     if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"no_case_split"
-        "sum: nothing"
+      Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"case_split"
+        "nothing"
 
   let add r =
     if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"add"
+      Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"add"
         "%a" X.print r
 
+  let pp_env env =
+    if Options.get_debug_sum () then
+      Printer.print_dbg ~module_name:"Enum_rel"
+        "The environment before assuming:@ @[%a@]" Domains.pp env.domains
 end
 (*BISECT-IGNORE-END*)
 
-(* Return the list of all the constructors of the type of [r]. *)
-let values_of r =
-  match X.type_info r with
-  | Ty.Tsum (_,l) ->
-    Some (List.fold_left (fun st hs -> HSS.add hs st) HSS.empty l)
-  | _ ->
-    (* This case can happen since we don't dispatch the literals
-       processed in [assume] by their types in the Relation module. *)
-    None
-
-(* Update the domains of the semantic values [sm1] and [sm2] according to
-   the disequality [sm1 <> sm2]. More precisely, if one of these semantic
-   values is a constructor, we remove it from the domain of the other one.
-
-   In any case, we produce an equality if the domain of one of these semantic
-   values becomes a singleton.
-
-   @raise Ex.Inconsistent if the disequality is inconsistent with the
-   current environment [env]. *)
-let add_diseq hss sm1 sm2 dep env eqs =
-  match sm1, sm2 with
-  | Alien r , Cons(h,ty)
-  | Cons (h,ty), Alien r  ->
-    let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
-    let enum = HSS.remove h enum in
-    let ex = Ex.union ex dep in
-    if HSS.is_empty enum then raise (Ex.Inconsistent (ex, env.classes))
-    else
-      let env = { env with mx = MX.add r (enum, ex) env.mx } in
-      if HSS.cardinal enum = 1 then
-        let h' = HSS.choose enum in
-        env,
-        (Literal.LSem (LR.mkv_eq r (Sh.is_mine (Cons(h',ty)))),
-         ex, Th_util.Other)::eqs
-      else env, eqs
-
-  | Alien r1, Alien r2 ->
-    let enum1,ex1= try MX.find r1 env.mx with Not_found -> hss,Ex.empty in
-    let enum2,ex2= try MX.find r2 env.mx with Not_found -> hss,Ex.empty in
-
-    let eqs =
-      if HSS.cardinal enum1 = 1 then
-        let ex = Ex.union dep ex1 in
-        let h' = HSS.choose enum1 in
-        let ty = X.type_info r1 in
-        (Literal.LSem (LR.mkv_eq r1 (Sh.is_mine (Cons(h',ty)))),
-         ex, Th_util.Other)::eqs
-      else eqs
-    in
-    let eqs =
-      if HSS.cardinal enum2 = 1 then
-        let ex = Ex.union dep ex2 in
-        let h' = HSS.choose enum2 in
-        let ty = X.type_info r2 in
-        (Literal.LSem (LR.mkv_eq r2 (Sh.is_mine (Cons(h',ty)))),
-         ex, Th_util.Other)::eqs
-      else eqs
-    in
-    env, eqs
-
-  |  _ -> env, eqs
-
-(* Update the domains of the semantic values [sm1] and [sm2] according to
-   the equation [sm1 = sm2]. More precisely, we replace their domains by
-   the intersection of these domains.
-
-   @raise Ex.Inconsistent if the domains of [sm1] and [sm2] are disjoint. *)
-let add_eq hss sm1 sm2 dep env eqs =
-  match sm1, sm2 with
-  | Alien r, Cons(h,_)
-  | Cons (h,_), Alien r  ->
-    let enum, ex = try MX.find r env.mx with Not_found -> hss, Ex.empty in
-    let ex = Ex.union ex dep in
-    if not (HSS.mem h enum) then raise (Ex.Inconsistent (ex, env.classes));
-    (* We don't need to produce a new equality as we are already processing
-       it. *)
-    {env with mx = MX.add r (HSS.singleton h, ex) env.mx} , eqs
-
-  | Alien r1, Alien r2   ->
-    let enum1,ex1 =
-      try MX.find r1 env.mx with Not_found -> hss, Ex.empty in
-    let enum2,ex2 =
-      try MX.find r2 env.mx with Not_found -> hss, Ex.empty in
-    let ex = Ex.union dep (Ex.union ex1 ex2) in
-    let diff = HSS.inter enum1 enum2 in
-    if HSS.is_empty diff then raise (Ex.Inconsistent (ex, env.classes));
-    let mx = MX.add r1 (diff, ex) env.mx in
-    let env = {env with mx = MX.add r2 (diff, ex) mx } in
-
-    (* We produce an equality if the domain of these semantic values becomes
-       a singleton. *)
-    if HSS.cardinal diff = 1 then
-      let h' = HSS.choose diff in
-      let ty = X.type_info r1 in
-      env, (Literal.LSem (LR.mkv_eq r1 (Sh.is_mine (Cons(h',ty)))),
-            ex, Th_util.Other)::eqs
-    else env, eqs
-
-  |  _ -> env, eqs
+let empty classes = {
+  domains = Domains.empty;
+  classes = classes;
+  size_splits = Numbers.Q.one
+}
 
 (* Update the counter of case-split size in [env]. *)
 let count_splits env la =
   let nb =
     List.fold_left
-      (fun nb (_,_,_,i) ->
+      (fun nb (_, _, _, i) ->
          match i with
          | Th_util.CS (Th_util.Th_sum, n) -> Numbers.Q.mult nb n
          | _ -> nb
-      )env.size_splits la
+      ) env.size_splits la
   in
   {env with size_splits = nb}
 
-(* Add the uninterpreted semantic value [r] to the environment [env] with
-   all the constructors of its type as domain. *)
-let add_aux env r =
-  Debug.add r;
-  match Sh.embed r, values_of r with
-  | Alien r, Some hss ->
-    if MX.mem r env.mx then env else
-      { env with mx = MX.add r (hss, Ex.empty) env.mx }
-  | _ -> env
+let update_domain rr nd env =
+  { env with domains = Domains.update rr nd env.domains }
 
-(* Needed for models generation because fresh terms are not added with function
-   add. *)
-let add_rec env r = List.fold_left add_aux env (X.leaves r)
+(* Update the domains of the semantic values [r1] and [r2] according to
+   the substitution `r1 |-> r2`.
+
+   @raise Domain.Inconsistent if this substitution is inconsistent with
+          the current environment [env]. *)
+let assume_subst ~ex r1 r2 env =
+  { env with domains = Domains.subst ~ex r1 r2 env.domains }
+
+(* Update the domains of the semantic values [r1] and [r2] according to the
+   disequality [r1 <> r2].
+
+   This function alone isn't sufficient to produce a complete decision
+   procedure for the Enum theory. For instance, let's assume we have three
+   semantic values [r1], [r2] and [r3] whose the domain is `{C1, C2}`. It's
+   clear that `(distinct r1 r2 r3)` is unsatisfiable but we haven't enough
+   information to discover this contradiction.
+
+   Now, if we produce a case-split for one of these semantic values,
+   we reach a contradiction for each choice and so our implementation got
+   a complete decision procedure (assuming we have fuel to produce enough
+   case-splits).
+
+   @raise Domain.Inconsistent if the disequality is inconsistent with
+          the current environment [env]. *)
+let assume_distinct ~ex r1 r2 env =
+  let d1 = Domains.get r1 env.domains in
+  let d2 = Domains.get r2 env.domains in
+  let env =
+    if Domain.cardinal d1 = 1 then
+      let c = Domain.choose d1 in
+      let nd = Domain.remove ~ex c d2 in
+      update_domain r2 nd env
+    else
+      env
+  in
+  if Domain.cardinal d2 = 1 then
+    let c = Domain.choose d2 in
+    let nd = Domain.remove ~ex c d1 in
+    update_domain r1 nd env
+  else
+    env
+
+let is_enum r =
+  match X.type_info r with
+  | Ty.Tsum _ -> true
+  | _ -> false
+
+(* Needed for models generation because fresh terms are not added with the
+   function add. *)
+let add r uf env =
+  match X.type_info r with
+  | Ty.Tsum _ ->
+    Debug.add r;
+    let rr, _ = Uf.find_r uf r in
+    { env with domains = Domains.add rr env.domains }
+  | _ ->
+    env
+
+let add_rec r uf env =
+  List.fold_left (fun env leaf -> add leaf uf env) env (X.leaves r)
+
+let add env uf r _t = add r uf env, []
+
+let assume_literals la uf env =
+  List.fold_left
+    (fun env lit ->
+       let open Xliteral in
+       match lit with
+       | Eq (r1, r2) as l, _, ex, Th_util.Subst when is_enum r1 ->
+         Debug.assume l;
+         let env = add_rec r1 uf env in
+         let env = add_rec r2 uf env in
+         assume_subst ~ex r1 r2 env
+
+       | Distinct (false, [r1; r2]) as l, _, ex, _ when is_enum r2 ->
+         Debug.assume l;
+         let env = add_rec r1 uf env in
+         let env = add_rec r2 uf env in
+         assume_distinct ~ex r1 r2 env
+
+       | _ ->
+         (* We ignore [Eq] literals that aren't substitutions as the propagation
+            of such equalities will produce substitutions later.
+            More precisely, the equation [Eq (r1, r2)] will produce two
+            substitutions:
+              [Eq (r1, rr)] and [Eq (r2, rr)]
+            where [rr] is the new class representative. *)
+         env
+    ) env la
+
+let propagate_domains env =
+  Domains.propagate
+    (fun eqs rr d ->
+       if Domain.cardinal d = 1 then
+         let c = Domain.choose d in
+         let nr = Th.is_mine (Cons (c, X.type_info rr)) in
+         let eq = Literal.LSem (LR.mkv_eq rr nr), d.ex, Th_util.Other in
+         eq :: eqs
+       else
+         eqs
+    ) [] env.domains
 
 let assume env uf la =
+  Debug.pp_env env;
   let env = count_splits env la in
   let classes = Uf.cl_extract uf in
   let env = { env with classes = classes } in
-  let aux bol r1 r2 dep env eqs = function
-    | None     -> env, eqs
-    | Some hss ->
-      Debug.assume bol r1 r2;
-      if bol then
-        add_eq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
-      else
-        add_diseq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
+  let env =
+    try
+      assume_literals la uf env
+    with Domain.Inconsistent ex ->
+      raise_notrace (Ex.Inconsistent (ex, env.classes))
   in
-  Debug.print_env env;
-  let env, eqs =
-    List.fold_left
-      (fun (env,eqs) -> function
-         | A.Eq(r1,r2), _, ex, _ ->
-           (* needed for models generation because fresh terms are not
-              added with function add *)
-           let env = add_rec (add_rec env r1) r2 in
-           aux true  r1 r2 ex env eqs (values_of r1)
+  let assume, domains = propagate_domains env in
+  { env with domains }, Sig_rel.{ assume; remove = [] }
 
-         | A.Distinct(false, [r1;r2]), _, ex, _ ->
-           (* needed for models generation because fresh terms are not
-              added with function add *)
-           let env = add_rec (add_rec env r1) r2 in
-           aux false r1 r2 ex env eqs (values_of r1)
+let case_split_limit env n =
+  let m = Options.get_max_split () in
+  Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
 
-         | _ -> env, eqs
-
-      ) (env,[]) la
-  in
-  env, { Sig_rel.assume = eqs; remove = [] }
-
-let add env _ r _ = add_aux env r, []
-
-(* Do a case-split by choosing a value for an uninterpreted semantic value
-   whose domain in [env] is of minimal size. *)
+(* Do a case-split by choosing a constructor for class representatives of
+   minimal size. *)
 let case_split env uf ~for_model =
-  let acc = MX.fold
-      (fun r (hss, _) acc ->
-         let x, _ = Uf.find_r uf r in
-         match Sh.embed x with
-         | Cons _ ->
-           (* The equivalence class of [r] already contains a value so
-              we don't need to make another case-split for this semantic
-              value. *)
-           acc
-         | _ ->
-           (* We have to perform a case-split, even if the domain of [r] is
-              of cardinal 1 as we have to let the union-find know this
-              equality. *)
-           let sz = HSS.cardinal hss in
-           match acc with
-           | Some (n,_,_) when n <= sz -> acc
-           | _ -> Some (sz, r, HSS.choose hss)
-      ) env.mx None
+  let best =
+    Domains.fold (fun r d best ->
+        let rr, _ = Uf.find_r uf r in
+        match Th.embed rr with
+        | Cons _ ->
+          (* The equivalence class of [r] already contains a model term so
+             we don't need to make another case-split for this semantic
+             value. *)
+          best
+        | _ ->
+          let cd = Domain.cardinal d in
+          match best with
+          | Some (n, _, _) when n <= cd -> best
+          | _ -> Some (cd, r, Domain.choose d)
+      ) env.domains None
   in
-  match acc with
-  | Some (n,r,hs) ->
+  match best with
+  | Some (n, r, c) ->
     let n = Numbers.Q.from_int n in
-    if for_model ||
-       Numbers.Q.compare
-         (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
-       Numbers.Q.sign  (Options.get_max_split ()) < 0 then
-      let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
-      Debug.case_split r r';
-      [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
+    if for_model || case_split_limit env n then
+      let nr = Th.is_mine (Cons (c, X.type_info r)) in
+      Debug.case_split r nr;
+      [LR.mkv_eq r nr, true, Th_util.CS (Th_util.Th_sum, n)]
     else
       []
   | None ->
