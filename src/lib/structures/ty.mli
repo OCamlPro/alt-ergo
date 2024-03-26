@@ -58,9 +58,13 @@ type t =
   (** Enumeration, with its name, and the list of its constructors. *)
 
   | Tadt of Hstring.t * t list
-  (** Algebraic types applied to arguments. [Tadt (s, args)] is
-      the application of the datatype constructor [s] to
-      arguments [args]. *)
+  (** Application of algebraic data types. [Tadt (a, params)] denotes
+      the application of the polymorphic datatype [a] to the types parameters
+      [params].
+
+      For instance the type of integer lists can be represented by the
+      value [Tadt (Hstring.make "list", [Tint])] where the identifier "list"
+      denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
   | Trecord of trecord
   (** Record type. *)
