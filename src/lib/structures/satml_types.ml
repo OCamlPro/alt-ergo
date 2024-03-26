@@ -107,7 +107,9 @@ module type ATOM = sig
 
   (*val made_vars_info : unit -> int * var list*)
 
-  val cmp_var : var -> var -> int
+  val equal_var : var -> var -> bool
+  val compare_var : var -> var -> int
+  val hash_var : var -> int
 
   val cmp_atom : atom -> atom -> int
   val eq_atom   : atom -> atom -> bool
@@ -389,13 +391,9 @@ module Atom : ATOM = struct
 
   let to_int f = int_of_float f
 
-  let cmp_var v1 v2 = v1.vid - v2.vid
-
-  (* unused --
-     let eq_var v1 v2 = v1.vid - v2.vid = 0
-     let tag_var v = v.vid
-     let h_var v = v.vid
-  *)
+  let equal_var v1 v2 = v1.vid = v2.vid
+  let compare_var v1 v2 = v1.vid - v2.vid
+  let hash_var v = Hashtbl.hash v.vid
 
   let cmp_atom a1 a2 = a1.aid - a2.aid
   let eq_atom   a1 a2 = a1.aid - a2.aid = 0
