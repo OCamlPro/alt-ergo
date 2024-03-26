@@ -24,6 +24,8 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    logs
+    logs.fmt
     stdcompat
   )
   (preprocess
@@ -60,7 +62,7 @@
     Emap Gc_debug Hconsing Hstring Heap Lists Loc
     MyUnix Numbers Uqueue
     Options Timers Util Vec Version Steps Printer My_zip
-    Theories
+    Theories Self
   )
 
  (js_of_ocaml

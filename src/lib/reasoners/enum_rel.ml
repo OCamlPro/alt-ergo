@@ -32,7 +32,7 @@ module A  = Xliteral
 module L  = List
 module Hs = Hstring
 
-let timer = Timers.M_Sum
+let timer = Self.M_Sum
 
 type 'a abstract = 'a Enum.abstract =
   | Cons of Hs.t * Ty.t
@@ -74,17 +74,10 @@ let empty classes = {
   size_splits = Numbers.Q.one
 }
 
+module P = Printer.Make (struct let mod_ = Self.M_Sum end)
+
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
-  open Printer
-
-  let assume bol r1 r2 =
-    if Options.get_debug_sum () then
-      print_dbg
-        ~module_name:"Enum_rel" ~function_name:"assume"
-        "we assume %a %s %a"
-        X.print r1 (if bol then "=" else "<>") X.print r2
-
   let print_env env =
     if Options.get_debug_sum () then begin
       Printer.print_dbg ~flushed:false
@@ -110,25 +103,6 @@ module Debug = struct
       Printer.print_dbg ~header:false
         "@ -------------------------------------------";
     end
-
-  let case_split r r' =
-    if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"case_split"
-        "%a = %a" X.print r X.print r'
-
-  let no_case_split () =
-    if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"no_case_split"
-        "sum: nothing"
-
-  let add r =
-    if Options.get_debug_sum () then
-      Printer.print_dbg
-        ~module_name:"Enum_rel" ~function_name:"add"
-        "%a" X.print r
-
 end
 (*BISECT-IGNORE-END*)
 
@@ -247,7 +221,7 @@ let count_splits env la =
 (* Add the uninterpreted semantic value [r] to the environment [env] with
    all the constructors of its type as domain. *)
 let add_aux env r =
-  Debug.add r;
+  P.debug ~fn:Self.F_add (fun k -> k"add %a" X.print r);
   match Sh.embed r, values_of r with
   | Alien r, Some hss ->
     if MX.mem r env.mx then env else
@@ -265,7 +239,10 @@ let assume env uf la =
   let aux bol r1 r2 dep env eqs = function
     | None     -> env, eqs
     | Some hss ->
-      Debug.assume bol r1 r2;
+      P.debug ~fn:Self.F_assume
+        (fun k -> k"assume@ %a %s %a"
+            X.print r1 (if bol then "=" else "<>") X.print r2
+        );
       if bol then
         add_eq hss (Sh.embed r1) (Sh.embed r2) dep env eqs
       else
@@ -325,12 +302,13 @@ let case_split env uf ~for_model =
          (Numbers.Q.mult n env.size_splits) (Options.get_max_split ()) <= 0  ||
        Numbers.Q.sign  (Options.get_max_split ()) < 0 then
       let r' = Sh.is_mine (Cons(hs,X.type_info r)) in
-      Debug.case_split r r';
+      P.debug ~fn:Self.F_case_split
+        (fun k -> k"case split:@ %a = %a" X.print r X.print r');
       [LR.mkv_eq r r', true, Th_util.CS (Th_util.Th_sum, n)]
     else
       []
   | None ->
-    Debug.no_case_split ();
+    P.debug ~fn:Self.F_case_split (fun k -> k"no case split found");
     []
 
 let optimizing_objective _env _uf _o = None
