@@ -656,7 +656,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until env lvl =
     P.debug (fun k ->
-        k"cancel until level %d (current level is %d)" lvl (decision_level env));
+        k"cancel until level %d (current level is %d)" lvl
+          (decision_level env));
     cancel_ff_lvls_until env lvl;
     let repush = ref [] in
     if decision_level env > lvl then begin

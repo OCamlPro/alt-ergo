@@ -103,9 +103,10 @@ struct
       let pp_index ppf i = Fmt.pf ppf "<%d" i in
       let pp_binding ppf (p, v) = Fmt.pf ppf "%a |-> %a" print p print v in
       P.debug (fun k -> k"%s subst:@ %a" msg
-                  Fmt.(iter_bindings List.iteri (pair ~sep:(const string ") ")
-                                                   pp_index pp_binding) |> box) sbs
-              )
+                  Fmt.(iter_bindings List.iteri
+                         (pair ~sep:(const string ") ") pp_index pp_binding)
+                       |> box)
+                  sbs)
 
     let debug_abstraction_result oa ob a b acc =
       let pp_index ppf i = Fmt.pf ppf "(%d)" i in
@@ -117,7 +118,8 @@ struct
                    selector elimination result:@ @[<v 2>%a@]@]"
                   CX.print oa CX.print ob
                   CX.print a CX.print b
-                  Fmt.(iter_bindings List.iteri (pair ~sep:sp pp_index pp_binding) |> box)
+                  Fmt.(iter_bindings List.iteri
+                         (pair ~sep:sp pp_index pp_binding) |> box)
                   acc
               )
 
