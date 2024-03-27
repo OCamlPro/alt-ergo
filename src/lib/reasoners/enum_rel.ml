@@ -39,121 +39,6 @@ module Th = Shostak.Enum
 
 let timer = Timers.M_Sum
 
-let ret a = fun s -> (a, s)
-
-let bind t f =
-  fun s1 ->
-  let (a, s2) = t s1 in
-  f a s2
-
-let run t s = t s
-
-let (let*) = bind
-
-let iter f l s =
-  let s =
-    List.fold_left
-      (fun s x ->
-         let (), s = f x s in
-         s
-      ) s l
-  in
-  (), s
-
-module type S = sig
-  type t
-  type dom
-
-  val empty : t
-  (*   val pp : t Fmt.t *)
-
-  val add : X.r -> t -> t
-  val update : X.r -> dom -> t -> t
-  val subst : ex:Ex.t -> X.r -> X.r -> t -> t
-  val propagate : ('a -> X.r -> dom -> 'a) -> 'a -> t -> 'a * t
-
-  val get : X.r -> t -> dom
-  val fold : (X.r -> dom -> 'a -> 'a) -> t -> 'a -> 'a
-end
-
-module type Domain = sig
-  type t
-
-  val unknown : X.r -> t
-  (*   val pp : t Fmt.t *)
-  val cardinal : t -> int
-  val intersect : ex:Ex.t -> t -> t -> t
-end
-
-module Make (D : Domain) : S with type dom = D.t = struct
-  type dom = D.t
-
-  type t = {
-    domains : dom MX.t;
-    (* Map of class representatives to domains of their domain.
-       The explanation justifies that the semantic value has to lie in this
-       domain. *)
-
-    changed : SX.t;
-    (* Set of changed domains. *)
-  }
-
-  (* let pp ppf t =
-     Fmt.(iter_bindings ~sep:semi MX.iter
-           (box @@ pair ~sep:(any " ->@ ") X.print D.pp)
-         |> braces
-        )
-      ppf t.domains
-  *)
-  let empty = { domains = MX.empty; changed = SX.empty }
-
-  let get rr t =
-    try MX.find rr t.domains
-    with Not_found -> D.unknown rr
-
-  let update rr nd t =
-    assert (D.cardinal nd > 0);
-    let domains = MX.add rr nd t.domains in
-    let changed = SX.add rr t.changed in
-    { domains; changed }
-
-  let add rr t =
-    match MX.find rr t.domains with
-    | _ -> t
-    | exception Not_found ->
-      let nd = D.unknown rr in
-      update rr nd t
-
-  let remove rr t =
-    let domains = MX.remove rr t.domains in
-    let changed = SX.remove rr t.changed in
-    { domains ; changed }
-
-  let subst ~ex rr nrr t =
-    match MX.find rr t.domains with
-    | d ->
-      let nnd =
-        match MX.find nrr t.domains with
-        | nd -> D.intersect ~ex d nd
-        | exception Not_found -> d
-      in
-      let t = remove rr t in
-      update nrr nnd t
-    | exception Not_found -> t
-
-  let fold f t acc = MX.fold f t.domains acc
-
-  let propagate f acc t =
-    let acc =
-      SX.fold
-        (fun rr acc ->
-           let d = get rr t in
-           f acc rr d
-        ) t.changed acc
-    in
-    acc, { t with changed = SX.empty }
-end
-
 module Domain = struct
   type t = {
     constrs : HSS.t;
@@ -161,8 +46,6 @@ module Domain = struct
   }
 
   exception Inconsistent of Ex.t
-
-  let[@inline always] expl { ex; _ } = ex
 
   let[@inline always] cardinal { constrs; _ } = HSS.cardinal constrs
 
@@ -191,12 +74,14 @@ module Domain = struct
            the Relation module. *)
         invalid_arg "unknown"
 
-  (* let pp ppf d =
-     Fmt.pf ppf "%a"
+  let equal d1 d2 = HSS.equal d1.constrs d2.constrs
+
+  let pp ppf d =
+    Fmt.pf ppf "%a"
       Fmt.(iter ~sep:comma HSS.iter Hstring.print) d.constrs;
-     if Options.(get_verbose () || get_unsat_core ()) then
+    if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
-  *)
+
   let intersect ~ex d1 d2 =
     let constrs = HSS.inter d1.constrs d2.constrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
@@ -208,9 +93,13 @@ module Domain = struct
     in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
     domain ~constrs ex
+
+  let fold_leaves _f _rr _d _ = assert false
+
+  let map_leaves _f _rr _ = assert false
 end
 
-module Domains = Make (Domain)
+module Domains = Rel_utils.SimpleDomains_make (Domain)
 
 type t = {
   domains : Domains.t;
@@ -235,13 +124,13 @@ let empty classes = {
 
 let get_domain r uf env =
   let rr, _ = Uf.find_r uf r in
-  (rr, Domains.get rr env.domains), env
+  rr, Domains.get rr env.domains, env
 
 let update_domain rr nd env =
-  (), { env with domains = Domains.update rr nd env.domains }
+  { env with domains = Domains.update rr nd env.domains }
 
 let subst ~ex r1 r2 env =
-  (), { env with domains = Domains.subst ~ex r1 r2 env.domains }
+  { env with domains = Domains.subst ~ex r1 r2 env.domains }
 
 (* Update the counter of case-split size in [env]. *)
 let count_splits env la =
@@ -255,77 +144,46 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
-let propagate_eq ~ex r1 r2 uf =
-  let* rr1, d1 = get_domain r1 uf in
-  let* rr2, d2 = get_domain r2 uf in
+let propagate_eq ~ex r1 r2 uf env =
+  let rr1, d1, env = get_domain r1 uf env in
+  let rr2, d2, env = get_domain r2 uf env in
   let nd = Domain.intersect ~ex d1 d2 in
-  let* () = update_domain rr1 nd in
-  update_domain rr2 nd
+  let env = update_domain rr1 nd env in
+  update_domain rr2 nd env
 
-let propagate_diseq ~ex r1 r2 uf =
-  let* rr1, d1 = get_domain r1 uf in
-  let* rr2, d2 = get_domain r2 uf in
-  let* () =
+let propagate_diseq ~ex r1 r2 uf env =
+  let rr1, d1, env = get_domain r1 uf env in
+  let rr2, d2, env = get_domain r2 uf env in
+  let env =
     if Domain.cardinal d1 = 1 then
       let nd = Domain.complement ~ex d2 d1 in
-      update_domain rr2 nd
+      update_domain rr2 nd env
     else
-      ret ()
+      env
   in
   if Domain.cardinal d2 = 1 then
     let nd = Domain.complement ~ex d1 d2 in
-    update_domain rr1 nd
+    update_domain rr1 nd env
   else
-    ret ()
+    env
 
 let is_enum r =
   match X.type_info r with
   | Ty.Tsum _ -> true
   | _ -> false
 
-let propagate_literals la uf =
-  iter
-    (fun lit ->
-       let open Xliteral in
-       match lit with
-       | Eq (r1, r2), _, ex, origin when is_enum r1 ->
-         begin match origin with
-           | Th_util.Subst ->
-             subst ~ex r1 r2
-           | _ ->
-             propagate_eq ~ex r1 r2 uf
-         end
-       | Distinct (false, [r1; r2]), _, ex, _ when is_enum r2 ->
-         propagate_diseq ~ex r1 r2 uf
-       | _ ->
-         ret ()
-    ) la
+(* Needed for models generation because fresh terms are not added with function
+   add. *)
+let add r uf env =
+  match X.type_info r with
+  | Ty.Tsum _ ->
+    let rr, _ = Uf.find_r uf r in
+    { env with domains = Domains.add rr env.domains }
+  | _ ->
+    env
 
-let propagate_domains env =
-  Domains.propagate
-    (fun eqs rr d ->
-       if Domain.cardinal d = 1 then
-         let c = Domain.choose d in
-         let nr = Th.is_mine (Cons (c, X.type_info rr)) in
-         let ex = Domain.expl d in
-         let eq = Literal.LSem (LR.mkv_eq rr nr), ex, Th_util.Other in
-         eq :: eqs
-       else
-         eqs
-    ) [] env.domains
-
-let assume env uf la =
-  let env = count_splits env la in
-  let classes = Uf.cl_extract uf in
-  let env = { env with classes = classes } in
-  let (), env =
-    try
-      run (propagate_literals la uf) env
-    with Domain.Inconsistent ex ->
-      raise_notrace (Ex.Inconsistent (ex, env.classes))
-  in
-  let assume, domains = propagate_domains env in
-  { env with domains }, Sig_rel.{ assume; remove = [] }
+let add_rec r uf env =
+  List.fold_left (fun env leaf -> add leaf uf env) env (X.leaves r)
 
 let add env uf r _t =
   match X.type_info r with
@@ -335,22 +193,77 @@ let add env uf r _t =
   | _ ->
     env, []
 
+let propagate_literals la uf env =
+  List.fold_left
+    (fun env lit ->
+       let open Xliteral in
+       match lit with
+       | Eq (r1, r2), _, ex, origin when is_enum r1 ->
+         let env = add_rec r1 uf env in
+         let env = add_rec r2 uf env in
+         begin match origin with
+           | Th_util.Subst ->
+             subst ~ex r1 r2 env
+           | _ ->
+             propagate_eq ~ex r1 r2 uf env
+         end
+       | Distinct (false, [r1; r2]), _, ex, _ when is_enum r2 ->
+         let env = add_rec r1 uf env in
+         let env = add_rec r2 uf env in
+         propagate_diseq ~ex r1 r2 uf env
+       | _ ->
+         env
+    ) env la
+
+let propagate_domains env =
+  Domains.propagate
+    (fun eqs rr d ->
+       if Domain.cardinal d = 1 then
+         let c = Domain.choose d in
+         let nr = Th.is_mine (Cons (c, X.type_info rr)) in
+         let eq = Literal.LSem (LR.mkv_eq rr nr), d.ex, Th_util.Other in
+         eq :: eqs
+       else
+         eqs
+    ) [] env.domains
+
+let assume env uf la =
+  let env = count_splits env la in
+  let classes = Uf.cl_extract uf in
+  let env = { env with classes = classes } in
+  let env =
+    try
+      propagate_literals la uf env
+    with Domain.Inconsistent ex ->
+      raise_notrace (Ex.Inconsistent (ex, env.classes))
+  in
+  let assume, domains = propagate_domains env in
+  { env with domains }, Sig_rel.{ assume; remove = [] }
+
 let cs_criteria env n =
   let m = Options.get_max_split () in
   Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
 
 (* Do a case-split by choosing a value for class representatives having of
    minimal size. *)
-let case_split env _uf ~for_model =
+let case_split env uf ~for_model =
   let best =
     Domains.fold (fun r d best ->
-        let cd = Domain.cardinal d in
-        if cd > 1 then
+        let rr, _ = Uf.find_r uf r in
+        match Th.embed rr with
+        | Cons _ ->
+          (* The equivalence class of [r] already contains a value so
+             we don't need to make another case-split for this semantic
+             value. *)
+          best
+        | _ ->
+          (* We have to perform a case-split, even if the domain of [r] is
+             of cardinal 1 as we have to let the union-find know this
+             equality. *)
+          let cd = Domain.cardinal d in
           match best with
           | Some (n, _, _) when n <= cd -> best
           | _ -> Some (cd, r, Domain.choose d)
-        else
-          best
       ) env.domains None
   in
   match best with
