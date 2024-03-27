@@ -214,13 +214,8 @@ module type Domain = sig
   exception Inconsistent of Explanation.t
   (** Exception raised by [intersect] when an inconsistency is detected. *)
 
-  val unknown : Ty.t -> t
-  (** [unknown ty] returns a full domain for values of type [t]. *)
-
-  val add_explanation : ex:Explanation.t -> t -> t
-  (** [add_explanation ~ex d] adds the justification [ex] to the domain d. The
-      returned domain is identical to the domain of [d], only the
-      justifications are changed. *)
+  val unknown : X.r -> t
+  (** [unknown r] returns a full domain for values of the semantic value [r]. *)
 
   val intersect : ex:Explanation.t -> t -> t -> t
   (** [intersect ~ex d1 d2] returns a new domain [d] that subsumes both [d1]
@@ -250,7 +245,7 @@ end
 module type Domains = sig
   type t
   (** The type of domain maps. A domain map maps each representative (semantic
-      value, of type [X.r]) to its associated domain.*)
+      value, of type [X.r]) to its associated domain. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for domain maps. *)
@@ -269,7 +264,7 @@ module type Domains = sig
   val add : X.r -> t -> t
   (** [add r t] adds a domain for [r] in the domain map. If [r] does not
       already have an associated domain, a fresh domain will be created for
-      [r]. *)
+      [r] using [Domain.unknown]. *)
 
   val get : X.r -> t -> elt
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
@@ -398,7 +393,7 @@ struct
 
   let create_domain r =
     Domain.map_leaves (fun r () ->
-        Domain.unknown (X.type_info r)
+        Domain.unknown r
       ) r ()
 
   let add r t =
@@ -621,6 +616,114 @@ struct
         unsafe_update
           ~changed:handle.Ephemeral.changed repr handle.domain domains
       ) t.Ephemeral.dirty_cache t.persistent
+end
+
+module SimpleDomains_make (Domain : Domain) : sig
+  type t
+  (** The type of simple domain maps. A domain map maps each representative
+      (semantic value, of type [X.r]) to its associated domain. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for domain maps. *)
+
+  val empty : t
+  (** The empty domain map. *)
+
+  type elt = Domain.t
+  (** The type of domains contained in the map. Each domain of type [elt]
+      applies to a single semantic value. *)
+
+  exception Inconsistent of Explanation.t
+  (** Exception raised by [update], [subst] and [structural_propagation] when
+      an inconsistency is detected. *)
+
+  val add : X.r -> t -> t
+  (** [add r t] adds a domain for [r] in the domain map. If [r] does not
+      already have an associated domain, a fresh domain will be created for
+      [r] using [Domain.unknown]. *)
+
+  val get : X.r -> t -> elt
+  (** [get r t] returns the domain currently associated with [r] in [t]. *)
+
+  val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
+  (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
+      domains, merging the corresponding domains as appropriate.
+
+      The explanation [ex] justifies the equality [p = v].
+
+      @raise Inconsistent if this causes any domain in [d] to become empty. *)
+
+  val update : X.r -> elt -> t -> t
+
+  val propagate : ('a -> X.r -> elt -> 'a) -> 'a -> t -> 'a * t
+
+  val fold : (X.r -> elt -> 'a -> 'a) -> t -> 'a -> 'a
+end = struct
+  type elt = Domain.t
+
+  exception Inconsistent = Domain.Inconsistent
+
+  type t = {
+    domains : Domain.t MX.t;
+    (** Map from tracked representatives to their domain *)
+
+    changed : SX.t;
+    (** Representatives whose domain has changed since the last flush *)
+  }
+
+  let pp ppf t =
+    Fmt.(iter_bindings ~sep:semi MX.iter
+           (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
+         |> braces
+        )
+      ppf t.domains
+
+  let empty = { domains = MX.empty; changed = SX.empty }
+
+  let get rr t =
+    try MX.find rr t.domains
+    with Not_found -> Domain.unknown rr
+
+  let update rr nd t =
+    let domains = MX.add rr nd t.domains in
+    let changed = SX.add rr t.changed in
+    { domains; changed }
+
+  let add rr t =
+    match MX.find rr t.domains with
+    | _ -> t
+    | exception Not_found ->
+      let nd = Domain.unknown rr in
+      update rr nd t
+
+  let remove rr t =
+    let domains = MX.remove rr t.domains in
+    let changed = SX.remove rr t.changed in
+    { domains ; changed }
+
+  let subst ~ex rr nrr t =
+    match MX.find rr t.domains with
+    | d ->
+      let nnd =
+        match MX.find nrr t.domains with
+        | nd -> Domain.intersect ~ex d nd
+        | exception Not_found -> d
+      in
+      let t = remove rr t in
+      update nrr nnd t
+    | exception Not_found -> t
+
+  let fold f t acc = MX.fold f t.domains acc
+
+  let propagate f acc t =
+    let acc =
+      SX.fold
+        (fun rr acc ->
+           let d = get rr t in
+           f acc rr d
+        ) t.changed acc
+    in
+    acc, { t with changed = SX.empty }
 end
 
 (** The ['c acts] type is used to register new facts and constraints in
