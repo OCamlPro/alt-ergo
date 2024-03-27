@@ -13,7 +13,7 @@ jobs:
     name: Build statically linked macOS binaries
     # Only do this when explicitly requested since it takes a long time to
     # build on macOS; no need to waste resources
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    # if: ${{ github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         include:
