@@ -1,0 +1,97 @@
+name: Build statically linked binaries
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - next
+      - main
+
+jobs:
+  macos-static:
+    name: Build statically linked macOS binaries
+    # Only do this when explicitly requested since it takes a long time to
+    # build on macOS; no need to waste resources
+    # if: ${{ github.event_name == 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            os: macos-12
+          - arch: aarch64
+            os: macos-14
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: ocaml/setup-ocaml@v2
+        with:
+          allow-prerelease-opam: true
+          ocaml-compiler: 4.14.1
+          dune-cache: true
+
+      - run: opam install . --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
+      - run: opam exec -- dune subst
+
+      - run: opam exec -- dune build --release @install --promote-install-files false
+        env:
+          LINK_MODE: mixed
+
+      - run: opam exec -- dune install -p alt-ergo --create-install-files --prefix opt/alt-ergo --relocatable
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alt-ergo-${{ matrix.arch }}-macos
+          path: _destdir/opt/alt-ergo/bin/alt-ergo
+
+  musl:
+    name: Build statically linked binary with musl
+
+    runs-on: ubuntu-latest
+
+    # Retrieve and use a light docker container on which ocaml 4.14 is installed
+    # as a system compiler. This container also contains opam 2.1.
+    container:
+      image: ocamlpro/ocaml:4.14-flambda
+      options: --user root
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Switch to ocaml user
+        run: su ocaml
+
+      # This line is needed to acces and use opam. We are unable to set the user
+      # to `ocaml` with the container parameters
+      - run: sudo chmod a+wx .
+
+      # This line is needed to allow the working directory to be used even
+      # the ocaml user do not have rights on it.
+      - run: CURRENTDIR=$(basename $(pwd)); git config --global --add safe.directory /__w/$CURRENTDIR/$CURRENTDIR
+
+      - name: Install static dependencies
+        run: sudo apk add zlib-static
+
+      - run: opam switch create . ocaml-system --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+
+      - run: opam exec -- dune subst
+
+      - name: Build statically linked binary
+        run: opam exec -- dune build --release @install --promote-install-files false
+        env:
+          LINK_MODE: static
+
+      - run: opam exec -- dune install -p alt-ergo --create-install-files --prefix opt/alt-ergo --relocatable
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alt-ergo-x86_64-linux-musl
+          path: _destdir/opt/alt-ergo/bin/alt-ergo
