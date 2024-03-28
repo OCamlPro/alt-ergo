@@ -1,0 +1,12 @@
+logic ac f : real, real -> real
+
+function id_2() : real = 2.
+
+axiom ax_1:
+  f(f(id_2, 1.), 0.) <= 0.0
+
+function f_2_1() : real = f(2., 1.)
+
+axiom ax_2: f_2_1 <= 0.0
+
+goal goal_1: false
