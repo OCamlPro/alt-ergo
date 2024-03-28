@@ -1,12 +1,16 @@
 (documentation
   (package alt-ergo))
 
+(rule
+ (with-stdout-to link_flags.dune
+  (run ./gen-link-flags.sh %{env:LINK_MODE=dynamic} %{ocaml-config:system})))
+
 (executable
   (name Main_text)
   (public_name alt-ergo)
   (package alt-ergo)
   (libraries alt_ergo_common)
-  (link_flags (:include flags.dune))
+  (link_flags (:standard (:include link_flags.dune)))
   (modules Main_text)
   (promote (until-clean)))
 
