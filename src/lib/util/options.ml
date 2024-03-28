@@ -272,6 +272,7 @@ let preludes = ref []
 let theory_preludes = ref Theories.default_preludes
 let type_only = ref false
 let type_smt2 = ref false
+let imperative_mode = ref false
 
 let set_answers_with_loc b = answers_with_loc := b
 let set_output_with_colors b = output_with_colors := b
@@ -286,6 +287,7 @@ let set_preludes p = preludes := p
 let set_theory_preludes t = theory_preludes := t
 let set_type_only b = type_only := b
 let set_type_smt2 b = type_smt2 := b
+let set_imperative_mode i = imperative_mode := i
 
 let get_answers_with_locs () = !answers_with_loc
 let get_output_with_colors () = !output_with_colors
@@ -299,6 +301,7 @@ let get_preludes () = !preludes
 let get_theory_preludes () = !theory_preludes
 let get_type_only () = !type_only
 let get_type_smt2 () = !type_smt2
+let get_imperative_mode () = !imperative_mode
 
 (** Internal options *)
 
