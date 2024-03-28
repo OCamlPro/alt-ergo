@@ -431,21 +431,16 @@ let main () =
 
   (* Before each query, we push the current environment. This allows to keep a
      fresh one for the next assertions. *)
-  let internal_push st =
-    if State.get is_decision_env st then
-      (* We already performed a check-sat *)
-      st
-    else
-      begin
-        let module Api = (val (DO.SatSolverModule.get st)) in
-        Api.FE.push 1 Api.env;
-        State.set is_decision_env true st
-      end
+  let push_before_query st =
+    assert (not (State.get is_decision_env st));
+    let module Api = (val (DO.SatSolverModule.get st)) in
+    Api.FE.push 1 Api.env;
+    State.set is_decision_env true st
   in
 
   (* The pop corresponding to the previous push. It is applied everytime the
      mode goes from Sat/Unsat to Assert. *)
-  let internal_pop st =
+  let pop_if_post_query st =
     if State.get is_decision_env st then
       begin
         let module Api = (val (DO.SatSolverModule.get st)) in
@@ -641,7 +636,7 @@ let main () =
     DO.Mode.add_hook
       (fun _ ~old:_ ~new_ st ->
          match new_ with
-         | Assert -> internal_pop st
+         | Assert -> pop_if_post_query st
          | _ -> st
       )
   in
@@ -1070,12 +1065,12 @@ let main () =
      the hook on D_state_option.Mode. *)
   let handle_query st id loc attrs contents =
     let module Api = (val (DO.SatSolverModule.get st)) in
-    let st = internal_pop st in
+    let st = pop_if_post_query st in
     (* Pushing the environment once. This allows to keep a trace of the old
        environment in case we want to assert afterwards.
        The `pop` instruction is handled by the hook on the mode: when we assert
        anything, we must make sure to go back to `Assert` mode. *)
-    let st = internal_push st in
+    let st = push_before_query st in
     let st_loc =
       let file_loc = (State.get State.logic_file st).loc in
       dl_to_ael file_loc loc

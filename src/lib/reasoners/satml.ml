@@ -1039,6 +1039,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            assert (ta.is_true);
            assert (ta.var.level >= 0);
            if ta.var.level = 0 then begin
+             incr nb_f;
              (ta.lit, Th_util.Other, Ex.empty, 0, env.cpt_current_propagations)
              :: acc
            end
@@ -1243,11 +1244,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let print_aux fmt hc =
     Format.fprintf fmt "%a@," Atom.pr_clause hc
 
-  let is_unsat env : unit = env.is_unsat <- true
+  let set_unsat env : unit = env.is_unsat <- true
 
   let report_b_unsat env linit =
     if not (Options.get_unsat_core ()) then begin
-      is_unsat env;
+      set_unsat env;
       env.unsat_core <- None;
       raise (Unsat None)
     end
@@ -1287,7 +1288,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
         Printer.print_dbg ~header:false "@[<v 2>UNSAT_CORE:@ %a@]"
           (Printer.pp_list_no_space print_aux) unsat_core;
-        is_unsat env;
+        set_unsat env;
         let unsat_core = Some unsat_core in
         env.unsat_core <- unsat_core;
         raise (Unsat unsat_core)
@@ -1295,7 +1296,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let report_t_unsat env dep =
     if not (Options.get_unsat_core ()) then begin
-      is_unsat env;
+      set_unsat env;
       env.unsat_core <- None;
       raise (Unsat None)
     end
@@ -1336,7 +1337,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg ~header:false
         "@[<v 2>T-UNSAT_CORE:@ %a@]"
         (Printer.pp_list_no_space print_aux) unsat_core;
-      is_unsat env;
+      set_unsat env;
       let unsat_core = Some unsat_core in
       env.unsat_core <- unsat_core;
       raise (Unsat unsat_core)

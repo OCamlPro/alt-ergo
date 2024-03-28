@@ -298,7 +298,7 @@ val set_triggers_var : bool -> unit
 (** Set [type_smt2] accessible with {!val:get_type_smt2} *)
 val set_type_smt2 : bool -> unit
 
-(** Set [type_smt2] accessible with {!val:get_type_smt2} *)
+(** Set [imperative_mode] accessible with {!val:get_imperative_mode} *)
 val set_imperative_mode : bool -> unit
 
 (** Set [unsat_core] accessible with {!val:get_unsat_core} *)
@@ -663,7 +663,7 @@ val get_type_only : unit -> bool
 val get_type_smt2 : unit -> bool
 (** Default to [false] *)
 
-(** [true] if the program shall stop after SMT2 typing. *)
+(** [true] if the solving loop should work in a pure imperative mode. *)
 val get_imperative_mode : unit -> bool
 (** Default to [false] *)
 
