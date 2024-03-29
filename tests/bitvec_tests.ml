@@ -276,6 +276,44 @@ let test_bitlist_mul sz =
 let () =
   Test.check_exn (test_bitlist_mul 3)
 
+let zshl sz a b =
+  match Z.to_int b with
+  | b when b < sz -> Z.extract (Z.shift_left a b) 0 sz
+  | _ | exception Z.Overflow -> Z.zero
+
+let test_interval_shl sz =
+  test_interval_binop ~count:1_000
+    sz (zshl sz) (Intervals.Int.bvshl ~size:sz)
+
+let () =
+  Test.check_exn (test_interval_shl 3)
+
+let test_bitlist_shl sz =
+  test_bitlist_binop ~count:1_000
+    sz (zshl sz) Bitlist.shl
+
+let () =
+  Test.check_exn (test_bitlist_shl 3)
+
+let zlshr a b =
+  match Z.to_int b with
+  | b -> Z.shift_right a b
+  | exception Z.Overflow -> Z.zero
+
+let test_interval_lshr sz =
+  test_interval_binop ~count:1_000
+    sz zlshr Intervals.Int.lshr
+
+let () =
+  Test.check_exn (test_interval_lshr 3)
+
+let test_bitlist_lshr sz =
+  test_bitlist_binop ~count:1_000
+    sz zlshr Bitlist.lshr
+
+let () =
+  Test.check_exn (test_bitlist_lshr 3)
+
 let zudiv sz a b =
   if Z.equal b Z.zero then
     Z.extract Z.minus_one 0 sz

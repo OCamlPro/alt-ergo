@@ -311,6 +311,48 @@ module ZEuclideanType = struct
     | Neg_infinite -> Pos_infinite
     | Pos_infinite -> Neg_infinite
     | Finite n -> Finite (Z.lognot n)
+
+  (* Values larger than [max_int] are treated as +oo *)
+  let shift_left ?(max_int = max_int) x y =
+    let[@inline always] must_be_nonnegative () =
+      Fmt.invalid_arg "shl: must shift by nonnegative amount"
+    in
+    match y with
+    | Neg_infinite -> must_be_nonnegative ()
+    | Finite y when Z.sign y < 0 -> must_be_nonnegative ()
+    | Pos_infinite -> Pos_infinite
+    | Finite y ->
+      match Z.to_int y with
+      | exception Z.Overflow -> Pos_infinite
+      | y ->
+        if y <= max_int then
+          match x with
+          | Neg_infinite -> Neg_infinite
+          | Pos_infinite -> Pos_infinite
+          | Finite x -> Finite (Z.shift_left x y)
+        else Pos_infinite
+
+  let shift_right x y =
+    match y with
+    | Neg_infinite ->
+      invalid_arg "shift_right: must shift by nonnegative amount"
+    | Finite y when Z.sign y < 0 ->
+      invalid_arg "shift_right: must shift by nonnegative amount"
+    | Pos_infinite -> (
+        match x with
+        | Pos_infinite -> invalid_arg "shift_right: undefined limit"
+        | _ -> zero
+      )
+    | Finite y ->
+      match x with
+      | Neg_infinite -> Neg_infinite
+      | Pos_infinite -> Pos_infinite
+      | Finite x ->
+        match Z.to_int y with
+        | exception Z.Overflow ->
+          (* y > max_int -> x >> y = 0 since numbits x <= max_int *)
+          zero
+        | y -> Finite (Z.shift_right x y)
 end
 
 (* AlgebraicType interface for reals
@@ -669,6 +711,31 @@ module Int = struct
                 interval_set { lb = ZEuclideanType.zero ; ub }
             ) u1
       ) u2
+
+  let bvshl ~size u1 u2 =
+    assert (size > 0);
+    (* Values higher than [max_int] ultimately map to [0] *)
+    let max_int = size - 1 in
+    let zero_i = { lb = ZEuclideanType.zero ; ub = ZEuclideanType.zero } in
+    extract ~ofs:0 ~len:size @@
+    of_set_nonempty @@
+    map_to_set (fun i2 ->
+        assert (ZEuclideanType.sign i2.lb >= 0);
+        if ZEuclideanType.(compare i2.lb (finite @@ Z.of_int max_int)) > 0 then
+          (* if i2.lb > max_int, the result is always zero
+             must not call ZEuclideanType.shift_left or we will likely OOM *)
+          interval_set zero_i
+        else
+          (* equivalent to multiplication by a positive constant *)
+          approx_map_inc_to_set
+            (fun lb -> ZEuclideanType.shift_left lb i2.lb)
+            (fun ub -> ZEuclideanType.shift_left ~max_int ub i2.ub)
+            u1
+      ) u2
+
+  let lshr u1 u2 =
+    of_set_nonempty @@
+    map2_mon_to_set ZEuclideanType.shift_right Inc u1 Dec u2
 end
 
 module Legacy = struct

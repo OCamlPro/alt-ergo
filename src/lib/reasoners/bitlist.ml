@@ -307,3 +307,61 @@ let mul a b =
     in
     concat (unknown (sz - width mid_bits - width low_bits) Ex.empty) @@
     concat mid_bits low_bits
+
+let shl a b =
+  (* If the minimum value for [b] is larger than the bitwidth, the result is
+     zero.
+
+     Otherwise, any low zero bit in [a] is also a zero bit in the result, and
+     the minimum value for [b] also accounts for that many minimum zeros (e.g.
+     ?000 shifted by at least 2 has at least 5 low zeroes).
+
+     NB: [increase_lower_bound b Z.zero] is the smallest positive integer that
+     matches the bitlist pattern, and so is a lower bound. Ideally we would
+     like to use the lower bound from the interval domain for [b] instead. *)
+  match Z.to_int (increase_lower_bound b Z.zero) with
+  | n when n < width a ->
+    let low_zeros = Z.trailing_zeros @@ Z.lognot @@ a.bits_clr in
+    if low_zeros + n >= width a then
+      exact (width a) Z.zero (Ex.union (explanation a) (explanation b))
+    else if low_zeros + n > 0 then
+      concat (unknown (width a - low_zeros - n) Ex.empty) @@
+      exact (low_zeros + n) Z.zero (Ex.union (explanation a) (explanation b))
+    else
+      unknown (width a) Ex.empty
+  | _ | exception Z.Overflow ->
+    exact (width a) Z.zero (explanation b)
+
+let lshr a b =
+  (* If the minimum value for [b] is larger than the bitwidth, the result is
+     zero.
+
+     Otherwise, any high zero bit in [a] is also a zero bit in the result, and
+     the minimum value for [b] also accounts for that many minimum zeros (e.g.
+     000??? shifted by at least 2 is 00000?).
+
+     NB: [increase_lower_bound b Z.zero] is the smallest positive integer that
+     matches the bitlist pattern, and so is a lower bound. Ideally we would
+     like to use the lower bound from the interval domain for [b] instead. *)
+  match Z.to_int (increase_lower_bound b Z.zero) with
+  | n when n < width a ->
+    let sz = width a in
+    if Z.testbit a.bits_clr (sz - 1) then (* MSB is zero *)
+      let low_msb_zero = Z.numbits @@ Z.extract (Z.lognot a.bits_clr) 0 sz in
+      let nb_msb_zeros = sz - low_msb_zero in
+      assert (nb_msb_zeros > 0);
+      let nb_zeros = nb_msb_zeros + n in
+      if nb_zeros >= sz then
+        exact sz Z.zero (Ex.union (explanation a) (explanation b))
+      else
+        concat
+          (exact nb_zeros Z.zero (Ex.union (explanation a) (explanation b)))
+          (unknown (sz - nb_zeros) Ex.empty)
+    else if n > 0 then
+      concat
+        (exact n Z.zero (explanation b))
+        (unknown (sz - n) Ex.empty)
+    else
+      unknown sz Ex.empty
+  | _ | exception Z.Overflow ->
+    exact (width a) Z.zero (explanation b)

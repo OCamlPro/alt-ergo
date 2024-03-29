@@ -3185,8 +3185,8 @@ module BV = struct
       (bvneg u)
 
   (* Shift operations *)
-  let bvshl s t = int2bv (size2 s t) Ints.(bv2nat s * (~$2 ** bv2nat t))
-  let bvlshr s t = int2bv (size2 s t) Ints.(bv2nat s / (~$2 ** bv2nat t))
+  let bvshl s t = mk_term (Op BVshl) [s; t] (type_info s)
+  let bvlshr s t = mk_term (Op BVlshr) [s; t] (type_info s)
   let bvashr s t =
     let m = size2 s t in
     ite (is (extract (m - 1) (m - 1) s) 0)
