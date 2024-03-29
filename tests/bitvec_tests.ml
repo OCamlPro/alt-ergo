@@ -254,6 +254,18 @@ let test_bitlist_binop ~count sz zop bop =
          (IntSet.map2 zop (of_bitlist s) (of_bitlist t))
          (of_bitlist u))
 
+let test_interval_binop ~count sz zop iop =
+  Test.make ~count
+    ~print:Print.(
+        pair
+          (Fmt.to_to_string Intervals.Int.pp)
+          (Fmt.to_to_string Intervals.Int.pp))
+    Gen.(pair (intervals sz) (intervals sz))
+    (fun (s, t) ->
+       IntSet.subset
+         (IntSet.map2 zop (of_interval s) (of_interval t))
+         (of_interval (iop s t)))
+
 let zmul sz a b =
   Z.extract (Z.mul a b) 0 sz
 
@@ -263,3 +275,29 @@ let test_bitlist_mul sz =
 
 let () =
   Test.check_exn (test_bitlist_mul 3)
+
+let zudiv sz a b =
+  if Z.equal b Z.zero then
+    Z.extract Z.minus_one 0 sz
+  else
+    Z.div a b
+
+let test_interval_bvudiv sz =
+  test_interval_binop ~count:1_000
+    sz (zudiv sz) (Intervals.Int.bvudiv ~size:sz)
+
+let () =
+  Test.check_exn (test_interval_bvudiv 3)
+
+let zurem a b =
+  if Z.equal b Z.zero then
+    a
+  else
+    Z.rem a b
+
+let test_interval_bvurem sz =
+  test_interval_binop ~count:1_000
+    sz zurem Intervals.Int.bvurem
+
+let () =
+  Test.check_exn (test_interval_bvurem 3)
