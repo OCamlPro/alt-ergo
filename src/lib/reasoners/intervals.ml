@@ -133,8 +133,9 @@ let borne_inf = function
   | { ints = (Strict (v, ex), _) :: _; _ } -> v, ex, false
   | _ -> raise No_finite_bound
 
-let only_borne_inf ({ ints; _ } as t) =
-  { t with ints = List.map (function (inf, _) -> (inf, Pinfty)) ints; }
+let only_borne_inf = function
+  | { ints = (inf, _) :: _ ; _ } as t -> { t with ints = [(inf, Pinfty)] }
+  | _ -> assert false
 
 let borne_sup { ints; _ } =
   match List.rev ints with
@@ -142,9 +143,12 @@ let borne_sup { ints; _ } =
   | (_, Strict (v, ex))::_ -> v, ex, false
   | _ -> raise No_finite_bound
 
-let only_borne_sup ({ ints; _ } as t) =
-  { t with ints = List.map (function (_, sup) -> (Minfty, sup)) ints; }
-
+let only_borne_sup t =
+  let rec aux = function
+    | [] -> assert false
+    | [ (_, sup) ] -> { t with ints = [(Minfty, sup)] }
+    | _ :: tl -> aux tl
+  in aux t.ints
 
 let explain_borne = function
   | Large (_, e) | Strict (_, e) -> e
