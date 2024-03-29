@@ -462,7 +462,10 @@ module SmtPrinter = struct
       pp_rational ppf q
 
     | Sy.Bitv (n, s), [] ->
-      Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
+      if n mod 4 = 0 then
+        Fmt.pf ppf "#x%s" (Z.format (Fmt.str "%%0%dx" (n / 4)) s)
+      else
+        Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
 
     | Sy.MapsTo v, [t] ->
       Fmt.pf ppf "@[<2>(ae.mapsto %a %a@])" Var.print v pp t

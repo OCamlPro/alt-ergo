@@ -1,5 +1,5 @@
 
 unknown
 (
-  (define-fun x () (_ BitVec 8) #b00000101)
+  (define-fun x () (_ BitVec 8) #x05)
 )
