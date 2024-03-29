@@ -3030,9 +3030,18 @@ end
 module BV = struct
   open Core
 
+  let of_bigint sz n =
+    assert (sz > 0);
+    mk_term (Sy.Bitv (sz, Z.extract n 0 sz)) [] (Tbitv sz)
+
+  let of_bigint_like s n =
+    match type_info s with
+    | Tbitv sz -> of_bigint sz n
+    | _ -> invalid_arg "of_bigint_like"
+
   (* Constant symbols for all zeros and all ones *)
-  let bvzero m = bitv (String.make m '0') (Tbitv m)
-  let bvones m = bitv (String.make m '1') (Tbitv m)
+  let bvzero m = of_bigint m Z.zero
+  let bvones m = of_bigint m Z.minus_one
 
   (* Helpers *)
   let b = function
@@ -3130,12 +3139,10 @@ module BV = struct
     bvcomp (size2 s t) s t
 
   (* Arithmetic operations *)
-  let bvneg s =
-    let m = size s in
-    int2bv m Ints.(~$$Z.(~$1 lsl m) - bv2nat s)
-  let bvadd s t = int2bv (size s) Ints.(bv2nat s + bv2nat t)
-  let bvsub s t = bvadd s (bvneg t)
-  let bvmul s t = int2bv (size s) Ints.(bv2nat s * bv2nat t)
+  let bvadd s t = mk_term (Op BVadd) [s; t] (type_info s)
+  let bvsub s t = mk_term (Op BVsub) [s; t] (type_info s)
+  let bvneg s = bvsub (of_bigint_like s Z.zero) s
+  let bvmul s t = mk_term (Op BVmul) [s; t] (type_info s)
   let bvudiv s t =
     let m = size2 s t in
     ite (eq (bv2nat t) Ints.(~$0))
@@ -3175,7 +3182,7 @@ module BV = struct
     let abs_s = ite (is msb_s 0) s (bvneg s) in
     let abs_t = ite (is msb_t 0) t (bvneg t) in
     let u = bvurem abs_s abs_t in
-    ite (eq (bv2nat u) Ints.(~$0))
+    ite (eq u (of_bigint_like u Z.zero))
       u
     @@ ite (and_ (is msb_s 0) (is msb_t 0))
       u

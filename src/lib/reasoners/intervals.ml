@@ -83,9 +83,13 @@ module Ring(C : Core)(RT : RingType) = struct
       );
     u
 
+  let neg u = trace1 "neg" u @@ map_strict_dec RT.neg u
+
   let add u1 u2 =
     trace2 "add" u1 u2 @@ of_set_nonempty @@
     map2_mon_to_set RT.add Inc u1 Inc u2
+
+  let sub u1 u2 = add u1 (neg u2)
 
   let scale alpha u =
     let alpha = RT.finite alpha in
@@ -122,8 +126,6 @@ module Ring(C : Core)(RT : RingType) = struct
         (map_inc_to_set (RT.pow n))
     else
       map_strict_inc (RT.pow n) u
-
-  let neg u = trace1 "neg" u @@ map_strict_dec RT.neg u
 end
 
 module Field(C : Core)(FT : FieldType) = struct

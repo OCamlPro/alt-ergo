@@ -49,7 +49,7 @@ let explanation { ex; _ } = ex
 
 let exact width value ex =
   { width
-  ; bits_set = value
+  ; bits_set = Z.extract value 0 width
   ; bits_clr = Z.extract (Z.lognot value) 0 width
   ; ex }
 
@@ -264,3 +264,39 @@ let fold_domain f b acc =
         (ofs + 1) { b with bits_set = Z.logor b.bits_set mask } acc
   in
   fold_domain_aux 0 b acc
+
+(* simple propagator: only compute known low bits *)
+let mul a b =
+  let sz = width a in
+  assert (width b = sz);
+
+  let ex = Ex.union (explanation a) (explanation b) in
+
+  (* (a * 2^n) * (b * 2^m) = (a * b) * 2^(n + m) *)
+  let zeroes_a = Z.trailing_zeros @@ Z.lognot a.bits_clr in
+  let zeroes_b = Z.trailing_zeros @@ Z.lognot b.bits_clr in
+  if zeroes_a + zeroes_b >= sz then
+    exact sz Z.zero ex
+  else
+    let low_bits =
+      if zeroes_a + zeroes_b = 0 then empty
+      else exact (zeroes_a + zeroes_b) Z.zero ex
+    in
+    let a = extract a zeroes_a (zeroes_a + sz - width low_bits - 1) in
+    assert (width a + width low_bits = sz);
+    let b = extract b zeroes_b (zeroes_b + sz - width low_bits - 1) in
+    assert (width b + width low_bits = sz);
+    (* ((ah * 2^n) + al) * ((bh * 2^m) + bl) =
+        al * bl  (mod 2^(min n m)) *)
+    let low_a_known = Z.trailing_zeros @@ Z.lognot @@ bits_known a in
+    let low_b_known = Z.trailing_zeros @@ Z.lognot @@ bits_known b in
+    let low_known = min low_a_known low_b_known in
+    let mid_bits =
+      if low_known = 0 then empty
+      else exact
+          low_known
+          Z.(extract (value a) 0 low_known * extract (value b) 0 low_known)
+          ex
+    in
+    concat (unknown (sz - width mid_bits - width low_bits) Ex.empty) @@
+    concat mid_bits low_bits
