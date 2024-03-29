@@ -121,6 +121,12 @@ val logxor : t -> t -> t
 val mul : t -> t -> t
 (** Integer multiplication. *)
 
+val shl : t -> t -> t
+(** Logical left shift. *)
+
+val lshr : t -> t -> t
+(** Logical right shift. *)
+
 val concat : t -> t -> t
 (** Bit-vector concatenation. *)
 

@@ -45,6 +45,7 @@ type operator =
   | Extract of int * int (* lower bound * upper bound *)
   | BVnot | BVand | BVor | BVxor
   | BVadd | BVsub | BVmul | BVudiv | BVurem
+  | BVshl | BVlshr
   | Int2BV of int | BV2Nat
   (* FP *)
   | Float
@@ -193,6 +194,7 @@ let compare_operators op1 op2 =
             | Integer_log2 | Pow | Integer_round
             | BVnot | BVand | BVor | BVxor
             | BVadd | BVsub | BVmul | BVudiv | BVurem
+            | BVshl | BVlshr
             | Int2BV _ | BV2Nat
             | Not_theory_constant | Is_theory_constant | Linear_dependency
             | Constr _ | Destruct _ | Tite) -> assert false
@@ -356,6 +358,8 @@ module AEPrinter = struct
     | BVmul -> Fmt.pf ppf "bvmul"
     | BVudiv -> Fmt.pf ppf "bvudiv"
     | BVurem -> Fmt.pf ppf "bvurem"
+    | BVshl -> Fmt.pf ppf "bvshl"
+    | BVlshr -> Fmt.pf ppf "bvlshr"
 
     (* ArraysEx theory *)
     | Get -> Fmt.pf ppf "get"
@@ -461,6 +465,8 @@ module SmtPrinter = struct
     | BVmul -> Fmt.pf ppf "bvmul"
     | BVudiv -> Fmt.pf ppf "bvudiv"
     | BVurem -> Fmt.pf ppf "bvurem"
+    | BVshl -> Fmt.pf ppf "bvshl"
+    | BVlshr -> Fmt.pf ppf "bvlshr"
 
     (* ArraysEx theory *)
     | Get -> Fmt.pf ppf "select"

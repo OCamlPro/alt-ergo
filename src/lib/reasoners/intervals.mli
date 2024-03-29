@@ -87,6 +87,19 @@ module Int : sig
       theory, i.e. where [bvurem n 0] is [n].
 
       [s] and [t] must be within the [0, 2^sz - 1] range. *)
+
+  val bvshl : size:int -> t -> t -> t
+  (** [shl sz s t] computes an overapproximation of the left shift [s lsl t],
+      truncating the result to [sz] bits.
+
+      [s] and [t] must only contain non-negative integers. *)
+
+  val lshr : t -> t -> t
+  (** [lshr s t] computes an approximation of the logical right shift [s lsr t].
+
+      Note that the result of logical right shift is independent of bit width.
+
+      [s] and [t] must only contain non-negative integers. *)
 end
 
 module Legacy : sig

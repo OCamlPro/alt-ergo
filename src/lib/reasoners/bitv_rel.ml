@@ -256,6 +256,12 @@ module Constraint : sig
 
       This uses the convention that [x % 0] is [x]. *)
 
+  val bvshl : X.r -> X.r -> X.r -> t
+  (** [bvshl r x y] is the constraint [r = x << y] *)
+
+  val bvlshr : X.r -> X.r -> X.r -> t
+  (** [bvshl r x y] is the constraint [r = x >> y] *)
+
   val bvule : X.r -> X.r -> t
 
   val bvugt : X.r -> X.r -> t
@@ -273,6 +279,8 @@ end = struct
     | Band | Bor | Bxor
     (* Arithmetic operations *)
     | Badd | Bmul | Budiv | Burem
+    (* Shift operations *)
+    | Bshl | Blshr
 
   let pp_binop ppf = function
     | Band -> Fmt.pf ppf "bvand"
@@ -282,6 +290,8 @@ end = struct
     | Bmul -> Fmt.pf ppf "bvmul"
     | Budiv -> Fmt.pf ppf "bvudiv"
     | Burem -> Fmt.pf ppf "bvurem"
+    | Bshl -> Fmt.pf ppf "bvshl"
+    | Blshr -> Fmt.pf ppf "bvlshr"
 
   let equal_binop op1 op2 =
     match op1, op2 with
@@ -304,12 +314,18 @@ end = struct
     | Budiv, _ | _, Budiv -> false
 
     | Burem, Burem -> true
+    | Burem, _ | _, Burem -> false
+
+    | Bshl, Bshl -> true
+    | Bshl, _ | _, Bshl -> false
+
+    | Blshr, Blshr -> true
 
   let hash_binop : binop -> int = Hashtbl.hash
 
   let is_commutative = function
     | Band | Bor | Bxor | Badd | Bmul -> true
-    | Budiv | Burem -> false
+    | Budiv | Burem | Bshl | Blshr -> false
 
   let propagate_binop ~ex dx op dy dz =
     let open Bitlist_domains.Ephemeral in
@@ -343,6 +359,12 @@ end = struct
       (* TODO: full adder propagation *)
       ()
 
+    | Bshl -> (* Only forward propagation for now *)
+      update ~ex dx (Bitlist.shl !!dy !!dz)
+
+    | Blshr -> (* Only forward propagation for now *)
+      update ~ex dx (Bitlist.lshr !!dy !!dz)
+
     | Bmul -> (* Only forward propagation for now *)
       update ~ex dx (Bitlist.mul !!dy !!dz)
 
@@ -360,6 +382,12 @@ end = struct
       update ~ex dr @@ norm @@ Intervals.Int.add !!dx !!dy;
       update ~ex dy @@ norm @@ Intervals.Int.sub !!dr !!dx;
       update ~ex dx @@ norm @@ Intervals.Int.sub !!dr !!dy
+
+    | Bshl -> (* Only forward propagation for now *)
+      update ~ex dr @@ Intervals.Int.bvshl ~size:sz !!dx !!dy
+
+    | Blshr -> (* Only forward propagation for now *)
+      update ~ex dr @@ Intervals.Int.lshr !!dx !!dy
 
     | Bmul -> (* Only forward propagation for now *)
       update ~ex dr @@ norm @@ Intervals.Int.mul !!dx !!dy
@@ -574,6 +602,8 @@ end = struct
   let bvmul = cbinop Bmul
   let bvudiv = cbinop Budiv
   let bvurem = cbinop Burem
+  let bvshl = cbinop Bshl
+  let bvlshr = cbinop Blshr
 
   let crel r = hcons @@ Crel r
 
@@ -729,6 +759,27 @@ end = struct
     ) else
       false
 
+  (* Add the constraint: r = x >> c *)
+  let add_lshr_const acts r x c =
+    let sz = bitwidth r in
+    match Z.to_int c with
+    | 0 -> add_eq acts r x
+    | n when n < sz ->
+      assert (n > 0);
+      let r_bitv = Shostak.Bitv.embed r in
+      let low_bits =
+        Shostak.Bitv.is_mine @@
+        Bitv.extract sz n (sz - 1) (Shostak.Bitv.embed x)
+      in
+      add_eq acts
+        (Shostak.Bitv.is_mine @@ Bitv.extract sz 0 (sz - 1 - n) r_bitv)
+        low_bits;
+      add_eq_const acts
+        (Shostak.Bitv.is_mine @@ Bitv.extract sz (sz - n) (sz - 1) r_bitv)
+        Z.zero
+    | _ | exception Z.Overflow ->
+      add_eq_const acts r Z.zero
+
   (* Ground evaluation rules for binary operators. *)
   let eval_binop op ty x y =
     match op with
@@ -747,6 +798,18 @@ end = struct
         cast ty x
       else
         cast ty @@ Z.rem x y
+    | Bshl -> (
+        match ty, Z.to_int y with
+        | Tbitv sz, y when y < sz ->
+          cast ty @@ Z.shift_left x y
+        | _ | exception Z.Overflow -> cast ty Z.zero
+      )
+    | Blshr -> (
+        match ty, Z.to_int y with
+        | Tbitv sz, y when y < sz ->
+          cast ty @@ Z.shift_right x y
+        | _ | exception Z.Overflow -> cast ty Z.zero
+      )
 
   (* Constant simplification rules for binary operators.
 
@@ -792,6 +855,17 @@ end = struct
     | Bmul -> false
 
     | Budiv | Burem -> false
+
+    (* shifts becomes a simple extraction when we know the right-hand side *)
+    | Bshl when X.is_constant y ->
+      add_shl_const acts r x (value y);
+      true
+    | Bshl -> false
+
+    | Blshr when X.is_constant y ->
+      add_lshr_const acts r x (value y);
+      true
+    | Blshr -> false
 
   (* Algebraic rewrite rules for binary operators.
 
@@ -864,6 +938,8 @@ let extract_binop =
     | BVmul -> Some bvmul
     | BVudiv -> Some bvudiv
     | BVurem -> Some bvurem
+    | BVshl -> Some bvshl
+    | BVlshr -> Some bvlshr
     | _ -> None
 
 let extract_constraints bcs uf r t =
