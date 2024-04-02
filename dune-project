@@ -80,7 +80,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (dolmen (>= 0.10))
   (dolmen_type (>= 0.10))
   (dolmen_loop (>= 0.10))
-  (ocplib-simplex (>= 0.5))
+  (ocplib-simplex (>= 0.5.1))
   (zarith (>= 1.11))
   seq
   (fmt (>= 0.9.0))

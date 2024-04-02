@@ -47,7 +47,7 @@ depends: [
   "ocamlbuild" {= "0.14.2"}
   "ocamlfind" {= "1.9.6"}
   "ocplib-endian" {= "1.2"}
-  "ocplib-simplex" {= "0.5"}
+  "ocplib-simplex" {= "0.5.1"}
   "pp_loc" {= "2.1.0"}
   "ppx_blob" {= "0.7.2"}
   "ppx_derivers" {= "1.2.1"}
@@ -57,7 +57,6 @@ depends: [
   "seq" {= "base"}
   "sexplib0" {= "v0.16.0"}
   "spelll" {= "0.4"}
-  "stdlib-shims" {= "0.3.0"}
   "stdcompat" {= "19"}
   "topkg" {= "1.0.7"}
   "uutf" {= "1.0.3"}
