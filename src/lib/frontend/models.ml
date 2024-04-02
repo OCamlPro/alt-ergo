@@ -185,9 +185,8 @@ module Pp_smtlib_term = struct
       else
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
-    | Sy.Op Sy.Destruct (hs, grded), [e] ->
-      fprintf fmt "%a#%s%a"
-        print e (if grded then "" else "!") Hstring.print hs
+    | Sy.Op Sy.Destruct hs, [e] ->
+      fprintf fmt "%a#%a" print e Hstring.print hs
 
 
     | Sy.In(lb, rb), [t] ->

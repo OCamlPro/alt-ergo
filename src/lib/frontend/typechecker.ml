@@ -494,7 +494,7 @@ module Env = struct
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
       if record then (Symbols.Op (Access (Hstring.make s)))
-      else Symbols.destruct ~guarded:true s
+      else Symbols.destruct s
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -621,7 +621,7 @@ let mk_adequate_app p s te_args ty logic_kind =
 
   | Env.RecordDestr, [te], _ -> TTdot(te, hp)
 
-  | Env.AdtDestr, [te], _ -> TTproject (true, te, hp)
+  | Env.AdtDestr, [te], _ -> TTproject (te, hp)
 
   | Env.RecordDestr, _, _ -> assert false
   | Env.RecordConstr, _, _ -> assert false
@@ -951,14 +951,14 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.TypeClash(t1,t2) -> Errors.typing_error (Unification(t1,t2)) loc
       end
 
-    | PPproject (grded, t, lbl) ->
+    | PPproject (t, lbl) ->
       let te = type_term env t in
       begin
         try
           match Env.fresh_type env lbl loc with
           | _, {Env.args = [arg] ; result}, Env.AdtDestr ->
             Ty.unify te.c.tt_ty arg;
-            TTproject (grded, te, Hstring.make lbl), Ty.shorten result
+            TTproject (te, Hstring.make lbl), Ty.shorten result
 
           | _, {Env.args = [arg] ; result}, Env.RecordDestr ->
             Ty.unify te.c.tt_ty arg;
@@ -1675,7 +1675,7 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
   | PPisConstr (e, _) ->
     no_alpha_renaming_b s e
 
-  | PPproject (_, e, _) ->
+  | PPproject (e, _) ->
     no_alpha_renaming_b s e
 
 let rec alpha_renaming_b ((up, m) as s) f =
@@ -1925,10 +1925,10 @@ let rec alpha_renaming_b ((up, m) as s) f =
       let cases' = if !same_cases then cases else cases' in
       { f with pp_desc = PPmatch(e', cases') }
 
-  | PPproject(grded, f1, a) ->
+  | PPproject(f1, a) ->
     let ff1 = alpha_renaming_b s f1 in
     if f1 == ff1 then f
-    else {f with pp_desc = PPproject(grded, ff1, a)}
+    else {f with pp_desc = PPproject(ff1, a)}
 
   | PPisConstr(f1, a) ->
     let ff1 = alpha_renaming_b s f1 in
@@ -2089,8 +2089,8 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
     | TTite (cond, t1, t2) ->
       TTite (monomorphize_form cond, mono_term t1, mono_term t2)
 
-    | TTproject (grded, t, lbl) ->
-      TTproject (grded, mono_term t, lbl)
+    | TTproject (t, lbl) ->
+      TTproject (mono_term t, lbl)
     | TTmatch (e, pats) ->
       let e = mono_term e in
       let pats = List.rev_map (fun (p, f) -> p, mono_term f) (List.rev pats) in

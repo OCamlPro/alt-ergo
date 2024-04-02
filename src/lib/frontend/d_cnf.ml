@@ -1046,7 +1046,7 @@ let rec mk_expr
                       | Trecord _ ->
                         Sy.Op (Sy.Access (Hstring.make name))
                       | Tadt _ ->
-                        Sy.destruct ~guarded:true name
+                        Sy.destruct name
                       | _ -> assert false
                     in
                     E.mk_term sy [e] ty

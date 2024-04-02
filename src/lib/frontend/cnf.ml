@@ -149,8 +149,8 @@ let rec make_term quant_basename t =
       let t2 = mk_term t2 in
       E.mk_ite cond t1 t2
 
-    | TTproject (b, t, s) ->
-      E.mk_term (Sy.destruct ~guarded:b (Hstring.view s)) [mk_term t] ty
+    | TTproject (t, s) ->
+      E.mk_term (Sy.destruct (Hstring.view s)) [mk_term t] ty
 
     | TTmatch (e, pats) ->
       let e = make_term quant_basename e in

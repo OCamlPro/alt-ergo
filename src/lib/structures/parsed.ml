@@ -166,7 +166,7 @@ and pp_desc =
   | PPcast of lexpr * ppure_type
   | PPmatch of lexpr * (pattern * lexpr) list
   | PPisConstr of lexpr * string
-  | PPproject of bool * lexpr * string
+  | PPproject of lexpr * string
 
 let rec pp_lexpr fmt {pp_desc; _} =
   let open Format in
@@ -231,7 +231,7 @@ let rec pp_lexpr fmt {pp_desc; _} =
     fprintf fmt "cast %a -> %a" pp_lexpr le pp_ppure_type ppt
   | PPmatch (_le, _plel) -> fprintf fmt "match"
   | PPisConstr (le, s) -> fprintf fmt "isConstr: %a %s" pp_lexpr le s
-  | PPproject (b, le, s) -> fprintf fmt "project: %b %a %s" b pp_lexpr le s
+  | PPproject (le, s) -> fprintf fmt "project: %a %s" pp_lexpr le s
 
 and pp_lexpr_list fmt tl =
   Format.fprintf fmt "@[<h>%a@]"

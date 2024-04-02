@@ -87,7 +87,8 @@ module Delayed : sig
       by [dispatch].
 
       [dispatch] must be pure. *)
-  val create : (Symbols.operator -> delayed_fn option) -> t
+  val create :
+    is_ready:(X.r -> bool) -> (Symbols.operator -> delayed_fn option) -> t
 
   (** [add env uf r t] checks whether the term [t] is a delayed function and if
       so either adds it to the structure or evaluates it immediately if
@@ -114,6 +115,9 @@ module Delayed : sig
   (** [assume] is a simple wrapper for [update] that is compatible with the
       [assume] signature of a relation. *)
   val assume : t -> Uf.t -> X.r Sig_rel.input list -> t * X.r Sig_rel.result
+
+  (** [iter_delayed f t] iterates on the delayed applications of [t]. *)
+  val iter_delayed : (X.r -> Symbols.operator -> Expr.t -> unit) -> t -> unit
 end = struct
   module OMap = Map.Make(struct
       type t = Symbols.operator
@@ -124,11 +128,12 @@ end = struct
   type t = {
     dispatch : Symbols.operator -> delayed_fn option ;
     used_by : Expr.Set.t OMap.t MX.t ;
+    is_ready : X.r -> bool ;
   }
 
-  let create dispatch = { dispatch; used_by = MX.empty }
+  let create ~is_ready dispatch = { dispatch; used_by = MX.empty; is_ready }
 
-  let add ({ dispatch; used_by } as env) uf r t =
+  let add ({ dispatch; used_by; _ } as env) uf r t =
     (* Note: we dispatch on [Op] symbols, but it could make sense to dispatch on
        a separate constructor for explicitely delayed terms. *)
     match Expr.term_view t with
@@ -156,7 +161,7 @@ end = struct
       )
     | _ -> env, []
 
-  let update { dispatch; used_by } uf r1 eqs =
+  let update { dispatch; used_by; _ } uf r1 eqs =
     match MX.find r1 used_by with
     | exception Not_found -> eqs
     | sm ->
@@ -180,7 +185,7 @@ end = struct
 
        The other origins are subsumed. *)
     match orig with
-    | Th_util.Subst when X.is_constant r2 -> update env uf r1 eqs
+    | Th_util.Subst when env.is_ready r2 -> update env uf r1 eqs
     | _ -> eqs
 
 
@@ -193,6 +198,9 @@ end = struct
         ) [] la
     in
     env, { Sig_rel.assume = assume_nontrivial_eqs eqs la; remove = [] }
+
+  let iter_delayed f t =
+    MX.iter (fun r -> OMap.iter (fun op -> Expr.Set.iter (f r op))) t.used_by
 end
 
 module type Domain = sig

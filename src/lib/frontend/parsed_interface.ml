@@ -337,5 +337,5 @@ let mk_match loc expr cases =
 let mk_algebraic_test loc expr cstr =
   mk_localized loc (PPisConstr (expr, cstr))
 
-let mk_algebraic_project loc ~guarded expr cstr =
-  mk_localized loc (PPproject (guarded, expr, cstr))
+let mk_algebraic_project loc expr cstr =
+  mk_localized loc (PPproject (expr, cstr))

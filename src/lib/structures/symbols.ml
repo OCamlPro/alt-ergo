@@ -39,7 +39,7 @@ type operator =
   (* ADTs *)
   | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of Hstring.t
   (* Arrays *)
   | Get | Set
   (* BV *)
@@ -150,7 +150,7 @@ let bitv s =
   in Bitv (String.length s, biv)
 let real r = Real (Q.of_string r)
 let constr s = Op (Constr (Hstring.make s))
-let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
+let destruct s = Op (Destruct (Hstring.make s))
 
 let mk_bound kind sort ~is_open ~is_lower =
   {kind; sort; is_open; is_lower}
@@ -181,10 +181,9 @@ let compare_kinds k1 k2 =
 let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
-      | Access h1, Access h2 | Constr h1, Constr h2 -> Hstring.compare h1 h2
-      | Destruct (h1, b1), Destruct(h2, b2) ->
-        let c = Stdlib.compare b1 b2 in
-        if c <> 0 then c else Hstring.compare h1 h2
+      | Access h1, Access h2 | Constr h1, Constr h2
+      | Destruct h1, Destruct h2 ->
+        Hstring.compare h1 h2
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
@@ -360,9 +359,8 @@ module AEPrinter = struct
     (* DT theory *)
     | Record -> Fmt.pf ppf "@Record"
     | Access s -> Fmt.pf ppf "@Access_%a" Hstring.print s
-    | Constr s -> Hstring.print ppf s
-    | Destruct (s, g) ->
-      Fmt.pf ppf "%s%a" (if g then "" else "!") Hstring.print s
+    | Constr s
+    | Destruct s -> Hstring.print ppf s
 
     (* Float theory *)
     | Float -> Fmt.pf ppf "float"
@@ -457,7 +455,7 @@ module SmtPrinter = struct
 
     (* DT theory *)
     | Record -> ()
-    | Access s | Constr s | Destruct (s, _) -> Hstring.print ppf s
+    | Access s | Constr s | Destruct s -> Hstring.print ppf s
 
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"
