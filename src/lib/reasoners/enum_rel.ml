@@ -292,7 +292,7 @@ let assume env uf la =
   let assume, domains = propagate_domains env in
   { env with domains }, Sig_rel.{ assume; remove = [] }
 
-let case_split_limit env n =
+let can_split env n =
   let m = Options.get_max_split () in
   Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
 
@@ -318,7 +318,7 @@ let case_split env uf ~for_model =
   match best with
   | Some (n, r, c) ->
     let n = Numbers.Q.from_int n in
-    if for_model || case_split_limit env n then
+    if for_model || can_split env n then
       let nr = Th.is_mine (Cons (c, X.type_info r)) in
       Debug.case_split r nr;
       [LR.mkv_eq r nr, true, Th_util.CS (Th_util.Th_sum, n)]
