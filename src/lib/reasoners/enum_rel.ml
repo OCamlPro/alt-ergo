@@ -97,13 +97,108 @@ module Domain = struct
     let constrs = HSS.remove c d.constrs in
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
-
-  let fold_leaves f r d acc = f r d acc
-
-  let map_leaves f r acc = f r acc
 end
 
-module Domains = Rel_utils.SimpleDomains_make (Domain)
+module Domains = struct
+  exception Inconsistent = Domain.Inconsistent
+  (** Exception raised by [update] or [subst] when an inconsistency is
+      detected. *)
+
+  (** The type of simple domain maps. A domain map maps each representative
+      (semantic value, of type [X.r]) to its associated domain. *)
+  type t = {
+    domains : Domain.t MX.t;
+    (** Map from tracked representatives to their domain. *)
+
+    changed : SX.t;
+    (** Representatives whose domain has changed since the last flush
+        in [propagation]. *)
+  }
+
+  let pp ppf t =
+    Fmt.(iter_bindings ~sep:semi MX.iter
+           (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
+         |> braces
+        )
+      ppf t.domains
+
+  let empty = { domains = MX.empty; changed = SX.empty }
+
+  let internal_update r nd t =
+    let domains = MX.add r nd t.domains in
+    let changed = SX.add r t.changed in
+    { domains; changed }
+
+  (** [add r t] adds a domain for [r] in the domain map. If [r] does not
+      already have an associated domain, a fresh domain will be created for
+      [r] using [Domain.unknown]. *)
+  let add r t =
+    match MX.find r t.domains with
+    | _ -> t
+    | exception Not_found ->
+      let nd = Domain.unknown r in
+      internal_update r nd t
+
+  (** [update r d t] replaces the domain of [r] in [t] by [d]. The
+      representative [r] is marked [changed] after this call. *)
+  let update r d t =
+    match MX.find r t.domains with
+    | od ->
+      let nd = Domain.intersect ~ex:Explanation.empty od d in
+      if Domain.equal od nd then
+        t
+      else
+        internal_update r nd t
+
+    | exception Not_found ->
+      let nd = Domain.intersect ~ex:Explanation.empty (Domain.unknown r) d in
+      internal_update r nd t
+
+  (** [get r t] returns the domain currently associated with [r] in [t]. *)
+  let get r t =
+    try MX.find r t.domains
+    with Not_found -> Domain.unknown r
+
+  let remove r t =
+    let domains = MX.remove r t.domains in
+    let changed = SX.remove r t.changed in
+    { domains ; changed }
+
+  (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
+      domains, merging the corresponding domains as appropriate.
+
+      The explanation [ex] justifies the equality [p = v].
+
+      @raise Domain.Inconsistent if this causes any domain in [d] to become
+             empty. *)
+  let subst ~ex r nr t =
+    match MX.find r t.domains with
+    | d ->
+      let nnd =
+        match MX.find nr t.domains with
+        | nd -> Domain.intersect ~ex d nd
+        | exception Not_found -> d
+      in
+      let t = remove r t in
+      internal_update nr nnd t
+
+    | exception Not_found -> t
+
+  let fold f t acc = MX.fold f t.domains acc
+
+  (* [propagate f a t] iterates on all the changed domains of [t] since the
+     last call of [propagate]. The list of changed domains is flushed after
+     this call. *)
+  let propagate f acc t =
+    let acc =
+      SX.fold
+        (fun r acc ->
+           let d = get r t in
+           f acc r d
+        ) t.changed acc
+    in
+    acc, { t with changed = SX.empty }
+end
 
 type t = {
   domains : Domains.t;
