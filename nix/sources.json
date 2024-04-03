@@ -25,17 +25,17 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "ocplib-simplex": {
-        "branch": "v0.5",
+        "branch": "v0.5.1",
         "description": "A library implementing a simplex algorithm, in a functional style, for solving systems of linear inequalities",
         "homepage": "",
         "owner": "OCamlPro",
         "repo": "ocplib-simplex",
-        "rev": "9b0944c81088b9039775e48cdbc3499128ca3692",
-        "sha256": "1dxx68k2smnxrp9b8snpvi74d41yfxn2j6swbqnny6r1d1950bmk",
+        "rev": "12e7c1fd994d4c40cf7159008a67579f470df616",
+        "sha256": "0jkyqvcia4950cr1ip4n4xnjgaqlliljw48b40n95j75wjvy3d3w",
         "type": "tarball",
-        "url": "https://github.com/OCamlPro/ocplib-simplex/archive/9b0944c81088b9039775e48cdbc3499128ca3692.tar.gz",
+        "url": "https://github.com/OCamlPro/ocplib-simplex/archive/12e7c1fd994d4c40cf7159008a67579f470df616.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "version": "0.5"
+        "version": "0.5.1"
     },
     "pp_loc": {
         "branch": "v2.1.0",
