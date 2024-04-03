@@ -215,8 +215,6 @@ let is_enum r =
   | Ty.Tsum _ -> true
   | _ -> false
 
-(* Needed for models generation because fresh terms are not added with the
-   function add. *)
 let add r uf env =
   match X.type_info r with
   | Ty.Tsum _ ->
@@ -238,12 +236,16 @@ let assume_literals la uf env =
        match lit with
        | Eq (r1, r2) as l, _, ex, Th_util.Subst when is_enum r1 ->
          Debug.assume l;
+         (* Needed for models generation because fresh terms are not added with
+            the function add. *)
          let env = add_rec r1 uf env in
          let env = add_rec r2 uf env in
          assume_subst ~ex r1 r2 env
 
        | Distinct (false, [r1; r2]) as l, _, ex, _ when is_enum r2 ->
          Debug.assume l;
+         (* Needed for models generation because fresh terms are not added with
+            the function add. *)
          let env = add_rec r1 uf env in
          let env = add_rec r2 uf env in
          assume_distinct ~ex r1 r2 env
