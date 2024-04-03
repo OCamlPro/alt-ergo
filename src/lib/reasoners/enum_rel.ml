@@ -92,9 +92,9 @@ module Domain = struct
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
 
-  let fold_leaves _f _rr _d _ = assert false
+  let fold_leaves f r d acc = f r d acc
 
-  let map_leaves _f _rr _ = assert false
+  let map_leaves f r acc = f r acc
 end
 
 module Domains = Rel_utils.SimpleDomains_make (Domain)
