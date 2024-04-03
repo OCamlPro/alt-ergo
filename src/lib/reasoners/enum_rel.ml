@@ -51,6 +51,12 @@ module Domain = struct
 
   let[@inline always] choose { constrs; _ } = HSS.choose constrs
 
+  let[@inline always] as_singleton { constrs; _ } =
+    if HSS.cardinal constrs = 1 then
+      Some (HSS.choose constrs)
+    else
+      None
+
   let domain ~constrs ex =
     if HSS.is_empty constrs then
       raise_notrace @@ Inconsistent ex
@@ -196,18 +202,18 @@ let assume_distinct ~ex r1 r2 env =
   let d1 = Domains.get r1 env.domains in
   let d2 = Domains.get r2 env.domains in
   let env =
-    if Domain.cardinal d1 = 1 then
-      let c = Domain.choose d1 in
+    match Domain.as_singleton d1 with
+    | Some c ->
       let nd = Domain.remove ~ex c d2 in
       update_domain r2 nd env
-    else
+    | None ->
       env
   in
-  if Domain.cardinal d2 = 1 then
-    let c = Domain.choose d2 in
+  match Domain.as_singleton d2 with
+  | Some c ->
     let nd = Domain.remove ~ex c d1 in
     update_domain r1 nd env
-  else
+  | None ->
     env
 
 let is_enum r =
@@ -263,12 +269,12 @@ let assume_literals la uf env =
 let propagate_domains env =
   Domains.propagate
     (fun eqs rr d ->
-       if Domain.cardinal d = 1 then
-         let c = Domain.choose d in
+       match Domain.as_singleton d with
+       | Some c ->
          let nr = Th.is_mine (Cons (c, X.type_info rr)) in
          let eq = Literal.LSem (LR.mkv_eq rr nr), d.ex, Th_util.Other in
          eq :: eqs
-       else
+       | None ->
          eqs
     ) [] env.domains
 
