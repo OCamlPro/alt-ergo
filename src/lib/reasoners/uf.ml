@@ -310,7 +310,7 @@ module Debug = struct
         ) repr
 
   let check_invariants orig env =
-    Options.heavy_assert (lazy (check_inv_repr_normalized orig env.repr))
+    Options.heavy_assert (fun () -> check_inv_repr_normalized orig env.repr)
 end
 (*BISECT-IGNORE-END*)
 

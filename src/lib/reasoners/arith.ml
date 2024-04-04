@@ -711,7 +711,7 @@ module Shostak
       (*
         This assert is not TRUE because of AC and distributivity of '*'
         Options.heavy_assert
-          (lazy (X.equal (apply_subst a sbs) (apply_subst b sbs)));
+          (fun () -> X.equal (apply_subst a sbs) (apply_subst b sbs));
       *)
     List.iter
       (fun (p, _) ->

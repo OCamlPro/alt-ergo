@@ -1351,7 +1351,7 @@ let fm (module Oracle : S with type p = P.t) uf are_eq rclass_of env eqs =
   Options.tool_req 4 "TR-Arith-Fm";
   let ineqs =
     MPL.fold (fun _ v acc ->
-        Options.heavy_assert (lazy (is_normalized_poly uf v.ple0));
+        Options.heavy_assert (fun () -> is_normalized_poly uf v.ple0);
         (better_bound_from_intervals env v) :: acc
       ) env.inequations []
   in

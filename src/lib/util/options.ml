@@ -660,4 +660,4 @@ let pp_comment fmt msg =
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
 
 let[@inline always] heavy_assert p =
-  assert (not @@ get_enable_assertions () || Lazy.force p)
+  assert (not @@ get_enable_assertions () || p ())

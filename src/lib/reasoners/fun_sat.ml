@@ -1048,7 +1048,7 @@ module Make (Th : Theory.S) = struct
     if list == [] then
       begin
         print_decisions_in_the_sats "exit assume rec" env;
-        Options.heavy_assert (lazy (cdcl_same_decisions env));
+        Options.heavy_assert (fun () -> cdcl_same_decisions env);
         env
       end
     else
@@ -1435,7 +1435,7 @@ module Make (Th : Theory.S) = struct
       if Options.get_profiling() then
         Profiling.decision new_level a.E.origin_name;
       (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
-      Options.heavy_assert (lazy (cdcl_same_decisions env));
+      Options.heavy_assert (fun () -> cdcl_same_decisions env);
       let env_a =
         {env with
          delta=l;
@@ -1478,11 +1478,11 @@ module Make (Th : Theory.S) = struct
             (*No backtrack, reset cache*)
             ignore (update_instances_cache (Some []));
         end;
-        Options.heavy_assert (lazy (cdcl_same_decisions env));
+        Options.heavy_assert (fun () -> cdcl_same_decisions env);
         if Options.get_tableaux_cdcl () then
           cdcl_learn_clause false env dep' (E.neg f);
         print_decisions_in_the_sats "make_one_decision:backtrack" env;
-        Options.heavy_assert (lazy (cdcl_same_decisions env));
+        Options.heavy_assert (fun () -> cdcl_same_decisions env);
         if not (Options.get_tableaux_cdcl ()) then
           unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
         else
@@ -1501,7 +1501,7 @@ module Make (Th : Theory.S) = struct
         Options.tool_req 2 "TR-Sat-Backjumping";
         dep
     with Propagate (ff, ex) ->
-      Options.heavy_assert (lazy (cdcl_same_decisions env));
+      Options.heavy_assert (fun () -> cdcl_same_decisions env);
       back_tracking (assume env [ff, ex])
 
   let max_term_depth_in_sat env =

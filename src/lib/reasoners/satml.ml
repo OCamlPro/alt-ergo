@@ -750,7 +750,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if is_semantic a then
       env.nchoices <- env.nchoices + 1;
     a.var.index <- Vec.size env.trail;
-    Options.heavy_assert (lazy (debug_enqueue_level a lvl reason))
+    Options.heavy_assert (fun () -> debug_enqueue_level a lvl reason)
 
   let progress_estimate env =
     let prg = ref 0. in
@@ -1002,9 +1002,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*let a = SFF.cardinal env.relevants in*)
     env.lazy_cnf <-
       Queue.fold (relevancy_propagation env) env.lazy_cnf env.tatoms_queue;
-    Options.heavy_assert (lazy (
+    Options.heavy_assert (fun () ->
         Matoms.for_all (fun a _ -> not a.is_true) env.lazy_cnf
-      ))
+      )
 
   let _expensive_theory_propagate () = None
   (* try *)

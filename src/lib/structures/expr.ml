@@ -1291,9 +1291,9 @@ let rec apply_subst_aux (s_t, s_ty) t =
         assert (no_capture_issue s_t binders);
         (* invariant: s_t does not contain other free vars than
            those of t, and binders cannot be free vars of t *)
-        Options.heavy_assert (lazy (
+        Options.heavy_assert (fun () ->
             Var.Map.for_all (fun sy _ -> not (Var.Map.mem sy s_t)) binders
-          ));
+          );
         let main = apply_subst_aux s main in
         let trs = List.map (apply_subst_trigger s) trs in
         let binders =

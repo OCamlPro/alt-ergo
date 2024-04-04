@@ -145,14 +145,14 @@ struct
           "abstract selectors of %a" CX.print a
 
     let assert_have_mem_types tya tyb =
-      Options.heavy_assert (lazy (
+      Options.heavy_assert (fun () ->
           if not (Ty.compare tya tyb = 0) then begin
             print_err "@[<v 0>@ Tya = %a  and @ Tyb = %a@]"
               Ty.print tya Ty.print tyb;
             false
           end
           else true
-        ))
+        )
 
   end
   (*BISECT-IGNORE-END*)
@@ -527,7 +527,8 @@ struct
     Debug.print_sbt "Triangular and cleaned" sbs;
     (*
       This assert is not TRUE because of AC and distributivity of '*'
-      Options.heavy_assert (equal (apply_subst a sbs) (apply_subst b sbs));
+      Options.heavy_assert
+        (fun () -> equal (apply_subst a sbs) (apply_subst b sbs));
     *)
     sbs
 
