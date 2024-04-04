@@ -151,14 +151,14 @@ module Domains = struct
       internal_update r nd t
 
   (** [update r d t] replaces the domain of [r] in [t] by [d]. The
-      representative [r] is marked [changed] after this call. *)
+      representative [r] is marked [changed] after this call if the domain
+      [d] isn't equal to the old one. *)
   let update r d t =
     let od = get r t in
-    let nd = Domain.intersect ~ex:Explanation.empty od d in
-    if Domain.equal od nd then
+    if Domain.equal od d then
       t
     else
-      internal_update r nd t
+      internal_update r d t
 
   let remove r t =
     let domains = MX.remove r t.domains in
