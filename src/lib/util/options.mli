@@ -1162,3 +1162,9 @@ end
 
 (** Print message as comment in the corresponding output format *)
 val pp_comment: Format.formatter -> string -> unit
+
+val heavy_assert : bool Lazy.t -> unit
+(** [heavy_assert p] checks if the boolean [p] evaluates to [true].
+    No-op if the [Options.get_enable_assertions ()] is [false].
+
+    @raises Assert_failure if [p] evaluates to [false]. *)
