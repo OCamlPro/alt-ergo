@@ -65,6 +65,8 @@ module Domain = struct
 
   let[@inline always] singleton ~ex c = { constrs = HSS.singleton c; ex }
 
+  let[@inline always] subset d1 d2 = HSS.subset d1.constrs d2.constrs
+
   let unknown ty =
     match ty with
     | Ty.Tsum (_, constrs) ->
@@ -122,7 +124,6 @@ module Domains = struct
     let changed = SX.add r t.changed in
     { domains; changed }
 
-  (** [get r t] returns the domain currently associated with [r] in [t]. *)
   let get r t =
     match Th.embed r with
     | Cons (r, _) ->
@@ -134,13 +135,13 @@ module Domains = struct
       with Not_found ->
         Domain.unknown (X.type_info r)
 
-  (** [add r t] adds a domain for [r] in the domain map. If [r] does not
-      already have an associated domain, a fresh domain will be created for
-      [r] and add to the map. *)
   let add r t =
     match MX.find r t.domains with
     | _ -> t
     | exception Not_found ->
+      (* We have to add a default domain if the key `r` isn't in map in order to
+         be sure that the case-split mechanism will attempt to choose a value
+         for it. *)
       let nd =
         match Th.embed r with
         | Cons (r, _) ->
@@ -155,6 +156,9 @@ module Domains = struct
       [d] isn't equal to the old one. *)
   let update r d t =
     let od = get r t in
+    (* For sake of completeness, the domain [d] has to be a subset
+       of the old domain of [r]. *)
+    assert (not (Options.get_enable_assertions ()) || Domain.subset d od);
     if Domain.equal od d then
       t
     else
