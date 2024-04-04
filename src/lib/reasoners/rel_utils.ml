@@ -217,6 +217,11 @@ module type Domain = sig
   val unknown : Ty.t -> t
   (** [unknown ty] returns a full domain for values of type [t]. *)
 
+  val add_explanation : ex:Explanation.t -> t -> t
+  (** [add_explanation ~ex d] adds the justification [ex] to the domain d. The
+      returned domain is identical to the domain of [d], only the
+      justifications are changed. *)
+
   val intersect : ex:Explanation.t -> t -> t -> t
   (** [intersect ~ex d1 d2] returns a new domain [d] that subsumes both [d1]
       and [d2]. The explanation [ex] justifies that the two domains can be

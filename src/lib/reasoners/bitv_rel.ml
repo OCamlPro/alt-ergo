@@ -77,7 +77,7 @@ let is_bv_ty = function
 
 let is_bv_r r = is_bv_ty @@ X.type_info r
 
-module Domain = struct
+module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
   (* Note: these functions are not in [Bitlist] proper in order to avoid a
      (direct) dependency from [Bitlist] to the [Shostak] module. *)
 
@@ -124,8 +124,7 @@ module Domain = struct
         | Ext (r, _r_size, i, j) -> extract (map_signed f r acc) i j
       ) empty (Shostak.Bitv.embed r)
 
-  let unknown ty =
-    match ty with
+  let unknown = function
     | Ty.Tbitv n -> unknown n Ex.empty
     | _ ->
       (* Only bit-vector values can have bitlist domains. *)
