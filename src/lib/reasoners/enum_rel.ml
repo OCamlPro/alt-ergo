@@ -63,7 +63,7 @@ module Domain = struct
     else
       { constrs; ex }
 
-  let unknown r =
+  let default r =
     match Th.embed r with
     | Cons (c, _) ->
       domain ~constrs:(HSS.singleton c) Ex.empty
@@ -127,18 +127,18 @@ module Domains = struct
 
   (** [add r t] adds a domain for [r] in the domain map. If [r] does not
       already have an associated domain, a fresh domain will be created for
-      [r] using [Domain.unknown]. *)
+      [r] using [Domain.default]. *)
   let add r t =
     match MX.find r t.domains with
     | _ -> t
     | exception Not_found ->
-      let nd = Domain.unknown r in
+      let nd = Domain.default r in
       internal_update r nd t
 
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
   let get r t =
     try MX.find r t.domains
-    with Not_found -> Domain.unknown r
+    with Not_found -> Domain.default r
 
   (** [update r d t] replaces the domain of [r] in [t] by [d]. The
       representative [r] is marked [changed] after this call. *)
