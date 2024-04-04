@@ -83,8 +83,11 @@ let delay2 embed is_mine f uf op = function
 module Delayed : sig
   type t
 
-  (** [create dispatch] creates a new delayed structure for the symbols handled
-      by [dispatch].
+  (** [create ~is_ready dispatch] creates a new delayed structure for the
+      symbols handled by [dispatch].
+
+      The predicate [is_ready] is used to prevent from computing the functions
+      of [dispatch] before we actually know their arguments.
 
       [dispatch] must be pure. *)
   val create :

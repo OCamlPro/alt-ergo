@@ -647,19 +647,20 @@ let constr_of_destr ty d =
 
 exception Found of X.r * Hstring.t
 
-(* Pick a delayed destructor application in [env.delayed].
-
-   @raise Found (r, d) if there is a delayed application of the destructor
-          [d] on the semantic value [r]. *)
+(* Pick a delayed destructor application in [env.delayed]. Returns [None]
+   if there is no delayed destructor. *)
 let pick_delayed_destructor env =
-  Rel_utils.Delayed.iter_delayed
-    (fun r sy _e ->
-       match sy with
-       | Sy.Destruct d ->
-         raise_notrace @@ Found (r, d)
-       | _ ->
-         ()
-    ) env.delayed
+  try
+    Rel_utils.Delayed.iter_delayed
+      (fun r sy _e ->
+         match sy with
+         | Sy.Destruct d ->
+           raise_notrace @@ Found (r, d)
+         | _ ->
+           ()
+      ) env.delayed;
+    None
+  with Found (r, d) -> Some (r, d)
 
 (* Do a case-split by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
@@ -672,7 +673,7 @@ let case_split env _uf ~for_model =
     assert (not for_model);
     if Options.get_debug_adt () then Debug.print_env "before cs" env;
     match pick_delayed_destructor env with
-    | exception Found (r, d) ->
+    | Some (r, d) ->
       if Options.get_debug_adt () then
         Printer.print_dbg ~flushed:false
           ~module_name:"Adt_rel" ~function_name:"case_split"
@@ -681,7 +682,7 @@ let case_split env _uf ~for_model =
       let c = constr_of_destr (X.type_info r) d in
       let cs =  LR.mkv_builtin false (Sy.IsConstr c) [r] in
       [ cs, true, Th_util.CS (Th_util.Th_adt, two) ]
-    | () ->
+    | None ->
       Debug.no_case_split ();
       []
   end
