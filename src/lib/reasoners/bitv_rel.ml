@@ -124,8 +124,8 @@ module Domain = struct
         | Ext (r, _r_size, i, j) -> extract (map_signed f r acc) i j
       ) empty (Shostak.Bitv.embed r)
 
-  let unknown r =
-    match X.type_info r with
+  let unknown ty =
+    match ty with
     | Ty.Tbitv n -> unknown n Ex.empty
     | _ ->
       (* Only bit-vector values can have bitlist domains. *)

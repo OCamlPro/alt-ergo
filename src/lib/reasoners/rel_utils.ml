@@ -214,8 +214,8 @@ module type Domain = sig
   exception Inconsistent of Explanation.t
   (** Exception raised by [intersect] when an inconsistency is detected. *)
 
-  val unknown : X.r -> t
-  (** [unknown r] returns a full domain for values of the semantic value [r]. *)
+  val unknown : Ty.t -> t
+  (** [unknown ty] returns a full domain for values of type [t]. *)
 
   val intersect : ex:Explanation.t -> t -> t -> t
   (** [intersect ~ex d1 d2] returns a new domain [d] that subsumes both [d1]
@@ -393,7 +393,7 @@ struct
 
   let create_domain r =
     Domain.map_leaves (fun r () ->
-        Domain.unknown r
+        Domain.unknown (X.type_info r)
       ) r ()
 
   let add r t =
