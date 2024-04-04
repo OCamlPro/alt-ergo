@@ -250,7 +250,7 @@ end
 module type Domains = sig
   type t
   (** The type of domain maps. A domain map maps each representative (semantic
-      value, of type [X.r]) to its associated domain.*)
+      value, of type [X.r]) to its associated domain. *)
 
   val pp : t Fmt.t
   (** Pretty-printer for domain maps. *)
@@ -269,7 +269,7 @@ module type Domains = sig
   val add : X.r -> t -> t
   (** [add r t] adds a domain for [r] in the domain map. If [r] does not
       already have an associated domain, a fresh domain will be created for
-      [r]. *)
+      [r] using [Domain.unknown]. *)
 
   val get : X.r -> t -> elt
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
