@@ -374,7 +374,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
           We maintain the following invariants:
 
-          - Any *unknown* variable is either in the [order] heap, or in the
+          - Any *undecided* variable is either in the [order] heap, or in the
              [irrelevants] set
           - Any variable in the [irrelevants] set is not relevant (i.e. neither
              [v.na] nor [v.pa] is in the [lazy_cnf] -- this invariant is locally
@@ -1787,7 +1787,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          propagated to the theory).
 
          Note that we can only do this if [get_cdcl_tableaux_inst ()] is [true],
-         because otherwise instanciation requires a complete boolean model. *)
+         because otherwise instantiation requires a complete boolean model. *)
       if Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf then
         make_decision env atom
       else (
