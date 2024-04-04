@@ -103,7 +103,9 @@ module Domains = struct
       (semantic value, of type [X.r]) to its associated domain. *)
   type t = {
     domains : Domain.t MX.t;
-    (** Map from tracked representatives to their domain. *)
+    (** Map from tracked representatives to their domain.
+
+        We don't store domains for constructors. *)
 
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
@@ -136,28 +138,24 @@ module Domains = struct
         Domain.unknown (X.type_info r)
 
   let add r t =
-    match MX.find r t.domains with
-    | _ -> t
-    | exception Not_found ->
-      (* We have to add a default domain if the key `r` isn't in map in order to
-         be sure that the case-split mechanism will attempt to choose a value
-         for it. *)
-      let nd =
-        match Th.embed r with
-        | Cons (r, _) ->
-          Domain.singleton ~ex:Explanation.empty r
-        | _ ->
-          Domain.unknown (X.type_info r)
-      in
-      internal_update r nd t
+    if MX.mem r t.domains then t
+    else
+      match Th.embed r with
+      | Cons _ -> t
+      | _ ->
+        (* We have to add a default domain if the key `r` isn't in map in order
+           to be sure that the case-split mechanism will attempt to choose a
+           value for it. *)
+        let nd = Domain.unknown (X.type_info r) in
+        internal_update r nd t
 
-  (** [update r d t] replaces the domain of [r] in [t] by [d]. The
-      representative [r] is marked [changed] after this call if the domain
-      [d] isn't equal to the old one. *)
-  let update r d t =
+  (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d] contains
+      in the current domain of [r]. The representative [r] is marked [changed]
+      after this call if the domain [d] is strictly smaller. *)
+  let tighten r d t =
     let od = get r t in
-    (* For sake of completeness, the domain [d] has to be a subset
-       of the old domain of [r]. *)
+    (* For sake of completeness, the domain [d] has to be a subset of the old
+       domain of [r]. *)
     assert (not (Options.get_enable_assertions ()) || Domain.subset d od);
     if Domain.equal od d then
       t
@@ -179,13 +177,9 @@ module Domains = struct
   let subst ~ex r nr t =
     match MX.find r t.domains with
     | d ->
-      let nnd =
-        match MX.find nr t.domains with
-        | nd -> Domain.intersect ~ex d nd
-        | exception Not_found -> d
-      in
+      let nd = Domain.intersect ~ex d (get nr t) in
       let t = remove r t in
-      internal_update nr nnd t
+      tighten nr nd t
 
     | exception Not_found -> t
 
@@ -271,8 +265,8 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
-let update_domain rr nd env =
-  { env with domains = Domains.update rr nd env.domains }
+let tighten_domain rr nd env =
+  { env with domains = Domains.tighten rr nd env.domains }
 
 (* Update the domains of the semantic values [r1] and [r2] according to
    the substitution `r1 |-> r2`.
@@ -305,14 +299,14 @@ let assume_distinct ~ex r1 r2 env =
     match Domain.as_singleton d1 with
     | Some c ->
       let nd = Domain.remove ~ex c d2 in
-      update_domain r2 nd env
+      tighten_domain r2 nd env
     | None ->
       env
   in
   match Domain.as_singleton d2 with
   | Some c ->
     let nd = Domain.remove ~ex c d1 in
-    update_domain r1 nd env
+    tighten_domain r1 nd env
   | None ->
     env
 
