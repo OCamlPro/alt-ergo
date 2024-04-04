@@ -1150,26 +1150,26 @@ let main () =
   let handle_solve =
     let goal_cnt = ref 0 in
     fun st id contents loc attrs ->
-    let module Api = (val DO.SatSolverModule.get st) in
+      let module Api = (val DO.SatSolverModule.get st) in
       let file_loc = (State.get State.logic_file st).loc in
-    let id =
-      match (State.get State.logic_file st).lang with
-      | Some (Smtlib2 _) ->
-        DStd.Id.mk DStd.Namespace.term @@
-        "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
-      | _ -> id
-    in
-    let contents =
-      match contents with
-      | `Solve (hyps, []) -> `Check hyps
-      | `Solve ([], [t]) -> `Goal t
-      | _ ->
-        let loc = DStd.Loc.loc file_loc loc in
-        fatal_error "%a: internal error: unknown statement"
-          DStd.Loc.fmt loc
-    in
-    (* Performing the query *)
-    handle_query st id loc attrs contents
+      let id =
+        match (State.get State.logic_file st).lang with
+        | Some (Smtlib2 _) ->
+          DStd.Id.mk DStd.Namespace.term @@
+          "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
+        | _ -> id
+      in
+      let contents =
+        match contents with
+        | `Solve (hyps, []) -> `Check hyps
+        | `Solve ([], [t]) -> `Goal t
+        | _ ->
+          let loc = DStd.Loc.loc file_loc loc in
+          fatal_error "%a: internal error: unknown statement"
+            DStd.Loc.fmt loc
+      in
+      (* Performing the query *)
+      handle_query st id loc attrs contents
   in
 
   (* TODO: reset options to their initial value. *)
@@ -1204,15 +1204,15 @@ let main () =
         contents = (`Goal _) as contents;
         implicit = _;
       } ->
-        (* In the non imperative mode, the Solve instruction is handled differently
-           (i.e. no pop/push). *)
+        (* In the non imperative mode, the Solve instruction is handled
+           differently (i.e. no pop/push). *)
         assert (not (Options.get_imperative_mode ()));
         cmd_on_modes st [Assert; Sat; Unsat] "goal";
         let st = pop_if_post_query st in
         (* Pushing the environment once. This allows to keep a trace of the old
            environment in case we want to assert afterwards.
-           The `pop` instruction is handled by the hook on the mode: when we assert
-           anything, we must make sure to go back to `Assert` mode. *)
+           The `pop` instruction is handled by the hook on the mode: when we
+           assert anything, we must make sure to go back to `Assert` mode. *)
         let st = push_before_query st in
         handle_query st id loc attrs contents
 
@@ -1249,15 +1249,15 @@ let main () =
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
       | { id; contents = (`Solve _ as contents); loc ; attrs; implicit=_ } ->
-        (* In the non imperative mode, the Solve instruction is handled differently
-           (i.e. no pop/push). *)
+        (* In the non imperative mode, the Solve instruction is handled
+           differently (i.e. no pop/push). *)
         assert (not (Options.get_imperative_mode ()));
         cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
         let st = pop_if_post_query st in
         (* Pushing the environment once. This allows to keep a trace of the old
            environment in case we want to assert afterwards.
-           The `pop` instruction is handled by the hook on the mode: when we assert
-           anything, we must make sure to go back to `Assert` mode. *)
+           The `pop` instruction is handled by the hook on the mode: when we
+           assert anything, we must make sure to go back to `Assert` mode. *)
         let st = push_before_query st in
         handle_solve st id contents loc attrs
 
@@ -1419,8 +1419,8 @@ let main () =
       State.set is_decision_env true st
     in
 
-    (* The pop corresponding to the previous push. It must be applied everytime the
-       mode goes from Sat/Unsat to Assert. *)
+    (* The pop corresponding to the previous push. It must be applied everytime
+       the mode goes from Sat/Unsat to Assert. *)
     let rec pop_if_post_query st =
       if State.get is_decision_env st
       then pop 1 st (aux Util.MS.empty)
@@ -1450,7 +1450,9 @@ let main () =
             let st = pop_if_post_query st in
             let st = push_before_query st in
             handle_query st id loc attrs contents
-          | { id; contents = (`Solve _ as contents); loc ; attrs; implicit=_ } ->
+          | {
+            id; contents = (`Solve _ as contents); loc ; attrs; implicit=_
+          } ->
             cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
             let st = pop_if_post_query st in
             let st = push_before_query st in

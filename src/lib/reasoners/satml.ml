@@ -1051,7 +1051,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             *   let ex =
             *     if ta.var.level = 0 then Ex.empty else
             *       let d =
-            *         Vec.get env.trail (Vec.get env.trail_lim (ta.var.level - 1))
+            *         Vec.get
+            *           env.trail
+            *           (Vec.get env.trail_lim (ta.var.level - 1))
             *       in
             *       Ex.singleton (Ex.Literal d)
             *   in
