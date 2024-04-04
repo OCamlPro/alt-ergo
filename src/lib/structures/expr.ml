@@ -634,9 +634,9 @@ module AEPrinter = struct
     | Sy.(Op (Constr _ as op)), _::_ ->
       Fmt.pf ppf "%a(%a)" Symbols.pp_ae_operator op Fmt.(list ~sep:comma pp) xs
 
-    | Sy.(Op Destruct (hs, grded)), [e] ->
-      Fmt.pf ppf "%a#%s%a"
-        pp e (if grded then "" else "!") Hstring.print hs
+    | Sy.(Op Destruct hs), [e] ->
+      Fmt.pf ppf "%a#%a"
+        pp e Hstring.print hs
 
     | Sy.Op op, [e1; e2] ->
       Fmt.pf ppf "(%a %a %a)" pp e1 Symbols.pp_ae_operator op pp e2
@@ -1953,8 +1953,8 @@ module Triggers = struct
     | { f = Op (Access _); _ }, _ -> -1
     | _, { f = Op (Access _); _ } -> 1
 
-    | { f = Op (Destruct (_,a1)) ; xs = [t1]; _ },
-      { f = Op (Destruct (_,a2)) ; xs = [t2]; _ } ->
+    | { f = Op (Destruct a1) ; xs = [t1]; _ },
+      { f = Op (Destruct a2) ; xs = [t2]; _ } ->
       let c = Stdlib.compare a1 a2 in (* should be Hstring.compare *)
       if c<>0 then c else cmp_trig_term t1 t2
 
@@ -2536,7 +2536,7 @@ let mk_match e cases =
   let ty = type_info e in
   let mk_destr =
     match ty with
-    | Ty.Tadt _ -> (fun hs -> Sy.destruct ~guarded:true (Hstring.view hs))
+    | Ty.Tadt _ -> (fun hs -> Sy.destruct (Hstring.view hs))
     | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
     | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false

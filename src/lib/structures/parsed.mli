@@ -99,7 +99,7 @@ and pp_desc =
   | PPcast of lexpr * ppure_type
   | PPmatch of lexpr * (pattern * lexpr) list
   | PPisConstr of lexpr * string
-  | PPproject of bool * lexpr * string
+  | PPproject of lexpr * string
 
 val pp_lexpr : Format.formatter -> lexpr -> unit
 val pp_lexpr_list : Format.formatter -> lexpr list -> unit

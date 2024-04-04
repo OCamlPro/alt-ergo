@@ -32,7 +32,6 @@ module X = Shostak.Combine
 module Th = Shostak.Adt
 
 type r = X.r
-type uf = Uf.t
 
 module Ex = Explanation
 module E = Expr
@@ -61,13 +60,7 @@ type t =
        constructors. The explanation justifies that any value assigned to
        the semantic value has to use a constructor lying in the domain. *)
 
-    (* TODO: rename this field. *)
-    seen_destr : SE.t;
-    (* Set of all the guarded destructors known by the theory. A guarded
-       destructor isn't interpreted by the ADT theory.
-
-       This field is used to prevent transforming twice a guarded
-       destructor to its non-guarded version and for debugging purposes. *)
+    delayed : Rel_utils.Delayed.t;
 
     (* TODO: rename this field. *)
     seen_access : SE.t;
@@ -82,30 +75,6 @@ type t =
        to register all the testers in [add_aux]. Now this field is only
        read to remember we have already forced a constructor because we have
        assumed its associated tester. *)
-
-    selectors : (E.t * Ex.t) list MHs.t MX.t;
-    (* Map of pending destructor equations. A destructor equation on an
-       ADT term [t] is an equation of the form:
-         d t = d' t
-       where [d] is a guarded destructor and [d'] its non-guarded version.
-
-       More precisely, this map matches a class representative [r] with a map
-       of constructors of the ADT type [X.type_info r] to a list of
-       destructor equations of the form [d t = d' t] where [t] lies in the
-       class of [r]. If a class representative changes, the structure is
-       updated by [update_cs_modulo_eq].
-
-       Consider [d] a guarded destructor and [c] its associated constructor.
-
-       - When we register the destructor application [d t] in [add_aux], we
-         produce an equation [d t = d' t] where [d'] is the non-guarded
-         version of [d]. If we don't already know that the value of [t] has
-         to use the constructor [c], we put the equation [d t = d' t] in this
-         map. Otherwise we propagate the equation to CC(X).
-
-       - When we assume a tester on [c] (see [assume_is_constr]), we retrieve
-         and propagate to CC(X) all the pending destructor equations
-         associated with the constructor [c]. *)
 
     size_splits : Numbers.Q.t;
     (* Product of the size of all the facts learnt by CS assumed in
@@ -135,13 +104,42 @@ type t =
          content is propagated to the environment of CC(X). *)
   }
 
+let calc_destructor d e uf =
+  let r, ex = Uf.find uf e in
+  match Th.embed r with
+  | Constr { c_args; _ } ->
+    begin match List.assoc d c_args with
+      | v -> Some (v, ex)
+      | exception Not_found -> None
+    end
+
+  | _ ->
+    None
+
+let delayed_destructor uf op = function
+  | [e] ->
+    begin match op with
+      | Sy.Destruct d ->
+        calc_destructor d e uf
+      | _ -> assert false
+    end
+  | _ -> assert false
+
+let is_ready r =
+  match Th.embed r with
+  | Constr _ -> true
+  | _ -> false
+
+let dispatch = function
+  | Symbols.Destruct _ -> Some delayed_destructor
+  | _ -> None
+
 let empty classes = {
   classes;
   domains = MX.empty;
-  seen_destr = SE.empty;
+  delayed = Rel_utils.Delayed.create ~is_ready dispatch;
   seen_access = SE.empty;
   seen_testers = MX.empty;
-  selectors = MX.empty;
   size_splits = Numbers.Q.one;
   new_terms = SE.empty;
   pending_deds = [];
@@ -171,18 +169,6 @@ module Debug = struct
       X.print r
       Fmt.(iter ~sep:(const string "|") HSS.iter Hstring.print) hss
 
-  let pp_selectors ppf (r, mhs) =
-    let pp_selector ppf (hs, l) =
-      let pp ppf (a, _) =
-        Fmt.pf ppf "(%a is %a) ==> %a"
-          X.print r
-          Hstring.print hs
-          E.print a
-      in
-      Fmt.(list ~sep:sp pp) ppf l
-    in
-    Fmt.iter_bindings MHs.iter pp_selector ppf mhs
-
   let print_env loc env =
     if Options.get_debug_adt () then begin
       print_dbg ~flushed:false ~module_name:"Adt_rel" ~function_name:"print_env"
@@ -193,10 +179,6 @@ module Debug = struct
         "@]@ @[<v 2>-- seen testers ---------------------------@ ";
       print_dbg ~flushed:false ~header:false "%a"
         Fmt.(iter_bindings ~sep:cut MX.iter pp_testers) env.seen_testers;
-      print_dbg ~flushed:false ~header:false
-        "@]@ @[<v 2>-- selectors ------------------------------@ ";
-      print_dbg ~flushed:false ~header:false "%a"
-        Fmt.(iter_bindings ~sep:cut MX.iter pp_selectors) env.selectors;
       print_dbg ~header:false
         "@]@ -------------------------------------------";
     end
@@ -354,100 +336,14 @@ let update_tester r hs env =
   let old = try MX.find r env.seen_testers with Not_found -> HSS.empty in
   {env with seen_testers = MX.add r (HSS.add hs old) env.seen_testers}
 
-(* Check if [((_ is hs) r)] is [true]. *)
-let trivial_tester r hs =
-  match Th.embed r with (* can filter further/better *)
-  | Adt.Constr { c_name; _ } -> Hstring.equal c_name hs
-  | _ -> false
-
-let constr_of_destr ty dest =
-  if Options.get_debug_adt () then
-    Printer.print_dbg
-      ~module_name:"Adt_rel" ~function_name:"constr_of_destr"
-      "ty = %a" Ty.print ty;
-  match ty with
-  | Ty.Tadt (name, params) ->
-    let cases =
-      match Ty.type_body name params with
-      | Ty.Adt cases -> cases
-    in
-    begin
-      try
-        List.find
-          (fun {Ty.destrs; _} ->
-             List.exists (fun (d, _) -> Hstring.equal dest d) destrs
-          )cases
-      with Not_found -> assert false (* invariant *)
-    end
-  | _ -> assert false
-
-
-[@@ocaml.ppwarning "XXX improve. For each selector, store its \
-                    corresponding constructor when typechecking ?"]
-let add_guarded_destr env uf t hs e t_ty =
-  if Options.get_debug_adt () then
-    Printer.print_dbg ~flushed:false
-      ~module_name:"Adt_rel" ~function_name:"add_guarded_destr"
-      "new (guarded) Destr: %a@ " E.print t;
-  let env = { env with seen_destr = SE.add t env.seen_destr } in
-  let {Ty.constr = c; _} = constr_of_destr (E.type_info e) hs in
-  let access = E.mk_term (Sy.destruct (Hs.view hs) ~guarded:false) [e] t_ty in
-  (* XXX : Never add non-guarded access to list of new terms !
-     This may/will introduce bugs when instantiating
-     let env = {env with new_terms = SE.add access env.new_terms} in
-  *)
-  let is_c = E.mk_tester (Hstring.view c) e in
-  let eq = E.mk_eq access t ~iff:false in
-  if Options.get_debug_adt () then
-    Printer.print_dbg ~header:false
-      "associated with constr %a@,%a => %a"
-      Hstring.print c
-      E.print is_c
-      E.print eq;
-  let r_e, ex_e = try Uf.find uf e with Not_found -> assert false in
-  if trivial_tester r_e c || seen_tester r_e c env then
-    {env with pending_deds =
-                (Literal.LTerm eq, ex_e, Th_util.Other) :: env.pending_deds}
-  else
-    let m_e = try MX.find r_e env.selectors with Not_found -> MHs.empty in
-    let old = try MHs.find c m_e with Not_found -> [] in
-    { env with selectors =
-                 MX.add r_e (MHs.add c ((eq, ex_e)::old) m_e)
-                   env.selectors }
-
-
-[@@ocaml.ppwarning "working with X.term_extract r would be sufficient ?"]
-let add_aux env (uf:uf) (r:r) t =
-  if Options.get_disable_adts () then env
-  else
-    let { E.f = sy; xs; ty; _ } = E.term_view t in
+let add env uf r t =
+  if Options.get_disable_adts () then env, []
+  else begin
+    let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
+    let E.{ f = sy; ty; _ } = E.term_view t in
     let env = add_adt env uf t r sy ty in
-    match sy, xs with
-    | Sy.Op Sy.Destruct (hs, true), [e] ->
-      (* guarded *)
-      if Options.get_debug_adt () then
-        Printer.print_dbg
-          ~module_name:"Adt_rel" ~function_name:"add_aux"
-          "add guarded destruct: %a" E.print t;
-      if (SE.mem t env.seen_destr) then env
-      else add_guarded_destr env uf t hs e ty
-
-    | Sy.Op Sy.Destruct (_, false), [_] ->
-      (* not guarded *)
-      if Options.get_debug_adt () then
-        Printer.print_dbg
-          ~module_name:"Adt_rel" ~function_name:"add_aux"
-          "[ADTs] add unguarded destruct: %a" E.print t;
-      { env with seen_access = SE.add t env.seen_access }
-
-    | Sy.Op Sy.Destruct _, _ ->
-      (* The arity of the [Sy.Destruct] operator is 1. *)
-      assert false
-
-    | _ -> env
-
-let add env (uf:uf) (r:r) t =
-  add_aux env (uf:uf) (r:r) t, []
+    { env with delayed }, eqs
+  end
 
 (* Update the counter of case-split size in [env]. *)
 let count_splits env la =
@@ -519,26 +415,6 @@ let add_diseq uf hss sm1 sm2 dep env eqs =
 
   |  _ -> env, eqs
 
-(* Helper function used in [assume_is_constr] and [assume_not_is_constr].
-   Retrieves the pending destructor equations associated with the semantic
-   value [r] and the constructor [hs]. This function removes also these
-   equations from [env.selectors]. *)
-let assoc_and_remove_selector hs r env =
-  try
-    let mhs = MX.find r env.selectors in
-    let deds = MHs.find hs mhs in
-    let mhs = MHs.remove hs mhs in
-    let env =
-      if MHs.is_empty mhs then
-        { env with selectors = MX.remove r env.selectors }
-      else
-        { env with selectors = MX.add r mhs env.selectors }
-    in
-    deds, env
-
-  with Not_found ->
-    [], env
-
 (* Assumes the tester `((_ is hs) r)` where [r] can be a constructor
    application or a uninterpreted semantic value.
 
@@ -566,15 +442,7 @@ let assume_is_constr uf hs r dep env eqs =
     if seen_tester r hs env then
       env, eqs
     else
-      let deds, env = assoc_and_remove_selector hs r env in
-      let eqs =
-        List.fold_left
-          (fun eqs (ded, dep') ->
-             (Literal.LTerm ded, Ex.union dep dep', Th_util.Other) :: eqs
-          )eqs deds
-      in
       let env = update_tester r hs env in
-
       let dom, ex =
         try MX.find r env.domains
         with Not_found ->
@@ -600,8 +468,6 @@ let assume_not_is_constr uf hs r dep env eqs =
   | Adt.Constr{ c_name; _ } when Hs.equal c_name hs ->
     raise (Ex.Inconsistent (dep, env.classes));
   | _ ->
-
-    let _, env = assoc_and_remove_selector hs r env in
     let dom, ex =
       try MX.find r env.domains with
         Not_found ->
@@ -681,46 +547,6 @@ let add_aux env r =
    added with function add. *)
 let add_rec env r = List.fold_left add_aux env (X.leaves r)
 
-(* Update the field [env.selectors] when a Subst equality have
-   been propagated to CC(X).
-
-   If [r2] becomes the class representative of [r1], this function is
-   called and [env.selectors] maps [r2] to the union of the old
-   selectors of [r2] and [r1]. *)
-let update_cs_modulo_eq r1 r2 ex env eqs =
-  (* PB Here: even if Subst, we are not sure that it was
-     r1 |-> r2, because LR.mkv_eq may swap r1 and r2 *)
-  try
-    let old = MX.find r1 env.selectors in
-    if Options.get_debug_adt () then
-      Printer.print_dbg ~flushed:false
-        ~module_name:"Adt_rel" ~function_name:"update_cs_modulo_eq"
-        "update selectors modulo eq: %a |-> %a@ "
-        X.print r1 X.print r2;
-    let mhs = try MX.find r2 env.selectors with Not_found -> MHs.empty in
-    let eqs = ref eqs in
-    let _new =
-      MHs.fold
-        (fun hs l mhs ->
-           if trivial_tester r2 hs then begin
-             if Options.get_debug_adt () then
-               Printer.print_dbg
-                 ~flushed:false ~header:false
-                 "make deduction because %a ? %a is trivial@ "
-                 X.print r2 Hs.print hs;
-             List.iter
-               (fun (a, dep) ->
-                  eqs := (Literal.LTerm a, dep, Th_util.Other) :: !eqs) l;
-           end;
-           let l = List.rev_map (fun (a, dep) -> a, Ex.union ex dep) l in
-           MHs.add hs l mhs
-        )old mhs
-    in
-    if Options.get_debug_adt () then
-      Printer.print_dbg ~header:false "";
-    { env with selectors = MX.add r2 _new env.selectors }, !eqs
-  with Not_found -> env, eqs
-
 (* Remove duplicate literals in the list [la]. *)
 let remove_redundancies la =
   let cache = ref SLR.empty in
@@ -739,6 +565,7 @@ let assume env uf la =
     env, { Sig_rel.assume = []; remove = [] }
   else
     let la = remove_redundancies la in (* should be done globally in CCX *)
+    let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
     let env = count_splits env la in
     let classes = Uf.cl_extract uf in
     let env = { env with classes = classes } in
@@ -756,16 +583,10 @@ let assume env uf la =
         (fun (env,eqs) (a, b, c, d) ->
            Debug.assume a;
            match a, b, c, d with
-           | Xliteral.Eq(r1,r2), _, ex, orig ->
+           | Xliteral.Eq (r1, r2), _, ex, _ ->
              (* needed for models generation because fresh terms are not
                 added with function add *)
              let env = add_rec (add_rec env r1) r2 in
-             let env, eqs =
-               if orig == Th_util.Subst then
-                 update_cs_modulo_eq r1 r2 ex env eqs
-               else
-                 env, eqs
-             in
              aux true  r1 r2 ex env eqs (values_of (X.type_info r1))
 
            | Xliteral.Distinct(false, [r1;r2]), _, ex, _ ->
@@ -798,41 +619,73 @@ let assume env uf la =
       Printer.print_dbg ~module_name:"Adt_rel" ~function_name:"assume"
         "assume deduced %d equalities@ %a" (List.length eqs)
         (Printer.pp_list_no_space print) eqs;
-    env, { Sig_rel.assume = eqs; remove = [] }
+    let eqs = List.rev_append eqs result.assume in
+    { env with delayed }, { Sig_rel.assume = eqs; remove = [] }
 
 
 (* ################################################################ *)
 
 let two = Numbers.Q.from_int 2
 
+let constr_of_destr ty d =
+  match ty with
+  | Ty.Tadt (name, params) ->
+    begin
+      let Ty.Adt cases = Ty.type_body name params in
+      try
+        let r =
+          List.find
+            (fun Ty.{ destrs; _ } ->
+               List.exists (fun (d', _) -> Hstring.equal d d') destrs
+            ) cases
+        in
+        r.constr
+      with Not_found -> assert false
+    end
+
+  | _ -> assert false
+
+exception Found of X.r * Hstring.t
+
+(* Pick a delayed destructor application in [env.delayed]. Returns [None]
+   if there is no delayed destructor. *)
+let pick_delayed_destructor env =
+  try
+    Rel_utils.Delayed.iter_delayed
+      (fun r sy _e ->
+         match sy with
+         | Sy.Destruct d ->
+           raise_notrace @@ Found (r, d)
+         | _ ->
+           ()
+      ) env.delayed;
+    None
+  with Found (r, d) -> Some (r, d)
+
 (* Do a case-split by choosing a semantic value [r] and constructor [c]
-   for which there are pending destructor equations and propagate the
+   for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
 let case_split env _uf ~for_model =
   if Options.get_disable_adts () || not (Options.get_enable_adts_cs())
   then
     []
-  else
-    begin
-      assert (not for_model);
-      if Options.get_debug_adt () then Debug.print_env "before cs" env;
-      try
-        let r, mhs = MX.choose env.selectors in
-        if Options.get_debug_adt () then
-          Printer.print_dbg ~flushed:false
-            ~module_name:"Adt_rel" ~function_name:"case_split"
-            "found r = %a@ " X.print r;
-        let hs, _ = MHs.choose mhs in
-        if Options.get_debug_adt () then
-          Printer.print_dbg ~header:false
-            "found hs = %a" Hs.print hs;
-        (* CS on negative version would be better in general. *)
-        let cs =  LR.mkv_builtin false (Sy.IsConstr hs) [r] in
-        [ cs, true, Th_util.CS (Th_util.Th_adt, two) ]
-      with Not_found ->
-        Debug.no_case_split ();
-        []
-    end
+  else begin
+    assert (not for_model);
+    if Options.get_debug_adt () then Debug.print_env "before cs" env;
+    match pick_delayed_destructor env with
+    | Some (r, d) ->
+      if Options.get_debug_adt () then
+        Printer.print_dbg ~flushed:false
+          ~module_name:"Adt_rel" ~function_name:"case_split"
+          "found r = %a and d = %a@ " X.print r Hstring.print d;
+      (* CS on negative version would be better in general. *)
+      let c = constr_of_destr (X.type_info r) d in
+      let cs =  LR.mkv_builtin false (Sy.IsConstr c) [r] in
+      [ cs, true, Th_util.CS (Th_util.Th_adt, two) ]
+    | None ->
+      Debug.no_case_split ();
+      []
+  end
 
 let optimizing_objective _env _uf _o = None
 

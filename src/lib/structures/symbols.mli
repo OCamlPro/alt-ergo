@@ -39,7 +39,7 @@ type operator =
   (* ADTs *)
   | Access of Hstring.t | Record
   | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t * bool
+  | Destruct of Hstring.t
   (* Arrays *)
   | Get | Set
   (* BV *)
@@ -164,7 +164,7 @@ val int : string -> t
 val bitv : string -> t
 val real : string -> t
 val constr : string -> t
-val destruct : guarded:bool -> string -> t
+val destruct : string -> t
 val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
 val mk_in : bound -> bound -> t
 val mk_maps_to : Var.t -> t

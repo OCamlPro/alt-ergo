@@ -481,7 +481,7 @@ type t =
   ; size_splits : Q.t }
 
 let empty _ =
-  { delayed = Rel_utils.Delayed.create dispatch
+  { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
   ; domain = Domains.empty
   ; constraints = Constraints.empty
   ; size_splits = Q.one }

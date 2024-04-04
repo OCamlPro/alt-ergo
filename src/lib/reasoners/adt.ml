@@ -88,12 +88,12 @@ module Shostak (X : ALIEN) = struct
     not (Options.get_disable_adts ()) &&
     match sy, ty with
     | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct (_, guarded), _ ->
-      (* A guarded destructor isn't interpreted by the ADT theory.
+    | Sy.Op Sy.Destruct _, Ty.Tadt _ ->
+      (* A destructor is partially interpreted by the ADT theory.
          If we assume the tester of the constructor associated with
          this destructor, we propagate the non-guarded version of the
          destructor. See the documentation of [env.selectors] in [Adt_rel]. *)
-      not guarded
+      false
     | _ -> false
 
   let embed r =
@@ -192,12 +192,7 @@ module Shostak (X : ALIEN) = struct
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct (hs, guarded), [e], _ ->
-      if not guarded then
-        let sel = Select {d_name = hs ; d_arg = e ; d_ty = ty} in
-        is_mine sel, ctx
-      else
-        X.term_embed t, ctx
+    | Sy.Op Sy.Destruct _, [_], _ -> X.term_embed t, ctx
     (* No risk !
          if equal sel (embed sel_x) then X.term_embed t, ctx
          else sel_x, ctx (* canonization OK *)

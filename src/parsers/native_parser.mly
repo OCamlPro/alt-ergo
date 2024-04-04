@@ -448,7 +448,7 @@ simple_expr :
     { mk_algebraic_test ($startpos, $endpos) se id }
 
 | se = simple_expr SHARP label = ident
-   { mk_algebraic_project ($startpos, $endpos) ~guarded:true se label }
+   { mk_algebraic_project ($startpos, $endpos) se label }
 array_assignements:
 | assign = array_assignement
    { [assign] }

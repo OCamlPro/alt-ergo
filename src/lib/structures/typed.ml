@@ -90,7 +90,7 @@ and 'a tt_desc =
   | TTnamed of Hstring.t * 'a atterm
   | TTite of 'a atform *
              'a atterm * 'a atterm
-  | TTproject of bool * 'a atterm  * Hstring.t
+  | TTproject of 'a atterm  * Hstring.t
   | TTmatch of 'a atterm * (pattern * 'a atterm) list
   | TTform of 'a atform
 
@@ -245,9 +245,9 @@ let rec print_term =
     | TTite(cond, t1, t2) ->
       fprintf fmt "(if %a then %a else %a)"
         print_formula cond print_term t1 print_term t2
-    | TTproject (grded, t1, s) ->
-      fprintf fmt "%a#%s%s"
-        print_term t1 (if grded then "" else "!") (Hstring.view s)
+    | TTproject (t1, s) ->
+      fprintf fmt "%a#%s"
+        print_term t1 (Hstring.view s)
 
     | TTform f ->
       fprintf fmt "%a" print_formula f

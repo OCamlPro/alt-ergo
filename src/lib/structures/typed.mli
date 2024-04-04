@@ -131,10 +131,8 @@ and 'a tt_desc =
   (** Conditional branching, of the form
       [TTite (condition, then_branch, else_branch)]. *)
 
-  | TTproject of bool * 'a atterm  * Hstring.t
-  (** Field (conditional) access on ADTs. The boolean is true when the
-      projection is 'guarded' and cannot be simplified (because
-      functions are total) *)
+  | TTproject of 'a atterm  * Hstring.t
+  (** Field (conditional) access on ADTs. *)
 
   | TTmatch of 'a atterm * (pattern * 'a atterm) list
   (** pattern matching on ADTs *)
