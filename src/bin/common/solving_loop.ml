@@ -631,7 +631,7 @@ let main () =
      to the Sat or Unsat mode we end up in. If we start asserting again, we must
      do it in the previous environment.
   *)
-  let () =
+  let init_full_incremental_hooks () =
     DO.Mode.reset_hooks ();
     DO.Mode.add_hook
       (fun _ ~old:_ ~new_ st ->
@@ -1065,12 +1065,6 @@ let main () =
      the hook on D_state_option.Mode. *)
   let handle_query st id loc attrs contents =
     let module Api = (val (DO.SatSolverModule.get st)) in
-    let st = pop_if_post_query st in
-    (* Pushing the environment once. This allows to keep a trace of the old
-       environment in case we want to assert afterwards.
-       The `pop` instruction is handled by the hook on the mode: when we assert
-       anything, we must make sure to go back to `Assert` mode. *)
-    let st = push_before_query st in
     let st_loc =
       let file_loc = (State.get State.logic_file st).loc in
       dl_to_ael file_loc loc
@@ -1153,6 +1147,31 @@ let main () =
     set_partial_model_and_mode solve_res st
   in
 
+  let handle_solve =
+    let goal_cnt = ref 0 in
+    fun st id contents loc attrs ->
+    let module Api = (val DO.SatSolverModule.get st) in
+      let file_loc = (State.get State.logic_file st).loc in
+    let id =
+      match (State.get State.logic_file st).lang with
+      | Some (Smtlib2 _) ->
+        DStd.Id.mk DStd.Namespace.term @@
+        "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
+      | _ -> id
+    in
+    let contents =
+      match contents with
+      | `Solve (hyps, []) -> `Check hyps
+      | `Solve ([], [t]) -> `Goal t
+      | _ ->
+        let loc = DStd.Loc.loc file_loc loc in
+        fatal_error "%a: internal error: unknown statement"
+          DStd.Loc.fmt loc
+    in
+    (* Performing the query *)
+    handle_query st id loc attrs contents
+  in
+
   (* TODO: reset options to their initial value. *)
   let handle_reset st =
     let () = Steps.reset_steps () in
@@ -1172,7 +1191,6 @@ let main () =
     State.t ->
     [< Typer_Pipe.typechecked | `Check of 'a ] D_loop.Typer_Pipe.stmt ->
     State.t =
-    let goal_cnt = ref 0 in
     fun _all_context st td ->
       let file_loc = (State.get State.logic_file st).loc in
       match td with
@@ -1186,8 +1204,16 @@ let main () =
         contents = (`Goal _) as contents;
         implicit = _;
       } ->
+        (* In the non imperative mode, the Solve instruction is handled differently
+           (i.e. no pop/push). *)
+        assert (not (Options.get_imperative_mode ()));
         cmd_on_modes st [Assert; Sat; Unsat] "goal";
-        (* Setting the mode is done by handle_query. *)
+        let st = pop_if_post_query st in
+        (* Pushing the environment once. This allows to keep a trace of the old
+           environment in case we want to assert afterwards.
+           The `pop` instruction is handled by the hook on the mode: when we assert
+           anything, we must make sure to go back to `Assert` mode. *)
+        let st = push_before_query st in
         handle_query st id loc attrs contents
 
       (* Axiom definitions *)
@@ -1223,27 +1249,17 @@ let main () =
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
       | { id; contents = (`Solve _ as contents); loc ; attrs; implicit=_ } ->
+        (* In the non imperative mode, the Solve instruction is handled differently
+           (i.e. no pop/push). *)
+        assert (not (Options.get_imperative_mode ()));
         cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
-        (* Setting the mode is done by handle_query. *)
-        let module Api = (val DO.SatSolverModule.get st) in
-        let id =
-          match (State.get State.logic_file st).lang with
-          | Some (Smtlib2 _) ->
-            DStd.Id.mk DStd.Namespace.term @@
-            "g_" ^ string_of_int (incr goal_cnt; !goal_cnt)
-          | _ -> id
-        in
-        let contents =
-          match contents with
-          | `Solve (hyps, []) -> `Check hyps
-          | `Solve ([], [t]) -> `Goal t
-          | _ ->
-            let loc = DStd.Loc.loc file_loc loc in
-            fatal_error "%a: internal error: unknown statement"
-              DStd.Loc.fmt loc
-        in
-        (* Performing the query *)
-        handle_query st id loc attrs contents;
+        let st = pop_if_post_query st in
+        (* Pushing the environment once. This allows to keep a trace of the old
+           environment in case we want to assert afterwards.
+           The `pop` instruction is handled by the hook on the mode: when we assert
+           anything, we must make sure to go back to `Assert` mode. *)
+        let st = push_before_query st in
+        handle_solve st id contents loc attrs
 
       | {contents = `Set_option
              { DStd.Term.term =
@@ -1370,34 +1386,84 @@ let main () =
      execution and a reinitialized one. The handle_reset function should handle
      this, but it is not the case yet. *)
   let handle_stmt_pop_reinit all_context st l =
-    let rec aux named_map st = function
+
+    (* Pushes n times the current path. *)
+    let push n st =
+      let current_path = get_current_path st in
+      let pushed_paths = get_pushed_paths st in
+      for _ = 0 to n - 1 do
+        Vec.push pushed_paths current_path
+      done
+    in
+
+    (* Pops n times the current path and calls [replay] on the
+       list of instruction returned. *)
+    let pop n st replay =
+      let pushed_paths = get_pushed_paths st in
+      let rec pop_until until res =
+        if until = 0 then
+          res
+        else
+          pop_until (until - 1) (Vec.pop pushed_paths)
+      in
+      let rev_prefix = pop_until (n - 1) (Vec.pop pushed_paths) in
+      let st = handle_reset st in
+      replay st (List.rev rev_prefix)
+    in
+
+    (* Before each query, we push the current environment. This allows to keep a
+       fresh one for the next assertions. *)
+    let push_before_query st =
+      assert (not (State.get is_decision_env st));
+      push 1 st;
+      State.set is_decision_env true st
+    in
+
+    (* The pop corresponding to the previous push. It must be applied everytime the
+       mode goes from Sat/Unsat to Assert. *)
+    let rec pop_if_post_query st =
+      if State.get is_decision_env st
+      then pop 1 st (aux Util.MS.empty)
+      else st
+    and aux named_map st = function
       | [] -> State.set named_terms named_map st
       | (stmt: stmt) :: tl ->
         begin
           let current_path = get_current_path st in
           match stmt with
           | {contents = `Push n; _} ->
-            let pushed_paths = get_pushed_paths st in
-            for _ = 0 to n - 1 do
-              Vec.push pushed_paths current_path
-            done;
+            push n st;
+            let st = set_mode Assert st in
             aux named_map st tl
           | {contents = `Pop n; _} ->
-            let pushed_paths = get_pushed_paths st in
-            let rec pop_until until res =
-              if until = 0 then
-                res
-              else
-                pop_until (until - 1) (Vec.pop pushed_paths)
-            in
-            let prefix = pop_until (n - 1) (Vec.pop pushed_paths) in
-            let st = handle_reset st in
-            let whole_path = List.rev_append prefix tl in
-            aux Util.MS.empty st whole_path
+            let st = set_mode Assert st in
+            pop n st begin fun st prefix ->
+              let st = aux Util.MS.empty st prefix in
+              aux (State.get named_terms st) st tl
+            end
+          | {
+            id; loc; attrs;
+            contents = (`Goal _) as contents;
+            implicit = _;
+          } ->
+            cmd_on_modes st [Assert; Sat; Unsat] "goal";
+            let st = pop_if_post_query st in
+            let st = push_before_query st in
+            handle_query st id loc attrs contents
+          | { id; contents = (`Solve _ as contents); loc ; attrs; implicit=_ } ->
+            cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
+            let st = pop_if_post_query st in
+            let st = push_before_query st in
+            handle_solve st id contents loc attrs
           | {contents; _ } ->
             let st =
               let new_current_path =
                 match contents with
+                (* Treated above *)
+                | `Goal _
+                | `Push _
+                | `Pop _
+                | `Solve (_, _) -> assert false
                 (* Statemets to keep *)
                 | `Clause _
                 | `Decls _
@@ -1419,11 +1485,7 @@ let main () =
                 | `Get_unsat_core
                 | `Get_value _
                 | `Get_assignment
-                | `Get_unsat_assumptions
-                | `Goal _
-                | `Push _
-                | `Pop _
-                | `Solve (_, _) -> current_path
+                | `Get_unsat_assumptions -> current_path
                 (* Custom statement *)
                 | `Other (custom, _) ->
                   begin
@@ -1440,12 +1502,21 @@ let main () =
             aux named_map st tl
         end
     in
+    DO.Mode.reset_hooks ();
+    DO.Mode.add_hook
+      (fun _ ~old:_ ~new_ st ->
+         match new_ with
+         | Assert -> pop_if_post_query st
+         | _ -> st
+      );
     aux (State.get named_terms st) st l
   in
   let handle_stmts all_context st l =
     begin
       if Options.get_imperative_mode ()
-      then handle_stmts_full_incremental
+      then
+        let () = init_full_incremental_hooks () in
+        handle_stmts_full_incremental
       else handle_stmt_pop_reinit
     end all_context st l
   in
