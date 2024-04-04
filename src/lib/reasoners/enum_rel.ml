@@ -135,25 +135,20 @@ module Domains = struct
       let nd = Domain.unknown r in
       internal_update r nd t
 
-  (** [update r d t] replaces the domain of [r] in [t] by [d]. The
-      representative [r] is marked [changed] after this call. *)
-  let update r d t =
-    match MX.find r t.domains with
-    | od ->
-      let nd = Domain.intersect ~ex:Explanation.empty od d in
-      if Domain.equal od nd then
-        t
-      else
-        internal_update r nd t
-
-    | exception Not_found ->
-      let nd = Domain.intersect ~ex:Explanation.empty (Domain.unknown r) d in
-      internal_update r nd t
-
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
   let get r t =
     try MX.find r t.domains
     with Not_found -> Domain.unknown r
+
+  (** [update r d t] replaces the domain of [r] in [t] by [d]. The
+      representative [r] is marked [changed] after this call. *)
+  let update r d t =
+    let od = get r t in
+    let nd = Domain.intersect ~ex:Explanation.empty od d in
+    if Domain.equal od nd then
+      t
+    else
+      internal_update r nd t
 
   let remove r t =
     let domains = MX.remove r t.domains in
