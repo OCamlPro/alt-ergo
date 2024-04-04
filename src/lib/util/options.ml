@@ -658,3 +658,6 @@ let pp_comment fmt msg =
   match get_output_format () with
   | Smtlib2 -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
+
+let[@inline always] heavy_assert p =
+  assert (not @@ get_enable_assertions () || p ())

@@ -285,7 +285,6 @@ module Debug = struct
         ~module_name:"Uf" ~function_name:"are_distinct"
         "are_distinct %a %a" E.print t1 E.print t2
 
-
   let check_inv_repr_normalized =
     let trace orig =
       print_err
@@ -293,26 +292,25 @@ module Debug = struct
         orig
     in
     fun orig repr ->
-      MapX.iter
+      MapX.for_all
         (fun _ (rr, _) ->
-           List.iter
-             (fun x ->
-                try
-                  if not (X.equal x (fst (MapX.find x repr))) then
-                    let () = trace orig in
-                    assert false
-                with Not_found ->
-                  (* all leaves that are in normal form should be in repr ?
-                     not AC leaves, which can be created dynamically,
-                     not for other, that can be introduced by make and solve*)
-                  ()
-             )(X.leaves rr)
-        )repr
+           try
+             let _ : X.r =
+               List.find
+                 (fun x -> not (X.equal x (fst (MapX.find x repr))))
+                 (X.leaves rr)
+             in
+             let () = trace orig in
+             false
+           with Not_found ->
+             (* all leaves that are in normal form should be in repr ?
+                not AC leaves, which can be created dynamically,
+                not for other, that can be introduced by make and solve*)
+             true
+        ) repr
 
   let check_invariants orig env =
-    if Options.get_enable_assertions() then begin
-      check_inv_repr_normalized orig env.repr;
-    end
+    Options.heavy_assert (fun () -> check_inv_repr_normalized orig env.repr)
 end
 (*BISECT-IGNORE-END*)
 

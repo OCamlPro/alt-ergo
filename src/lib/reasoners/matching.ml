@@ -494,8 +494,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     let open Matching_types in
     let pats = pat_info.trigger in
     let pats_list = pats.E.content in
-    assert (not (Options.get_enable_assertions ()) ||
-            Lists.is_sorted pat_weight pats_list);
+    Options.heavy_assert (fun () -> Lists.is_sorted pat_weight pats_list);
     Debug.matching pats;
     if List.length pats_list > Options.get_max_multi_triggers_size () then
       pat_info, []

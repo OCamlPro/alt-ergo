@@ -712,14 +712,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let debug_enqueue_level a lvl reason =
     match reason with
-    | None -> ()
+    | None -> true
     | Some (c : Atom.clause) ->
       let maxi = ref min_int in
       Vec.iter (fun (atom : Atom.atom) ->
           if not (Atom.eq_atom a atom) then
             maxi := max !maxi atom.var.level
         ) c.atoms;
-      assert (!maxi = lvl)
+      !maxi = lvl
 
   let max_level_in_clause (c : Atom.clause) =
     let max_lvl = ref 0 in
@@ -750,7 +750,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     if is_semantic a then
       env.nchoices <- env.nchoices + 1;
     a.var.index <- Vec.size env.trail;
-    if Options.get_enable_assertions() then  debug_enqueue_level a lvl reason
+    Options.heavy_assert (fun () -> debug_enqueue_level a lvl reason)
 
   let progress_estimate env =
     let prg = ref 0. in
@@ -1002,9 +1002,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (*let a = SFF.cardinal env.relevants in*)
     env.lazy_cnf <-
       Queue.fold (relevancy_propagation env) env.lazy_cnf env.tatoms_queue;
-    if Options.get_enable_assertions() then (*debug *)
-      Matoms.iter (fun a _ -> assert (not a.is_true)) env.lazy_cnf
-
+    Options.heavy_assert (fun () ->
+        Matoms.for_all (fun a _ -> not a.is_true) env.lazy_cnf
+      )
 
   let _expensive_theory_propagate () = None
   (* try *)

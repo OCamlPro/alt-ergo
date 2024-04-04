@@ -710,8 +710,8 @@ module Shostak
     let sbs = List.filter (fun (p,_) -> SX.mem p lvs || is_non_lin p) sbs in
       (*
         This assert is not TRUE because of AC and distributivity of '*'
-        assert (not (get_enable_assertions ()) ||
-        X.equal (apply_subst a sbs) (apply_subst b sbs));
+        Options.heavy_assert
+          (fun () -> X.equal (apply_subst a sbs) (apply_subst b sbs));
       *)
     List.iter
       (fun (p, _) ->
