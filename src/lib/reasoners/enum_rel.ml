@@ -63,22 +63,19 @@ module Domain = struct
     else
       { constrs; ex }
 
-  let default r =
-    match Th.embed r with
-    | Cons (c, _) ->
-      domain ~constrs:(HSS.singleton c) Ex.empty
+  let[@inline always] singleton ~ex c = { constrs = HSS.singleton c; ex }
+
+  let unknown ty =
+    match ty with
+    | Ty.Tsum (_, constrs) ->
+      (* Return the list of all the constructors of the type of [r]. *)
+      let constrs = HSS.of_list constrs in
+      assert (not @@ HSS.is_empty constrs);
+      { constrs; ex = Ex.empty }
     | _ ->
-      match X.type_info r with
-      | Ty.Tsum (_, constrs) ->
-        (* Return the list of all the constructors of the type of [r]. *)
-        let constrs = HSS.of_list constrs in
-        assert (not @@ HSS.is_empty constrs);
-        { constrs; ex = Ex.empty }
-      | _ ->
-        (* Only Enum values can have a domain. This case shouldn't happen since
-           we check the type of [r] in [add] and [assume] functions of this
-           module. *)
-        assert false
+      (* Only Enum values can have a domain. This case shouldn't happen since
+         we check the type of semantic values in both [add] and [assume]. *)
+      assert false
 
   let equal d1 d2 = HSS.equal d1.constrs d2.constrs
 
@@ -125,20 +122,33 @@ module Domains = struct
     let changed = SX.add r t.changed in
     { domains; changed }
 
+  (** [get r t] returns the domain currently associated with [r] in [t]. *)
+  let get r t =
+    match Th.embed r with
+    | Cons (r, _) ->
+      (* For sake of efficiency, we don't look in the map if the
+         semantic value is a constructor. *)
+      Domain.singleton ~ex:Explanation.empty r
+    | _ ->
+      try MX.find r t.domains
+      with Not_found ->
+        Domain.unknown (X.type_info r)
+
   (** [add r t] adds a domain for [r] in the domain map. If [r] does not
       already have an associated domain, a fresh domain will be created for
-      [r] using [Domain.default]. *)
+      [r] and add to the map. *)
   let add r t =
     match MX.find r t.domains with
     | _ -> t
     | exception Not_found ->
-      let nd = Domain.default r in
+      let nd =
+        match Th.embed r with
+        | Cons (r, _) ->
+          Domain.singleton ~ex:Explanation.empty r
+        | _ ->
+          Domain.unknown (X.type_info r)
+      in
       internal_update r nd t
-
-  (** [get r t] returns the domain currently associated with [r] in [t]. *)
-  let get r t =
-    try MX.find r t.domains
-    with Not_found -> Domain.default r
 
   (** [update r d t] replaces the domain of [r] in [t] by [d]. The
       representative [r] is marked [changed] after this call. *)
