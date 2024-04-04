@@ -156,7 +156,7 @@ module Domains = struct
     let od = get r t in
     (* For sake of completeness, the domain [d] has to be a subset of the old
        domain of [r]. *)
-    assert (not (Options.get_enable_assertions ()) || Domain.subset d od);
+    Options.heavy_assert (fun () -> Domain.subset d od);
     if Domain.equal od d then
       t
     else
