@@ -75,16 +75,16 @@ module Domain = struct
         assert (not @@ HSS.is_empty constrs);
         { constrs; ex = Ex.empty }
       | _ ->
-        (* Only Enum values can have a domain. This case can happen since we
-           don't dispatch the literals processed in [assume] by their types in
-           the Relation module. *)
-        invalid_arg "unknown"
+        (* Only Enum values can have a domain. This case shouldn't happen since
+           we check the type of [r] in [add] and [assume] functions of this
+           module. *)
+        assert false
 
   let equal d1 d2 = HSS.equal d1.constrs d2.constrs
 
   let pp ppf d =
-    Fmt.pf ppf "%a"
-      Fmt.(iter ~sep:comma HSS.iter Hstring.print) d.constrs;
+    Fmt.(braces @@
+         iter ~sep:comma HSS.iter Hstring.print) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
@@ -100,10 +100,6 @@ module Domain = struct
 end
 
 module Domains = struct
-  exception Inconsistent = Domain.Inconsistent
-  (** Exception raised by [update] or [subst] when an inconsistency is
-      detected. *)
-
   (** The type of simple domain maps. A domain map maps each representative
       (semantic value, of type [X.r]) to its associated domain. *)
   type t = {
