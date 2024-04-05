@@ -282,8 +282,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable tenv_queue : Th.t Vec.t;
 
-      mutable unit_tenv_queue : Th.t Vec.t;
-
       mutable tatoms_queue : Atom.atom Queue.t;
       (** Queue of atoms that have been added to the [trail] through either
           decision or boolean propagation, but have not been otherwise processed
@@ -507,8 +505,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       unit_tenv = Th.empty();
 
       tenv_queue = Vec.make 100 ~dummy:(Th.empty());
-
-      unit_tenv_queue = Vec.make 100 ~dummy:(Th.empty());
 
       tatoms_queue = Queue.create ();
 
@@ -2207,7 +2203,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     guard.neg.is_guard <- false;
     cancel_until env env.next_dec_guard;
     Vec.push env.increm_guards guard;
-    Vec.push env.unit_tenv_queue env.unit_tenv;
     env.is_unsat_cpt <- if env.is_unsat then env.is_unsat_cpt + 1 else 0
 
   let pop env =
@@ -2215,7 +2210,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let g = Vec.pop env.increm_guards in
     env.is_unsat <- env.is_unsat_cpt <> 0;
     env.is_unsat_cpt <- max 0 (env.is_unsat_cpt - 1);
-    env.unit_tenv <- Vec.pop env.unit_tenv_queue;
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)
