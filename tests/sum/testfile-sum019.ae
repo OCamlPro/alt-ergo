@@ -1,0 +1,15 @@
+type house = H1 | H2 | H3 | H4
+
+logic h1, h2 : house
+
+predicate leftof(h1: house, h2: house) =
+  (h2 = H2 -> h1 <> H2 and h1 <> H3 and h1 <> H4) (* h1 = H1 *)
+  and
+  (h2 = H3 -> h1 <> H1 and h1 <> H3 and h1 <> H4) (* h1 = H2 *)
+  and
+  (h2 = H4 -> h1 <> H1 and h1 <> H2 and h1 <> H4) (* h1 = H3 *)
+  and
+  (h2 = H1 -> h1 <> H1 and h1 <> H2 and h1 <> H3) (* h1 = H4 *)
+
+axiom clue : leftof(h1, h2)
+goal g : false

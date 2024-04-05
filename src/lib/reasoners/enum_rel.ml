@@ -51,9 +51,9 @@ module Domain = struct
 
   let[@inline always] choose { constrs; _ } = HSS.choose constrs
 
-  let[@inline always] as_singleton { constrs; _ } =
+  let[@inline always] as_singleton { constrs; ex } =
     if HSS.cardinal constrs = 1 then
-      Some (HSS.choose constrs)
+      Some (HSS.choose constrs, ex)
     else
       None
 
@@ -128,10 +128,10 @@ module Domains = struct
 
   let get r t =
     match Th.embed r with
-    | Cons (r, _) ->
+    | Cons (c, _) ->
       (* For sake of efficiency, we don't look in the map if the
          semantic value is a constructor. *)
-      Domain.singleton ~ex:Explanation.empty r
+      Domain.singleton ~ex:Explanation.empty c
     | _ ->
       try MX.find r t.domains
       with Not_found ->
@@ -297,14 +297,16 @@ let assume_distinct ~ex r1 r2 env =
   let d2 = Domains.get r2 env.domains in
   let env =
     match Domain.as_singleton d1 with
-    | Some c ->
+    | Some (c, ex1) ->
+      let ex = Ex.union ex1 ex in
       let nd = Domain.remove ~ex c d2 in
       tighten_domain r2 nd env
     | None ->
       env
   in
   match Domain.as_singleton d2 with
-  | Some c ->
+  | Some (c, ex2) ->
+    let ex = Ex.union ex2 ex in
     let nd = Domain.remove ~ex c d1 in
     tighten_domain r1 nd env
   | None ->
@@ -364,9 +366,9 @@ let propagate_domains env =
   Domains.propagate
     (fun eqs rr d ->
        match Domain.as_singleton d with
-       | Some c ->
+       | Some (c, ex) ->
          let nr = Th.is_mine (Cons (c, X.type_info rr)) in
-         let eq = Literal.LSem (LR.mkv_eq rr nr), d.ex, Th_util.Other in
+         let eq = Literal.LSem (LR.mkv_eq rr nr), ex, Th_util.Other in
          eq :: eqs
        | None ->
          eqs
