@@ -1173,7 +1173,7 @@ let main () =
   in
 
   (* TODO: reset options to their initial value. *)
-  let handle_reset st =
+  let reset_state st =
     st
     |> State.set partial_model_key None
     |> State.set solver_ctx_key empty_solver_ctx
@@ -1296,7 +1296,7 @@ let main () =
 
       | {contents = `Reset; _} ->
         let () = Steps.reset_steps () in
-        handle_reset st
+        reset_state st
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -1415,7 +1415,7 @@ let main () =
           pop_until (until - 1) (Vec.pop pushed_paths)
       in
       let rev_prefix = pop_until (n - 1) (Vec.pop pushed_paths) in
-      let st = handle_reset st in
+      let st = reset_state st in
       (* Part of the reset, the current path must be reinitialized as well. *)
       let st = State.set current_path_key [] st in
       replay st (List.rev rev_prefix)
