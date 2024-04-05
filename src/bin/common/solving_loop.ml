@@ -1294,7 +1294,9 @@ let main () =
             st
           end
 
-      | {contents = `Reset; _} -> handle_reset st
+      | {contents = `Reset; _} ->
+        let () = Steps.reset_steps () in
+        handle_reset st
 
       | {contents = `Exit; _} -> raise Exit
 
@@ -1386,6 +1388,13 @@ let main () =
      this, but it is not the case yet. *)
   let handle_stmt_pop_reinit all_context st l =
 
+    let has_timeout st =
+      let module Api = (val DO.SatSolverModule.get st) in
+      match Api.SAT.get_unknown_reason Api.env.sat_env with
+      | Some (Timeout _) -> true
+      | _ -> false
+    in
+
     (* Pushes n times the current path. *)
     let push n st =
       let current_path = get_current_path st in
@@ -1419,7 +1428,6 @@ let main () =
       push 1 st;
       State.set is_decision_env true st
     in
-
     (* The pop corresponding to the previous push. It must be applied everytime
        the mode goes from Sat/Unsat to Assert. *)
     let rec pop_if_post_query st =
@@ -1450,14 +1458,34 @@ let main () =
             cmd_on_modes st [Assert; Sat; Unsat] "goal";
             let st = pop_if_post_query st in
             let st = push_before_query st in
-            handle_query st id loc attrs contents
+            let st = handle_query st id loc attrs contents in
+            let () =
+              if has_timeout st then
+                if Options.get_timelimit_per_goal ()
+                then begin
+                  Options.Time.start ();
+                  Options.Time.set_timeout (Options.get_timelimit ());
+                end
+                else exit_as_timeout ()
+            in
+            st
           | {
             id; contents = (`Solve _ as contents); loc ; attrs; implicit=_
           } ->
             cmd_on_modes st [Assert; Unsat; Sat] "check-sat";
             let st = pop_if_post_query st in
             let st = push_before_query st in
-            handle_solve st id contents loc attrs
+            let st = handle_solve st id contents loc attrs in
+            let () =
+              if has_timeout st then
+                if Options.get_timelimit_per_goal ()
+                then begin
+                  Options.Time.start ();
+                  Options.Time.set_timeout (Options.get_timelimit ());
+                end
+                else exit_as_timeout ()
+            in
+            st
           | {contents; _ } ->
             let st =
               let new_current_path =
