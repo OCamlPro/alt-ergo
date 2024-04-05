@@ -488,7 +488,10 @@ let main () =
       recoverable_error "%t" msg; st
     | Util.Timeout ->
       Printer.print_status_timeout None None None None;
-      exit_as_timeout ()
+      if (not(Options.get_timelimit_per_goal ())) then
+        exit_as_timeout ()
+      else
+        st
     | Errors.Error e ->
       recoverable_error "%a" Errors.report e;
       st
