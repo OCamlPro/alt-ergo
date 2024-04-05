@@ -106,6 +106,8 @@ let create_opt
       st
       |> apply_hooks ~old ~new_
       |> State.update_opt key (fun _ -> None)
+    (* S: [clear] rebuilds a new default value for the hooks, but does not put
+       it back on the state. *)
 
     let reset_hooks () = on_update_list := on_update_base
 
