@@ -1024,7 +1024,7 @@ module Shostak(X : ALIEN) = struct
            a B-variable has been split into parts below.
            Therefore we assert that the variable is indeed a B variable and that
            list of substitutions for B variables is not empty. *)
-        assert (not (Lists.is_empty (fst subs)));
+        assert (not (Stdcompat.List.is_empty (fst subs)));
         assert (
           match st.bv.defn with Droot { sorte = B; _ } -> true | _ -> false
         );
@@ -1152,7 +1152,7 @@ module Shostak(X : ALIEN) = struct
         |[] -> bw
         |(t,vls)::r ->
           let (vls', csub) = uniforme_slice vls in
-          if Lists.is_empty csub then slice_rec ((t,vls')::bw) r
+          if Stdcompat.List.is_empty csub then slice_rec ((t,vls')::bw) r
           else
             begin
               let _bw = apply_subs csub bw in
@@ -1232,7 +1232,7 @@ module Shostak(X : ALIEN) = struct
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
-        if Lists.is_empty varsU && Lists.is_empty varsV
+        if Stdcompat.List.(is_empty varsU && is_empty varsV)
         then raise Util.Unsolvable
         else
           begin
@@ -1440,7 +1440,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Bitv" ~function_name:"subst"
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
-    if Lists.is_empty biv then is_mine biv
+    if Stdcompat.List.is_empty biv then is_mine biv
     else
       let r = Canon.normalize (subst_rec x subs biv) in
       is_mine r

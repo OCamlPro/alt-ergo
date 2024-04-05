@@ -35,9 +35,6 @@
 
 (** {3 Misc functions} *)
 
-val is_empty : 'a list -> bool
-(** Is the list empty? *)
-
 val apply : ('a -> 'a) -> 'a list -> 'a list * bool
 (** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
     same such that: (1) "same" is true if and only if a_i == a_i for

@@ -28,10 +28,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-let is_empty = function
-  | [] -> true
-  | _ -> false
-
 let apply f l =
   let res, same =
     List.fold_left

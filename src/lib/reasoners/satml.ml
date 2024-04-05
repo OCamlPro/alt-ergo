@@ -1781,7 +1781,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let is_sat env =
     Option.is_none env.next_objective &&
-    Lists.is_empty env.next_decisions &&
+    Stdcompat.List.is_empty env.next_decisions &&
     Option.is_none env.next_split && (
       nb_assigns env = nb_vars env ||
       (Options.get_cdcl_tableaux_inst () &&
