@@ -48,16 +48,15 @@ type t =
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
+
   | Tfarray of t * t
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
-  | Tsum of Uid.t * Uid.t list
-  (** Enumeration, with its name, and the list of its constructors. *)
 
-  | Tadt of Uid.t * t list
-  (** Application of algebraic data types. [Tadt (a, params)] denotes
+  | Tadt of Uid.t * t list * bool
+  (** Application of algebraic data types. [Tadt (a, params, enum)] denotes
       the application of the polymorphic datatype [a] to the types parameters
-      [params].
+      [params]. The flag [enum] determines if the ADT is an enum.
 
       For instance the type of integer lists can be represented by the
       value [Tadt (Hstring.make "list", [Tint])] where the identifier "list"
@@ -169,11 +168,8 @@ val text : t list -> Uid.t -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
-val tsum : Uid.t -> Uid.t list -> t
-(** Create an enumeration type. [tsum name enums] creates an enumeration
-    named [name], with constructors [enums]. *)
-
 val t_adt :
+  ?enum:bool ->
   ?body: ((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of

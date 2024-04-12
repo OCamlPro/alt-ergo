@@ -2617,7 +2617,6 @@ let mk_match e cases =
     match ty with
     | Ty.Tadt _ -> (fun hs -> Sy.destruct hs)
     | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
-    | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false
   in
   let mker =
@@ -2628,13 +2627,6 @@ let mk_match e cases =
 
     | Ty.Trecord _ ->
       (fun _e _name -> assert false) (* no need to test for records *)
-
-    | Ty.Tsum _ ->
-      (fun e n -> (* testers are equalities for Tsum *)
-         let constr =
-           mk_term (Sy.constr n) [] (type_info e)
-         in
-         mk_eq ~iff:false e constr)
 
     | _ -> assert false
   in

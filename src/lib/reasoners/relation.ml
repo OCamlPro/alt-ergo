@@ -37,11 +37,9 @@ module Rel3 : Sig_rel.RELATION = Bitv_rel
 
 module Rel4 : Sig_rel.RELATION = Arrays_rel
 
-module Rel5 : Sig_rel.RELATION = Enum_rel
+module Rel5 : Sig_rel.RELATION = Adt_rel
 
-module Rel6 : Sig_rel.RELATION = Adt_rel
-
-module Rel7 : Sig_rel.RELATION = Ite_rel
+module Rel6 : Sig_rel.RELATION = Ite_rel
 
 (* This value is unused. *)
 let timer = Timers.M_None
@@ -53,7 +51,6 @@ type t = {
   r4: Rel4.t;
   r5: Rel5.t;
   r6: Rel6.t;
-  r7: Rel7.t;
 }
 
 let empty uf =
@@ -63,8 +60,7 @@ let empty uf =
   let r4, doms4 = Rel4.empty (Uf.set_domains uf doms3) in
   let r5, doms5 = Rel5.empty (Uf.set_domains uf doms4) in
   let r6, doms6 = Rel6.empty (Uf.set_domains uf doms5) in
-  let r7, doms7 = Rel7.empty (Uf.set_domains uf doms6) in
-  {r1; r2; r3; r4; r5; r6; r7}, doms7
+  {r1; r2; r3; r4; r5; r6}, doms6
 
 let (|@|) l1 l2 =
   if l1 == [] then l2
@@ -97,14 +93,10 @@ let assume env uf sa =
     Timers.with_timer Rel6.timer Timers.F_assume @@ fun () ->
     Rel6.assume env.r6 (Uf.set_domains uf doms5) sa
   in
-  let env7, doms7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
-    Timers.with_timer Rel7.timer Timers.F_assume @@ fun () ->
-    Rel7.assume env.r7 (Uf.set_domains uf doms6) sa
-  in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
-  doms7,
-  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
-     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6},
+  doms6,
+  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6;
+     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 }
    : _ Sig_rel.result)
 
 let assume_th_elt env th_elt dep =
@@ -115,8 +107,7 @@ let assume_th_elt env th_elt dep =
   let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
   let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
   let env6 = Rel6.assume_th_elt env.r6 th_elt dep in
-  let env7 = Rel7.assume_th_elt env.r7 th_elt dep in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7}
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6}
 
 let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
     k =
@@ -132,8 +123,7 @@ let query env uf a =
   try_query (module Rel3) env.r3 uf a @@ fun () ->
   try_query (module Rel4) env.r4 uf a @@ fun () ->
   try_query (module Rel5) env.r5 uf a @@ fun () ->
-  try_query (module Rel6) env.r6 uf a @@ fun () ->
-  try_query (module Rel7) env.r7 uf a @@ fun () -> None
+  try_query (module Rel6) env.r6 uf a @@ fun () -> None
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();
@@ -143,8 +133,7 @@ let case_split env uf ~for_model =
   let seq4 = Rel4.case_split env.r4 uf ~for_model in
   let seq5 = Rel5.case_split env.r5 uf ~for_model in
   let seq6 = Rel6.case_split env.r6 uf ~for_model in
-  let seq7 = Rel7.case_split env.r7 uf ~for_model in
-  let splits = [seq1; seq2; seq3; seq4; seq5; seq6; seq7] in
+  let splits = [seq1; seq2; seq3; seq4; seq5; seq6] in
   let splits = List.fold_left (|@|) [] splits in
   List.fast_sort
     (fun (_ ,_ , sz1) (_ ,_ , sz2) ->
@@ -181,8 +170,7 @@ let add env uf r t =
   let r4, doms4, eqs4 =Rel4.add env.r4 (Uf.set_domains uf doms3) r t in
   let r5, doms5, eqs5 =Rel5.add env.r5 (Uf.set_domains uf doms4) r t in
   let r6, doms6, eqs6 =Rel6.add env.r6 (Uf.set_domains uf doms5) r t in
-  let r7, doms7, eqs7 =Rel7.add env.r7 (Uf.set_domains uf doms6) r t in
-  {r1;r2;r3;r4;r5;r6;r7;},doms7,eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
+  {r1;r2;r3;r4;r5;r6}, doms6, eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6
 
 
 let instantiate ~do_syntactic_matching t_match env uf selector =
@@ -199,22 +187,13 @@ let instantiate ~do_syntactic_matching t_match env uf selector =
     Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
   let r6, l6 =
     Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
-  let r7, l7 =
-    Rel7.instantiate ~do_syntactic_matching t_match env.r7 uf selector in
-  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
-  l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
+  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6},
+  l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
 let new_terms env =
-  let t1 = Rel1.new_terms env.r1 in
-  let t2 = Rel2.new_terms env.r2 in
-  let t3 = Rel3.new_terms env.r3 in
-  let t4 = Rel4.new_terms env.r4 in
-  let t5 = Rel5.new_terms env.r5 in
-  let t6 = Rel6.new_terms env.r6 in
-  let t7 = Rel7.new_terms env.r7 in
-  Expr.Set.union t1
-    (Expr.Set.union t2
-       (Expr.Set.union t3
-          (Expr.Set.union t4
-             (Expr.Set.union t5
-                (Expr.Set.union t6 t7)) )))
+  Rel1.new_terms env.r1
+  |> Expr.Set.union @@ Rel2.new_terms env.r2
+  |> Expr.Set.union @@ Rel3.new_terms env.r3
+  |> Expr.Set.union @@ Rel4.new_terms env.r4
+  |> Expr.Set.union @@ Rel5.new_terms env.r5
+  |> Expr.Set.union @@ Rel6.new_terms env.r6

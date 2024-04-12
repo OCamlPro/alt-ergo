@@ -83,7 +83,7 @@ module Domain = struct
 
   let unknown ty =
     match ty with
-    | Ty.Tadt (name, params) ->
+    | Ty.Tadt (name, params, _) ->
       (* Return the list of all the constructors of the type of [r]. *)
       let Adt body = Ty.type_body name params in
       let constrs =
@@ -133,6 +133,9 @@ module Domains = struct
 
         We don't store domains for constructors and selectors. *)
 
+    enums: SX.t;
+    (** Set of tracked representatives of enum type. *)
+
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
         in [propagation]. *)
@@ -147,14 +150,20 @@ module Domains = struct
         )
       ppf t.domains
 
-  let empty = { domains = MX.empty; changed = SX.empty }
+  let empty = { domains = MX.empty; enums = SX.empty; changed = SX.empty }
 
   let filter_ty = is_adt_ty
 
+  let is_enum r =
+    match X.type_info r with
+    | Ty.Tadt (_, [], true) -> true
+    | _ -> false
+
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
+    let enums = if is_enum r then SX.add r t.enums else t.enums in
     let changed = SX.add r t.changed in
-    { domains; changed }
+    { domains; enums; changed }
 
   let get r t =
     match Th.embed r with
@@ -170,9 +179,9 @@ module Domains = struct
   let add r t =
     match Th.embed r with
     | Alien _ when not (MX.mem r t.domains) ->
-      (* We have to add a default domain if the key `r` isn't in map in order
-          to be sure that the case-split mechanism will attempt to choose a
-          value for it. *)
+      (* We have to add a default domain if the key `r` is not in map in order
+         to be sure that the case split mechanism will attempt to choose a
+         value for it. *)
       let nd = Domain.unknown (X.type_info r) in
       internal_update r nd t
     | Alien _ | Constr _ | Select _ -> t
@@ -192,8 +201,9 @@ module Domains = struct
 
   let remove r t =
     let domains = MX.remove r t.domains in
+    let enums = SX.remove r t.enums in
     let changed = SX.remove r t.changed in
-    { domains ; changed }
+    { domains; enums; changed }
 
   exception Inconsistent = Domain.Inconsistent
 
@@ -227,6 +237,8 @@ module Domains = struct
     acc, { t with changed = SX.empty }
 
   let fold f t = MX.fold f t.domains
+
+  let fold_enums f t = SX.fold f t.enums
 end
 
 let calc_destructor d e uf =
@@ -342,7 +354,7 @@ let assume_th_elt t th_elt _ =
 (* Update the domains of the semantic values [r1] and [r2] according to the
    disequality [r1 <> r2].
 
-   This function alone isn't sufficient to produce a complete decision
+   This function alone is not sufficient to produce a complete decision
    procedure for the ADT theory. For instance, let's assume we have three
    semantic values [r1], [r2] and [r3] whose the domain is `{C1, C2}`. It's
    clear that `(distinct r1 r2 r3)` is unsatisfiable but we have not enough
@@ -428,7 +440,7 @@ let assume_literals la uf domains =
          let rr1, ex1 = Uf.find_r uf r1 in
          let rr2, ex2 = Uf.find_r uf r2 in
          (* The explanation [ex] explains why [r1] and [r2] are distinct,
-            which isn't sufficient to justify why [rr1] and [rr2] are
+            which is not sufficient to justify why [rr1] and [rr2] are
             distinct. *)
          let ex = Ex.union ex1 @@ Ex.union ex2 ex in
          (* Needed for models generation because fresh terms are not added with
@@ -465,7 +477,7 @@ let build_constr_eq r c =
   match Th.embed r with
   | Alien r ->
     begin match X.type_info r with
-      | Ty.Tadt (name, params) as ty ->
+      | Ty.Tadt (name, params, _) as ty ->
         let Ty.Adt body = Ty.type_body name params in
         let ds =
           try Ty.assoc_destrs c body with Not_found -> assert false
@@ -566,7 +578,7 @@ let two = Numbers.Q.from_int 2
 (* TODO: we should compute this reverse map in `Ty` and store it there. *)
 let constr_of_destr ty d =
   match ty with
-  | Ty.Tadt (name, params) ->
+  | Ty.Tadt (name, params, _) ->
     begin
       let Ty.Adt cases = Ty.type_body name params in
       try
@@ -583,6 +595,11 @@ let constr_of_destr ty d =
   | _ -> assert false
 
 exception Found of X.r * Uid.t
+
+let can_split env n =
+  let m = Options.get_max_split () in
+  Numbers.Q.(compare (mult n env.size_splits) m) <= 0
+  || Numbers.Q.sign m < 0
 
 let (let*) = Option.bind
 
@@ -622,6 +639,32 @@ let pick_best ds =
   in
   Some (r, c)
 
+let pick_enum ds uf =
+  Domains.fold_enums
+    (fun r best ->
+       let rr, _ = Uf.find_r uf r in
+       let d = Domains.get r ds in
+       let cd = Domain.cardinal d in
+       match Th.embed rr, best with
+       | Constr _, _ -> best
+       | _, Some (n, _, _) when n <= cd -> best
+       | _ ->
+         let c = Domain.choose d in
+         Some (cd, r, c)
+    ) ds None
+
+let split_enum env uf =
+  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+  let* n, r, c = pick_enum ds uf in
+  let n = Numbers.Q.from_int n in
+  if can_split env n then
+    let _, cons = Option.get @@ build_constr_eq r c in
+    let nr, ctx = X.make cons in
+    assert (Lists.is_empty ctx);
+    Some (LR.mkv_eq r nr)
+  else
+    None
+
 let split_best_domain ~for_model uf =
   if not for_model then
     None
@@ -640,7 +683,10 @@ let split_best_domain ~for_model uf =
 let next_case_split ~for_model env uf =
   match split_delayed_destructor env with
   | Some _ as r -> r
-  | None -> split_best_domain ~for_model uf
+  | None ->
+    match split_enum env uf with
+    | Some _ as r -> r
+    | None -> split_best_domain ~for_model uf
 
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then

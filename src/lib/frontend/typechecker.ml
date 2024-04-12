@@ -69,12 +69,12 @@ module Types = struct
     match ty with
     | Ty.Text (lty', s)
     | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty') ->
+    | Ty.Tadt (s,lty',false) ->
       if List.length lty <> List.length lty' then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
-    | Ty.Tsum (s, _) ->
-      if List.length lty <> 0 then
+    | Ty.Tadt (s,lty',true) ->
+      if List.length lty <> 0 || List.length lty' <> 0 then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       []
     | _ -> assert false
@@ -145,13 +145,6 @@ module Types = struct
     | Abstract ->
       let ty = Ty.text ty_vars (Uid.of_string id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
-    | Enum lc ->
-      if not (Lists.is_empty ty_vars) then
-        Errors.typing_error (PolymorphicEnum id) loc;
-      let ty =
-        Ty.tsum (Uid.of_string id) (List.map Uid.of_string lc)
-      in
-      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
@@ -171,6 +164,10 @@ module Types = struct
             from_labels =
               List.fold_left
                 (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
+    | Enum l ->
+      let body = List.map (fun constr -> Uid.of_string constr, []) l in
+      let ty = Ty.t_adt ~enum:true ~body:(Some body) (Uid.of_string id) [] in
+      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Algebraic l ->
       let l = (* convert ppure_type to Ty.t in l *)
         List.map (fun (constr, l) ->
@@ -276,7 +273,9 @@ module Env = struct
   let add_fpa_enum map =
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
-    | Ty.Tsum (_, cstrs) ->
+    | Ty.Tadt (name, [], true) ->
+      let Adt cases = Ty.type_body name [] in
+      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
         (fun m c ->
            match Fpa_rounding.translate_smt_rounding_mode
@@ -300,9 +299,12 @@ module Env = struct
 
   let find_builtin_cstr ty n =
     match ty with
-    | Ty.Tsum (_, cstrs) ->
-      List.find (Uid.equal n) cstrs
-    | _ -> assert false
+    | Ty.Tadt (name, [], true) ->
+      let Adt cases = Ty.type_body name [] in
+      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
+      List.find (fun c -> String.equal n @@ Uid.show c) cstrs
+    | _ ->
+      assert false
 
   let add_fpa_builtins env =
     let (->.) args result = { args; result } in
@@ -327,9 +329,9 @@ module Env = struct
     let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
     let tname = Fpa_rounding.fpa_rounding_mode_ae_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode (Uid.of_string nte)) in
+    let float32d = float32 (mode nte) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode (Uid.of_string nte)) in
+    let float64d = float64 (mode nte) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -1001,14 +1003,11 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
-            | Ty.Adt cases -> cases
-          end
+        | Ty.Tadt (name, params, _) ->
+          let Ty.Adt cases = Ty.type_body name params in
+          cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e; destrs = []}) l
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -1412,15 +1411,12 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
-            | Ty.Adt cases -> cases
-          end
+        | Ty.Tadt (name, params, _) ->
+          let Ty.Adt cases = Ty.type_body name params in
+          cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
 
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e ; destrs = []}) l
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in
