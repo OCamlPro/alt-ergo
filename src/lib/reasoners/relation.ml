@@ -31,15 +31,13 @@ module X = Shostak.Combine
 
 module Rel1 : Sig_rel.RELATION = IntervalCalculus
 
-module Rel2 : Sig_rel.RELATION = Records_rel
+module Rel2 : Sig_rel.RELATION = Bitv_rel
 
-module Rel3 : Sig_rel.RELATION = Bitv_rel
+module Rel3 : Sig_rel.RELATION = Arrays_rel
 
-module Rel4 : Sig_rel.RELATION = Arrays_rel
+module Rel4 : Sig_rel.RELATION = Adt_rel
 
-module Rel5 : Sig_rel.RELATION = Adt_rel
-
-module Rel6 : Sig_rel.RELATION = Ite_rel
+module Rel5 : Sig_rel.RELATION = Ite_rel
 
 (* This value is unused. *)
 let timer = Timers.M_None
@@ -50,7 +48,6 @@ type t = {
   r3: Rel3.t;
   r4: Rel4.t;
   r5: Rel5.t;
-  r6: Rel6.t;
 }
 
 let empty uf =
@@ -59,8 +56,7 @@ let empty uf =
   let r3, doms3 = Rel3.empty (Uf.set_domains uf doms2) in
   let r4, doms4 = Rel4.empty (Uf.set_domains uf doms3) in
   let r5, doms5 = Rel5.empty (Uf.set_domains uf doms4) in
-  let r6, doms6 = Rel6.empty (Uf.set_domains uf doms5) in
-  {r1; r2; r3; r4; r5; r6}, doms6
+  {r1; r2; r3; r4; r5}, doms5
 
 let (|@|) l1 l2 =
   if l1 == [] then l2
@@ -89,14 +85,10 @@ let assume env uf sa =
     Timers.with_timer Rel5.timer Timers.F_assume @@ fun () ->
     Rel5.assume env.r5 (Uf.set_domains uf doms4) sa
   in
-  let env6, doms6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
-    Timers.with_timer Rel6.timer Timers.F_assume @@ fun () ->
-    Rel6.assume env.r6 (Uf.set_domains uf doms5) sa
-  in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6},
-  doms6,
-  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6;
-     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 }
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5},
+  doms5,
+  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5;
+     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 }
    : _ Sig_rel.result)
 
 let assume_th_elt env th_elt dep =
@@ -106,8 +98,7 @@ let assume_th_elt env th_elt dep =
   let env3 = Rel3.assume_th_elt env.r3 th_elt dep in
   let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
   let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
-  let env6 = Rel6.assume_th_elt env.r6 th_elt dep in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6}
+  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5}
 
 let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
     k =
@@ -122,8 +113,7 @@ let query env uf a =
   try_query (module Rel2) env.r2 uf a @@ fun () ->
   try_query (module Rel3) env.r3 uf a @@ fun () ->
   try_query (module Rel4) env.r4 uf a @@ fun () ->
-  try_query (module Rel5) env.r5 uf a @@ fun () ->
-  try_query (module Rel6) env.r6 uf a @@ fun () -> None
+  try_query (module Rel5) env.r5 uf a @@ fun () -> None
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();
@@ -132,8 +122,7 @@ let case_split env uf ~for_model =
   let seq3 = Rel3.case_split env.r3 uf ~for_model in
   let seq4 = Rel4.case_split env.r4 uf ~for_model in
   let seq5 = Rel5.case_split env.r5 uf ~for_model in
-  let seq6 = Rel6.case_split env.r6 uf ~for_model in
-  let splits = [seq1; seq2; seq3; seq4; seq5; seq6] in
+  let splits = [seq1; seq2; seq3; seq4; seq5] in
   let splits = List.fold_left (|@|) [] splits in
   List.fast_sort
     (fun (_ ,_ , sz1) (_ ,_ , sz2) ->
@@ -158,8 +147,7 @@ let optimizing_objective env uf o =
     Rel1.optimizing_objective env.r1 uf;
     Rel2.optimizing_objective env.r2 uf;
     Rel3.optimizing_objective env.r3 uf;
-    Rel4.optimizing_objective env.r4 uf;
-    Rel5.optimizing_objective env.r5 uf
+    Rel4.optimizing_objective env.r4 uf
   ]
 
 let add env uf r t =
@@ -169,9 +157,7 @@ let add env uf r t =
   let r3, doms3, eqs3 =Rel3.add env.r3 (Uf.set_domains uf doms2) r t in
   let r4, doms4, eqs4 =Rel4.add env.r4 (Uf.set_domains uf doms3) r t in
   let r5, doms5, eqs5 =Rel5.add env.r5 (Uf.set_domains uf doms4) r t in
-  let r6, doms6, eqs6 =Rel6.add env.r6 (Uf.set_domains uf doms5) r t in
-  {r1;r2;r3;r4;r5;r6}, doms6, eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6
-
+  {r1;r2;r3;r4;r5}, doms5, eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5
 
 let instantiate ~do_syntactic_matching t_match env uf selector =
   Options.exec_thread_yield ();
@@ -185,10 +171,8 @@ let instantiate ~do_syntactic_matching t_match env uf selector =
     Rel4.instantiate ~do_syntactic_matching t_match env.r4 uf selector in
   let r5, l5 =
     Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
-  let r6, l6 =
-    Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
-  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6},
-  l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
+  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5},
+  l5 |@| l4 |@| l3 |@| l2 |@| l1
 
 let new_terms env =
   Rel1.new_terms env.r1
@@ -196,4 +180,3 @@ let new_terms env =
   |> Expr.Set.union @@ Rel3.new_terms env.r3
   |> Expr.Set.union @@ Rel4.new_terms env.r4
   |> Expr.Set.union @@ Rel5.new_terms env.r5
-  |> Expr.Set.union @@ Rel6.new_terms env.r6

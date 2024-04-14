@@ -96,6 +96,10 @@ let compare (type a b) (u1 : a t) (u2 : b t) =
   | Ty_var id1, Ty_var id2 -> DE.Id.compare id1 id2
   | _ -> String.compare (show u1) (show u2)
 
+let rec list_assoc x = function
+  | [] -> raise Not_found
+  | (y, v) :: l -> if equal x y then v else list_assoc x l
+
 module Term_set = Set.Make
     (struct
       type nonrec t = term_cst

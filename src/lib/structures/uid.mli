@@ -43,6 +43,8 @@ val of_ty_var : DE.ty_var -> ty_var
 val of_string : string -> 'a t
 val of_hstring : Hstring.t -> 'a t
 
+val list_assoc : 'a t -> ('a t * 'b) list -> 'b
+
 val hash : 'a t -> int
 val pp : 'a t Fmt.t
 val show : 'a t -> string
