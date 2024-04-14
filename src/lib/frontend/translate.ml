@@ -519,85 +519,17 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | _ -> unsupported "Type %a" DE.Ty.print dty
 
 and handle_ty_app ?(update = false) ty_c l =
-  (* Applies the substitutions in [tysubsts] to each encountered type
-     variable. *)
-  let rec apply_ty_substs tysubsts ty =
-    match ty with
-    | Ty.Tvar { v; _ } ->
-      Ty.M.find v tysubsts
-
-    | Text (tyl, hs) ->
-      Ty.Text (List.map (apply_ty_substs tysubsts) tyl, hs)
-
-    | Tfarray (ti, tv) ->
-      Tfarray (
-        apply_ty_substs tysubsts ti,
-        apply_ty_substs tysubsts tv
-      )
-
-    | Tadt (hs, tyl) ->
-      Tadt (hs, List.map (apply_ty_substs tysubsts) tyl)
-
-    | Trecord ({ args; lbs; _ } as rcrd) ->
-      Trecord {
-        rcrd with
-        args = List.map (apply_ty_substs tysubsts) args;
-        lbs = List.map (
-            fun (hs, t) ->
-              hs, apply_ty_substs tysubsts t
-          ) lbs;
-      }
-
-    | _ -> ty
-  in
   let tyl = List.map (dty_to_ty ~update) l in
   (* Recover the initial versions of the types and apply them on the provided
      type arguments stored in [tyl]. *)
   match Cache.find_ty ty_c with
-  | Tadt (hs, _) -> Tadt (hs, tyl)
-
-  | Trecord { args; _ } as ty ->
-    let tysubsts =
-      List.fold_left2 (
-        fun acc tv ty ->
-          match tv with
-          | Ty.Tvar { v; _ } -> Ty.M.add v ty acc
-          | _ -> assert false
-      ) Ty.M.empty args tyl
-    in
-    apply_ty_substs tysubsts ty
-
+  | Tadt (hs, _, record) -> Tadt (hs, tyl, record)
   | Text (_, s) -> Text (tyl, s)
   | _ -> assert false
 
 (** Handles a simple type declaration. *)
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
-  | Some (
-      (Adt
-         { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt)
-    ) ->
-    (* Records and adts that only have one case are treated in the same way,
-       and considered as records. *)
-    Nest.attach_orders [adt];
-    let tyvl = Cache.store_ty_vars_ret id_ty in
-    let lbs =
-      Array.fold_right (
-        fun c acc ->
-          match c with
-          | Some (DE.{ id_ty; _ } as id) ->
-            let pty = dty_to_ty id_ty in
-            (id, pty) :: acc
-          | _ ->
-            Fmt.failwith
-              "Unexpected null label for some field of the record type %a"
-              DE.Ty.Const.print ty_c
-
-      ) dstrs []
-    in
-    let ty = Ty.trecord ~record_constr:cstr tyvl ty_c lbs in
-    Cache.store_ty ty_c ty
-
   | Some (Adt { cases; _ } as adt) ->
     Nest.attach_orders [adt];
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
@@ -654,29 +586,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
 let mk_mr_ty_decls (tdl: DE.ty_cst list) =
   let handle_ty_decl (ty: Ty.t) (tdef: DE.Ty.def option) =
     match ty, tdef with
-    | Trecord { args; name; record_constr; _ },
-      Some (
-        Adt { cases = [| { dstrs; _ } |]; ty = ty_c; _ }
-      ) ->
-      let lbs =
-        Array.fold_right (
-          fun c acc ->
-            match c with
-            | Some (DE.{ id_ty; _ } as id) ->
-              let pty = dty_to_ty id_ty in
-              (id, pty) :: acc
-            | _ ->
-              Fmt.failwith
-                "Unexpected null label for some field of the record type %a"
-                DE.Ty.Const.print ty_c
-        ) dstrs []
-      in
-      let ty =
-        Ty.trecord ~record_constr args name lbs
-      in
-      Cache.store_ty ty_c ty
-
-    | Tadt (hs, tyl), Some (Adt { cases; ty = ty_c; _ }) ->
+    | Tadt (hs, tyl, _), Some (Adt { cases; ty = ty_c; _ }) ->
       let cs =
         Array.fold_right (
           fun DE.{ cstr; dstrs; _ } accl ->
@@ -697,37 +607,15 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
 
     | _ -> assert false
   in
-  (* If there are adts in the list of type declarations then records are
-     converted to adts, because that's how it's done in the legacy typechecker.
-     But it might be more efficient not to do that. *)
-  let rev_tdefs, contains_adts =
-    List.fold_left (
-      fun (acc, ca) ty_c ->
-        match DT.definition ty_c with
-        | Some (Adt { record; cases; _ } as df)
-          when not record && Array.length cases > 1 ->
-          df :: acc, true
-        | Some (Adt _ as df) ->
-          df :: acc, ca
-        | Some Abstract | None ->
-          assert false
-    ) ([], false) tdl
-  in
+  let rev_tdefs = List.rev_map (fun td -> Option.get @@ DT.definition td) tdl in
   Nest.attach_orders rev_tdefs;
   let rev_l =
     List.fold_left (
       fun acc tdef ->
         match tdef with
-        | DE.Adt { cases; record; ty = ty_c; } as adt ->
+        | DE.Adt { cases; ty = ty_c; _ } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-          let record_constr = cases.(0).cstr in
-          let ty =
-            if (record || Array.length cases = 1) && not contains_adts
-            then
-              Ty.trecord ~record_constr tyvl ty_c []
-            else
-              Ty.t_adt ty_c tyvl
-          in
+          let ty = Ty.t_adt ty_c tyvl in
           Cache.store_ty ty_c ty;
           (ty, Some adt) :: acc
 
@@ -953,14 +841,8 @@ let rec mk_expr
             E.mk_term sy [] ty
 
           | B.Constructor _ ->
-            begin match dty_to_ty term_ty with
-              | Trecord _ as ty ->
-                E.mk_record [] ty
-              | Tadt _ as ty ->
-                E.mk_constr tcst [] ty
-              | ty ->
-                Fmt.failwith "unexpected type %a@." Ty.print ty
-            end
+            let ty = dty_to_ty term_ty in
+            E.mk_constr tcst [] ty
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1001,10 +883,7 @@ let rec mk_expr
                     let e = aux_mk_expr x in
                     let sy =
                       match Cache.find_ty adt with
-                      | Trecord _ ->
-                        Sy.Op (Sy.Access destr)
-                      | Tadt _ ->
-                        Sy.destruct destr
+                      | Tadt _ -> Sy.destruct destr
                       | _ -> assert false
                     in
                     E.mk_term sy [e] ty
@@ -1035,11 +914,6 @@ let rec mk_expr
               | Ty.Tadt _ ->
                 E.mk_tester cstr (aux_mk_expr x)
 
-              | Ty.Trecord _ ->
-                (* The typechecker allows only testers whose the
-                   two arguments have the same type. Thus, we can always
-                   replace the tester of a record by the true literal. *)
-                E.vrai
               | _ -> assert false
             end
 
@@ -1306,19 +1180,9 @@ let rec mk_expr
 
           | B.Constructor _, _ ->
             let ty = dty_to_ty term_ty in
-            begin match ty with
-              | Ty.Tadt _ ->
-                let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_constr tcst l ty
-              | Ty.Trecord _ ->
-                let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_record l ty
-              | _ ->
-                Fmt.failwith
-                  "Constructor error: %a does not belong to a record nor an\
-                   algebraic data type"
-                  DE.Term.print app_term
-            end
+            let sy = Sy.constr tcst in
+            let l = List.map (fun t -> aux_mk_expr t) args in
+            E.mk_term sy l ty
 
           | B.Coercion, [ x ] ->
             begin match DT.view (DE.Term.ty x), DT.view term_ty with

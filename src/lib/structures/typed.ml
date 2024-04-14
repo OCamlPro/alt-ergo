@@ -83,8 +83,7 @@ and 'a tt_desc =
   | TTextract of
       'a atterm * int * int
   | TTconcat of 'a atterm * 'a atterm
-  | TTdot of 'a atterm * Hstring.t
-  | TTrecord of (Hstring.t * 'a atterm) list
+  | TTrecord of Ty.t * (Hstring.t * 'a atterm) list
   | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
   | TTnamed of Hstring.t * 'a atterm
   | TTite of 'a atform *
@@ -220,9 +219,7 @@ let rec print_term =
       fprintf fmt "%a^{%d, %d}" print_term t1 i j
     | TTconcat (t1, t2) ->
       fprintf fmt "%a @@ %a" print_term t1 print_term t2
-    | TTdot (t1, s) ->
-      fprintf fmt "%a.%s" print_term t1 (Hstring.view s)
-    | TTrecord l ->
+    | TTrecord (_, l) ->
       fprintf fmt "{ ";
       List.iter
         (fun (s, t) -> fprintf fmt "%s = %a" (Hstring.view s) print_term t) l;

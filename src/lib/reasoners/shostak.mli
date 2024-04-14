@@ -40,9 +40,6 @@ module Polynome : Polynome.T
 module Arith : Sig.SHOSTAK
   with type r = Combine.r and type t = Polynome.t
 
-module Records : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Records.abstract
-
 module Bitv : Sig.SHOSTAK
   with type r = Combine.r and type t = Combine.r Bitv.abstract
 

@@ -294,7 +294,6 @@ val mk_constr : Dolmen.Std.Expr.term_cst -> t list -> Ty.t -> t
            [Nest.attach_orders]. *)
 
 val mk_tester : Dolmen.Std.Expr.term_cst -> t -> t
-val mk_record : t list -> Ty.t -> t
 
 (** Substitutions *)
 
