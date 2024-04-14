@@ -40,16 +40,7 @@ type t =
   | Tbitv of int
   | Text of t list * DE.ty_cst
   | Tfarray of t * t
-  | Tadt of DE.ty_cst * t list
-  | Trecord of trecord
-
-and trecord = {
-  mutable args : t list;
-  name : DE.ty_cst;
-  mutable lbs :  (DE.term_cst * t) list;
-  record_constr : DE.term_cst;
-  (* for ADTs that become records. default is "{" *)
-}
+  | Tadt of DE.ty_cst * t list * bool
 
 module Smtlib = struct
   let rec pp ppf = function
@@ -59,11 +50,9 @@ module Smtlib = struct
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
-    | Text ([], name)
-    | Trecord { args = []; name; _ } | Tadt (name, []) ->
+    | Text ([], name) | Tadt (name, [], _) ->
       DE.Ty.Const.print ppf name
-    | Text (args, name)
-    | Trecord { args; name; _ } | Tadt (name, args) ->
+    | Text (args, name) | Tadt (name, args, _) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
     | Tvar tv -> DE.Ty.Var.print ppf tv
 end
@@ -111,22 +100,7 @@ let print_generic body_of =
         fprintf fmt "%a <ext>%a" print_list l DE.Ty.Const.print s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
-      | Trecord { args = lv; name = n; lbs = lbls; _ } ->
-        begin
-          fprintf fmt "%a <record>%a" print_list lv DE.Ty.Const.print n;
-          if body_of != None then begin
-            fprintf fmt " = {";
-            let first = ref true in
-            List.iter
-              (fun (s, t) ->
-                 fprintf fmt "%s%a : %a" (if !first then "" else "; ")
-                   DE.Term.Const.print s (print body_of) t;
-                 first := false
-              ) lbls;
-            fprintf fmt "}"
-          end
-        end
-      | Tadt (n, lv) ->
+      | Tadt (n, lv, _) ->
         fprintf fmt "%a <adt>%a" print_list lv DE.Ty.Const.print n;
         begin match body_of with
           | None -> ()
@@ -193,17 +167,7 @@ let rec compare t1 t2 =
     if c<>0 then c
     else compare ta2 tb2
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
-  | Trecord { args = a1; name = s1; lbs = l1; _ },
-    Trecord { args = a2; name = s2; lbs = l2; _ } ->
-    let c = DE.Ty.Const.compare s1 s2 in
-    if c <> 0 then c else
-      let c = compare_list a1 a2 in
-      if c <> 0 then c else
-        let l1, l2 = List.map snd l1, List.map snd l2 in
-        compare_list l1 l2
-  | Trecord _, _ -> -1 | _ , Trecord _ -> 1
-
-  | Tadt (s1, pars1), Tadt (s2, pars2) ->
+  | Tadt (s1, pars1, _), Tadt (s2, pars2, _) ->
     let c = DE.Ty.Const.compare s1 s2 in
     if c <> 0 then c
     else compare_list pars1 pars2
@@ -239,20 +203,10 @@ let rec equal t1 t2 =
      with Invalid_argument _ -> false)
   | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     equal ta1 tb1 && equal ta2 tb2
-  | Trecord { args = a1; name = s1; lbs = l1; _ },
-    Trecord { args = a2; name = s2; lbs = l2; _ } ->
-    begin
-      try
-        DE.Ty.Const.equal s1 s2 && List.for_all2 equal a1 a2 &&
-        List.for_all2
-          (fun (l1, ty1) (l2, ty2) ->
-             DE.Term.Const.equal l1 l2 && equal ty1 ty2) l1 l2
-      with Invalid_argument _ -> false
-    end
   | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
 
-  | Tadt (s1, pars1), Tadt (s2, pars2) ->
+  | Tadt (s1, pars1, _), Tadt (s2, pars2, _) ->
     begin
       try DE.Ty.Const.equal s1 s2 && List.for_all2 equal pars1 pars2
       with Invalid_argument _ -> false
@@ -278,13 +232,9 @@ let rec matching s pat t =
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
     matching (matching s ta1 tb1) ta2 tb2
-  | Trecord r1, Trecord r2 when DE.Ty.Const.equal r1.name r2.name ->
-    let s = List.fold_left2 matching s r1.args r2.args in
-    List.fold_left2
-      (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
   | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
-  | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
+  | Tadt(n1, args1, _), Tadt(n2, args2, _) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->
     raise (TypeClash(pat,t))
@@ -304,20 +254,10 @@ let apply_subst =
       let t2' = apply_subst s t2 in
       if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
 
-    | Trecord r ->
-      let lbs,  same1 = My_list.apply_right (apply_subst s) r.lbs in
-      let args, same2 = My_list.apply (apply_subst s) r.args in
-      if same1 && same2 then ty
-      else
-        Trecord
-          {r with args = args;
-                  name = r.name;
-                  lbs = lbs}
-
-    | Tadt(name, params)
+    | Tadt(name, params, record)
       [@ocaml.ppwarning "TODO: detect when there are no changes "]
       ->
-      Tadt (name, List.map (apply_subst s) params)
+      Tadt (name, List.map (apply_subst s) params, record)
 
     | Tint | Treal | Tbool | Tbitv _ -> ty
   in
@@ -339,18 +279,9 @@ let rec fresh ty subst =
     let ty1, subst = fresh ty1 subst in
     let ty2, subst = fresh ty2 subst in
     Tfarray (ty1, ty2), subst
-  | Trecord ({ args; name = n; lbs; _ } as r) ->
+  | Tadt(s,args, record) ->
     let args, subst = fresh_list args subst in
-    let lbs, subst =
-      List.fold_right
-        (fun (x,ty) (lbs, subst) ->
-           let ty, subst = fresh ty subst in
-           (x, ty)::lbs, subst) lbs ([], subst)
-    in
-    Trecord {r with  args = args; name = n; lbs = lbs}, subst
-  | Tadt(s, args) ->
-    let args, subst = fresh_list args subst in
-    Tadt (s, args), subst
+    Tadt (s,args, record), subst
   | t -> t, subst
 
 and fresh_list lty subst =
@@ -466,8 +397,8 @@ let fresh_empty_text =
     in
     text [] id
 
-let t_adt ?(body=None) s ty_vars =
-  let ty = Tadt (s, ty_vars) in
+let t_adt ?(record=false) ?(body=None) s ty_vars =
+  let ty = Tadt (s, ty_vars, record) in
   begin match body with
     | None -> ()
     | Some [] -> assert false
@@ -497,23 +428,13 @@ let tunit =
   let ty = t_adt ~body DE.Ty.Const.unit [] in
   ty
 
-let trecord ~record_constr lv name lbs =
-  Trecord { record_constr; args = lv; name; lbs = lbs}
-
 let rec hash t =
   match t with
   | Tvar tv -> DE.Ty.Var.hash tv
   | Text(l,s) ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
-  | Trecord { args; name = s; _ } ->
-    (* We do not hash constructors. *)
-    let h =
-      List.fold_left (fun h ty -> 27 * h + hash ty) (DE.Ty.Const.hash s) args
-    in
-    abs h
-
-  | Tadt (ty, args) ->
+  | Tadt (ty, args, _) ->
     (* We do not hash constructors. *)
     let h =
       List.fold_left (fun h ty -> 31 * h + hash ty) (DE.Ty.Const.hash ty) args
@@ -541,10 +462,7 @@ let vty_of t =
     | Tvar tv -> TvSet.add tv acc
     | Text (l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
-    | Trecord { args; lbs; _ } ->
-      let acc = List.fold_left vty_of_rec acc args in
-      List.fold_left (fun acc (_, ty) -> vty_of_rec acc ty) acc lbs
-    | Tadt(_, args) ->
+    | Tadt(_, args, _) ->
       List.fold_left vty_of_rec acc args
 
     | Tint | Treal | Tbool | Tbitv _ ->

@@ -37,14 +37,11 @@ module rec CX : sig
   val extract1 : r -> ARITH.t option
   val embed1 : ARITH.t -> r
 
-  val extract2 : r -> RECORDS.t option
-  val embed2 : RECORDS.t -> r
+  val extract2 : r -> BITV.t option
+  val embed2 : BITV.t -> r
 
-  val extract3 : r -> BITV.t option
-  val embed3 : BITV.t -> r
-
-  val extract4 : r -> ADT.t option
-  val embed4 : ADT.t -> r
+  val extract3 : r -> ADT.t option
+  val embed3 : ADT.t -> r
 
 end =
 struct
@@ -53,7 +50,6 @@ struct
     | Term of Expr.t
     | Ac of AC.t
     | Arith of ARITH.t
-    | Records of RECORDS.t
     | Bitv of BITV.t
     | Adt of ADT.t
 
@@ -68,7 +64,6 @@ struct
       if Options.get_term_like_pp () then begin
         match r.v with
         | Arith t -> fprintf fmt "%a" ARITH.print t
-        | Records t -> fprintf fmt "%a" RECORDS.print t
         | Bitv t -> fprintf fmt "%a" BITV.print t
         | Adt t -> fprintf fmt "%a" ADT.print t
         | Term t -> fprintf fmt "%a" Expr.print t
@@ -78,8 +73,6 @@ struct
         match r.v with
         | Arith t ->
           fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
-        | Records t ->
-          fprintf fmt "Records(%s):[%a]" RECORDS.name RECORDS.print t
         | Bitv t ->
           fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
         | Adt t ->
@@ -161,7 +154,6 @@ struct
     let hash r =
       let res = match r.v with
         | Arith x -> 1 + 10 * ARITH.hash x
-        | Records x -> 2 + 10 * RECORDS.hash x
         | Bitv x -> 3 + 10 * BITV.hash x
         | Adt x -> 6 + 10 * ADT.hash x
         | Ac ac -> 9 + 10 * AC.hash ac
@@ -172,7 +164,6 @@ struct
     let eq  r1 r2 =
       match r1.v, r2.v with
       | Arith x, Arith y -> ARITH.equal x y
-      | Records x, Records y -> RECORDS.equal x y
       | Bitv x, Bitv y -> BITV.equal x y
       | Adt x, Adt y -> ADT.equal x y
       | Term x, Term y -> Expr.equal x y
@@ -198,9 +189,8 @@ struct
   (* end: Hconsing modules and functions *)
 
   let embed1 x = hcons {v = Arith x; id = -1000 (* dummy *)}
-  let embed2 x = hcons {v = Records x; id = -1000 (* dummy *)}
-  let embed3 x = hcons {v = Bitv x; id = -1000 (* dummy *)}
-  let embed4 x = hcons {v = Adt x; id = -1000 (* dummy *)}
+  let embed2 x = hcons {v = Bitv x; id = -1000 (* dummy *)}
+  let embed3 x = hcons {v = Adt x; id = -1000 (* dummy *)}
 
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
@@ -215,9 +205,8 @@ struct
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
   let extract1 = function { v=Arith r; _ } -> Some r | _ -> None
-  let extract2 = function { v=Records r; _ } -> Some r | _ -> None
-  let extract3 = function { v=Bitv r; _ } -> Some r | _ -> None
-  let extract4 = function { v=Adt r; _ } -> Some r | _ -> None
+  let extract2 = function { v=Bitv r; _ } -> Some r | _ -> None
+  let extract3 = function { v=Adt r; _ } -> Some r | _ -> None
 
   let ac_extract = function
     | { v = Ac t; _ }   -> Some t
@@ -226,7 +215,6 @@ struct
   let term_extract r =
     match r.v with
     | Arith _ -> ARITH.term_extract r
-    | Records _ -> RECORDS.term_extract r
     | Bitv _ -> BITV.term_extract r
     | Adt _ -> ADT.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
@@ -236,7 +224,6 @@ struct
     let res =
       match r.v with
       | Arith _ -> ARITH.to_model_term r
-      | Records _ -> RECORDS.to_model_term r
       | Bitv _ -> BITV.to_model_term r
       | Adt _ -> ADT.to_model_term r
       | Term t when Expr.is_model_term t -> Some t
@@ -251,7 +238,6 @@ struct
 
   let type_info = function
     | { v = Arith t; _ } -> ARITH.type_info t
-    | { v = Records t; _ } -> RECORDS.type_info t
     | { v = Bitv t; _ } -> BITV.type_info t
     | { v = Adt t; _ } -> ADT.type_info t
     | { v = Ac x; _ } -> AC.type_info x
@@ -263,9 +249,8 @@ struct
     | Ac _ -> -1
     | Term  _ -> -2
     | Arith _ -> -3
-    | Records _ -> -4
-    | Bitv _ -> -5
-    | Adt _ -> -7
+    | Bitv _ -> -4
+    | Adt _ -> -5
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -274,7 +259,6 @@ struct
     else
       match a.v, b.v with
       | Arith _, Arith _ -> ARITH.compare a b
-      | Records _, Records _ -> RECORDS.compare a b
       | Bitv _, Bitv _ -> BITV.compare a b
       | Adt _, Adt _ -> ADT.compare a b
       | Term x, Term y -> Expr.compare x y
@@ -289,7 +273,6 @@ struct
        | Term  t -> Expr.hash t
        | Ac x -> AC.hash x
        | Arith x -> ARITH.hash x
-       | Records x -> RECORDS.hash x
        | Bitv x -> BITV.hash x
        | Arrays x -> ARRAYS.hash x
        | Adt x -> ADT.hash x
@@ -318,7 +301,6 @@ struct
   let leaves r =
     match r.v with
     | Arith t -> ARITH.leaves t
-    | Records t -> RECORDS.leaves t
     | Bitv t -> BITV.leaves t
     | Adt t -> ADT.leaves t
     | Ac t -> r :: (AC.leaves t)
@@ -327,7 +309,6 @@ struct
   let is_constant r =
     match r.v with
     | Arith t -> ARITH.is_constant t
-    | Records t -> RECORDS.is_constant t
     | Bitv t -> BITV.is_constant t
     | Adt t -> ADT.is_constant t
     | Term t ->
@@ -344,7 +325,6 @@ struct
     if equal p v then r
     else match r.v with
       | Arith t -> ARITH.subst p v t
-      | Records t -> RECORDS.subst p v t
       | Bitv t -> BITV.subst p v t
       | Adt t -> ADT.subst p v t
       | Ac t -> if equal p r then v else AC.subst p v t
@@ -355,32 +335,27 @@ struct
     let not_restricted = not @@ Options.get_restricted () in
     match
       ARITH.is_mine_symb sb,
-      not_restricted && RECORDS.is_mine_symb sb,
       not_restricted && BITV.is_mine_symb sb,
       not_restricted && ADT.is_mine_symb sb,
       AC.is_mine_symb sb
     with
-    | true, false, false, false, false ->
+    | true, false, false, false ->
       Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () ->
       ARITH.make t
 
-    | false, true, false, false, false ->
-      Timers.with_timer Timers.M_Records Timers.F_make @@ fun () ->
-      RECORDS.make t
-
-    | false, false, true, false, false ->
+    | false, true, false, false ->
       Timers.with_timer Timers.M_Bitv Timers.F_make @@ fun () ->
       BITV.make t
 
-    | false, false, false, true, false ->
+    | false, false, true, false ->
       Timers.with_timer Timers.M_Adt Timers.F_make @@ fun () ->
       ADT.make t
 
-    | false, false, false, false, true  ->
+    | false, false, false, true ->
       Timers.with_timer Timers.M_AC Timers.F_make @@ fun () ->
       AC.make t
 
-    | false, false, false, false, false ->
+    | false, false, false, false ->
       term_embed t, []
 
     | _ -> assert false
@@ -389,30 +364,26 @@ struct
     let not_restricted = not @@ Options.get_restricted () in
     match
       ARITH.is_mine_symb sb,
-      not_restricted && RECORDS.is_mine_symb sb,
       not_restricted && BITV.is_mine_symb sb,
       not_restricted && ADT.is_mine_symb sb,
       AC.is_mine_symb sb
     with
-    | true, false, false, false, false ->
+    | true, false, false, false ->
       ARITH.fully_interpreted sb
-    | false, true, false, false, false ->
-      RECORDS.fully_interpreted sb
-    | false, false, true, false, false ->
+    | false, true, false, false ->
       BITV.fully_interpreted sb
-    | false, false, false, true, false ->
+    | false, false, true, false ->
       ADT.fully_interpreted sb
-    | false, false, false, false, true  ->
+    | false, false, false, true  ->
       AC.fully_interpreted sb
-    | false, false, false, false, false ->
+    | false, false, false, false ->
       false
     | _ -> assert false
 
   let is_solvable_theory_symbol sb =
     ARITH.is_mine_symb sb ||
     not (Options.get_restricted ()) &&
-    (RECORDS.is_mine_symb sb ||
-     BITV.is_mine_symb sb ||
+    (BITV.is_mine_symb sb||
      ADT.is_mine_symb sb)
 
   let is_a_leaf r = match r.v with
@@ -426,18 +397,15 @@ struct
     | _ ->
       match
         ARITH.is_mine_symb ac.Sig.h,
-        RECORDS.is_mine_symb ac.Sig.h,
         BITV.is_mine_symb ac.Sig.h,
         ADT.is_mine_symb ac.Sig.h,
         AC.is_mine_symb ac.Sig.h with
       (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
-      | true, false, false, false, false ->
+      | true, false, false, false ->
         ARITH.color ac
-      | false, true, false, false, false ->
-        RECORDS.color ac
-      | false, false, true, false, false ->
+      | false, true, false, false ->
         BITV.color ac
-      | false, false, false, true, false ->
+      | false, false, true, false ->
         ADT.color ac
       | _  -> ac_embed ac
 
@@ -445,7 +413,6 @@ struct
     Debug.debug_abstract_selectors a;
     match a.v with
     | Arith a -> ARITH.abstract_selectors a acc
-    | Records a -> RECORDS.abstract_selectors a acc
     | Bitv a -> BITV.abstract_selectors a acc
     | Adt a -> ADT.abstract_selectors a acc
     | Term _ -> a, acc
@@ -527,10 +494,6 @@ struct
             Timers.with_timer ARITH.timer Timers.F_solve @@ fun () ->
             ARITH.solve ra rb pb
 
-          | Ty.Trecord _       ->
-            Timers.with_timer RECORDS.timer Timers.F_solve @@ fun () ->
-            RECORDS.solve ra rb pb
-
           | Ty.Tbitv _         ->
             Timers.with_timer BITV.timer Timers.F_solve @@ fun () ->
             BITV.solve ra rb pb
@@ -577,7 +540,6 @@ struct
     let opt = match r.v, type_info r with
       | _, Ty.Tint
       | _, Ty.Treal     -> ARITH.assign_value r distincts eq
-      | _, Ty.Trecord _ -> RECORDS.assign_value r distincts eq
       | _, Ty.Tbitv _   -> BITV.assign_value r distincts eq
       | Term t, Ty.Tfarray _ ->
         begin
@@ -642,24 +604,14 @@ and ARITH : Sig.SHOSTAK
       let embed =  CX.embed1
     end)
 
-and RECORDS : Sig.SHOSTAK
-  with type r = CX.r
-   and type t = CX.r Records.abstract =
-  Records.Shostak
-    (struct
-      include CX
-      let extract = extract2
-      let embed = embed2
-    end)
-
 and BITV : Sig.SHOSTAK
   with type r = CX.r
    and type t = CX.r Bitv.abstract =
   Bitv.Shostak
     (struct
       include CX
-      let extract = extract3
-      let embed = embed3
+      let extract = extract2
+      let embed = embed2
     end)
 
 and ADT : Sig.SHOSTAK
@@ -668,8 +620,8 @@ and ADT : Sig.SHOSTAK
   Adt.Shostak
     (struct
       include CX
-      let extract = extract4
-      let embed = embed4
+      let extract = extract3
+      let embed = embed3
     end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
@@ -711,7 +663,6 @@ module Combine = struct
 end
 
 module Arith = ARITH
-module Records = RECORDS
 module Bitv = BITV
 module Adt = ADT
 module Polynome = TARITH

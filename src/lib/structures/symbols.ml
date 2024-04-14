@@ -37,8 +37,7 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of DE.term_cst | Record
-  | Constr of DE.term_cst (* enums, adts *)
+  | Constr of DE.term_cst
   | Destruct of DE.term_cst
   (* Arrays *)
   | Get | Set
@@ -188,7 +187,7 @@ let compare_kinds k1 k2 =
 let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
     (function
-      | Access h1, Access h2 | Constr h1, Constr h2
+      | Constr h1, Constr h2
       | Destruct h1, Destruct h2 ->
         DE.Term.Const.compare h1 h2
       | Extract (i1, j1), Extract (i2, j2) ->
@@ -200,7 +199,7 @@ let compare_operators op1 op2 =
       | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
             | Concat | Extract _ | Sign_extend _ | Repeat _ | Get | Set | Float
-            | Access _ | Record | Sqrt_real | Abs_int | Abs_real
+            | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
             | Integer_log2 | Pow | Integer_round
@@ -380,8 +379,6 @@ module AEPrinter = struct
     | Set -> Fmt.pf ppf "set"
 
     (* DT theory *)
-    | Record -> Fmt.pf ppf "@Record"
-    | Access tcst -> Fmt.pf ppf "@Access_%a" DE.Term.Const.print tcst
     | Constr tcst
     | Destruct tcst -> DE.Term.Const.print ppf tcst
 
@@ -489,9 +486,7 @@ module SmtPrinter = struct
     | Set -> Fmt.pf ppf "store"
 
     (* DT theory *)
-    | Record -> ()
-    | Access tcst | Constr tcst | Destruct tcst ->
-      DE.Term.Const.print ppf tcst
+    | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
 
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"
