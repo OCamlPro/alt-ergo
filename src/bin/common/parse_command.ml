@@ -303,7 +303,7 @@ let mk_context_opt replay replay_all_used_context replay_used_context
 let mk_execution_opt input_format parse_only ()
     preludes no_locs_in_answers colors_in_output no_headers_in_output
     no_formatting_in_output no_forced_flush_in_output pretty_output
-    type_only type_smt2
+    type_only type_smt2 imperative_mode
   =
   let answers_with_loc = not no_locs_in_answers in
   let output_with_colors = colors_in_output || pretty_output in
@@ -321,6 +321,7 @@ let mk_execution_opt input_format parse_only ()
   set_type_only type_only;
   set_type_smt2 type_smt2;
   set_preludes preludes;
+  set_imperative_mode imperative_mode;
   `Ok()
 
 let mk_internal_opt
@@ -744,12 +745,15 @@ let parse_execution_opt =
     let doc = "Stop after SMT2 typing." in
     Arg.(value & flag & info ["type-smt2"] ~docs ~doc) in
 
+  let imperative_smt =
+    let doc = "Starts Alt-Ergo in incremental mode" in
+    Arg.(value & flag & info ["incremental-mode"] ~docs ~doc) in
 
   Term.(ret (const mk_execution_opt $
              input_format $ parse_only $ parsers $ preludes $
              no_locs_in_answers $ colors_in_output $ no_headers_in_output $
              no_formatting_in_output $ no_forced_flush_in_output $
-             pretty_output $ type_only $ type_smt2
+             pretty_output $ type_only $ type_smt2 $ imperative_smt
             ))
 
 let parse_halt_opt =

@@ -120,6 +120,7 @@ module type SAT_ML = sig
   val create : Atom.hcons_env -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  val push_level : t -> int
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 
@@ -183,6 +184,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       (* si vrai, les contraintes sont deja fausses *)
       mutable is_unsat : bool;
+
+      (* le nombre de fois que l'on a poussé un environnement unsat *)
+      mutable is_unsat_cpt : int;
 
       mutable unsat_core : Atom.clause list option;
 
@@ -452,6 +456,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       is_unsat = false;
 
+      is_unsat_cpt = 0;
+
       unsat_core = None;
 
       clauses = Vec.make 0 ~dummy:Atom.dummy_clause;
@@ -590,6 +596,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         ) env.learnts;
       env.clause_inc <- env.clause_inc *. 1e-20
     end
+
+  let push_level env = Vec.size env.increm_guards
 
   let decision_level env = Vec.size env.trail_lim
 
@@ -1076,6 +1084,26 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
              (ta.lit, Th_util.Other, Ex.empty, 0, env.cpt_current_propagations)
              :: acc
            end
+           (* This was first added by PR 1000, but it triggers a bug in
+              tests/cc/testfile-ac_cc002.ae with option
+              --no-tableaux-cdcl-in-instantiation *)
+           (* if ta.var.level <= Vec.size env.increm_guards then begin
+            *   incr nb_f;
+            *   let ex =
+            *     if ta.var.level = 0 then Ex.empty else
+            *       let d =
+            *         Vec.get
+            *           env.trail
+            *           (Vec.get env.trail_lim (ta.var.level - 1))
+            *       in
+            *       Ex.singleton (Ex.Literal d)
+            *   in
+            *   (ta.lit,
+            *    Th_util.Other,
+            *    ex,
+            *    ta.var.level,
+            *    env.cpt_current_propagations) :: acc
+            * end *)
            else acc
         )[] lazy_q
     in
@@ -1259,9 +1287,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let print_aux fmt hc =
     Format.fprintf fmt "%a@," Atom.pr_clause hc
 
+  let set_unsat env : unit = env.is_unsat <- true
+
   let report_b_unsat env linit =
     if not (Options.get_unsat_core ()) then begin
-      env.is_unsat <- true;
+      set_unsat env;
       env.unsat_core <- None;
       raise (Unsat None)
     end
@@ -1301,7 +1331,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
         Printer.print_dbg ~header:false "@[<v 2>UNSAT_CORE:@ %a@]"
           (Printer.pp_list_no_space print_aux) unsat_core;
-        env.is_unsat <- true;
+        set_unsat env;
         let unsat_core = Some unsat_core in
         env.unsat_core <- unsat_core;
         raise (Unsat unsat_core)
@@ -1309,7 +1339,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let report_t_unsat env dep =
     if not (Options.get_unsat_core ()) then begin
-      env.is_unsat <- true;
+      set_unsat env;
       env.unsat_core <- None;
       raise (Unsat None)
     end
@@ -1350,7 +1380,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg ~header:false
         "@[<v 2>T-UNSAT_CORE:@ %a@]"
         (Printer.pp_list_no_space print_aux) unsat_core;
-      env.is_unsat <- true;
+      set_unsat env;
       let unsat_core = Some unsat_core in
       env.unsat_core <- unsat_core;
       raise (Unsat unsat_core)
@@ -2234,11 +2264,14 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     guard.is_guard <- true;
     guard.neg.is_guard <- false;
     cancel_until env env.next_dec_guard;
-    Vec.push env.increm_guards guard
+    Vec.push env.increm_guards guard;
+    env.is_unsat_cpt <- if env.is_unsat then env.is_unsat_cpt + 1 else 0
 
   let pop env =
     (assert (not (Vec.is_empty env.increm_guards)));
     let g = Vec.pop env.increm_guards in
+    env.is_unsat <- env.is_unsat_cpt <> 0;
+    env.is_unsat_cpt <- max 0 (env.is_unsat_cpt - 1);
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)

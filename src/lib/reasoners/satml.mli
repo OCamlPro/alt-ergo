@@ -77,6 +77,9 @@ module type SAT_ML = sig
   val create : Atom.hcons_env -> t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  (** Returns the push/pop depth of the current analysis
+      (i.e., #push - #pop) *)
+  val push_level : t -> int
   val decision_level : t -> int
   val cancel_until : t -> int -> unit
 

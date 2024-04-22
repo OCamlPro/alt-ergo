@@ -459,6 +459,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let pred_def env f name dep _loc =
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
+    assert (SAT.decision_level env.satml <= SAT.push_level env.satml);
     let guard = env.guards.current_guard in
     env.inst <- Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep
 
@@ -1309,8 +1310,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Inst.add_terms env.inst
         (E.max_ground_terms_rec_of_form gf.E.ff) gf;
     try
-      assert (SAT.decision_level env.satml == 0);
-      let _updated = assume_aux ~dec_lvl:0 env [gf] in
+      let _updated =
+        assume_aux
+          ~dec_lvl:(SAT.decision_level env.satml)
+          env
+          [gf]
+      in
       let max_t = max_term_depth_in_sat env in
       env.inst <- Inst.register_max_term_depth env.inst max_t;
       unsat_rec_prem env ~first_call:true;
@@ -1329,8 +1334,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
-    assert (SAT.decision_level env.satml == 0);
-    try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
+    assert (SAT.decision_level env.satml <= SAT.push_level env.satml);
+    try
+      let _ : bool =
+        assume_aux
+          ~dec_lvl:(SAT.decision_level env.satml)
+          env
+          [add_guard env gf]
+      in ()
     with | IUnsat (_env, dep) -> raise (Unsat dep)
          | Util.Timeout ->
            (* don't attempt to compute a model if timeout before

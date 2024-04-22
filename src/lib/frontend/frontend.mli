@@ -70,6 +70,8 @@ module type S = sig
       the user. *)
   type 'a process = ?loc:Loc.t -> 'a -> env -> unit
 
+  val declare : Id.typed process
+
   val push : int process
 
   val pop : int process

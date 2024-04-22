@@ -1,4 +1,4 @@
-(set-option :steps-bound 2)
+(set-option :steps-bound 4)
 (set-logic ALL)
 
 (declare-const x Int)
