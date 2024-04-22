@@ -45,6 +45,9 @@ module MHs = Hs.Map
 let timer = Timers.M_Adt
 
 module Domain = struct
+  (* Set of possible constructors. The explanation justifies that any value
+     assigned to the semantic value has to use a constructor lying in the
+     domain. *)
   type t = {
     constrs : HSS.t;
     ex : Ex.t;
@@ -60,7 +63,7 @@ module Domain = struct
 
   let domain ~constrs ex =
     if HSS.is_empty constrs then
-      raise_notrace @@ Inconsistent ex
+      raise @@ Inconsistent ex
     else
       { constrs; ex }
 
@@ -242,9 +245,6 @@ type t = {
      inconsistency. *)
 
   domains : Domains.t;
-  (* Map of the uninterpreted semantic values to domains of their possible
-     constructors. The explanation justifies that any value assigned to
-     the semantic value has to use a constructor lying in the domain. *)
 
   delayed : Rel_utils.Delayed.t;
   (* Set of delayed destructor applications. The computation of a destructor
@@ -339,13 +339,6 @@ let assume_subst ~ex r1 r2 env =
   let domains = Domains.subst ~ex r1 r2 env.domains in
   { env with domains }
 
-let is_tightenable ty c =
-  match ty with
-  | Ty.Tadt (name, params) ->
-    let Adt cases = Ty.type_body name params in
-    Lists.is_empty @@ Ty.assoc_destrs c cases
-  | _ -> assert false
-
 (* Update the domains of the semantic values [r1] and [r2] according to the
    disequality [r1 <> r2].
 
@@ -361,25 +354,27 @@ let is_tightenable ty c =
 
    @raise Domain.Inconsistent if the disequality is inconsistent with
           the current environment [env]. *)
-let assume_distinct ~ex r1 r2 env =
-  let d1 = Domains.get r1 env.domains in
-  let d2 = Domains.get r2 env.domains in
-  let env =
-    match Domain.as_singleton d1 with
-    | Some (c, ex1) when is_tightenable (X.type_info r2) c ->
-      let ex = Ex.union ex ex1 in
-      let nd = Domain.remove ~ex c d2 in
-      tighten_domain r2 nd env
-    | Some _ | None ->
+let assume_distinct =
+  let aux ~ex r1 r2 env =
+    match Th.embed r1 with
+    | Constr { c_args; _ } when List.length c_args = 0 ->
+      begin
+        let d1 = Domains.get r1 env.domains in
+        let d2 = Domains.get r2 env.domains in
+        match Domain.as_singleton d1 with
+        | Some (c, ex') ->
+          let ex = Ex.union ex ex' in
+          let nd = Domain.remove ~ex c d2 in
+          tighten_domain r2 nd env
+        | None -> env
+      end
+    | _ ->
+      (* If `d1` is a singleton domain but its constructor has a payload,
+         we cannot tighten the domain of `r2` because they could have
+         distinct payloads. *)
       env
-  in
-  match Domain.as_singleton d2 with
-  | Some (c, ex2) when is_tightenable (X.type_info r1) c ->
-    let ex = Ex.union ex ex2 in
-    let nd = Domain.remove ~ex c d1 in
-    tighten_domain r1 nd env
-  | Some _ | None ->
-    env
+  in fun ~ex r1 r2 env ->
+    aux ~ex r1 r2 env |> aux ~ex r2 r1
 
 (* Assumes the tester `((_ is c) r)` where [r] can be a constructor
    application or a uninterpreted semantic value.
@@ -487,7 +482,15 @@ let build_constr_eq r c =
           try Ty.assoc_destrs c body with Not_found -> assert false
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
-        Some (r, E.mk_constr (Hstring.view c) xs ty)
+        let cons = E.mk_constr (Hstring.view c) xs ty in
+        let r', ctx = X.make cons in
+        (* In the current implementation of `X.make`, we produce
+           a nonempty context only for interpreted semantic values
+           of the `Arith` and `Records` theories. The semantic
+           values `cons` never involves such values. *)
+        assert (Lists.is_empty ctx);
+        let eq = Shostak.L.(view @@ mk_eq r r') in
+        Some (eq, E.mk_constr (Hstring.view c) xs ty)
 
       | _ -> assert false
     end
@@ -506,14 +509,7 @@ let propagate_domains env =
        match Domain.as_singleton d with
        | Some (c, ex) ->
          begin match build_constr_eq rr c with
-           | Some (r, cons) ->
-             let r', ctx = X.make cons in
-             (* In the current implementation of `X.make`, we produce
-                a nonempty context only for interpreted semantic values
-                of the `Arith` and `Records` theories. The semantic
-                values `cons` never involves such values. *)
-             assert (Lists.is_empty ctx);
-             let eq = Shostak.L.(view @@ mk_eq r r') in
+           | Some (eq, cons) ->
              let new_terms = SE.add cons new_terms in
              (Literal.LSem eq, ex, Th_util.Other) :: eqs, new_terms
            | None ->
@@ -521,7 +517,7 @@ let propagate_domains env =
          end
        | None ->
          eqs, new_terms
-    ) ([], SE.empty) env.domains
+    ) ([], env.new_terms) env.domains
 
 (* Remove duplicate literals in the list [la]. *)
 let remove_redundancies la =
@@ -547,6 +543,7 @@ let count_splits env la =
 
 let assume env uf la =
   Debug.pp_env "before assume" env;
+  (* should be done globally in CCX *)
   let la = remove_redundancies la in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let env =
@@ -556,12 +553,12 @@ let assume env uf la =
       raise_notrace (Ex.Inconsistent (ex, env.classes))
   in
   let (assume, new_terms), domains = propagate_domains env in
-  let assume = List.rev_append result.assume assume in
+  let assume = List.rev_append assume result.assume in
   let env = {
     delayed; domains;
     classes = Uf.cl_extract uf;
     size_splits = count_splits env la;
-    new_terms = SE.union env.new_terms new_terms;
+    new_terms;
   }
   in
   Debug.pp_env "after assume" env;
