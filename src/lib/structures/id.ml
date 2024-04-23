@@ -28,45 +28,48 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t = Hstring.t [@@deriving ord]
+type t = {
+  name : Hstring.t;
+  tag : int;
+}
+
+let equal { tag = t1; _ } { tag = t2; _ } = t1 = t2
+
+let compare { tag = t1; _ } { tag = t2; _ } = t1 - t2
+
+let hash { tag; _ } = tag
 
 type typed = t * Ty.t list * Ty.t [@@deriving ord]
 
-let equal = Hstring.equal
+let pp ?(full = false) ppf { name; tag } =
+  let name = Hstring.view name in
+  if full then
+    Fmt.pf ppf "%a%d"
+      Dolmen.Smtlib2.Script.Poly.Print.id (Dolmen.Std.Name.simple name)
+      tag
+  else
+    Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple name)
 
-let pp ppf id =
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf
-    (Dolmen.Std.Name.simple (Hstring.view id))
+let show ?(full = false) = Fmt.to_to_string (pp ~full)
 
-let show id = Fmt.str "%a" pp id
+let cpt : int ref = ref 0
 
-module Namespace = struct
-  module type S = sig
-    val fresh : ?base:string -> unit -> string
-  end
+let reinit () =
+  cpt := 0
 
-  module Make () = struct
-    let fresh, reset_fresh_cpt =
-      let cpt = ref 0 in
-      let fresh_string ?(base = "") () =
-        let res = base ^ (string_of_int !cpt) in
-        incr cpt;
-        res
-      in
-      let reset_fresh_string_cpt () =
-        cpt := 0
-      in
-      fresh_string, reset_fresh_string_cpt
-  end
+let make name =
+  let res = { name = Hstring.make name; tag = !cpt } in
+  incr cpt;
+  res
 
-  module Internal = Make ()
+module Set = Set.Make
+    (struct
+      type nonrec t = t
+      let compare = compare
+    end)
 
-  module Skolem = Make ()
-
-  module Abstract = Make ()
-
-  let reinit () =
-    Internal.reset_fresh_cpt ();
-    Skolem.reset_fresh_cpt ();
-    Abstract.reset_fresh_cpt ()
-end
+module Map = Map.Make
+    (struct
+      type nonrec t = t
+      let compare = compare
+    end)

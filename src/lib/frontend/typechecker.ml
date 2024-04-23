@@ -2165,7 +2165,7 @@ let axioms_of_rules loc name lf acc env =
       (fun acc f ->
          let name =
            Fmt.str "%s_%s"
-             (Id.Namespace.Internal.fresh ())
+             (Id.show ~full:true (Id.make ""))
              name
          in
          let td = {c = TAxiom(loc,name,Util.Default, f); annot = new_id () } in

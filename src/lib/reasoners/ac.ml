@@ -205,7 +205,7 @@ module Make (X : Sig.X) = struct
       | Some ac, { f = Name { hs; kind = Ac; _ } ; xs; ty; _ } ->
         (* It should have been abstracted when building [r] *)
         assert (not (Sy.equal sy ac.h));
-        let aro_sy = Sy.name ~ns:Internal ("@" ^ (HS.view hs)) in
+        let aro_sy = Sy.name ~ns:Internal ("@" ^ (Id.show hs)) in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc

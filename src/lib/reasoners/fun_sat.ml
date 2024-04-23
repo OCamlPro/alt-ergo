@@ -1879,7 +1879,7 @@ module Make (Th : Theory.S) = struct
     clear_instances_cache ();
     Th.reinit_cpt ();
     Symbols.clear_labels ();
-    Id.Namespace.reinit ();
+    Id.reinit ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();

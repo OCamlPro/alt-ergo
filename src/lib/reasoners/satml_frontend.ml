@@ -1384,7 +1384,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let reinit_ctx () =
     Steps.reinit_steps ();
     Th.reinit_cpt ();
-    Id.Namespace.reinit ();
+    Id.reinit ();
     Symbols.clear_labels ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();

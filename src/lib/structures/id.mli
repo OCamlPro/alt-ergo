@@ -28,7 +28,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t = Hstring.t [@@deriving ord]
+type t
+
+val make : string -> t
+val hash : t -> int
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val pp : ?full:bool -> t Fmt.t
+val show : ?full:bool -> t -> string
+val reinit : unit -> unit
 
 type typed = t * Ty.t list * Ty.t
 (** Typed identifier of function. In order:
@@ -37,20 +45,6 @@ type typed = t * Ty.t list * Ty.t
     - The returned type. *)
 
 val compare_typed : typed -> typed -> int
-val equal : t -> t -> bool
-val show : t -> string
-val pp : t Fmt.t
 
-module Namespace : sig
-  module type S = sig
-    val fresh : ?base:string -> unit -> string
-  end
-
-  module Internal : S
-  module Skolem : S
-  module Abstract : S
-
-  val reinit : unit -> unit
-  (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
-      counters. *)
-end
+module Set : Set.S with type elt = t
+module Map : Map.S with type key = t

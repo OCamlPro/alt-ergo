@@ -647,6 +647,11 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       | _ -> Sy.name name
     end
   in
+  let id =
+    match sy with
+    | Sy.Name { hs; _ } -> hs
+    | _ -> assert false
+  in
   Cache.store_sy tcst sy;
   (* Adding polymorphic types to the cache. *)
   Cache.store_ty_vars id_ty;
@@ -656,7 +661,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       List.map dty_to_ty arg_tys, dty_to_ty ret_ty
     | _ -> [], dty_to_ty id_ty
   in
-  (Hstring.make name, arg_tys, ret_ty)
+  (id, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are

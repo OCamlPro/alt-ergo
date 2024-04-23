@@ -265,7 +265,7 @@ let report_model_error ppf = function
     Fmt.pf ppf
       "Cannot substitute the identifier %a of type %a by an expression of \
        type %a"
-      Id.pp id
+      (Id.pp ~full:true) id
       Ty.pp_smtlib ty1
       Ty.pp_smtlib ty2
 

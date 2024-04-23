@@ -138,7 +138,7 @@ type t = {
 let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
-                     arguments" Id.pp id;
+                     arguments" (Id.pp ~full:false) id;
   let constraints =
     match P.find sy values with
     | C g -> g
@@ -193,7 +193,7 @@ let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
 let pp_define_fun ~is_constant pp ppf ((id, arg_tys, ret_ty), a) =
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
-    Id.pp id
+    (Id.pp ~full:false) id
     Fmt.(list ~sep:sp (pp_named_arg_ty ~unused:is_constant)) named_arg_tys
     Ty.pp_smtlib ret_ty
     pp a

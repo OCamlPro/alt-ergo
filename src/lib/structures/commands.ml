@@ -49,7 +49,7 @@ type sat_tdecl = {
 let print_aux fmt = function
   | Decl (id, arg_tys, ret_ty) ->
     Fmt.pf fmt "declare %a with type (%a) -> %a"
-      Id.pp id
+      (Id.pp ~full:false) id
       Fmt.(list ~sep:comma Ty.print) arg_tys
       Ty.print ret_ty
 

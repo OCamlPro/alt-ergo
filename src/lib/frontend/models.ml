@@ -193,11 +193,12 @@ module Pp_smtlib_term = struct
       fprintf fmt "(%a in %a, %a)" print t Sy.print_bound lb Sy.print_bound rb
 
     | Sy.Name { hs = n; _ }, l -> begin
-        let constraint_name =
-          try let constraint_name,_,_ =
+        assert false
+        (* let constraint_name =
+           try let constraint_name,_,_ =
                 (MS.find (Hstring.view n) !constraints) in
             constraint_name
-          with _ ->
+           with _ ->
             let constraint_name = "c_"^(Hstring.view n)  in
             constraints := MS.add (Hstring.view n)
                 (constraint_name,
@@ -205,11 +206,11 @@ module Pp_smtlib_term = struct
                  List.map (fun e -> to_string_type (E.type_info e)) l
                 ) !constraints;
             constraint_name
-        in
-        match l with
-        | [] -> fprintf fmt "%s" constraint_name
-        | l ->
-          fprintf fmt "(%s %a)" constraint_name (Printer.pp_list_space print) l;
+           in
+           match l with
+           | [] -> fprintf fmt "%s" constraint_name
+           | l ->
+           fprintf fmt "(%s %a)" constraint_name (Printer.pp_list_space print) l; *)
       end
 
     | _, [] ->

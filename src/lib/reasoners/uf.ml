@@ -1014,14 +1014,14 @@ module MED = Map.Make
         else Expr.compare a b
     end)
 
-let is_suspicious_name hs =
-  match Hstring.view hs with
+let is_suspicious_name s =
+  match s with
   | "@/" | "@%" | "@*" -> true
   | _ -> false
 
 (* The model generation is known to be imcomplete for FPA theory. *)
 let is_suspicious_symbol = function
-  | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
+  | Symbols.Name { hs; _ } when is_suspicious_name (Id.show hs) -> true
   | _ -> false
 
 let terms env =

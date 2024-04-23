@@ -136,7 +136,7 @@ let mangle ns s =
 (* NB: names are pre-mangled, which means that we don't need to take the
    namespace into consideration when hashing or comparing. *)
 let name ?(kind=Other) ?(defined=false) ?(ns = User) s =
-  Name { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
+  Name { hs = Id.make (mangle ns s) ; kind ; defined ; ns }
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -250,12 +250,10 @@ let compare s1 s2 =
       | Int z1, Int z2 -> Z.compare z1 z2
       | Real h1, Real h2 -> Q.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name { ns = ns1; hs = h1; kind = k1; _ },
-        Name { ns = ns2; hs = h2; kind = k2; _ } ->
-        let c = Hstring.compare h1 h2 in
-        if c <> 0 then c else
-          let c = compare_kinds k1 k2 in
-          if c <> 0 then c else compare_name_space ns1 ns2
+      | Name { hs = h1; _ },
+        Name { hs = h2; _ } ->
+        (* Identifier are unique *)
+        Id.compare h1 h2
       | Bitv (n1, s1), Bitv (n2, s2) ->
         let c = Int.compare n1 n2 in
         if c <> 0 then c else Z.compare s1 s2
@@ -283,8 +281,8 @@ let hash x =
   | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   (* NB: No need to hash the namespace because names are pre-mangled *)
-  | Name { hs = n; kind = Ac; _ } -> 19 * Hstring.hash n + 5
-  | Name { hs = n; kind = Other; _ } -> 19 * Hstring.hash n + 6
+  | Name { hs = n; kind = Ac; _ } -> 19 * Id.hash n + 5
+  | Name { hs = n; kind = Other; _ } -> 19 * Id.hash n + 6
   | Int z -> 19 * Z.hash z + 7
   | Real n -> 19 * Hashtbl.hash n + 7
   | Var v -> 19 * Var.hash v + 8
@@ -307,9 +305,12 @@ let string_of_bound b =
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
-let pp_name ppf (_ns, s) =
-  (* Names are pre-mangled *)
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
+let pp_name ppf (ns, id) =
+  match ns with
+  | Internal | Fresh | Skolem | Abstract ->
+    Id.pp ~full:true ppf id
+  | User ->
+    Id.pp ~full:false ppf id
 
 module AEPrinter = struct
   let pp_operator ppf op =
@@ -403,7 +404,7 @@ module AEPrinter = struct
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
     | Void -> Fmt.pf ppf "void"
-    | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
+    | Name { ns; hs; _ } -> pp_name ppf (ns, hs)
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
 
@@ -491,9 +492,11 @@ let to_string_clean sy =
 let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
-let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
-let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
-let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
+let fresh_skolem_name base = name ~ns:Skolem base
+
+let fresh_skolem_var base =
+  let id = Id.make base in
+  Var.of_string (Id.show ~full:true id)
 
 let is_fresh_skolem = function
   | Name { ns = Skolem; _ } -> true

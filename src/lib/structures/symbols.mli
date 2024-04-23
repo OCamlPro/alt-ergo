@@ -188,7 +188,7 @@ val print : t Fmt.t
 val to_string_clean : t -> string
 val print_clean : t Fmt.t
 
-val pp_name : (name_space * string) Fmt.t
+val pp_name : (name_space * Id.t) Fmt.t
 
 val pp_ae_operator : operator Fmt.t
 (* [pp_ae_operator ppf op] prints the operator symbol [op] on the

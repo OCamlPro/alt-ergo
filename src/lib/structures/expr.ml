@@ -441,13 +441,22 @@ module SmtPrinter = struct
     | Sy.False, [] -> Fmt.pf ppf "false"
 
     | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
-      Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
+      Fmt.pf ppf "(as %a %a)" (Id.pp ~full:true) n Ty.pp_smtlib ty
 
-    | Sy.Name { hs = n; _ }, [] -> Id.pp ppf n
+    | Sy.Name { ns = (Fresh | Skolem | Internal); hs = n; _ }, [] ->
+      Id.pp ~full:true ppf n
 
-    | Sy.Name { hs = n; _ }, _ :: _ ->
+    | Sy.Name { ns = User; hs = n; _ }, [] ->
+      Id.pp ~full:false ppf n
+
+    | Sy.Name { ns = Abstract | Fresh | Skolem | Internal; hs = n; _ }, _ :: _ ->
       Fmt.pf ppf "@[<2>(%a %a@])"
-        Id.pp n
+        (Id.pp ~full:true) n
+        Fmt.(list ~sep:sp pp |> box) xs
+
+    | Sy.Name { ns = User; hs = n; _ }, _ :: _ ->
+      Fmt.pf ppf "@[<2>(%a %a@])"
+        (Id.pp ~full:false) n
         Fmt.(list ~sep:sp pp |> box) xs
 
     | Sy.Var v, [] -> Var.print ppf v
@@ -908,10 +917,10 @@ let faux = neg (vrai)
 let void = mk_term (Sy.Void) [] Ty.Tunit
 
 let fresh_name ty =
-  mk_term (Sy.name ~ns:Fresh @@ Id.Namespace.Internal.fresh ()) [] ty
+  mk_term (Sy.name ~ns:Fresh "") [] ty
 
 let mk_abstract ty =
-  mk_term (Sy.name ~ns:Abstract @@ Id.Namespace.Abstract.fresh ()) [] ty
+  mk_term (Sy.name ~ns:Abstract "") [] ty
 
 let is_internal_name t =
   match t with
