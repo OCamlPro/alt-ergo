@@ -36,7 +36,7 @@ module Q = Numbers.Q
 module L = Xliteral
 
 module Sy = Symbols
-module I = Intervals
+module I = Intervals.Legacy
 
 open Inequalities
 
@@ -489,8 +489,8 @@ let generic_add x j use is_mon env =
     let p, c = P.separate_constant p0 in
     let p, c0, d = P.normal_form_pos p in
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
-    let j = I.add j (I.point (Q.minus c) ty Explanation.empty) in
-    let j = I.scale (Q.inv d) j in
+    (* x = (p + c0) * d <-> p = x * 1/d - c0 / d *)
+    let j = I.affine_scale ~coef:(Q.inv d) ~const:(Q.div (Q.minus c) d) j in
     try MP.n_add p j (MP.n_find p env.polynomes) env
     with Not_found -> MP.n_add p j (I.undefined ty) env
 
@@ -766,14 +766,14 @@ let rec init_monomes_of_poly are_eq env p use_p expl =
          update_monome are_eq expl use_p env x
     ) env (fst (P.to_list p))
 
-and init_alien are_eq expl p (normal_p, c, d) ty use_x env =
+and init_alien are_eq expl p (normal_p, c, d) use_x env =
   let env = init_monomes_of_poly are_eq env p use_x expl in
   let i = intervals_from_monomes env p in
   let i =
     try
+      (* p = (normal_p + c) * d *)
       let old_i = MP.n_find normal_p env.polynomes in
-      let old_i = I.scale d
-          (I.add old_i (I.point c ty Explanation.empty)) in
+      let old_i = I.affine_scale ~const:(Q.mult c d) ~coef:d old_i in
       I.intersect i old_i
     with Not_found -> i
   in
@@ -819,10 +819,10 @@ and update_monome are_eq expl use_x env x =
             let (pa', ca, da) as npa = P.normal_form_pos pa in
             let (pb', cb, db) as npb = P.normal_form_pos pb in
             let env, ia =
-              init_alien are_eq expl pa npa ty use_x env in
+              init_alien are_eq expl pa npa use_x env in
             let ia = I.add_explanation ia ea in (* take repr into account*)
             let env, ib =
-              init_alien are_eq expl pb npb ty use_x env in
+              init_alien are_eq expl pb npb use_x env in
             let ib = I.add_explanation ib eb in (* take repr into account*)
             let ia, ib = match cannot_be_equal_to_zero env pb ib with
               | Some (ex, _) when Q.equal ca cb
@@ -864,7 +864,7 @@ let rec tighten_ac are_eq x env expl =
       let env =
         if is_alien x then
           (* identity *)
-          let u = I.root n u in
+          let u = I.coerce ty (I.root n (I.coerce Treal u)) in
           let (pu, use_px) =
             try MX.n_find x env.monomes (* we know that x is a monome *)
             with Not_found -> I.undefined ty, SX.empty
@@ -881,7 +881,7 @@ let rec tighten_ac are_eq x env expl =
         Symbols.equal h (Symbols.Op Symbols.Mult) && n > 2 ->
       let env =
         if is_alien x then
-          let u = I.root n u in
+          let u = I.coerce ty (I.root n (I.coerce Treal u)) in
           let pu, use_px =
             try MX.n_find x env.monomes (* we know that x is a monome *)
             with Not_found -> I.undefined ty, SX.empty
@@ -917,19 +917,19 @@ and tighten_non_lin are_eq x use_x env expl =
 
 let update_monomes_from_poly p i env =
   let lp, _ = P.to_list p in
-  let ty = P.type_info p in
   List.fold_left (fun env (a,x) ->
       let np = P.remove x p in
       let (np,c,d) = P.normal_form_pos np in
+      (* a * x + (np + c) * d = 0 -> a * x = -d * np - d * c *)
       try
         let inp = MP.n_find np env.polynomes in
         let new_ix =
           I.scale
-            (Q.div Q.one a)
+            (Q.inv a)
             (I.add i
-               (I.scale (Q.minus d)
-                  (I.add inp
-                     (I.point c ty Explanation.empty)))) in
+               (I.affine_scale
+                  ~coef:(Q.minus d) ~const:(Q.mult (Q.minus d) c) inp))
+        in
         let old_ix, ux = MX.n_find x env.monomes in
         let ix = I.intersect old_ix new_ix in
         MX.n_add x (ix, ux) old_ix env
@@ -1386,25 +1386,23 @@ let add_disequality are_eq env eqs p expl =
     env, eqs
   | ([a, x], v) ->
     let b = Q.div (Q.minus v) a in
-    let i1 = I.point b ty expl in
     let i2, use2 =
       try
         MX.n_find x env.monomes
       with Not_found -> I.undefined ty, SX.empty
     in
-    let i = I.exclude i1 i2 in
+    let i = I.exclude ~ex:expl b i2 in
     let env = MX.n_add x (i,use2) i2 env in
     let env = tighten_non_lin are_eq x use2 env expl in
     env, find_eq eqs x i env
   | _ ->
     let p, c, _ = P.normal_form_pos p in
-    let i1 = I.point (Q.minus c) ty expl in
     let i2 =
       try
         MP.n_find p env.polynomes
       with Not_found -> I.undefined ty
     in
-    let i = I.exclude i1 i2 in
+    let i = I.exclude ~ex:expl (Q.minus c) i2 in
     let env =
       if I.is_strict_smaller i i2 then
         update_monomes_from_poly p i (MP.n_add p i i2 env)
@@ -1816,11 +1814,16 @@ let new_terms _ = SE.empty
 
 let case_split_union_of_intervals =
   let aux acc uf i z =
-    if Uf.is_normalized uf z then
-      match I.bounds_of i with
-      | [] -> assert false
-      | [_] -> ()
-      | (_,(v, ex))::_ -> acc := Some (z, v, ex); raise Exit
+    if Uf.is_normalized uf z then (
+      ignore @@
+      I.fold (fun prev { lb = _ ; ub } ->
+          match prev, ub with
+          | None, Open ub -> Some (L.LT, ub)
+          | None, Closed ub -> Some (L.LE, ub)
+          | Some bnd, _ -> acc := Some (z, bnd); raise Exit
+          | None, _ -> None
+        ) None i
+    )
   in fun env uf ->
     let cs = ref None in
     try
@@ -1830,38 +1833,20 @@ let case_split_union_of_intervals =
     with Exit ->
     match !cs with
     | None -> assert false
-    | Some(_,None, _) -> assert false
-    | Some(r1,Some (n, eps), _) ->
+    | Some (r1, (pred, n)) ->
       let ty = X.type_info r1 in
       let r2 = alien_of (P.create [] n ty) in
-      let pred =
-        if Q.is_zero eps then L.LE else (assert (Q.is_m_one eps); L.LT)
-      in
       [LR.mkv_builtin true pred [r1; r2], true,
        Th_util.CS (Th_util.Th_arith, Q.one)]
 
 
 (*****)
 
-let bnd_to_simplex_bound ((bnd, explanation) : I.bnd) : Sim.Core.bound option =
-  match bnd with
-  | None -> None
-  | Some (bnd, offset) ->
-    let bvalue =
-      if Q.equal offset Q.one
-      then Sim.Core.R2.lower bnd
-      else if Q.equal offset Q.m_one
-      then Sim.Core.R2.upper bnd
-      else if Q.equal offset Q.zero
-      then Sim.Core.R2.of_r bnd
-      else assert false (* alt-ergo style *)
-    in Some {bvalue; explanation}
-
 let int_constraints_from_map_intervals =
   let aux p xp i uf acc =
     if Uf.is_normalized uf xp && I.is_point i == None
        && P.type_info p == Ty.Tint
-    then (p, I.bounds_of i) :: acc
+    then (p, I.integer_hull i) :: acc
     else acc
   in
   fun env uf ->
@@ -1875,36 +1860,37 @@ let fm_simplex_unbounded_integers_encoding env uf =
   let simplex = Sim.Core.empty ~is_int:true ~check_invs:true in
   let int_ctx = int_constraints_from_map_intervals env uf in
   List.fold_left
-    (fun simplex (p, uints) ->
-       match uints with
-       | [] ->
-         Printer.print_err "Intervals already empty !!!";
-         assert false
-       | _::_::_ ->
-         Printer.print_err
-           "case-split over unions of intervals is needed !!!";
-         assert false
-
-       | [(lb, ex_lb), (ub, ex_ub)] ->
-         let l, c = P.to_list p in
-         assert (Q.is_zero c);
-         assert (lb == None || ub == None);
-         let min = bnd_to_simplex_bound (lb, ex_lb) in
-         let max = bnd_to_simplex_bound (ub, ex_ub) in
-         match l with
-         | [] -> assert false
-         | [c, x] ->
-           assert (Q.is_one c);
-           Sim.Assert.var simplex x ?min ?max |> fst
-         | _ ->
-           let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
-           let xp = alien_of p in
-           let sim_p =
-             match Sim.Core.poly_of_slake simplex xp with
-             | Some res -> res
-             | None -> Sim.Core.P.from_list l
-           in
-           Sim.Assert.poly simplex sim_p xp ?min ?max |> fst
+    (fun simplex (p, (lb, ub)) ->
+       let l, c = P.to_list p in
+       assert (Q.is_zero c);
+       let min =
+         match lb with
+         | Some (lb, ex_lb) ->
+           let lb = Q.from_z lb in
+           Some Sim.Core.{ bvalue = R2.of_r lb ; explanation = ex_lb }
+         | None -> None
+       in
+       let max =
+         match ub with
+         | Some (ub, ex_ub) ->
+           let ub = Q.from_z ub in
+           Some Sim.Core.{ bvalue = R2.of_r ub ; explanation = ex_ub }
+         | None -> None
+       in
+       match l with
+       | [] -> assert false
+       | [c, x] ->
+         assert (Q.is_one c);
+         Sim.Assert.var simplex x ?min ?max |> fst
+       | _ ->
+         let l = List.rev_map (fun (c, x) -> x, c) (List.rev l) in
+         let xp = alien_of p in
+         let sim_p =
+           match Sim.Core.poly_of_slake simplex xp with
+           | Some res -> res
+           | None -> Sim.Core.P.from_list l
+         in
+         Sim.Assert.poly simplex sim_p xp ?min ?max |> fst
 
     ) simplex int_ctx
 
@@ -2003,15 +1989,15 @@ let middle_value env ~is_max ty p bound =
       begin
         try
           if is_max then
-            Intervals.new_borne_sup Ex.empty bound ~is_le:false i
+            I.new_borne_sup Ex.empty bound ~is_le:false i
           else
-            Intervals.new_borne_inf Ex.empty bound ~is_le:false i
-        with Intervals.NotConsistent _ -> assert false
+            I.new_borne_inf Ex.empty bound ~is_le:false i
+        with I.NotConsistent _ -> assert false
       end
     | Some i, None -> i
-    | None, _ -> Intervals.point Q.zero ty Ex.empty
+    | None, _ -> I.point Q.zero ty Ex.empty
   in
-  let q = Option.get (Intervals.pick ~is_max interval) in
+  let q = I.pick ~is_max interval in
   alien_of (P.create [] q ty)
 
 let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
@@ -2258,8 +2244,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
              let p = poly_of rr in
              let p', c', d = P.normal_form_pos p in
              let env, i' = best_interval_of optimized env p' in
-             let ic = I.point c' (P.type_info p') Explanation.empty in
-             let i = I.scale d (I.add i' ic) in
+             let i = I.affine_scale ~coef:d ~const:(Q.mult d c') i' in
              begin match I.match_interval lb ub i idoms with
                | None -> raise (Sem_match_fails env)
                | Some idoms -> idoms, maps_to, env, uf

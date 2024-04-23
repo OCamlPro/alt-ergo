@@ -118,10 +118,10 @@ module Container : Container_SIG = struct
       let ple0 = P.sub p1 p2 in
       match P.to_list ple0 with
       | ([], ctt) when is_le && Q.sign ctt > 0->
-        raise (Intervals.NotConsistent expl)
+        raise (Intervals.Legacy.NotConsistent expl)
 
       | ([], ctt) when not is_le  && Q.sign ctt >= 0 ->
-        raise (Intervals.NotConsistent expl)
+        raise (Intervals.Legacy.NotConsistent expl)
 
       | _ ->
         let p,c,d = P.normal_form ple0 in (* ple0 = (p + c) * d, and d > 0 *)

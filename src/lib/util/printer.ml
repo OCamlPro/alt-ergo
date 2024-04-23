@@ -248,7 +248,10 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
 let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(module_name="") ?(function_name="") s =
   let fmt = Options.Output.get_fmt_diagnostic () in
-  Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
+  if header then
+    Format.fprintf fmt "@[%s" (pp_smt clean_dbg_print)
+  else
+    Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
   if header then begin
     let fname =
       if String.equal function_name ""
@@ -264,11 +267,11 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     force_new_line fmt;
     if Options.get_output_with_colors () then
       Format.fprintf fmt
-        "@{<fg_blue>@{<bold>[Debug]%s%s@}@} @[<v 0>"
+        "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@ @[<v 0>"
         mname fname
     else
       Format.fprintf fmt
-        "[Debug]%s%s @[<v 0>" mname fname
+        "[Debug]%s%s@ @[<v 0>" mname fname
   end;
   if flushed || Options.get_output_with_forced_flush ()
   then Format.kfprintf flush fmt s else Format.fprintf fmt s

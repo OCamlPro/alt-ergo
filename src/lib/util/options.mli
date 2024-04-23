@@ -126,6 +126,9 @@ val set_debug_explanations : bool -> unit
 (** Set [debug_fm] accessible with {!val:get_debug_fm} *)
 val set_debug_fm : bool -> unit
 
+(** Set [debug_intervals] accessible with {!val:get_debug_intervals} *)
+val set_debug_intervals : bool -> unit
+
 (** Set [debug_fpa] accessible with {!val:get_debug_fpa}
 
     Possible values are
@@ -503,6 +506,9 @@ val get_debug_uf : unit -> bool
 
 (** Get the debugging flag of inequalities. *)
 val get_debug_fm : unit -> bool
+
+(** Get the debugging flag of intervals. *)
+val get_debug_intervals : unit -> bool
 
 (** Get the debugging value of floating-point. *)
 val get_debug_fpa : unit -> int
