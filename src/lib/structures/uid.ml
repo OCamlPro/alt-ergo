@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) 2013-2023 --- OCamlPro SAS                           *)
+(*     Copyright (C) 2013-2024 --- OCamlPro SAS                           *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
@@ -28,14 +28,79 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(*type 'a abstract*)
-type 'a abstract = Cons of Uid.t * Ty.t |  Alien of 'a
+module DStd = Dolmen.Std
+module DE = DStd.Expr
 
-module type ALIEN = sig
-  include Sig.X
-  val embed : r abstract -> r
-  val extract : r -> (r abstract) option
-end
+type t =
+  | Fake of Hstring.t
+  | Unique of { name : Hstring.t; index : int }
 
-module Shostak
-    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+(** Helper function: returns the basename of a dolmen path, since in AE
+    the problems are contained in one-file (for now at least), the path is
+    irrelevant and only the basename matters *)
+let get_basename = function
+  | DStd.Path.Local { name; }
+  | Absolute { name; path = []; } -> name
+  | Absolute { name; path; } ->
+    Fmt.failwith
+      "Expected an empty path to the basename: \"%s\" but got: [%a]."
+      name (fun fmt l ->
+          match l with
+          | h :: t ->
+            Format.fprintf fmt "%s" h;
+            List.iter (Format.fprintf fmt "; %s") t
+          | _ -> ()
+        ) path
+
+let of_dolmen DE.{ path; index; _ } =
+  let name = Hstring.make @@ get_basename path in
+  Unique { name; index = (index :> int) }
+
+let fake s = Fake (Hstring.make s)
+
+let hash = function
+  | Fake hs -> Hstring.hash hs
+  | Unique { index; _ } -> index
+
+let pp ppf = function
+  | Fake hs -> Hstring.print ppf hs
+  | Unique { name; _ } -> Hstring.print ppf name
+
+let show = Fmt.to_to_string pp
+
+let equal u1 u2 =
+  match u1, u2 with
+  | Fake hs1, Fake hs2 -> Hstring.equal hs1 hs2
+  | Unique { index = i1; _ }, Unique { index = i2; _ }->
+    let b = i1 = i2 in
+    (* if not b then
+       assert (not @@ String.equal (show u1) (show u2)); *)
+    b
+  | _ -> assert false
+
+let compare u1 u2 =
+  match u1, u2 with
+  | Fake hs1, Fake hs2 -> Hstring.compare hs1 hs2
+  | Unique { index = i1; _ }, Unique { index = i2; _ } ->
+    let c = i1 - i2 in
+    (* if c <> 0 then
+       assert (not @@ String.equal (show u1) (show u2)); *)
+    c
+  | _ ->
+    Fmt.failwith "%a and %a" pp u1 pp u2
+
+let rec list_assoc x = function
+  | [] -> raise Not_found
+  | (y, v) :: l -> if equal x y then v else list_assoc x l
+
+module Set = Set.Make
+    (struct
+      type nonrec t = t
+      let compare = compare
+    end)
+
+module Map = Map.Make
+    (struct
+      type nonrec t = t
+      let compare = compare
+    end)

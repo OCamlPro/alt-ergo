@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) 2013-2023 --- OCamlPro SAS                           *)
+(*     Copyright (C) 2013-2024 --- OCamlPro SAS                           *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
@@ -28,14 +28,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(*type 'a abstract*)
-type 'a abstract = Cons of Uid.t * Ty.t |  Alien of 'a
+module DE = Dolmen.Std.Expr
 
-module type ALIEN = sig
-  include Sig.X
-  val embed : r abstract -> r
-  val extract : r -> (r abstract) option
-end
+type t
 
-module Shostak
-    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+val of_dolmen : 'a DE.Id.t -> t
+val fake : string -> t
+val hash : t -> int
+val pp : t Fmt.t
+val show : t -> string
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val list_assoc : t -> (t * 'a) list -> 'a
+
+module Set : Set.S with type elt = t
+module Map : Map.S with type key = t

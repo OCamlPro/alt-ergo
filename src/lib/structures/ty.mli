@@ -47,17 +47,17 @@ type t =
   (** Type variables *)
   | Tbitv of int
   (** Bitvectors of a given length *)
-  | Text of t list * Hstring.t
+  | Text of t list * Uid.t
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
   | Tfarray of t * t
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
-  | Tsum of Hstring.t * Hstring.t list
+  | Tsum of Uid.t * Uid.t list
   (** Enumeration, with its name, and the list of its constructors. *)
 
-  | Tadt of Hstring.t * t list
+  | Tadt of Uid.t * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -83,22 +83,22 @@ and tvar = {
 and trecord = {
   mutable args : t list;
   (** Arguments passed to the record constructor *)
-  name : Hstring.t;
+  name : Uid.t;
   (** Name of the record type *)
-  mutable lbs :  (Hstring.t * t) list;
+  mutable lbs :  (Uid.t * t) list;
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
-  record_constr : Hstring.t;
+  record_constr : Uid.t;
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 
 type adt_constr =
-  { constr : Hstring.t ;
+  { constr : Uid.t ;
     (** constructor of an ADT type *)
 
-    destrs : (Hstring.t * t) list
+    destrs : (Uid.t * t) list
     (** the list of destructors associated with the constructor and
         their respective types *)
   }
@@ -117,12 +117,12 @@ module Set : Set.S with type elt = t
 (** Sets of types *)
 
 
-val assoc_destrs : Hstring.t -> adt_constr list -> (Hstring.t * t) list
+val assoc_destrs : Uid.t -> adt_constr list -> (Uid.t * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
     @raises Not_found if the constructor is not in the given list. *)
 
-val type_body : Hstring.t -> t list -> type_body
+val type_body : Uid.t -> t list -> type_body
 
 (** {2 Type inspection} *)
 
@@ -168,18 +168,16 @@ val fresh_tvar : unit -> t
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
-val text : t list -> string -> t
+val text : t list -> Uid.t -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
-val tsum : string -> string list -> t
+val tsum : Uid.t -> Uid.t list -> t
 (** Create an enumeration type. [tsum name enums] creates an enumeration
     named [name], with constructors [enums]. *)
 
 val t_adt :
-  ?body: ((string * (string * t) list) list) option ->
-  string -> t list ->
-  t
+  ?body: ((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
@@ -189,7 +187,7 @@ val t_adt :
 
 val trecord :
   ?sort_fields:bool ->
-  record_constr:string -> t list -> string -> (string * t) list -> t
+  record_constr:Uid.t -> t list -> Uid.t -> (Uid.t * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs].
 

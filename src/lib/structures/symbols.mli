@@ -30,16 +30,16 @@
 
 type builtin =
     LE | LT (* arithmetic *)
-  | IsConstr of Hstring.t (* ADT tester *)
+  | IsConstr of Uid.t (* ADT tester *)
 
 type operator =
   | Tite
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Hstring.t | Record
-  | Constr of Hstring.t (* enums, adts *)
-  | Destruct of Hstring.t
+  | Access of Uid.t | Record
+  | Constr of Uid.t (* enums, adts *)
+  | Destruct of Uid.t
   (* Arrays *)
   | Get | Set
   (* BV *)
@@ -163,8 +163,8 @@ val var : Var.t -> t
 val int : string -> t
 val bitv : string -> t
 val real : string -> t
-val constr : string -> t
-val destruct : string -> t
+val constr : Uid.t -> t
+val destruct : Uid.t -> t
 val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
 val mk_in : bound -> bound -> t
 val mk_maps_to : Var.t -> t

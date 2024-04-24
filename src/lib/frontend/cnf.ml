@@ -114,7 +114,7 @@ let rec make_term quant_basename t =
         [mk_term t1; mk_term t2] ty
 
     | TTdot (t, s) ->
-      E.mk_term (Sy.Op (Sy.Access s)) [mk_term t] ty
+      E.mk_term (Sy.Op (Sy.Access (Uid.fake (Hstring.view s)))) [mk_term t] ty
 
     | TTrecord lbs ->
       let lbs = List.map (fun (_, t) -> mk_term t) lbs in
@@ -156,7 +156,7 @@ let rec make_term quant_basename t =
       E.mk_ite cond t1 t2
 
     | TTproject (t, s) ->
-      E.mk_term (Sy.destruct (Hstring.view s)) [mk_term t] ty
+      E.mk_term (Sy.destruct (Uid.fake (Hstring.view s))) [mk_term t] ty
 
     | TTmatch (e, pats) ->
       let e = make_term quant_basename e in
@@ -227,7 +227,7 @@ and make_form name_base ~toplevel f loc ~decl_kind : E.t =
                  make_term name_base t2]
           end
         | TTisConstr (t, lbl) ->
-          E.mk_builtin ~is_pos:true (Sy.IsConstr lbl)
+          E.mk_builtin ~is_pos:true (Sy.IsConstr (Uid.fake (Hstring.view lbl)))
             [make_term name_base t]
 
         | _ -> assert false

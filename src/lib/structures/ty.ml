@@ -35,18 +35,18 @@ type t =
   | Tunit
   | Tvar of tvar
   | Tbitv of int
-  | Text of t list * Hstring.t
+  | Text of t list * Uid.t
   | Tfarray of t * t
-  | Tsum of Hstring.t * Hstring.t list
-  | Tadt of Hstring.t * t list
+  | Tsum of Uid.t * Uid.t list
+  | Tadt of Uid.t * t list
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
 and trecord = {
   mutable args : t list;
-  name : Hstring.t;
-  mutable lbs :  (Hstring.t * t) list;
-  record_constr : Hstring.t; (* for ADTs that become records. default is "{" *)
+  name : Uid.t;
+  mutable lbs :  (Uid.t * t) list;
+  record_constr : Uid.t; (* for ADTs that become records. default is "{" *)
 }
 
 module Smtlib = struct
@@ -58,11 +58,11 @@ module Smtlib = struct
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
-    | Tsum (name, _) | Text ([], name)
-    | Trecord { args = []; name; _ } | Tadt (name, []) ->
-      Fmt.pf ppf "%a" Hstring.print name
-    | Text (args, name) | Trecord { args; name; _ } | Tadt (name, args) ->
-      Fmt.(pf ppf "(@[%a %a@])" Hstring.print name (list ~sep:sp pp) args)
+    | Text ([], name) | Tsum (name, _)
+    | Trecord { args = []; name; _ } | Tadt (name, []) -> Uid.pp ppf name
+    | Text (args, name)
+    | Trecord { args; name; _ } | Tadt (name, args) ->
+      Fmt.(pf ppf "(@[%a %a@])" Uid.pp name (list ~sep:sp pp) args)
     | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
     | Tvar { value = Some t; _ } -> pp ppf t
 end
@@ -73,8 +73,8 @@ exception TypeClash of t*t
 exception Shorten of t
 
 type adt_constr =
-  { constr : Hstring.t ;
-    destrs : (Hstring.t * t) list }
+  { constr : Uid.t ;
+    destrs : (Uid.t * t) list }
 
 type type_body =
   | Adt of adt_constr list
@@ -85,7 +85,7 @@ let assoc_destrs hs cases =
   try
     List.iter
       (fun {constr = s ; destrs = t} ->
-         if Hstring.equal hs s then begin
+         if Uid.equal hs s then begin
            res := Some t;
            raise Exit
          end
@@ -111,7 +111,7 @@ let print_generic body_of =
       | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
       | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
         if Hashtbl.mem h v then
-          fprintf fmt "%a %s" print_list l (Hstring.view n)
+          fprintf fmt "%a %a" print_list l Uid.pp n
         else
           (Hashtbl.add h v ();
            (*fprintf fmt "('a_%d->%a)" v print t *)
@@ -120,30 +120,30 @@ let print_generic body_of =
         (*fprintf fmt "('a_%d->%a)" v print t *)
         print body_of fmt t
       | Text(l, s) when l == [] ->
-        fprintf fmt "<ext>%s" (Hstring.view s)
+        fprintf fmt "<ext>%a" Uid.pp s
       | Text(l,s) ->
-        fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
+        fprintf fmt "%a <ext>%a" print_list l Uid.pp s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
       | Tsum(s, _) ->
-        fprintf fmt "<sum>%s" (Hstring.view s)
+        fprintf fmt "<sum>%a" Uid.pp s
       | Trecord { args = lv; name = n; lbs = lbls; _ } ->
         begin
-          fprintf fmt "%a <record>%s" print_list lv (Hstring.view n);
+          fprintf fmt "%a <record>%a" print_list lv Uid.pp n;
           if body_of != None then begin
             fprintf fmt " = {";
             let first = ref true in
             List.iter
               (fun (s, t) ->
-                 fprintf fmt "%s%s : %a" (if !first then "" else "; ")
-                   (Hstring.view s) (print body_of) t;
+                 fprintf fmt "%s%a : %a" (if !first then "" else "; ")
+                   Uid.pp s (print body_of) t;
                  first := false
               ) lbls;
             fprintf fmt "}"
           end
         end
       | Tadt (n, lv) ->
-        fprintf fmt "%a <adt>%s" print_list lv (Hstring.view n);
+        fprintf fmt "%a <adt>%a" print_list lv Uid.pp n;
         begin match body_of with
           | None -> ()
           | Some type_body ->
@@ -154,8 +154,8 @@ let print_generic body_of =
             let first = ref true in
             List.iter
               (fun {constr = s ; destrs = t} ->
-                 fprintf fmt "%s%s%a" (if !first then "" else " | ")
-                   (Hstring.view s) print_adt_tuple t;
+                 fprintf fmt "%s%a%a" (if !first then "" else " | ")
+                   Uid.pp s print_adt_tuple t;
                  first := false
               ) cases;
             fprintf fmt "}"
@@ -164,10 +164,10 @@ let print_generic body_of =
   and print_adt_tuple fmt = function
     | [] -> ()
     | (d, e)::l ->
-      Format.fprintf fmt " of { %a : %a " Hstring.print d (print None) e;
+      Format.fprintf fmt " of { %a : %a " Uid.pp d (print None) e;
       List.iter
         (fun (d, e) ->
-           Format.fprintf fmt "; %a : %a " Hstring.print d (print None) e
+           Format.fprintf fmt "; %a : %a " Uid.pp d (print None) e
         ) l;
       Format.fprintf fmt "}"
 
@@ -242,7 +242,7 @@ let rec compare t1 t2 =
   | Tvar{ v = v1; _ } , Tvar{ v = v2; _ } -> Int.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
-    let c = Hstring.compare s1 s2 in
+    let c = Uid.compare s1 s2 in
     if c<>0 then c
     else compare_list l1 l2
   | Text _, _ -> -1 | _ , Text _ -> 1
@@ -252,11 +252,11 @@ let rec compare t1 t2 =
     else compare ta2 tb2
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
   | Tsum(s1, _), Tsum(s2, _) ->
-    Hstring.compare s1 s2
+    Uid.compare s1 s2
   | Tsum _, _ -> -1 | _ , Tsum _ -> 1
   | Trecord { args = a1; name = s1; lbs = l1; _ },
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
-    let c = Hstring.compare s1 s2 in
+    let c = Uid.compare s1 s2 in
     if c <> 0 then c else
       let c = compare_list a1 a2 in
       if c <> 0 then c else
@@ -265,7 +265,7 @@ let rec compare t1 t2 =
   | Trecord _, _ -> -1 | _ , Trecord _ -> 1
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
-    let c = Hstring.compare s1 s2 in
+    let c = Uid.compare s1 s2 in
     if c <> 0 then c
     else compare_list pars1 pars2
   (* no need to compare bodies *)
@@ -299,19 +299,19 @@ let rec equal t1 t2 =
   match shorten t1 , shorten t2 with
   | Tvar{ v = v1; _ }, Tvar{ v = v2; _ } -> v1 = v2
   | Text(l1, s1), Text(l2, s2) ->
-    (try Hstring.equal s1 s2 && List.for_all2 equal l1 l2
+    (try Uid.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
   | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     equal ta1 tb1 && equal ta2 tb2
-  | Tsum (s1, _), Tsum (s2, _) -> Hstring.equal s1 s2
+  | Tsum (s1, _), Tsum (s2, _) -> Uid.equal s1 s2
   | Trecord { args = a1; name = s1; lbs = l1; _ },
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
     begin
       try
-        Hstring.equal s1 s2 && List.for_all2 equal a1 a2 &&
+        Uid.equal s1 s2 && List.for_all2 equal a1 a2 &&
         List.for_all2
           (fun (l1, ty1) (l2, ty2) ->
-             Hstring.equal l1 l2 && equal ty1 ty2) l1 l2
+             Uid.equal l1 l2 && equal ty1 ty2) l1 l2
       with Invalid_argument _ -> false
     end
   | Tint, Tint | Treal, Treal | Tbool, Tbool | Tunit, Tunit -> true
@@ -319,7 +319,7 @@ let rec equal t1 t2 =
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
     begin
-      try Hstring.equal s1 s2 && List.for_all2 equal pars1 pars2
+      try Uid.equal s1 s2 && List.for_all2 equal pars1 pars2
       with Invalid_argument _ -> false
       (* no need to compare bodies *)
     end
@@ -338,18 +338,18 @@ let rec matching s pat t =
     (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
      with Not_found -> M.add n t s)
   | Tvar { value = _; _ }, _ -> raise (Shorten pat)
-  | Text (l1,s1) , Text (l2,s2) when Hstring.equal s1 s2 ->
+  | Text (l1,s1) , Text (l2,s2) when Uid.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
     matching (matching s ta1 tb1) ta2 tb2
-  | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
+  | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
     let s = List.fold_left2 matching s r1.args r2.args in
     List.fold_left2
       (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
-  | Tsum (s1, _), Tsum (s2, _) when Hstring.equal s1 s2 -> s
+  | Tsum (s1, _), Tsum (s2, _) when Uid.equal s1 s2 -> s
   | Tint , Tint | Tbool , Tbool | Treal , Treal | Tunit, Tunit -> s
   | Tbitv n , Tbitv m when n=m -> s
-  | Tadt(n1, args1), Tadt(n2, args2) when Hstring.equal n1 n2 ->
+  | Tadt(n1, args1), Tadt(n2, args2) when Uid.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->
     raise (TypeClash(pat,t))
@@ -426,7 +426,7 @@ and fresh_list lty subst =
 
 module Decls = struct
 
-  module MH = Hstring.Map
+  module MH = Uid.Map
 
   module MTY = Map.Make(struct
       type ty = t
@@ -514,7 +514,7 @@ module Decls = struct
         add name params body;
         body
     with Not_found ->
-      Printer.print_err "%a not found" Hstring.print name;
+      Printer.print_err "%a not found" Uid.pp name;
       assert false
 
   let reinit () = decls := MH.empty
@@ -525,19 +525,19 @@ let type_body name args = Decls.body name args
 
 
 (* smart constructors *)
-let tunit = Text ([],Hstring.make "unit")
+(* HACK: we should create a unique Dolmen identifier here. *)
+let tunit = Text ([], Uid.fake "unit")
 
-let text l s = Text (l,Hstring.make s)
+let text l s = Text (l, s)
 
 let fresh_empty_text =
   let cpt = ref (-1) in
-  fun () -> incr cpt; text [] ("'_c"^(string_of_int !cpt))
+  fun () -> incr cpt; text [] (Uid.fake ("'_c"^(string_of_int !cpt)))
 
-let tsum s lc = Tsum (Hstring.make s, List.map Hstring.make lc)
+let tsum s lc = Tsum (s, lc)
 
 let t_adt ?(body=None) s ty_vars =
-  let hs = Hstring.make s in
-  let ty = Tadt (hs, ty_vars) in
+  let ty = Tadt (s, ty_vars) in
   begin match body with
     | None -> ()
     | Some [] -> assert false
@@ -546,59 +546,48 @@ let t_adt ?(body=None) s ty_vars =
         Printer.print_dbg ~module_name:"Ty"
           "should be registered as a record";
       let cases =
-        List.map (fun (s, l) ->
-            let l =
-              List.map (fun (d, e) -> Hstring.make d, e) l
-            in
-            {constr = Hstring.make s ; destrs = l}
-          ) cases
+        List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      Decls.add hs ty_vars (Adt cases)
+      Decls.add s ty_vars (Adt cases)
     | Some cases ->
       let cases =
-        List.map (fun (s, l) ->
-            let l =
-              List.map (fun (d, e) -> Hstring.make d, e) l
-            in
-            {constr = Hstring.make s; destrs = l}
-          ) cases
+        List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      Decls.add hs ty_vars (Adt cases)
+      Decls.add s ty_vars (Adt cases)
   end;
   ty
 
-let trecord ?(sort_fields = false) ~record_constr lv n lbs =
-  let lbs = List.map (fun (l,ty) -> Hstring.make l, ty) lbs in
+let trecord ?(sort_fields = false) ~record_constr lv name lbs =
   let lbs, record_constr =
     if sort_fields then
-      List.sort (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs,
-      Format.sprintf "%s___%s" record_constr n
+      List.sort (fun (l1, _) (l2, _) -> Uid.compare l1 l2) lbs, record_constr
+      (* TODO: FIIIIXXX *)
+      (*       Format.sprintf "%s___%s" record_constr n *)
     else lbs, record_constr
   in
-  let record_constr = Hstring.make record_constr in
-  Trecord { record_constr; args = lv; name = Hstring.make n; lbs = lbs}
+  Trecord { record_constr; args = lv; name; lbs = lbs}
 
 let rec hash t =
   match t with
   | Tvar{ v; _ } -> v
   | Text(l,s) ->
-    abs (List.fold_left (fun acc x-> acc*19 + hash x) (Hstring.hash s) l)
+    abs (List.fold_left (fun acc x-> acc*19 + hash x) (Uid.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
   | Trecord { args; name = s; lbs; _ } ->
     let h =
-      List.fold_left (fun h ty -> 27 * h + hash ty) (Hstring.hash s) args
+      List.fold_left (fun h ty -> 27 * h + hash ty) (Uid.hash s) args
     in
     let h =
       List.fold_left
-        (fun h (lb, ty) -> 23 * h + 19 * (Hstring.hash lb) + hash ty)
+        (fun h (lb, ty) -> 23 * h + 19 * (Uid.hash lb) + hash ty)
         (abs h) lbs
     in
     abs h
-  | Tsum (s, _) -> abs (Hstring.hash s) (*we do not hash constructors*)
+  | Tsum (s, _) -> abs (Uid.hash s) (*we do not hash constructors*)
 
   | Tadt (s, args) ->
     let h =
-      List.fold_left (fun h ty -> 31 * h + hash ty) (Hstring.hash s) args
+      List.fold_left (fun h ty -> 31 * h + hash ty) (Uid.hash s) args
     in
     abs h
 
@@ -626,16 +615,16 @@ let rec unify t1 t2 =
   | Tvar ({ value = None; _ } as tv) , _ ->
     if (occurs tv t2) then raise (TypeClash(t1,t2));
     tv.value <- Some t2
-  | Text(l1,s1) , Text(l2,s2) when Hstring.equal s1 s2 ->
+  | Text(l1,s1) , Text(l2,s2) when Uid.equal s1 s2 ->
     List.iter2 unify l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) -> unify ta1 tb1;unify ta2 tb2
-  | Trecord r1, Trecord r2 when Hstring.equal r1.name r2.name ->
+  | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
     List.iter2 unify r1.args r2.args
-  | Tsum(s1, _) , Tsum(s2, _) when Hstring.equal s1 s2 -> ()
+  | Tsum(s1, _) , Tsum(s2, _) when Uid.equal s1 s2 -> ()
   | Tint, Tint | Tbool, Tbool | Treal, Treal | Tunit, Tunit -> ()
   | Tbitv n , Tbitv m when m=n -> ()
 
-  | Tadt(n1, p1), Tadt (n2, p2) when Hstring.equal n1 n2 ->
+  | Tadt(n1, p1), Tadt (n2, p2) when Uid.equal n1 n2 ->
     List.iter2 unify p1 p2
 
   | _ , _ [@ocaml.ppwarning "TODO: remove fragile pattern "] ->
@@ -700,7 +689,7 @@ let rec monomorphize ty =
     in
     Trecord {r with args = m_tylv; name = n; lbs = m_tylb}
   | Tfarray (ty1,ty2)    -> Tfarray (monomorphize ty1,monomorphize ty2)
-  | Tvar {v=v; value=None} -> text [] ("'_c"^(string_of_int v))
+  | Tvar {v=v; value=None} -> text [] (Uid.fake ("'_c"^(string_of_int v)))
   | Tvar ({ value = Some ty1; _ } as r) ->
     Tvar { r with value = Some (monomorphize ty1)}
   | Tadt(name, params) ->

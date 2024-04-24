@@ -30,7 +30,7 @@
 
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
-    IsConstr of Hstring.t (* ADT tester *)
+    IsConstr of Uid.t (* ADT tester *)
 
 type 'a view = (*private*)
   | Eq of 'a * 'a

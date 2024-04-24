@@ -74,11 +74,11 @@ module Types = struct
     | Ty.Trecord { Ty.args = lty'; name = s; _ }
     | Ty.Tadt (s,lty') ->
       if List.length lty <> List.length lty' then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
+        Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
     | Ty.Tsum (s, _) ->
       if List.length lty <> 0 then
-        Errors.typing_error (WrongNumberofArgs (Hstring.view s)) loc;
+        Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       []
     | _ -> assert false
 
@@ -146,18 +146,22 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text ty_vars id in
+      let ty = Ty.text ty_vars (Uid.fake id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
       if not (Lists.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
-      let ty = Ty.tsum id lc in
+      let ty = Ty.tsum (Uid.fake id) (List.map Uid.fake lc) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
       let sort_fields = String.equal record_constr "{" in
-      let ty = Ty.trecord ~sort_fields ~record_constr ty_vars id lbs in
+      let record_constr = Uid.fake record_constr in
+      let ty =
+        Ty.trecord ~sort_fields ~record_constr ty_vars
+          (Uid.fake id) (List.map (fun (s, ty) -> Uid.fake s, ty) lbs)
+      in
       ty, { to_ty = MString.add id ty env.to_ty;
             builtins = env.builtins;
             from_labels =
@@ -166,15 +170,16 @@ module Types = struct
     | Algebraic l ->
       let l = (* convert ppure_type to Ty.t in l *)
         List.map (fun (constr, l) ->
-            constr,
-            List.map (fun (field, pp) -> field, ty_of_pp loc env None pp) l
+            Uid.fake constr,
+            List.map (fun (field, pp) ->
+                Uid.fake field, ty_of_pp loc env None pp) l
           ) l
       in
       let body =
         if l == [] then None (* in initialization step, no body *)
         else Some l
       in
-      let ty = Ty.t_adt ~body id ty_vars in
+      let ty = Ty.t_adt ~body (Uid.fake id) ty_vars in
       ty, { env with to_ty = MString.add id ty env.to_ty }
 
   let add_builtin env id ty =
@@ -186,19 +191,22 @@ module Types = struct
     let rec check_duplicates s = function
       | [] -> ()
       | (lb, _) :: l ->
-        if SH.mem lb s then Errors.typing_error (DuplicateLabel lb) loc;
-        check_duplicates (SH.add lb s) l
+        if Uid.Set.mem lb s then
+          Errors.typing_error
+            (DuplicateLabel (Hstring.make @@ Uid.show lb)) loc;
+        check_duplicates (Uid.Set.add lb s) l
     in
-    check_duplicates SH.empty lbs;
+    check_duplicates Uid.Set.empty lbs;
     match ty with
     | Ty.Trecord { Ty.lbs = l; _ } ->
       if List.length lbs <> List.length l then
         Errors.typing_error WrongNumberOfLabels loc;
       List.iter
         (fun (lb, _) ->
-           try ignore (Hstring.list_assoc lb l)
+           try ignore (Uid.list_assoc lb l)
            with Not_found ->
-             Errors.typing_error (WrongLabel(lb, ty)) loc) lbs;
+             Errors.typing_error
+               (WrongLabel((Hstring.make @@ Uid.show lb), ty)) loc) lbs;
       ty
     | _ -> assert false
 
@@ -208,10 +216,12 @@ module Types = struct
     | [] -> assert false
     | (l, _) :: _ ->
       try
-        let l = Hstring.view l in
-        let ty = MString.find (MString.find l env.from_labels) env.to_ty in
+        let ty =
+          MString.find (MString.find (Uid.show l) env.from_labels) env.to_ty
+        in
         check_labels lbs ty loc
-      with Not_found -> Errors.typing_error (NoRecordType l) loc
+      with Not_found ->
+        Errors.typing_error (NoRecordType (Hstring.make @@ Uid.show l)) loc
 
   let rec monomorphized = function
     | PPTvarid (x, _) when not (MString.mem x !to_tyvars) ->
@@ -265,7 +275,8 @@ module Env = struct
     | Ty.Tsum (_, cstrs) ->
       List.fold_left
         (fun m c ->
-           match Fpa_rounding.translate_smt_rounding_mode c with
+           match Fpa_rounding.translate_smt_rounding_mode
+                   (Hstring.make @@ Uid.show c) with
            | None ->
              (* The constructors of the type are expected to be AE rounding
                 modes. *)
@@ -286,7 +297,7 @@ module Env = struct
   let find_builtin_cstr ty n =
     match ty with
     | Ty.Tsum (_, cstrs) ->
-      List.find (fun c -> String.equal n @@ Hstring.view c) cstrs
+      List.find (Uid.equal n) cstrs
     | _ -> assert false
 
   let add_fpa_builtins env =
@@ -312,9 +323,9 @@ module Env = struct
     let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
     let tname = Fpa_rounding.fpa_rounding_mode_ae_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode nte) in
+    let float32d = float32 (mode (Uid.fake nte)) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode nte) in
+    let float64d = float64 (mode (Uid.fake nte)) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -488,13 +499,14 @@ module Env = struct
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
     let kind = if record then RecordConstr else AdtConstr in
-    add_logics ~kind env Symbols.constr [constr, ""] pp_profile loc
+    let mk_constr = fun s -> Symbols.constr @@ Uid.fake s in
+    add_logics ~kind env mk_constr [constr, ""] pp_profile loc
 
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
-      if record then (Symbols.Op (Access (Hstring.make s)))
-      else Symbols.destruct s
+      if record then (Symbols.Op (Access (Uid.fake s)))
+      else Symbols.destruct (Uid.fake s)
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -569,35 +581,40 @@ let check_no_duplicates =
 
 let filter_patterns pats ty_body _loc =
   let cases =
-    List.fold_left (fun s {Ty.constr=c; _} -> HSS.add c s) HSS.empty ty_body
+    List.fold_left
+      (fun s {Ty.constr=c; _} -> Uid.Set.add c s) Uid.Set.empty ty_body
   in
   let missing, filtered_pats, dead =
     List.fold_left
       (fun (miss, filtered_pats, dead) ((p, _) as u) ->
          match p with
          | Constr { name; _ } ->
-           assert (HSS.mem name cases); (* pattern is well typed *)
-           if HSS.mem name miss then (* not encountered yet *)
-             HSS.remove name miss, u :: filtered_pats, dead
+           assert (Uid.Set.mem name cases); (* pattern is well typed *)
+           if Uid.Set.mem name miss then (* not encountered yet *)
+             Uid.Set.remove name miss, u :: filtered_pats, dead
            else (* case already seen --> dead pattern *)
              miss, pats, p :: dead
          | Var _ ->
-           if HSS.is_empty miss then (* match already exhaussive -> dead case *)
+           if Uid.Set.is_empty miss then
+             (* match already exhaussive -> dead case *)
              miss, filtered_pats, p :: dead
            else (* covers all remaining cases, miss becomes empty *)
-             HSS.empty, u :: filtered_pats, dead
+             Uid.Set.empty, u :: filtered_pats, dead
       )(cases, [], []) pats
   in
   missing, List.rev filtered_pats, dead
 
 let check_pattern_matching missing dead loc =
-  if not (HSS.is_empty missing) then
-    Errors.typing_error (MatchNotExhaustive (HSS.elements missing)) loc;
+  if not (Uid.Set.is_empty missing) then begin
+    let missing =
+      List.map (fun m -> Hstring.make @@ Uid.show m) (Uid.Set.elements missing)
+    in
+    Errors.typing_error (MatchNotExhaustive missing) loc end;
   if dead != [] then
     let dead =
       List.rev_map
         (function
-          | Constr { name; _ } -> name
+          | Constr { name; _ } -> Uid.show name |> Hstring.make
           | Var v -> Var.to_string v |> Hstring.make
         ) dead
     in
@@ -614,7 +631,8 @@ let mk_adequate_app p s te_args ty logic_kind =
 
   | Env.RecordConstr, _, Ty.Trecord { Ty.lbs; _ } ->
     let lbs =
-      try List.map2 (fun (hs, _) e -> hs, e) lbs te_args
+      try
+        List.map2 (fun (hs, _) e -> Hstring.make @@ Uid.show hs, e) lbs te_args
       with Invalid_argument _ -> assert false
     in
     TTrecord lbs
@@ -844,10 +862,9 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Trecord { Ty.name = g; lbs; _ } ->
           begin
             try
-              let a = Hstring.make a in
-              TTdot(te, a), Hstring.list_assoc a lbs
+              TTdot(te, Hstring.make a), Uid.list_assoc (Uid.fake a) lbs
             with Not_found ->
-              let g = Hstring.view g in
+              let g = Uid.show g in
               Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc
           end
         | _ -> Errors.typing_error (ShouldHaveTypeRecord ty) t.pp_loc
@@ -858,7 +875,10 @@ let rec type_term ?(call_from_type_form=false) env f =
           List.map (fun (lb, t) -> Hstring.make lb, type_term env t) lbs in
         let lbs = List.sort
             (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs in
-        let ty = Types.from_labels env.Env.types lbs loc in
+        let fake_lbs =
+          List.map (fun (lb, ty) -> Uid.fake @@ Hstring.view lb, ty) lbs
+        in
+        let ty = Types.from_labels env.Env.types fake_lbs loc in
         let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
         match ty with
         | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
@@ -868,7 +888,7 @@ let rec type_term ?(call_from_type_form=false) env f =
                 List.map2
                   (fun (_, te) (lb,ty_lb)->
                      Ty.unify te.c.tt_ty ty_lb;
-                     lb, te) lbs ty_lbs
+                     Hstring.make @@ Uid.show lb, te) lbs ty_lbs
               in
               TTrecord(lbs), ty
             with Ty.TypeClash(t1,t2) ->
@@ -885,6 +905,9 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty = Ty.shorten te.c.tt_ty in
         match ty with
         | Ty.Trecord { Ty.lbs = ty_lbs; _ } ->
+          let ty_lbs =
+            List.map (fun (uid, ty) -> Hstring.make @@ Uid.show uid, ty) ty_lbs
+          in
           let nlbs =
             List.map
               (fun (lb, ty_lb) ->
@@ -1429,7 +1452,7 @@ and type_pattern p env ty ty_body =
   check_no_duplicates pat_loc args;
   let hf = Hstring.make f in
   try
-    let prof = Ty.assoc_destrs hf ty_body in
+    let prof = Ty.assoc_destrs (Uid.fake @@ Hstring.view hf) ty_body in
     let env =
       try
         List.fold_left2
@@ -1448,7 +1471,7 @@ and type_pattern p env ty ty_body =
            var_v, destr, ty
         )args prof
     in
-    Constr { name = hf ; args = args }, env
+    Constr { name = Uid.fake @@ Hstring.view hf ; args = args }, env
   with Not_found ->
     if args != [] then Errors.typing_error (NotAdtConstr (f, ty)) pat_loc;
     let env = Env.add_ty_var env [f] ty in
@@ -2332,7 +2355,8 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      Env.add_logics ~kind:Env.EnumConstr env Symbols.constr lcl ty loc
+      let constr = fun s -> Symbols.constr @@ Uid.fake s in
+      Env.add_logics ~kind:Env.EnumConstr env constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env

@@ -33,7 +33,6 @@ module X = Shostak.Combine
 module Ex = Explanation
 module MX = Shostak.MXH
 module SX = Shostak.SXH
-module HSS = Set.Make (Hstring)
 module LR = Uf.LX
 module Th = Shostak.Enum
 
@@ -41,59 +40,59 @@ let timer = Timers.M_Sum
 
 module Domain = struct
   type t = {
-    constrs : HSS.t;
+    constrs : Uid.Set.t;
     ex : Ex.t;
   }
 
   exception Inconsistent of Ex.t
 
-  let[@inline always] cardinal { constrs; _ } = HSS.cardinal constrs
+  let[@inline always] cardinal { constrs; _ } = Uid.Set.cardinal constrs
 
-  let[@inline always] choose { constrs; _ } = HSS.choose constrs
+  let[@inline always] choose { constrs; _ } = Uid.Set.choose constrs
 
   let[@inline always] as_singleton { constrs; ex } =
-    if HSS.cardinal constrs = 1 then
-      Some (HSS.choose constrs, ex)
+    if Uid.Set.cardinal constrs = 1 then
+      Some (Uid.Set.choose constrs, ex)
     else
       None
 
   let domain ~constrs ex =
-    if HSS.is_empty constrs then
+    if Uid.Set.is_empty constrs then
       raise_notrace @@ Inconsistent ex
     else
       { constrs; ex }
 
-  let[@inline always] singleton ~ex c = { constrs = HSS.singleton c; ex }
+  let[@inline always] singleton ~ex c = { constrs = Uid.Set.singleton c; ex }
 
-  let[@inline always] subset d1 d2 = HSS.subset d1.constrs d2.constrs
+  let[@inline always] subset d1 d2 = Uid.Set.subset d1.constrs d2.constrs
 
   let unknown ty =
     match ty with
     | Ty.Tsum (_, constrs) ->
       (* Return the list of all the constructors of the type of [r]. *)
-      let constrs = HSS.of_list constrs in
-      assert (not @@ HSS.is_empty constrs);
+      let constrs = Uid.Set.of_list constrs in
+      assert (not @@ Uid.Set.is_empty constrs);
       { constrs; ex = Ex.empty }
     | _ ->
       (* Only Enum values can have a domain. This case shouldn't happen since
          we check the type of semantic values in both [add] and [assume]. *)
       assert false
 
-  let equal d1 d2 = HSS.equal d1.constrs d2.constrs
+  let equal d1 d2 = Uid.Set.equal d1.constrs d2.constrs
 
   let pp ppf d =
     Fmt.(braces @@
-         iter ~sep:comma HSS.iter Hstring.print) ppf d.constrs;
+         iter ~sep:comma Uid.Set.iter Uid.pp) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
   let intersect ~ex d1 d2 =
-    let constrs = HSS.inter d1.constrs d2.constrs in
+    let constrs = Uid.Set.inter d1.constrs d2.constrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
     domain ~constrs ex
 
   let remove ~ex c d =
-    let constrs = HSS.remove c d.constrs in
+    let constrs = Uid.Set.remove c d.constrs in
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
 end

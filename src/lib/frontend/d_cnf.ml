@@ -46,11 +46,15 @@ let unsupported msg =
     (fun str -> Errors.(run_error (Unsupported_feature str)))
     msg
 
-module HT = Hashtbl.Make(
-  struct
-    type t = int
-    let equal = (=)
-    let hash = Fun.id
+type id = Id : 'a DE.id -> id
+
+module HT =
+  Hashtbl.Make (struct
+    type t = id
+
+    let equal (Id id1) (Id id2) = DE.Id.equal id1 id2
+
+    let hash (Id i)= DE.Id.hash i
   end)
 
 (** Helper function: returns the basename of a dolmen path, since in AE
@@ -76,14 +80,14 @@ module Cache = struct
 
   let ae_ty_ht: Ty.t HT.t = HT.create 100
 
-  let store_sy ind sy =
-    HT.add ae_sy_ht (DE.Id.hash ind) sy
+  let store_sy id sy =
+    HT.add ae_sy_ht (Id id) sy
 
-  let store_ty ind ty =
-    HT.add ae_ty_ht ind ty
+  let store_ty id ty =
+    HT.add ae_ty_ht (Id id) ty
 
-  let find_sy ind =
-    HT.find ae_sy_ht (DE.Id.hash ind)
+  let find_sy id =
+    HT.find ae_sy_ht (Id id)
 
   let find_var ind =
     match find_sy ind with
@@ -97,42 +101,40 @@ module Cache = struct
   let store_var ind v =
     store_sy ind (Sy.var v)
 
-  let find_ty ind =
-    HT.find ae_ty_ht ind
+  let find_ty id =
+    HT.find ae_ty_ht (Id id)
 
-  let fresh_ty ?(is_var = true) ?(name = None) () =
+  let fresh_ty ?(is_var = true) ?(id = None) () =
     if is_var
     then Ty.fresh_tvar ()
     else
-      match name with
-      | Some n -> Ty.text [] n
+      match id with
+      | Some id -> Ty.text [] (Uid.of_dolmen id)
       | None -> Ty.fresh_empty_text ()
 
-  let update_ty_store ?(is_var = true) ?name ind =
-    let ty = fresh_ty ~is_var ~name () in
-    store_ty ind ty
+  let update_ty_store ?(is_var = true) id =
+    let ty = fresh_ty ~is_var ~id:(Some id) () in
+    store_ty id ty
 
-  let update_ty_store_ret ?(is_var = true) ?name ind =
-    let ty = fresh_ty ~is_var ~name () in
-    store_ty ind ty;
+  let update_ty_store_ret ?(is_var = true) id =
+    let ty = fresh_ty ~is_var ~id:(Some id) () in
+    store_ty id ty;
     ty
 
-  let find_update_ty ?(is_var = true) ind =
-    match HT.find_opt ae_ty_ht ind with
+  let find_update_ty ?(is_var = true) id =
+    match HT.find_opt ae_ty_ht (Id id) with
     | Some ty -> ty
     | None ->
-      update_ty_store_ret ~is_var ind
+      update_ty_store_ret ~is_var id
 
-  let store_tyv ?(is_var = true) ({ DE.path; _ } as t_v) =
-    let name = get_basename path in
-    update_ty_store ~is_var ~name (DE.Ty.Var.hash t_v)
+  let store_tyv ?(is_var = true) t_v =
+    update_ty_store ~is_var t_v
 
   let store_tyvl ?(is_var = true) (tyvl: DE.ty_var list) =
     List.iter (store_tyv ~is_var) tyvl
 
-  let store_tyv_ret ?(is_var = true) ({ DE.path; _ } as t_v) =
-    let name = get_basename path in
-    update_ty_store_ret ~is_var ~name (DE.Ty.Var.hash t_v)
+  let store_tyv_ret ?(is_var = true) t_v =
+    update_ty_store_ret ~is_var t_v
 
   let store_tyvl_ret ?(is_var = true) (tyvl: DE.ty_var list) =
     List.map (store_tyv_ret ~is_var) tyvl
@@ -200,11 +202,11 @@ let builtin_enum = function
   | Ty.Tsum (name, cstrs) as ty_ ->
     let ty_cst =
       DStd.Expr.Id.mk ~builtin:B.Base
-        (DStd.Path.global (Hstring.view name))
+        (DStd.Path.global (Uid.show name))
         DStd.Expr.{ arity = 0; alias = No_alias }
     in
     let cstrs =
-      List.map (fun c -> DStd.Path.global (Hstring.view c), []) cstrs
+      List.map (fun c -> DStd.Path.global (Uid.show c), []) cstrs
     in
     let _, cstrs = DStd.Expr.Term.define_adt ty_cst [] cstrs in
     let dty = DT.apply ty_cst [] in
@@ -218,12 +220,12 @@ let builtin_enum = function
                  (module Dl.Typer.T) env c) map)
         map cstrs
     in
-    Cache.store_ty (DE.Ty.Const.hash ty_cst) ty_;
+    Cache.store_ty ty_cst ty_;
     dty,
     cstrs,
     fun map ->
       map
-      |> ty (Hstring.view name) dty
+      |> ty (Uid.show name) dty
       |> add_cstrs
   | _ -> assert false
 
@@ -491,9 +493,9 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `App (`Generic c, l) -> handle_ty_app ~update c l
 
   | `Var ty_v when update ->
-    Cache.find_update_ty (DE.Ty.Var.hash ty_v)
+    Cache.find_update_ty ty_v
   | `Var ty_v ->
-    Cache.find_ty (DE.Ty.Var.hash ty_v)
+    Cache.find_ty ty_v
 
   | `Arrow (_, ty) -> aux ty
   | `Pi (tyvl, ty) ->
@@ -537,7 +539,7 @@ and handle_ty_app ?(update = false) ty_c l =
   let tyl = List.map (dty_to_ty ~update) l in
   (* Recover the initial versions of the types and apply them on the provided
      type arguments stored in [tyl]. *)
-  match Cache.find_ty (DE.Ty.Const.hash ty_c) with
+  match Cache.find_ty ty_c with
   | Tadt (hs, _) -> Tadt (hs, tyl)
 
   | Trecord { args; _ } as ty ->
@@ -559,7 +561,7 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      Adt { cases = [| { cstr = { id_ty; path; _ }; dstrs; _ } |]; _ }
+      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ }
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
@@ -568,10 +570,9 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       Array.fold_left (
         fun acc c ->
           match c with
-          | Some DE.{ path; id_ty; _ } ->
-            let pn = get_basename path in
+          | Some (DE.{ id_ty; _ } as id) ->
             let pty = dty_to_ty id_ty in
-            (pn, pty) :: acc
+            (Uid.of_dolmen id, pty) :: acc
           | _ ->
             Fmt.failwith
               "Unexpected null label for some field of the record type %a"
@@ -580,26 +581,26 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       ) [] dstrs
     in
     let lbs = List.rev rev_lbs in
-    let record_constr = Format.asprintf "%a" DStd.Path.print path in
-    let ty = Ty.trecord ~record_constr tyvl (get_basename ty_c.path) lbs in
-    Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+    let record_constr = Uid.of_dolmen cstr in
+    let ty = Ty.trecord ~record_constr tyvl (Uid.of_dolmen ty_c) lbs in
+    Cache.store_ty ty_c ty
 
   | Some (
       (Adt { cases; _ } as _adt)
     ) ->
-    let name = get_basename ty_c.path in
+    let uid = Uid.of_dolmen ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     let rev_cs, is_enum =
       Array.fold_left (
-        fun (accl, is_enum) DE.{ cstr = { path; _ }; dstrs; _ } ->
+        fun (accl, is_enum) DE.{ cstr; dstrs; _ } ->
           let is_enum =
             if is_enum
             then
               if Array.length dstrs = 0
               then true
               else (
-                let ty = Ty.t_adt name tyvl in
-                Cache.store_ty (DE.Ty.Const.hash ty_c) ty;
+                let ty = Ty.t_adt (Uid.of_dolmen ty_c) tyvl in
+                Cache.store_ty ty_c ty;
                 false
               )
             else false
@@ -608,13 +609,12 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
             Array.fold_left (
               fun acc tc_o ->
                 match tc_o with
-                | Some DE.{ id_ty; path; _ } ->
-                  (get_basename path, dty_to_ty id_ty) :: acc
+                | Some (DE.{ id_ty; _ } as id) ->
+                  (Uid.of_dolmen id, dty_to_ty id_ty) :: acc
                 | None -> assert false
             ) [] dstrs
           in
-          let name = get_basename path in
-          (name, List.rev rev_fields) :: accl, is_enum
+          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl, is_enum
       ) ([], true) cases
     in
     if is_enum
@@ -622,20 +622,19 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       let cstrs =
         List.map (fun s -> fst s) (List.rev rev_cs)
       in
-      let ty = Ty.tsum name cstrs in
-      Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+      let ty = Ty.tsum uid cstrs in
+      Cache.store_ty ty_c ty
     else
       let body = Some (List.rev rev_cs) in
-      let ty = Ty.t_adt ~body name tyvl in
-      Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+      let ty = Ty.t_adt ~body uid tyvl in
+      Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
-    let name = get_basename ty_c.path in
     let ty_params = []
     (* List.init ty_c.id_ty.arity (fun _ -> Ty.fresh_tvar ()) *)
     in
-    let ty = Ty.text ty_params name in
-    Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+    let ty = Ty.text ty_params (Uid.of_dolmen ty_c) in
+    Cache.store_ty ty_c ty
 
 (** Handles term declaration by storing the eventual present type variables
     in the cache as well as the symbol associated to the term. *)
@@ -672,10 +671,9 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         Array.fold_left (
           fun acc c ->
             match c with
-            | Some DE.{ path; id_ty; _ } ->
-              let pn = get_basename path in
+            | Some (DE.{ id_ty; _ } as id) ->
               let pty = dty_to_ty id_ty in
-              (pn, pty) :: acc
+              (Uid.of_dolmen id, pty) :: acc
             | _ ->
               Fmt.failwith
                 "Unexpected null label for some field of the record type %a"
@@ -683,12 +681,10 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         ) [] dstrs
       in
       let lbs = List.rev rev_lbs in
-      let name = Hstring.view name in
-      let record_constr = Hstring.view record_constr in
       let ty =
         Ty.trecord ~record_constr args name lbs
       in
-      Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+      Cache.store_ty ty_c ty
 
     | Tadt (hs, tyl),
       Some (
@@ -696,24 +692,23 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       ) ->
       let rev_cs =
         Array.fold_left (
-          fun accl DE.{ cstr = { path; _ }; dstrs; _ } ->
+          fun accl DE.{ cstr; dstrs; _ } ->
             let rev_fields =
               Array.fold_left (
                 fun acc tc_o ->
                   match tc_o with
-                  | Some DE.{ id_ty; path; _ } ->
-                    (get_basename path, dty_to_ty id_ty) :: acc
+                  | Some (DE.{ id_ty; _ } as id) ->
+                    (Uid.of_dolmen id, dty_to_ty id_ty) :: acc
                   | None -> assert false
               ) [] dstrs
             in
-            let name = get_basename path in
-            (name, List.rev rev_fields) :: accl
+            (Uid.of_dolmen cstr, List.rev rev_fields) :: accl
         ) [] cases
       in
       let body = Some (List.rev rev_cs) in
       let args = tyl in
-      let ty = Ty.t_adt ~body (Hstring.view hs) args in
-      Cache.store_ty (DE.Ty.Const.hash ty_c) ty
+      let ty = Ty.t_adt ~body hs args in
+      Cache.store_ty ty_c ty
 
     | _ -> assert false
   in
@@ -738,19 +733,19 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             (DE.Adt { cases; record; ty = ty_c; }) as adt
           ) ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-          let name = get_basename ty_c.path in
 
           let cns, is_enum =
             Array.fold_right (
-              fun DE.{ dstrs; cstr = { path; _ }; _ } (nacc, is_enum) ->
-                get_basename path :: nacc,
+              fun DE.{ dstrs; cstr; _ } (nacc, is_enum) ->
+                Uid.of_dolmen cstr :: nacc,
                 Array.length dstrs = 0 && is_enum
             ) cases ([], true)
           in
+          let uid = Uid.of_dolmen ty_c in
           if is_enum
           then (
-            let ty = Ty.tsum name cns in
-            Cache.store_ty (DE.Ty.Const.hash ty_c) ty;
+            let ty = Ty.tsum uid cns in
+            Cache.store_ty ty_c ty;
             (* If it's an enum we don't need the second iteration. *)
             acc
           )
@@ -758,13 +753,10 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             let ty =
               if (record || Array.length cases = 1) && not contains_adts
               then
-                let record_constr =
-                  Format.asprintf "%a" DStd.Path.print ty_c.path
-                in
-                Ty.trecord ~record_constr tyvl name []
-              else Ty.t_adt name tyvl
+                Ty.trecord ~record_constr:uid tyvl uid []
+              else Ty.t_adt uid tyvl
             in
-            Cache.store_ty (DE.Ty.Const.hash ty_c) ty;
+            Cache.store_ty ty_c ty;
             (ty, Some adt) :: acc
           )
         | None
@@ -777,23 +769,21 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
   ) (List.rev rev_l)
 
 (** Helper function hadle variables that are encoutered in patterns. *)
-let handle_patt_var name (DE.{ term_descr; _ } as term)  =
+let handle_patt_var id (DE.{ term_descr; _ } as term)  =
   match term_descr with
   | Cst ({ builtin = B.Base; id_ty; _ } as ty_c) ->
     let ty = dty_to_ty id_ty in
-    let n = Hstring.make name in
-    let v = Var.of_hstring n in
+    let v = Var.of_string @@ Uid.show id in
     let sy = Sy.Var v in
     Cache.store_sy ty_c sy;
-    v, n, ty
+    v, id, ty
 
   | Var ({ builtin = B.Base; id_ty; _ } as ty_v) ->
     let ty = dty_to_ty id_ty in
-    let n = Hstring.make name in
-    let v = Var.of_hstring n in
+    let v = Var.of_string @@ Uid.show id in
     let sy = Sy.Var v in
     Cache.store_sy ty_v sy;
-    v, n, ty
+    v, id, ty
 
   | _ ->
     Fmt.failwith
@@ -806,10 +796,9 @@ let mk_pattern DE.{ term_descr; _ } =
   match term_descr with
   | App (
       { term_descr =
-          Cst { builtin = B.Constructor { adt; case; }; path; _ }; _
+          Cst ({ builtin = B.Constructor { adt; case; }; _ } as cst); _
       }, _, pargs
     ) ->
-    let name = Hstring.make (get_basename path) in
     let rev_vnames =
       begin match DT.definition adt with
         | Some (Adt { cases; _ }) ->
@@ -817,7 +806,7 @@ let mk_pattern DE.{ term_descr; _ } =
           Array.fold_left (
             fun acc v ->
               match v with
-              | Some DE.{ path; _ } -> get_basename path :: acc
+              | Some dstr -> Uid.of_dolmen dstr :: acc
               | _ -> assert false
           ) [] dstrs
         | _ ->
@@ -835,12 +824,10 @@ let mk_pattern DE.{ term_descr; _ } =
       ) [] (List.rev rev_vnames) pargs
     in
     let args = List.rev rev_args in
-    Typed.Constr {name; args}
+    Typed.Constr {name = Uid.of_dolmen cst; args}
 
-  | Cst { builtin = B.Constructor _; path; _ } ->
-    let name = Hstring.make (get_basename path) in
-    let args = [] in
-    Typed.Constr {name; args}
+  | Cst ({ builtin = B.Constructor _; _ } as cst) ->
+    Typed.Constr {name = Uid.of_dolmen cst; args = []}
 
   | Var ({ builtin = B.Base; path; _ } as t_v) ->
     (* Should the type be passed as an argument
@@ -965,7 +952,7 @@ let mk_rounding fpar =
   let name = Fpa_rounding.string_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
   let sy =
-    Sy.Op (Sy.Constr (Hstring.make name)) in
+    Sy.Op (Sy.Constr (Uid.fake name)) in
   E.mk_term sy [] ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
@@ -981,7 +968,7 @@ let rec mk_expr
     let mk = aux_mk_expr in
     let res =
       match term_descr with
-      | Cst ({ builtin; path; _ } as tcst) ->
+      | Cst ({ builtin; _ } as tcst) ->
         begin match builtin with
           | B.True -> E.vrai
           | B.False -> E.faux
@@ -997,9 +984,8 @@ let rec mk_expr
             E.mk_term sy [] ty
 
           | B.Constructor _ ->
-            let name = get_basename path in
             let ty = dty_to_ty term_ty in
-            let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+            let sy = Sy.Op (Sy.Constr (Uid.of_dolmen tcst)) in
             E.mk_term sy [] ty
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
@@ -1012,8 +998,7 @@ let rec mk_expr
 
       | App (
           { term_descr = Cst ({
-                builtin;
-                path; _
+                builtin; _
               } as tcst); _
           } as app_term, _, args
         ) ->
@@ -1037,16 +1022,15 @@ let rec mk_expr
             begin match DT.definition adt with
               | Some (Adt { cases;  _ }) ->
                 begin match cases.(case).dstrs.(field) with
-                  | Some { path; _ } ->
-                    let name = get_basename path in
+                  | Some destr ->
                     let ty = dty_to_ty term_ty in
                     let e = aux_mk_expr x in
                     let sy =
-                      match Cache.find_ty (DE.Ty.Const.hash adt) with
+                      match Cache.find_ty adt with
                       | Trecord _ ->
-                        Sy.Op (Sy.Access (Hstring.make name))
+                        Sy.Op (Sy.Access (Uid.of_dolmen destr))
                       | Tadt _ ->
-                        Sy.destruct name
+                        Sy.destruct (Uid.of_dolmen destr)
                       | _ -> assert false
                     in
                     E.mk_term sy [e] ty
@@ -1063,11 +1047,10 @@ let rec mk_expr
             end
 
           | B.Tester {
-              cstr = { builtin = B.Constructor { adt; _ }; path; _ }; _
+              cstr = { builtin = B.Constructor { adt; _ }; _ } as cstr; _
             }, [x] ->
             begin
-              let name = get_basename path in
-              let builtin = Sy.IsConstr (Hstring.make name) in
+              let builtin = Sy.IsConstr (Uid.of_dolmen cstr) in
               let ty_c =
                 match DT.definition adt with
                 | Some (
@@ -1075,14 +1058,11 @@ let rec mk_expr
                   ) -> ty_c
                 | _ -> assert false
               in
-              match Cache.find_ty (DE.Ty.Const.hash ty_c) with
+              match Cache.find_ty ty_c with
               | Ty.Tadt _ ->
                 E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
               | Ty.Tsum _ as ty ->
-                let cstr =
-                  let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
-                  E.mk_term sy [] ty
-                in
+                let cstr = E.mk_constr (Uid.of_dolmen cstr) [] ty in
                 E.mk_eq ~iff:false (aux_mk_expr x) cstr
               | Ty.Trecord _ ->
                 (* The typechecker allows only testers whose the
@@ -1372,11 +1352,10 @@ let rec mk_expr
             E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
 
           | B.Constructor _, _ ->
-            let name = get_basename path in
             let ty = dty_to_ty term_ty in
             begin match ty with
               | Ty.Tadt (_, _) ->
-                let sy = Sy.Op (Sy.Constr (Hstring.make name)) in
+                let sy = Sy.Op (Sy.Constr (Uid.of_dolmen tcst)) in
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term sy l ty
               | Ty.Trecord _ ->

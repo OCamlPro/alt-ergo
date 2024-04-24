@@ -30,7 +30,7 @@
 
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
-    IsConstr of Hstring.t (* ADT tester *)
+    IsConstr of Uid.t (* ADT tester *)
 
 type 'a view =
   | Eq of 'a * 'a
@@ -121,7 +121,7 @@ let print_view ?(lbl="") pr_elt fmt vw =
 
   | Builtin (pos, IsConstr hs, [e]) ->
     Format.fprintf fmt "%s(%a ? %a)"
-      (if pos then "" else "not ") pr_elt e Hstring.print hs
+      (if pos then "" else "not ") pr_elt e Uid.pp hs
 
   | Builtin (_, IsConstr _, _) ->
     assert false (* not reachable *)
@@ -186,7 +186,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   let equal_builtins n1 n2 =
     match n1, n2 with
     | LT, LT | LE, LE -> true
-    | IsConstr h1, IsConstr h2 -> Hstring.equal h1 h2
+    | IsConstr h1, IsConstr h2 -> Uid.equal h1 h2
     | _ -> false
 
   module V = struct

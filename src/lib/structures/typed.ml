@@ -55,7 +55,7 @@ type oplogic =
 
 (** type of pattern in match construct of ADTs *)
 type pattern =
-  | Constr of { name : Hstring.t ; args : (Var.t * Hstring.t * Ty.t) list}
+  | Constr of { name : Uid.t ; args : (Var.t * Uid.t * Ty.t) list}
   (** A pattern case which is a constructor. [name] is the name of
       constructor. [args] contains the variables bound by this pattern
       with their correponsing destructors and types *)
@@ -267,7 +267,7 @@ let rec print_term =
         (fun (p, v) ->
            match p with
            | Constr {name = n; args = l} ->
-             fprintf fmt "| %a %a -> %a\n" Hstring.print n pp_vars l
+             fprintf fmt "| %a %a -> %a\n" Uid.pp n pp_vars l
                print_term v
            | Var x ->
              fprintf fmt "| %a -> %a\n" Var.print x print_term v;

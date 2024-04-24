@@ -89,7 +89,10 @@ let hstring_ae_reprs =
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
 let fpa_rounding_mode =
-  Ty.Tsum (Hs.make "RoundingMode", hstring_smt_reprs)
+  let fake_reprs =
+    List.map (fun hs -> Uid.fake @@ Hstring.view hs) hstring_smt_reprs
+  in
+  Ty.Tsum (Uid.fake "RoundingMode", fake_reprs)
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in

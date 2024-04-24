@@ -384,11 +384,11 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>(not@ %a@])" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" Hstring.print hs pp e
+      Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" Uid.pp hs pp e
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))"
-        Hstring.print hs pp e
+        Uid.pp hs pp e
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -416,7 +416,7 @@ module SmtPrinter = struct
         | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
           assert (List.compare_lengths xs lbs = 0);
           Fmt.pf ppf "@[<2>(%a %a@])"
-            Hstring.print record_constr
+            Uid.pp record_constr
             Fmt.(list ~sep:sp pp |> box) xs
 
         | _ ->
@@ -570,10 +570,10 @@ module AEPrinter = struct
       Fmt.pf ppf "(not %a)" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "(%a ? %a)" pp e Hstring.print hs
+      Fmt.pf ppf "(%a ? %a)" pp e Uid.pp hs
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "not (%a ? %a)" pp e Hstring.print hs
+      Fmt.pf ppf "not (%a ? %a)" pp e Uid.pp hs
 
     | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
       | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -610,7 +610,7 @@ module AEPrinter = struct
       Fmt.pf ppf "%a^{%d, %d}" pp e i j
 
     | Sy.(Op (Access field)), [e] ->
-      Fmt.pf ppf "%a.%s" pp e (Hstring.view field)
+      Fmt.pf ppf "%a.%a" pp e Uid.pp field
 
     | Sy.(Op Record), _ ->
       begin match ty with
@@ -618,8 +618,8 @@ module AEPrinter = struct
           assert (List.compare_lengths xs lbs = 0);
           Fmt.pf ppf "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
-              Fmt.pf ppf "%s%s = %a"  (if first then "" else "; ")
-                (Hstring.view field) pp e;
+              Fmt.pf ppf "%s%a = %a"  (if first then "" else "; ")
+                Uid.pp field pp e;
               false
             ) true lbs xs);
           Fmt.pf ppf "}";
@@ -637,7 +637,7 @@ module AEPrinter = struct
 
     | Sy.(Op Destruct hs), [e] ->
       Fmt.pf ppf "%a#%a"
-        pp e Hstring.print hs
+        pp e Uid.pp hs
 
     | Sy.Op op, [e1; e2] ->
       Fmt.pf ppf "(%a %a %a)" pp e1 Symbols.pp_ae_operator op pp e2
@@ -1262,10 +1262,10 @@ let mk_builtin ~is_pos n l =
 
 (** smart constructors for datatypes. *)
 
-let mk_constr cons xs ty = mk_term (Sy.Op (Constr (Hstring.make cons))) xs ty
+let mk_constr cons xs ty = mk_term (Sy.Op (Constr cons)) xs ty
 
 let mk_tester cons t =
-  mk_builtin ~is_pos:true (Sy.IsConstr (Hstring.make cons)) [t]
+  mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
 
 (** Substitutions *)
 
@@ -2567,7 +2567,7 @@ let debug_compile_match e cases res =
          | Typed.Constr {name; args} ->
            Printer.print_dbg  ~flushed:false ~header:false
              "| %a %a -> %a@ "
-             Hstring.print name
+             Uid.pp name
              p_list_vars args
              print v;
          | Typed.Var x ->
@@ -2582,7 +2582,7 @@ let mk_match e cases =
   let ty = type_info e in
   let mk_destr =
     match ty with
-    | Ty.Tadt _ -> (fun hs -> Sy.destruct (Hstring.view hs))
+    | Ty.Tadt _ -> (fun hs -> Sy.destruct hs)
     | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
     | Ty.Tsum _ -> (fun _hs -> assert false) (* no destructors for Tsum *)
     | _ -> assert false
@@ -2590,14 +2590,17 @@ let mk_match e cases =
   let mker =
     match ty with
     | Ty.Tadt _ ->
-      (fun e name -> mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
+      (fun e name ->
+         mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
 
     | Ty.Trecord _ ->
       (fun _e _name -> assert false) (* no need to test for records *)
 
     | Ty.Tsum _ ->
       (fun e n -> (* testers are equalities for Tsum *)
-         let constr = mk_term (Sy.constr (Hstring.view n)) [] (type_info e) in
+         let constr =
+           mk_term (Sy.constr n) [] (type_info e)
+         in
          mk_eq ~iff:false e constr)
 
     | _ -> assert false
@@ -2875,6 +2878,7 @@ let const_view t =
     end
   | { f = Op (Constr c); ty; _ }
     when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
+    let c = Uid.show c |> Hstring.make in
     RoundingMode (Fpa_rounding.rounding_mode_of_smt_hs c)
   | _ -> Fmt.failwith "unsupported constant: %a" print t
 
