@@ -526,13 +526,14 @@ let type_body name args = Decls.body name args
 
 (* smart constructors *)
 (* HACK: we should create a unique Dolmen identifier here. *)
-let tunit = Text ([], Uid.fake "unit")
+let tunit = Text ([], Uid.of_string "unit")
 
 let text l s = Text (l, s)
 
 let fresh_empty_text =
   let cpt = ref (-1) in
-  fun () -> incr cpt; text [] (Uid.fake ("'_c"^(string_of_int !cpt)))
+  fun () ->
+    incr cpt; text [] (Uid.of_string ("'_c"^(string_of_int !cpt)))
 
 let tsum s lc = Tsum (s, lc)
 
@@ -689,7 +690,7 @@ let rec monomorphize ty =
     in
     Trecord {r with args = m_tylv; name = n; lbs = m_tylb}
   | Tfarray (ty1,ty2)    -> Tfarray (monomorphize ty1,monomorphize ty2)
-  | Tvar {v=v; value=None} -> text [] (Uid.fake ("'_c"^(string_of_int v)))
+  | Tvar {v=v; value=None} -> text [] (Uid.of_string ("'_c"^(string_of_int v)))
   | Tvar ({ value = Some ty1; _ } as r) ->
     Tvar { r with value = Some (monomorphize ty1)}
   | Tadt(name, params) ->

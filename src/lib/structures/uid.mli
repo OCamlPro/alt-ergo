@@ -33,7 +33,8 @@ module DE = Dolmen.Std.Expr
 type t
 
 val of_dolmen : 'a DE.Id.t -> t
-val fake : string -> t
+val of_string : string -> t
+val of_hstring : Hstring.t -> t
 val hash : t -> int
 val pp : t Fmt.t
 val show : t -> string

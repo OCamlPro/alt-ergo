@@ -52,11 +52,12 @@ let get_basename = function
           | _ -> ()
         ) path
 
-let of_dolmen DE.{ path; index; _ } =
+let[@inline always] of_dolmen DE.{ path; index; _ } =
   let name = Hstring.make @@ get_basename path in
   Unique { name; index = (index :> int) }
 
-let fake s = Fake (Hstring.make s)
+let[@inline always] of_hstring hs = Fake hs
+let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
 let hash = function
   | Fake hs -> Hstring.hash hs

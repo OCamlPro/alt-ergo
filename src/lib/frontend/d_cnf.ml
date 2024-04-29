@@ -949,10 +949,9 @@ let mk_add translate sy ty l =
   E.mk_term sy args ty
 
 let mk_rounding fpar =
-  let name = Fpa_rounding.string_of_rounding_mode fpar in
+  let name = Hstring.make @@ Fpa_rounding.string_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
-  let sy =
-    Sy.Op (Sy.Constr (Uid.fake name)) in
+  let sy = Sy.Op (Sy.Constr (Uid.of_hstring name)) in
   E.mk_term sy [] ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]

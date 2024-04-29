@@ -146,21 +146,23 @@ module Types = struct
     let ty_vars = fresh_vars ~recursive vars loc in
     match body with
     | Abstract ->
-      let ty = Ty.text ty_vars (Uid.fake id) in
+      let ty = Ty.text ty_vars (Uid.of_string id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum lc ->
       if not (Lists.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
-      let ty = Ty.tsum (Uid.fake id) (List.map Uid.fake lc) in
+      let ty =
+        Ty.tsum (Uid.of_string id) (List.map Uid.of_string lc)
+      in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
       let sort_fields = String.equal record_constr "{" in
-      let record_constr = Uid.fake record_constr in
+      let record_constr = Uid.of_string record_constr in
       let ty =
         Ty.trecord ~sort_fields ~record_constr ty_vars
-          (Uid.fake id) (List.map (fun (s, ty) -> Uid.fake s, ty) lbs)
+          (Uid.of_string id) (List.map (fun (s, ty) -> Uid.of_string s, ty) lbs)
       in
       ty, { to_ty = MString.add id ty env.to_ty;
             builtins = env.builtins;
@@ -170,16 +172,16 @@ module Types = struct
     | Algebraic l ->
       let l = (* convert ppure_type to Ty.t in l *)
         List.map (fun (constr, l) ->
-            Uid.fake constr,
+            Uid.of_string constr,
             List.map (fun (field, pp) ->
-                Uid.fake field, ty_of_pp loc env None pp) l
+                Uid.of_string field, ty_of_pp loc env None pp) l
           ) l
       in
       let body =
         if l == [] then None (* in initialization step, no body *)
         else Some l
       in
-      let ty = Ty.t_adt ~body (Uid.fake id) ty_vars in
+      let ty = Ty.t_adt ~body (Uid.of_string id) ty_vars in
       ty, { env with to_ty = MString.add id ty env.to_ty }
 
   let add_builtin env id ty =
@@ -323,9 +325,9 @@ module Env = struct
     let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
     let tname = Fpa_rounding.fpa_rounding_mode_ae_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode (Uid.fake nte)) in
+    let float32d = float32 (mode (Uid.of_string nte)) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode (Uid.fake nte)) in
+    let float64d = float64 (mode (Uid.of_string nte)) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in
@@ -499,14 +501,14 @@ module Env = struct
   let add_constr ~record env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
     let kind = if record then RecordConstr else AdtConstr in
-    let mk_constr = fun s -> Symbols.constr @@ Uid.fake s in
+    let mk_constr = fun s -> Symbols.constr @@ Uid.of_string s in
     add_logics ~kind env mk_constr [constr, ""] pp_profile loc
 
   let add_destr ~record env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
     let mk_sy s =
-      if record then (Symbols.Op (Access (Uid.fake s)))
-      else Symbols.destruct (Uid.fake s)
+      if record then (Symbols.Op (Access (Uid.of_string s)))
+      else Symbols.destruct (Uid.of_string s)
     in
     let kind = if record then RecordDestr else AdtDestr in
     add_logics ~kind env mk_sy [destr, ""] pp_profile loc
@@ -862,7 +864,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Trecord { Ty.name = g; lbs; _ } ->
           begin
             try
-              TTdot(te, Hstring.make a), Uid.list_assoc (Uid.fake a) lbs
+              TTdot(te, Hstring.make a), Uid.list_assoc (Uid.of_string a) lbs
             with Not_found ->
               let g = Uid.show g in
               Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc
@@ -876,7 +878,7 @@ let rec type_term ?(call_from_type_form=false) env f =
         let lbs = List.sort
             (fun (l1, _) (l2, _) -> Hstring.compare l1 l2) lbs in
         let fake_lbs =
-          List.map (fun (lb, ty) -> Uid.fake @@ Hstring.view lb, ty) lbs
+          List.map (fun (lb, ty) -> Uid.of_hstring lb, ty) lbs
         in
         let ty = Types.from_labels env.Env.types fake_lbs loc in
         let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
@@ -1452,7 +1454,7 @@ and type_pattern p env ty ty_body =
   check_no_duplicates pat_loc args;
   let hf = Hstring.make f in
   try
-    let prof = Ty.assoc_destrs (Uid.fake @@ Hstring.view hf) ty_body in
+    let prof = Ty.assoc_destrs (Uid.of_hstring hf) ty_body in
     let env =
       try
         List.fold_left2
@@ -1471,7 +1473,7 @@ and type_pattern p env ty ty_body =
            var_v, destr, ty
         )args prof
     in
-    Constr { name = Uid.fake @@ Hstring.view hf ; args = args }, env
+    Constr { name = Uid.of_hstring hf ; args = args }, env
   with Not_found ->
     if args != [] then Errors.typing_error (NotAdtConstr (f, ty)) pat_loc;
     let env = Env.add_ty_var env [f] ty in
@@ -2355,7 +2357,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let ty = PFunction([], pur_ty) in
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
-      let constr = fun s -> Symbols.constr @@ Uid.fake s in
+      let constr = fun s -> Symbols.constr @@ Uid.of_string s in
       Env.add_logics ~kind:Env.EnumConstr env constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
