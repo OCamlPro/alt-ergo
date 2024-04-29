@@ -746,12 +746,6 @@ let [@inline always] symbol_info t = t.f
    | _ -> true (* bool vars are terms *)
 *)
 
-let mk_binders st = TSet.fold (fun t sym ->
-    match t with
-    | { f = Sy.Var v; ty; _ } -> Var.Map.add v ty sym
-    | _ -> assert false
-  ) st Var.Map.empty
-
 let merge_vars acc b =
   Var.Map.merge (fun v a b ->
       match a, b with

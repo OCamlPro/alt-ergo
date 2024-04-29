@@ -1492,16 +1492,14 @@ let rec mk_expr
             ) tvl
           in
           (* Set of binders *)
-          let qvs =
+          let binders =
             List.fold_left (
               fun vl (ty, v, tv) ->
                 let sy = Sy.var v in
                 Cache.store_sy tv sy;
-                let e = E.mk_term sy [] ty in
-                SE.add e vl
-            ) SE.empty ntvl
+                Var.Map.add v ty vl
+            ) Var.Map.empty ntvl
           in
-          let binders = E.mk_binders qvs in
 
           (* filters *)
           let hyp =
@@ -1966,21 +1964,22 @@ let make dloc_file acc stmt =
             let st_loc = dl_to_ael dloc_file loc in
             let name_base = get_basename path in
 
-            let binders_set, defn =
+            let binders, defn =
               let rty = dty_to_ty body.term_ty in
-              let binders_set, rev_args =
+              let binders, rev_args =
                 List.fold_left (
-                  fun (binders_set, acc) (DE.{ path; id_ty; _ } as tv) ->
+                  fun (binders, acc) (DE.{ path; id_ty; _ } as tv) ->
                     let ty = dty_to_ty id_ty in
-                    let sy = Sy.var (Var.of_string (get_basename path)) in
+                    let v = Var.of_string (get_basename path) in
+                    let sy = Sy.var v in
                     Cache.store_sy tv sy;
                     let e = E.mk_term sy [] ty in
-                    SE.add e binders_set, e :: acc
-                ) (SE.empty, []) terml
+                    Var.Map.add v ty binders, e :: acc
+                ) (Var.Map.empty, []) terml
               in
               let sy = Cache.find_sy tcst in
               let e = E.mk_term sy (List.rev rev_args) rty in
-              binders_set, e
+              binders, e
             in
 
             let loc = st_loc in
@@ -1993,7 +1992,6 @@ let make dloc_file acc stmt =
                     ~toplevel:false ~decl_kind body
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
-                let binders = E.mk_binders binders_set in
                 let ff =
                   E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
@@ -2015,7 +2013,6 @@ let make dloc_file acc stmt =
                 in
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
                 let qb = E.mk_eq ~iff defn ff in
-                let binders = E.mk_binders binders_set in
                 let ff =
                   E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
