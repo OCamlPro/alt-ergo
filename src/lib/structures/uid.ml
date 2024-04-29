@@ -72,21 +72,14 @@ let show = Fmt.to_to_string pp
 let equal u1 u2 =
   match u1, u2 with
   | Fake hs1, Fake hs2 -> Hstring.equal hs1 hs2
-  | Unique { index = i1; _ }, Unique { index = i2; _ }->
-    let b = i1 = i2 in
-    (* if not b then
-       assert (not @@ String.equal (show u1) (show u2)); *)
-    b
-  | _ -> assert false
+  | Unique { index = i1; _ }, Unique { index = i2; _ }-> i1 = i2
+  | _ ->
+    Fmt.failwith "%a and %a" pp u1 pp u2
 
 let compare u1 u2 =
   match u1, u2 with
   | Fake hs1, Fake hs2 -> Hstring.compare hs1 hs2
-  | Unique { index = i1; _ }, Unique { index = i2; _ } ->
-    let c = i1 - i2 in
-    (* if c <> 0 then
-       assert (not @@ String.equal (show u1) (show u2)); *)
-    c
+  | Unique { index = i1; _ }, Unique { index = i2; _ } -> i1 - i2
   | _ ->
     Fmt.failwith "%a and %a" pp u1 pp u2
 
