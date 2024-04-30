@@ -73,15 +73,13 @@ let equal u1 u2 =
   match u1, u2 with
   | Fake hs1, Fake hs2 -> Hstring.equal hs1 hs2
   | Unique { index = i1; _ }, Unique { index = i2; _ }-> i1 = i2
-  | _ ->
-    Fmt.failwith "%a and %a" pp u1 pp u2
+  | _ -> false
 
 let compare u1 u2 =
   match u1, u2 with
   | Fake hs1, Fake hs2 -> Hstring.compare hs1 hs2
   | Unique { index = i1; _ }, Unique { index = i2; _ } -> i1 - i2
-  | _ ->
-    Fmt.failwith "%a and %a" pp u1 pp u2
+  | _ -> -1
 
 let rec list_assoc x = function
   | [] -> raise Not_found
