@@ -310,7 +310,7 @@ module Env = struct
       TTapp (Symbols.Op Float, [prec; exp; mode; x])
     in
     let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
-    let tname = Fpa_rounding.fpa_rounding_mode_type_name in
+    let tname = Fpa_rounding.fpa_rounding_mode_ae_type_name in
     let float32 = float (int "24") (int "149") in
     let float32d = float32 (mode nte) in
     let float64 = float (int "53") (int "1074") in
