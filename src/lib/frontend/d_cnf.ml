@@ -1473,7 +1473,7 @@ let rec mk_expr
 
       | Binder ((Forall (tyvl, tvl) | Exists (tyvl, tvl)) as e, body) ->
         if tvl == []
-        then (Cache.store_tyvl tyvl; aux_mk_expr ~toplevel body)
+        then (Cache.store_tyvl tyvl; aux_mk_expr ~toplevel:false body)
         else
           let name =
             if !name_tag = 0 then name_base
@@ -1518,7 +1518,7 @@ let rec mk_expr
             end
           in
           let in_theory = decl_kind == E.Dtheory in
-          let f = aux_mk_expr ~toplevel body in
+          let f = aux_mk_expr ~toplevel:false body in
           let qbody = E.purify_form f in
           (*  All the triggers that are encoutered at this level are assumed
               to be user-defined. *)
