@@ -70,11 +70,9 @@ and quantified = {
   toplevel : bool;
   user_trs : trigger list;
   binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
   sko_v : t list;
   sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
+  loc : Loc.t;
   kind : decl_kind;
 }
 
@@ -1438,10 +1436,27 @@ and mk_forall_bis (q : quantified) =
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q
 
+(* Look for a substitution [sbt] of term variables such that:
+   - the domain of [sbt] is a subset of [binders];
+   - the application of [sbt] on the formula [f] produces a formula [g]
+     such that:
+     -- the set of free term variables of [g] in [binders] is strictly smaller;
+     -- the universal closures of [f] and [g] are equivalent.
+
+   For instance, let's [f] be the formula:
+    x <> 1 or f(y) = x + 1
+   and the set of binders is `{ x, y }`. This function will produce the
+   substitution `{ x |-> 1 }`. Indeed, the ground formulas
+    forall x, y : int. x <> 1 or f(y) < x + 1
+   and
+    forall y : int. 1 <> 1 or f(y) < 1 + 1
+   are equivalent.
+
+   *Note*: this heuristic is disabled if the user has defined filters.
+
+   @return [None] if the heuristic failed to produce such a substitution. *)
 and find_particular_subst =
   let exception Found of Var.t * t in
-  (* ex: in "forall x, y : int. x <> 1 or f(y) = x+1 or P(x,y)",
-     x can be replaced with 1 *)
   let rec find_subst v tv f =
     match form_view f with
     | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
@@ -1464,6 +1479,7 @@ and find_particular_subst =
       | _ -> ()
   in
   fun binders trs f ->
+    (* TODO: move the test for `trs` outside. *)
     if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
        has_semantic_triggers trs
     then
@@ -2000,6 +2016,7 @@ module Triggers = struct
 
   let not_pure t = not t.pure
 
+  (* Collect all the term variables in [t] that are in the set [bv]. *)
   let vars_of_term bv acc t =
     Var.Map.fold
       (fun v _ acc ->
@@ -2007,12 +2024,19 @@ module Triggers = struct
       )
       t.vars acc
 
+  (* TODO: we should define here a predicate `good_triggers`
+     and call it with List.filter in the appropriate locations. *)
   let filter_good_triggers (bv, vty) trs =
     List.filter
       (fun { content = l; _ } ->
+         (* Check if the multi-trigger covers all the type and term
+            variables. *)
          not (List.exists not_pure l) &&
          let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
          let s2 = List.fold_left vty_of_term Svty.empty l in
+         (* TODO: we can replace `Var.Set.subset bv s1`
+            by `Var.Seq.equal bv s1`. By construction `s1` is
+            a subset of `bv`. *)
          Var.Set.subset bv s1 && Svty.subset vty s2 )
       trs
 
@@ -2360,7 +2384,9 @@ module Triggers = struct
         Var.Map.fold (fun v _ s -> Var.Set.add v s) binders Var.Set.empty
       in
       match decl_kind, f with
-      | Dtheory, _ -> assert false
+      | Dtheory, _ ->
+        (* TODO: Add Dobjective here. We never generate triggers for them. *)
+        assert false
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
           | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->
@@ -2584,7 +2610,7 @@ module Purification = struct
         mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
       | _ -> (* detect ITEs *)
-        match t.xs with
+        match tm.xs with
         | [_;_;_] when is_ite t.f ->
           let fresh_var = Sy.fresh_skolem_var "Pur-Ite" in
           mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
