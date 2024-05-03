@@ -1472,8 +1472,14 @@ let rec mk_expr
         ) body binders
 
       | Binder ((Forall (tyvl, tvl) | Exists (tyvl, tvl)) as e, body) ->
-        if tvl == []
-        then (Cache.store_tyvl tyvl; aux_mk_expr ~toplevel body)
+        if not toplevel && tyvl != [] then
+          Fmt.failwith "Non-prenex polymorphism in the term %a"
+            DE.Term.print term
+        else if tvl == []
+        then begin
+          Cache.store_tyvl tyvl;
+          aux_mk_expr ~toplevel:true body
+        end
         else
           let name =
             if !name_tag = 0 then name_base
