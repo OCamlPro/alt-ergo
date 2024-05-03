@@ -70,7 +70,7 @@ and quantified = {
   toplevel : bool;
   user_trs : trigger list;
   binders : binders;
-  sko_v : t list;
+  sko_v : t list; (* This list has to be ordered for the skolemization. *)
   sko_vty : Ty.t list;
   loc : Loc.t;
   kind : decl_kind;
@@ -1420,6 +1420,11 @@ and mk_forall_bis (q : quantified) =
   if Var.Map.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
   else
     let q = {q with binders} in
+    (* Attempt to reduce the number of quantifiers. We try to find a
+       particular substitution [sbs] such that the application of [sbs]
+       on [q.main] produces a formula [g] such that
+       - [g] has less free term variables than [q.main] in [binders];
+       - the universal closures of [f] and [g] are equivalent. *)
     match find_particular_subst binders q.user_trs q.main with
     | None -> mk_forall_ter q
 
@@ -1436,25 +1441,12 @@ and mk_forall_bis (q : quantified) =
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q
 
-(* Look for a substitution [sbt] of term variables such that:
-   - the domain of [sbt] is a subset of [binders];
-   - the application of [sbt] on the formula [f] produces a formula [g]
-     such that:
-     -- the set of free term variables of [g] in [binders] is strictly smaller;
-     -- the universal closures of [f] and [g] are equivalent.
+(* If [f] is a formula of the form [x = a -> P(x)] where [a] doesn't content
+   [x], this function produces the substitution { x |-> a }.
 
-   For instance, let's [f] be the formula:
-    x <> 1 or f(y) = x + 1
-   and the set of binders is `{ x, y }`. This function will produce the
-   substitution `{ x |-> 1 }`. Indeed, the ground formulas
-    forall x, y : int. x <> 1 or f(y) < x + 1
-   and
-    forall y : int. 1 <> 1 or f(y) < 1 + 1
-   are equivalent.
+   *Note*: this heuristic isn't used if the user has defined filters.
 
-   *Note*: this heuristic is disabled if the user has defined filters.
-
-   @return [None] if the heuristic failed to produce such a substitution. *)
+   @return [None] if the formula hasn't the right form. *)
 and find_particular_subst =
   let exception Found of Var.t * t in
   let rec find_subst v tv f =
@@ -2610,7 +2602,7 @@ module Purification = struct
         mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets
 
       | _ -> (* detect ITEs *)
-        match tm.xs with
+        match t.xs with
         | [_;_;_] when is_ite t.f ->
           let fresh_var = Sy.fresh_skolem_var "Pur-Ite" in
           mk_term (Sy.Var fresh_var) [] t.ty , add_let fresh_var t lets

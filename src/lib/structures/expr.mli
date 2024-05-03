@@ -92,7 +92,7 @@ and quantified = private {
   binders : binders;
   (** The ordered list of quantified term variables of [main].
 
-      This field has to be ordered for the skolemization. *)
+      This list has to be ordered for the skolemization. *)
 
   sko_v : t list;
   (** Set of all the free variables of the quantified formula. In other words,
