@@ -167,8 +167,6 @@ val compare_quant : quantified -> quantified -> int
 val compare_let : letin -> letin -> int
 
 (** Some auxiliary functions *)
-
-val mk_binders : Set.t -> binders
 val free_vars : t -> (Ty.t * int) Var.Map.t -> (Ty.t * int) Var.Map.t
 val free_type_vars : t -> Ty.Svty.t
 val is_ground : t -> bool

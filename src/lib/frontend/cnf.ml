@@ -35,7 +35,13 @@ module SE = E.Set
 let varset_of_list =
   List.fold_left
     (fun acc (s,ty) ->
-       SE.add (E.mk_term s [] (Ty.shorten ty)) acc) SE.empty
+       let v =
+         match s with
+         | Sy.Var v -> v
+         | _ -> assert false
+       in
+       Var.Map.add v (Ty.shorten ty) acc
+    ) Var.Map.empty
 
 module ME =
   Map.Make
@@ -263,8 +269,7 @@ and make_form name_base ~toplevel f loc ~decl_kind : E.t =
         else Format.sprintf "#%s#sub-%d" name_base !name_tag
       in
       incr name_tag;
-      let qvars = varset_of_list qf.qf_bvars in
-      let binders = E.mk_binders qvars in
+      let binders = varset_of_list qf.qf_bvars in
       let ff = mk_form ~toplevel:false qf.qf_form.c in
 
       (* S : Formulas are purified afterwards.
