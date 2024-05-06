@@ -19,6 +19,9 @@
 (*                                                                        *)
 (*     CNRS - INRIA - Universite Paris Sud                                *)
 (*                                                                        *)
+(*     Until 2013, some parts of this code were released under            *)
+(*     the Apache Software License version 2.0.                           *)
+(*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
@@ -1030,5 +1033,5 @@ module DebugExplanations : Explanations with type t = string list = struct
     List.rev_append l1 l2 |> List.sort_uniq String.compare
 
   let compare l1 l2 =
-    List.compare String.compare l1 l2
+    Stdcompat.List.compare String.compare l1 l2
 end

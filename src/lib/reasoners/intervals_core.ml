@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) 2024 --- OCamlPro SAS                                *)
+(*     Copyright (C) 2013-2023 --- OCamlPro SAS                           *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
@@ -19,6 +19,9 @@
 (*                                                                        *)
 (*     CNRS - INRIA - Universite Paris Sud                                *)
 (*                                                                        *)
+(*     Until 2013, some parts of this code were released under            *)
+(*     the Apache Software License version 2.0.                           *)
+(*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
@@ -30,16 +33,16 @@ open Intervals_intf
 (** Pretty-printer for a bound when used as a lower bound. *)
 let pp_lower_bound pp_a ppf lb =
   match lb with
-  | Unbounded -> Format.fprintf ppf "]-oo"
-  | Open x -> Format.fprintf ppf "]%a" pp_a x
-  | Closed x -> Format.fprintf ppf "[%a" pp_a x
+  | Unbounded -> Fmt.pf ppf "]-oo"
+  | Open x -> Fmt.pf ppf "]%a" pp_a x
+  | Closed x -> Fmt.pf ppf "[%a" pp_a x
 
 (** Pretty-printer for a bound when used as an upper bound. *)
 let pp_upper_bound pp_a ppf ub =
   match ub with
-  | Unbounded -> Format.fprintf ppf "+oo["
-  | Open x -> Format.fprintf ppf "%a[" pp_a x
-  | Closed x -> Format.fprintf ppf "%a]" pp_a x
+  | Unbounded -> Fmt.pf ppf "+oo["
+  | Open x -> Fmt.pf ppf "%a[" pp_a x
+  | Closed x -> Fmt.pf ppf "%a]" pp_a x
 
 module EqLtLeNotations(OT : OrderedType) = struct
   (** This module contains convenient redefinitions of [=], [<], [<=], [min] and
@@ -64,7 +67,7 @@ module Interval(OT : OrderedType) = struct
   type t = OT.t interval
 
   let pp ppf i =
-    Format.fprintf ppf "@[%a;@ %a@]"
+    Fmt.pf ppf "@[%a;@ %a@]"
       (pp_lower_bound OT.pp_finite) (OT.view i.lb)
       (pp_upper_bound OT.pp_finite) (OT.view i.ub)
 

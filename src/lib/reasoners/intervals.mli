@@ -19,6 +19,9 @@
 (*                                                                        *)
 (*     CNRS - INRIA - Universite Paris Sud                                *)
 (*                                                                        *)
+(*     Until 2013, some parts of this code were released under            *)
+(*     the Apache Software License version 2.0.                           *)
+(*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
@@ -93,14 +96,14 @@ module Legacy : sig
 
   val affine_scale : const:Numbers.Q.t -> coef:Numbers.Q.t -> t -> t
   (** Perform an affine transformation on the given bounds.
-      Suposing input bounds (b1, b2), this will return
+      Supposing input bounds (b1, b2), this will return
       (const + coef * b1, const + coef * b2).
       This function is useful to avoid the incorrect roundings that
       can take place when scaling down an integer range. *)
 
-  val pretty_print : Format.formatter -> t -> unit
+  val pretty_print : t Fmt.t
 
-  val print : Format.formatter -> t -> unit
+  val print : t Fmt.t
 
   val finite_size : t -> Numbers.Q.t option
 
@@ -134,7 +137,7 @@ module Legacy : sig
   val equal : t -> t -> bool
 
   val pick : is_max:bool -> t -> Numbers.Q.t
-  (** [pick ~is_max t] returns an elements of the set of intervals [t]. If
+  (** [pick ~is_max t] returns an element of the union of intervals [t]. If
       [is_max] is [true], we pick the largest element of [t], if it exists.
       We look for the smallest element if [is_max] is [false]. *)
 
