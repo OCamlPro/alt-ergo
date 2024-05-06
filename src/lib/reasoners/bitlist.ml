@@ -162,3 +162,105 @@ let logxor b1 b2 =
   ; bits_clr
   ; ex = Ex.union b1.ex b2.ex
   }
+
+(* The logic for the [increase_lower_bound] function below is described in
+   section 4.1 of
+
+   Sharpening Constraint Programming approaches for Bit-Vector Theory.
+   Zakaria Chihani, Bruno Marre, François Bobot, Sébastien Bardin.
+   CPAIOR 2017. International Conference on AI and OR Techniques in
+   Constraint Programming for Combinatorial Optimization Problems, Jun
+   2017, Padova, Italy.
+   https://cea.hal.science/cea-01795779/document *)
+
+(* [left_cl_can_set highest_cleared cleared_can_set] returns the
+   least-significant bit that is:
+   - More significant than [highest_cleared], strictly;
+   - Set in [cleared_can_set] *)
+let left_cl_can_set highest_cleared cleared_can_set =
+  let can_set = Z.(cleared_can_set asr highest_cleared) in
+  highest_cleared + Z.trailing_zeros can_set
+
+let increase_lower_bound b lb =
+  (* [r] is the new candidate lower bound; we only keep the *unknown* bits of
+     [lb] and otherwise use the known bits from the domain [b].
+
+     [cleared_bits] contains the bits that were set in [lb] and got cleared in
+     [r]; conversely, [set_bits] contains the bits that were cleared in [lb] and
+     got set in [r]. *)
+  let r = Z.logor b.bits_set (Z.logand lb (Z.lognot b.bits_clr)) in
+  let cleared_bits = Z.logand lb (Z.lognot r) in
+  let set_bits = Z.logand (Z.lognot lb) r in
+
+  (* We now look at the most-significant bit that was changed (since [set_bits]
+     and [cleared_bits] have disjoint bits set, comparing them is equivalent to
+     comparing their most significant bit). *)
+  let c = Z.compare set_bits cleared_bits in
+  if c > 0 then (
+    (* [set_bits > cleared_bits] means that the most-significant changed bit
+       was 0, and is now 1.
+
+       Any higher bits are unchanged, but all lower bits that are not forced
+       must be cleared (for instance we can only increase 0b010 to 0b100;
+       increasing it to 0b110 would be incorrect).
+
+       The following clears any lower bits ([Z.numbits set_bits] is the
+       most-significant bit that was set), unless they are forced to 1. *)
+    let bit_to_set = Z.numbits set_bits in
+    let mask = Z.(minus_one lsl bit_to_set) in
+    Z.logand r @@ Z.logor mask b.bits_set
+  ) else if c = 0 then (
+    (* [set_bits] and [cleared_bits] can only be equal if they are both zero,
+       because no bit can go from 0 to 1 *and* from 1 to 0 at the same time. *)
+    assert (Z.equal set_bits Z.zero);
+    assert (Z.equal r lb);
+    lb
+  ) else (
+    (* [cleared_bits > set_bits] means that the most-significant changed bit was
+       1, and is now 0. To achieve this while increasing the value, we need to
+       set a higher bit from 0 to 1, and it needs to be the *lowest* bit that is
+       higher than the most-significant changed bit.
+
+       For instance to clear 0b01[1]011 we need to go to 0b100000.
+
+       Once we found that bit (done by [left_cl_can_set]), we do the same thing
+       as when the most-significant changed bit was 0 and is now 1 (see [if]
+       case above). *)
+    let bit_to_clear = Z.numbits cleared_bits in
+    let cleared_can_set = Z.lognot @@ Z.logor r b.bits_clr in
+    let bit_to_set = left_cl_can_set bit_to_clear cleared_can_set in
+    if bit_to_set >= b.width then
+      raise Not_found;
+    let r = Z.logor r Z.(~$1 lsl bit_to_set) in
+    let mask  = Z.(minus_one lsl bit_to_set) in
+    Z.logand r @@ Z.logor mask b.bits_set
+  )
+
+let decrease_upper_bound b ub =
+  (* x <= ub <-> ~ub <= ~x *)
+  let sz = width b in
+  assert (Z.numbits ub <= sz);
+  let nub =
+    increase_lower_bound (lognot b) (Z.extract (Z.lognot ub) 0 sz)
+  in
+  Z.extract (Z.lognot nub) 0 sz
+
+let fold_domain f b acc =
+  if b.width <= 0 then
+    invalid_arg "Bitlist.fold_domain";
+  let rec fold_domain_aux ofs b acc =
+    if ofs >= b.width then (
+      assert (is_fully_known b);
+      f (value b) acc
+    ) else if Z.testbit b.bits_clr ofs || Z.testbit b.bits_set ofs then
+      fold_domain_aux (ofs + 1) b acc
+    else
+      let mask = Z.(one lsl ofs) in
+      let acc =
+        fold_domain_aux
+          (ofs + 1) { b with bits_clr = Z.logor b.bits_clr mask } acc
+      in
+      fold_domain_aux
+        (ofs + 1) { b with bits_set = Z.logor b.bits_set mask } acc
+  in
+  fold_domain_aux 0 b acc

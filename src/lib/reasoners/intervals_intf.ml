@@ -650,6 +650,10 @@ module type Ring = sig
   (** [add u1 u2] evaluates to {m \{ x + y \mid x \in S_1, y \in S_2 \}} when
       [u1] evaluates to {m S_1} and [u2] evaluates to {m S_2}. *)
 
+  val scale : value -> t -> t
+  (** [scale v u] evaluates to {m \{ v \times x \mid x \in S \}} when [u]
+      evaluates to {m S}. *)
+
   val mul : t -> t -> t
   (** [mul u1 u2] evaluates to {m \{ x \times y \mid x \in S_1, y \in S_2 \}}
       when [u1] evaluates to {m S_1} and [u2] evaluates to {m S_2}. *)

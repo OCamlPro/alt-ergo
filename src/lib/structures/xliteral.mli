@@ -28,6 +28,7 @@
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
     IsConstr of Uid.t (* ADT tester *)
+  | BVULE (* unsigned bit-vector arithmetic *)
 
 type 'a view = (*private*)
   | Eq of 'a * 'a

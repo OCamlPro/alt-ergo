@@ -91,6 +91,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (odoc :with-doc)
   ppx_deriving
   stdcompat
+  (qcheck :with-test)
  )
  (conflicts
   (ppxlib (< 0.30.0))

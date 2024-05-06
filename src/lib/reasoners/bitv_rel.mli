@@ -27,4 +27,8 @@
 
 include Sig_rel.RELATION
 
+(**/**)
 
+module Test : sig
+  val shared_msb : int -> Z.t -> Z.t -> int
+end
