@@ -90,7 +90,9 @@ module Interval_domain : Rel_utils.Domain with type t = Intervals.Int.t = struct
     | Ty.Tbitv n ->
       Intervals.Int.of_bounds
         (Closed Z.zero) (Open Z.(~$1 lsl n))
-    | _ -> assert false
+    | ty ->
+      Fmt.invalid_arg "unknown: only bit-vector types are supported; got %a"
+        Ty.print ty
 
   let filter_ty = is_bv_ty
 
@@ -678,12 +680,12 @@ let rec shared_msb sz inf sup =
     sz - numbits_sup
 
 let finite_lower_bound = function
-  | Intervals_intf.Unbounded -> invalid_arg "finite_lower_bound"
+  | Intervals_intf.Unbounded -> Z.zero
   | Closed n -> n
   | Open n -> Z.succ n
 
-let finite_upper_bound = function
-  | Intervals_intf.Unbounded -> invalid_arg "finite_upper_bound"
+let finite_upper_bound ~size:sz = function
+  | Intervals_intf.Unbounded -> Z.extract Z.minus_one 0 sz
   | Closed n -> n
   | Open n -> Z.pred n
 
@@ -696,15 +698,22 @@ let finite_upper_bound = function
    CPAIOR 2017. International Conference on AI and OR Techniques in
    Constraint Programming for Combinatorial Optimization Problems, Jun
    2017, Padova, Italy.
-   https://cea.hal.science/cea-01795779/document *)
+   https://cea.hal.science/cea-01795779/document
+
+   Relevant excerpt:
+
+   For example, m = 48 and M = 52 (00110000 and 00110100 in binary) share their
+   five most-significant bits, denoted [00110???]. Therefore, a bit-vector bl =
+   [0??1???0] can be refined into [00110??0]. *)
 let constrain_bitlist_from_interval bv int =
   let open Domains.Ephemeral in
+  let sz = Bitlist.width !!bv in
+
   let inf, inf_ex = Intervals.Int.lower_bound int in
   let inf = finite_lower_bound inf in
   let sup, sup_ex = Intervals.Int.upper_bound int in
-  let sup = finite_upper_bound sup in
+  let sup = finite_upper_bound ~size:sz sup in
 
-  let sz = Bitlist.width !!bv in
   let nshared = shared_msb sz inf sup in
   if nshared > 0 then
     let ex = Ex.union inf_ex sup_ex in
@@ -714,10 +723,18 @@ let constrain_bitlist_from_interval bv int =
     update ~ex bv @@
     Bitlist.concat shared_bl (Bitlist.unknown (sz - nshared) Ex.empty)
 
-(* Algorithm 1 from "Sharpening Constraint Programming approaches for
-   Bit-Vector Theory".
+(* Algorithm 1 from
 
-   https://cea.hal.science/cea-01795779/document *)
+   Sharpening Constraint Programming approaches for Bit-Vector Theory.
+   Zakaria Chihani, Bruno Marre, François Bobot, Sébastien Bardin.
+   CPAIOR 2017. International Conference on AI and OR Techniques in
+   Constraint Programming for Combinatorial Optimization Problems, Jun
+   2017, Padova, Italy.
+   https://cea.hal.science/cea-01795779/document
+
+   This function is a wrapper calling [Bitlist.increase_lower_bound] and
+   [Bitlist.decrease_upper_bound] on all the constituent interavals of an union;
+   see the documentation of these functions for details. *)
 let constrain_interval_from_bitlist int bv =
   let open Interval_domains.Ephemeral in
   let ex = Bitlist.explanation bv in
@@ -734,41 +751,37 @@ let constrain_interval_from_bitlist int bv =
   update ~ex int @@
   Intervals.Int.fold (fun acc i ->
       let { Intervals_intf.lb ; ub } = Intervals.Int.Interval.view i in
+      let lb = finite_lower_bound lb in
+      let ub = finite_upper_bound ~size:(Bitlist.width bv) ub in
       let acc =
-        match lb with
-        | Intervals_intf.Unbounded | Open _ -> assert false
-        | Closed lb ->
-          match Bitlist.increase_lower_bound bv lb with
-          | new_lb when Z.compare new_lb lb > 0 ->
-            (* lower bound increased; remove [lb, new_lb[ *)
-            remove ~ex acc
-            @@ Intervals.Int.Interval.of_bounds (Closed lb) (Open new_lb)
-          | new_lb ->
-            (* no change *)
-            assert (Z.equal new_lb lb);
-            acc
-          | exception Not_found ->
-            (* No value larger than lb matches the bit-pattern *)
-            remove ~ex acc
-            @@ Intervals.Int.Interval.of_bounds (Closed lb) Unbounded
+        match Bitlist.increase_lower_bound bv lb with
+        | new_lb when Z.compare new_lb lb > 0 ->
+          (* lower bound increased; remove [lb, new_lb[ *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Closed lb) (Open new_lb)
+        | new_lb ->
+          (* no change *)
+          assert (Z.equal new_lb lb);
+          acc
+        | exception Not_found ->
+          (* No value larger than lb matches the bit-pattern *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Closed lb) Unbounded
       in
       let acc =
-        match ub with
-        | Intervals_intf.Unbounded | Open _ -> assert false
-        | Closed ub ->
-          match Bitlist.decrease_upper_bound bv ub with
-          | new_ub when Z.compare new_ub ub < 0 ->
-            (* upper bound decreased; remove ]new_ub, ub] *)
-            remove ~ex acc
-            @@ Intervals.Int.Interval.of_bounds (Open new_ub) (Closed ub)
-          | new_ub ->
-            (* no change *)
-            assert (Z.equal new_ub ub);
-            acc
-          | exception Not_found ->
-            (* No value smaller than ub matches the bit-pattern *)
-            remove ~ex acc
-            @@ Intervals.Int.Interval.of_bounds Unbounded (Closed ub)
+        match Bitlist.decrease_upper_bound bv ub with
+        | new_ub when Z.compare new_ub ub < 0 ->
+          (* upper bound decreased; remove ]new_ub, ub] *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Open new_ub) (Closed ub)
+        | new_ub ->
+          (* no change *)
+          assert (Z.equal new_ub ub);
+          acc
+        | exception Not_found ->
+          (* No value smaller than ub matches the bit-pattern *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds Unbounded (Closed ub)
       in
       acc
     ) !!int !!int
