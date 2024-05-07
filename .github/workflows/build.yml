@@ -29,10 +29,10 @@ jobs:
           - 4.08.1
           - 4.14.1
           - 5.0.0
-      exclude:
-        # No longer seems to be available
-        - os: macos-latest
-          ocaml-compiler: 4.08.1
+        exclude:
+          # No longer seems to be available
+          - os: macos-latest
+            ocaml-compiler: 4.08.1
 
     runs-on: ${{ matrix.os }}
 
