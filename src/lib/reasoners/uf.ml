@@ -529,7 +529,7 @@ module Env = struct
           else add_to_gamma p rp env.gamma ;
         neqs    =
           if MapX.mem p env.neqs then env.neqs
-          else update_neqs p rp Ex.empty env }
+          else update_neqs p rp ex_rp env }
     in
     Debug.check_invariants "init_leaf" env;
     env
