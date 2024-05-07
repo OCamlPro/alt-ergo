@@ -47,11 +47,11 @@ end
 module SetX = Shostak.SXH
 
 module SetXX = Set.Make(struct
-    type t = X.r * X.r
-    let compare (r1, r1') (r2, r2') =
+    type t = X.r * X.r * Explanation.t
+    let compare (r1, r1', _) (r2, r2', _) =
       let c = X.hash_cmp r1 r2 in
       if c <> 0 then c
-      else  X.hash_cmp r1' r2'
+      else X.hash_cmp r1' r2'
   end)
 
 module SetAc = Set.Make(struct type t = Ac.t let compare = Ac.compare end)
@@ -628,9 +628,9 @@ module Env = struct
       head_cp eqs env p r v dep;
       env
 
-  let update_aux dep set env=
+  let update_aux set env=
     SetXX.fold
-      (fun (rr, nrr) env ->
+      (fun (rr, nrr, dep) env ->
          { env with
            neqs = update_neqs rr nrr dep env ;
            classes = update_classes rr nrr env.classes})
@@ -668,15 +668,15 @@ module Env = struct
                env,
                (r, nrr, ex)::touched_p,
                update_global_tch global_tch p r nrr ex,
-               SetXX.add (rr, nrr) neqs_to_up
+               SetXX.add (rr, nrr, dep) neqs_to_up
           ) use_p (env, [], global_tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
-      update_aux dep neqs_to_up env, touched_p, global_tch
+      update_aux neqs_to_up env, touched_p, global_tch
 
     with Not_found -> assert false
 
-  let up_uf_rs dep env tch =
+  let up_uf_rs env tch =
     if RS.is_empty env.ac_rs then env, tch
     else
       let env, tch, neqs_to_up = MapX.fold
@@ -695,18 +695,18 @@ module Env = struct
                  if X.is_a_leaf r then (r,[r, nrr, ex],nrr) :: tch
                  else tch
                in
-               env, tch, SetXX.add (rr, nrr) neqs_to_up
+               env, tch, SetXX.add (rr, nrr, ex_nrr) neqs_to_up
           ) env.repr (env, tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
-      update_aux dep neqs_to_up env, tch
+      update_aux neqs_to_up env, tch
 
-  let apply_sigma eqs env tch ((p, v, dep) as sigma) =
+  let apply_sigma eqs env tch ((p, v, _) as sigma) =
     let env = init_leaves env p in
     let env = init_leaves env v in
     let env = apply_sigma_ac eqs env sigma in
     let env, touched_sigma, tch = apply_sigma_uf env sigma tch in
-    up_uf_rs dep env ((p, touched_sigma, v) :: tch)
+    up_uf_rs env ((p, touched_sigma, v) :: tch)
 
 end
 
