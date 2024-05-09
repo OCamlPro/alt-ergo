@@ -33,6 +33,7 @@ module Ex = Explanation
 module Sy = Symbols
 module X = Shostak.Combine
 module SX = Shostak.SXH
+module MX = Shostak.MXH
 module HX = Shostak.HX
 module L = Xliteral
 
@@ -82,6 +83,8 @@ module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
      (direct) dependency from [Bitlist] to the [Shostak] module. *)
 
   include Bitlist
+
+  let filter_ty = is_bv_ty
 
   let fold_signed f { Bitv.value; negated } bl acc =
     let bl = if negated then lognot bl else bl in
@@ -480,22 +483,23 @@ let propagate eqs bcs dom =
 
 type t =
   { delayed : Rel_utils.Delayed.t
-  ; domain : Domains.t
   ; constraints : Constraints.t
   ; size_splits : Q.t }
 
-let empty _ =
+let empty uf =
   { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
-  ; domain = Domains.empty
   ; constraints = Constraints.empty
-  ; size_splits = Q.one }
+  ; size_splits = Q.one },
+  Uf.Domains.add (module Domains) Domains.empty (Uf.domains uf)
 
 let assume env uf la =
+  let ds = Uf.domains uf in
+  let domain = Uf.Domains.find (module Domains) ds in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let (domain, constraints, eqs, size_splits) =
     try
-      let ((constraints, domain), eqs, size_splits) =
-        List.fold_left (fun ((bcs, dom), eqs, ss) (a, _root, ex, orig) ->
+      let (constraints, eqs, size_splits) =
+        List.fold_left (fun (bcs, eqs, ss) (a, _root, ex, orig) ->
             let ss =
               match orig with
               | Th_util.CS (Th_bitv, n) -> Q.(ss * n)
@@ -508,9 +512,8 @@ let assume env uf la =
             in
             match a, orig with
             | L.Eq (rr, nrr), Subst when is_bv_r rr ->
-              let dom = Domains.subst ~ex rr nrr dom in
               let bcs = Constraints.subst ~ex rr nrr bcs in
-              ((bcs, dom), eqs, ss)
+              (bcs, eqs, ss)
             | L.Distinct (false, [rr; nrr]), _ when is_1bit rr ->
               (* We don't (yet) support [distinct] in general, but we must
                  support it for case splits to avoid looping.
@@ -520,10 +523,10 @@ let assume env uf la =
               let not_nrr =
                 Shostak.Bitv.is_mine (Bitv.lognot (Shostak.Bitv.embed nrr))
               in
-              ((bcs, dom), (Uf.LX.mkv_eq rr not_nrr, ex) :: eqs, ss)
-            | _ -> ((bcs, dom), eqs, ss)
+              (bcs, (Uf.LX.mkv_eq rr not_nrr, ex) :: eqs, ss)
+            | _ -> (bcs, eqs, ss)
           )
-          ((env.constraints, env.domain), [], env.size_splits)
+          (env.constraints, [], env.size_splits)
           la
       in
       let eqs, constraints, domain = propagate eqs constraints domain in
@@ -545,14 +548,17 @@ let assume env uf la =
   let result =
     { result with assume = List.rev_append assume result.assume }
   in
-  { delayed ; constraints ; domain ; size_splits }, result
+  { delayed ; constraints ; size_splits },
+  Uf.Domains.add (module Domains) domain ds,
+  result
 
 let query _ _ _ = None
 
-let case_split env _uf ~for_model =
+let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
     []
   else
+    let domain = Uf.Domains.find (module Domains) (Uf.domains uf) in
     (* Look for representatives with minimal, non-fully known, domain size.
 
        We first look among the constrained variables, then if there are no
@@ -570,28 +576,28 @@ let case_split env _uf ~for_model =
           Some (nunk', SX.add r xs)
         | _ -> Some (nunk, SX.singleton r)
     in
+    let f_acc' r acc =
+      let r, _ = Uf.find_r uf r in
+      List.fold_left (fun acc { Bitv.bv; _ } ->
+          match bv with
+          | Bitv.Cte _ -> acc
+          | Other r | Ext (r, _, _, _) ->
+            let bl = Domains.get r.value domain in
+            f_acc r.value bl acc
+        ) acc (Shostak.Bitv.embed r)
+    in
     let _, candidates =
-      match
-        Constraints.fold_args (fun r acc ->
-            List.fold_left (fun acc { Bitv.bv; _ } ->
-                match bv with
-                | Bitv.Cte _ -> acc
-                | Other r | Ext (r, _, _, _) ->
-                  let bl = Domains.get r.value env.domain in
-                  f_acc r.value bl acc
-              ) acc (Shostak.Bitv.embed r)
-          ) env.constraints None
-      with
+      match Constraints.fold_args f_acc' env.constraints None with
       | Some (nunk, xs) -> nunk, xs
-      | None ->
-        match Domains.fold_leaves f_acc env.domain None with
+      | _ ->
+        match Domains.fold_leaves f_acc domain None with
         | Some (nunk, xs) -> nunk, xs
         | None -> 0, SX.empty
     in
     (* For now, just pick a value for the most significant bit. *)
     match SX.choose candidates with
     | r ->
-      let bl = Domains.get r env.domain in
+      let bl = Domains.get r domain in
       let w = Bitlist.width bl in
       let unknown = Z.extract (Z.lognot @@ Bitlist.bits_known bl) 0 w in
       let bitidx = Z.numbits unknown  - 1 in
@@ -611,19 +617,16 @@ let case_split env _uf ~for_model =
 let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   let env, eqs =
-    match X.type_info r with
-    | Tbitv _ -> (
-        try
-          let dom = Domains.add r env.domain in
-          let bcs = extract_constraints env.constraints uf r t in
-          let eqs, bcs, dom = propagate eqs bcs dom in
-          { env with constraints = bcs ; domain = dom }, eqs
-        with Domains.Inconsistent ex ->
-          raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
-      )
-    | _ -> env, eqs
+    if is_bv_r r then
+      try
+        let constraints = extract_constraints env.constraints uf r t in
+        { env with constraints }, eqs
+      with Domains.Inconsistent ex ->
+        raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
+    else
+      env, eqs
   in
-  { env with delayed }, eqs
+  { env with delayed }, Uf.domains uf, eqs
 
 let optimizing_objective _env _uf _o = None
 

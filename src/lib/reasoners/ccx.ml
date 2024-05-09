@@ -108,11 +108,15 @@ module Main : S = struct
 
   type r = Shostak.Combine.r
 
-  let empty = {
-    use = Use.empty ;
-    uf = Uf.empty;
-    relation = Rel.empty [];
-  }
+  let empty =
+    let uf = Uf.empty in
+    let relation, domains = Rel.empty uf in
+    let uf = Uf.set_domains uf domains in
+    {
+      use = Use.empty;
+      uf;
+      relation;
+    }
 
   let empty_facts () =
     Sig_rel.{ equas   = Queue.create ();
@@ -465,7 +469,8 @@ module Main : S = struct
   let replay_atom env sa =
     Options.exec_thread_yield ();
     let sa = make_unique sa in
-    let relation, result = Rel.assume env.relation env.uf sa in
+    let relation, domains, result = Rel.assume env.relation env.uf sa in
+    let env = { env with uf = Uf.set_domains env.uf domains } in
     let env = { env with relation = relation } in
     let env = clean_use env result.remove in
     env, result.assume
@@ -492,7 +497,8 @@ module Main : S = struct
       let nuse = Use.up_add env.use t rt lvs in
 
       (* If finitetest is used we add the term to the relation *)
-      let rel, eqs = Rel.add env.relation nuf rt t in
+      let rel, doms, eqs = Rel.add env.relation nuf rt t in
+      let nuf = Uf.set_domains nuf doms in
       Debug.rel_add_cst t eqs;
       (* We add terms made from relations as fact *)
       List.iter (fun (a,ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;

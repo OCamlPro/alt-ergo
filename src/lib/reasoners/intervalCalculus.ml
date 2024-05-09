@@ -683,7 +683,7 @@ let dispatch = function
   | Symbols.Pow -> Some delayed_pow
   | _ -> None
 
-let empty classes = {
+let empty uf = {
   inequations = MPL.empty;
   monomes = MX.empty ;
   polynomes = MP.empty ;
@@ -691,7 +691,7 @@ let empty classes = {
   known_eqs = SX.empty ;
   improved_p = SP.empty ;
   improved_x = SX.empty ;
-  classes = classes;
+  classes = Uf.cl_extract uf;
   size_splits = Q.one;
   new_uf = Uf.empty;
 
@@ -705,7 +705,7 @@ let empty classes = {
   th_axioms = ME.empty;
   linear_dep = ME.empty;
   syntactic_matching = [];
-}
+}, Uf.domains uf
 
 (*let up_improved env p oldi newi =
   if I.is_strict_smaller newi oldi then
@@ -1700,7 +1700,7 @@ let assume ~query env uf la =
          if Uf.is_normalized uf (alien_of p) then mp else MP.remove p mp)
       env.polynomes env.polynomes
   in
-  {env with polynomes = polys}, res
+  {env with polynomes = polys}, Uf.domains uf, res
 
 let query env uf a_ex =
   try
@@ -1801,8 +1801,8 @@ let add =
         let delayed, eqs =
           Rel_utils.Delayed.add env.delayed env.new_uf r t
         in
-        { env with delayed }, eqs
-      else env, []
+        { env with delayed }, Uf.domains new_uf, eqs
+      else env, Uf.domains new_uf, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl;
       raise (Ex.Inconsistent (expl, env.classes))

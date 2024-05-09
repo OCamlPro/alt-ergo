@@ -47,8 +47,8 @@ end
 module SetX = Shostak.SXH
 
 module SetXX = Set.Make(struct
-    type t = X.r * X.r
-    let compare (r1, r1') (r2, r2') =
+    type t = X.r * X.r * Explanation.t
+    let compare (r1, r1', _) (r2, r2', _) =
       let c = X.hash_cmp r1 r2 in
       if c <> 0 then c
       else  X.hash_cmp r1' r2'
@@ -78,6 +78,87 @@ end
 
 type r = X.r
 
+type _ id = ..
+
+module type Domains = sig
+  type t
+
+  val pp : t Fmt.t
+
+  type _ id += Id : t id
+
+  val empty : t
+
+  val filter_ty : Ty.t -> bool
+
+  val add : X.r -> t -> t
+
+  exception Inconsistent of Explanation.t
+
+  val subst : ex:Explanation.t -> r -> r -> t -> t
+end
+
+type 'a domains = (module Domains with type t = 'a)
+
+module Domains = struct
+  type (_, _) eq = Equal : ('a, 'a) eq
+
+  let[@inline] uid (type a) ((module Doms) : a domains) =
+    Obj.Extension_constructor.id (Obj.Extension_constructor.of_val Doms.Id)
+
+  module MapI = Map.Make(Int)
+
+  type binding = B : 'a domains * 'a -> binding
+
+  type t = binding MapI.t
+
+  let pp : t Fmt.t =
+    let open Fmt in
+    vbox (
+      any "@,=================== UF: Domains ======================@," ++
+      iter
+        ~sep:(any "@,------------------------------------------------------@,")
+        (fun f ->
+           MapI.iter (fun _ (B ((module D), d)) ->
+               f (hvbox (const D.pp d))
+             ))
+        (fun ppf pp -> pp ppf ())
+    ) ++ cut
+
+  let empty = MapI.empty
+
+  let find (type a) ((module D) as k : a domains) t : a =
+    match MapI.find (uid k) t with
+    | exception Not_found -> D.empty
+    | B ((module D'), d) ->
+      match D'.Id with
+      | D.Id -> d
+      | _ ->
+        (* Distinct extension constructors cannot have the same uid. *)
+        assert false
+
+  let init r t =
+    let ty = X.type_info r in
+    MapI.map (function B ((module D) as dom, d) as b ->
+        if D.filter_ty ty then B (dom, D.add r d) else b
+      ) t
+
+  let add (type a) ((module D) as dom : a domains) v t =
+    MapI.add (uid dom) (B (dom, v)) t
+
+  exception Inconsistent of Ex.t
+
+  let subst ~ex rr nrr t =
+    let ty = X.type_info rr in
+    MapI.map (function B (((module D) as dom), d) as b ->
+        if D.filter_ty ty then
+          try
+            B (dom, D.subst ~ex rr nrr d)
+          with D.Inconsistent ex -> raise (Inconsistent ex)
+        else b
+      ) t
+end
+
 type t = {
 
   (* term -> [t] *)
@@ -85,6 +166,9 @@ type t = {
 
   (* representative table *)
   repr : (r * Ex.t) MapX.t;
+
+  (* domains associated with class representatives (values in repr) only *)
+  domains : Domains.t;
 
   (* r -> class (of terms) *)
   classes : SE.t MapX.t;
@@ -99,7 +183,6 @@ type t = {
   (*AC rewrite system *)
   ac_rs : SetRL.t RS.t;
 }
-
 
 exception Found_term of E.t
 
@@ -200,13 +283,14 @@ module Debug = struct
       print_dbg
         ~module_name:"Uf" ~function_name:"all"
         "@[<v 0>-------------------------------------------------@ \
-         %a%a%a%a%a\
+         %a%a%a%a%a%a\
          -------------------------------------------------@]"
         pmake env.make
         prepr env.repr
         prules env.ac_rs
         pclasses env.classes
         pneqs env.neqs
+        (if Options.get_verbose () then Domains.pp else Fmt.any "") env.domains
 
   let lookup_not_found t env =
     print_err
@@ -502,6 +586,10 @@ module Env = struct
        function again with x == repr_x *)
     MapX.add repr_x mapl (MapX.remove x env.neqs)
 
+  let update_domains ~ex rr nrr env =
+    try Domains.subst ~ex rr nrr env.domains
+    with Domains.Inconsistent ex -> raise (Ex.Inconsistent (ex, cl_extract env))
+
   let init_leaf env p =
     Debug.init_leaf p;
     let in_repr = MapX.mem p env.repr in
@@ -521,6 +609,9 @@ module Env = struct
         repr    =
           if in_repr then env.repr
           else MapX.add p (rp, ex_rp) env.repr;
+        domains =
+          if in_repr then env.domains
+          else Domains.init rp env.domains;
         classes =
           if MapX.mem p env.classes then env.classes
           else update_classes p rp env.classes;
@@ -555,6 +646,7 @@ module Env = struct
       {env with
        make    = ME.add t mkr env.make;
        repr    = MapX.add mkr (rp,ex) env.repr;
+       domains = Domains.init rp env.domains;
        classes = add_to_classes t rp env.classes;
        gamma   = add_to_gamma mkr rp env.gamma;
        neqs    =
@@ -628,12 +720,13 @@ module Env = struct
       head_cp eqs env p r v dep;
       env
 
-  let update_aux dep set env=
+  let update_aux dep set env =
     SetXX.fold
-      (fun (rr, nrr) env ->
+      (fun (rr, nrr, ex) env ->
          { env with
            neqs = update_neqs rr nrr dep env ;
-           classes = update_classes rr nrr env.classes})
+           classes = update_classes rr nrr env.classes ;
+           domains = update_domains ~ex rr nrr env })
       set env
 
   (* Patch modudo AC for CC: if p is a leaf different from r and r is AC
@@ -668,7 +761,7 @@ module Env = struct
                env,
                (r, nrr, ex)::touched_p,
                update_global_tch global_tch p r nrr ex,
-               SetXX.add (rr, nrr) neqs_to_up
+               SetXX.add (rr, nrr, dep) neqs_to_up
           ) use_p (env, [], global_tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
@@ -695,7 +788,7 @@ module Env = struct
                  if X.is_a_leaf r then (r,[r, nrr, ex],nrr) :: tch
                  else tch
                in
-               env, tch, SetXX.add (rr, nrr) neqs_to_up
+               env, tch, SetXX.add (rr, nrr, ex_nrr) neqs_to_up
           ) env.repr (env, tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
@@ -868,6 +961,10 @@ let find_r =
   Options.tool_req 3 "TR-UFX-Find";
   Env.find_or_normal_form
 
+let domains env = env.domains
+
+let set_domains env domains = { env with domains }
+
 let print = Debug.all
 
 let mem = Env.mem
@@ -891,6 +988,7 @@ let empty =
   let env = {
     make  = ME.empty;
     repr = MapX.empty;
+    domains = Domains.empty;
     classes = MapX.empty;
     gamma = MapX.empty;
     neqs = MapX.empty;

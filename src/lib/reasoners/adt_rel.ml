@@ -108,6 +108,12 @@ module Domain = struct
     domain ~constrs ex
 end
 
+let is_adt_ty = function
+  | Ty.Tadt _ -> true
+  | _ -> false
+
+let is_adt r = is_adt_ty (X.type_info r)
+
 module Domains = struct
   (** The type of simple domain maps. A domain map maps each representative
       (semantic value, of type [X.r]) to its associated domain. *)
@@ -122,6 +128,8 @@ module Domains = struct
         in [propagation]. *)
   }
 
+  type _ Uf.id += Id : t Uf.id
+
   let pp ppf t =
     Fmt.(iter_bindings ~sep:semi MX.iter
            (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
@@ -130,6 +138,8 @@ module Domains = struct
       ppf t.domains
 
   let empty = { domains = MX.empty; changed = SX.empty }
+
+  let filter_ty = is_adt_ty
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
@@ -148,16 +158,14 @@ module Domains = struct
         Domain.unknown (X.type_info r)
 
   let add r t =
-    if MX.mem r t.domains then t
-    else
-      match Th.embed r with
-      | Constr _ | Select _ -> t
-      | Alien _ ->
-        (* We have to add a default domain if the key `r` isn't in map in order
-           to be sure that the case-split mechanism will attempt to choose a
-           value for it. *)
-        let nd = Domain.unknown (X.type_info r) in
-        internal_update r nd t
+    match Th.embed r with
+    | Alien _ when not (MX.mem r t.domains) ->
+      (* We have to add a default domain if the key `r` isn't in map in order
+          to be sure that the case-split mechanism will attempt to choose a
+          value for it. *)
+      let nd = Domain.unknown (X.type_info r) in
+      internal_update r nd t
+    | Alien _ | Constr _ | Select _ -> t
 
   (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d] contains
       in the current domain of [r]. The representative [r] is marked [changed]
@@ -177,6 +185,8 @@ module Domains = struct
     let changed = SX.remove r t.changed in
     { domains ; changed }
 
+  exception Inconsistent = Domain.Inconsistent
+
   (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
       domains, merging the corresponding domains as appropriate.
 
@@ -191,7 +201,7 @@ module Domains = struct
       let t = remove r t in
       tighten nr nd t
 
-    | exception Not_found -> t
+    | exception Not_found -> add nr t
 
   (* [propagate f a t] iterates on all the changed domains of [t] since the
      last call of [propagate]. The list of changed domains is flushed after
@@ -238,14 +248,6 @@ let dispatch = function
   | _ -> None
 
 type t = {
-  classes : E.Set.t list;
-  (* State of the union-find represented by all its equivalence classes.
-     This state is kept for debugging purposes only. It is updated after
-     assuming literals of the theory and returned by queries in case of
-     inconsistency. *)
-
-  domains : Domains.t;
-
   delayed : Rel_utils.Delayed.t;
   (* Set of delayed destructor applications. The computation of a destructor
      application [d r] is forced if we see the tester `(_ is d) r` of the
@@ -262,13 +264,11 @@ type t = {
      See the function [deduce_is_constr]. *)
 }
 
-let empty classes = {
-  classes;
-  domains = Domains.empty;
+let empty uf = {
   delayed = Rel_utils.Delayed.create ~is_ready dispatch;
   size_splits = Numbers.Q.one;
   new_terms = SE.empty;
-}
+}, Uf.Domains.add (module Domains) Domains.empty (Uf.domains uf)
 
 (* ################################################################ *)
 (*BISECT-IGNORE-BEGIN*)
@@ -282,12 +282,12 @@ module Debug = struct
         ~function_name:"assume"
         "assume %a" LR.print (LR.make a)
 
-  let pp_env loc env =
+  let pp_domains loc domains =
     if Options.get_debug_adt () then begin
       print_dbg ~flushed:false ~module_name:"Adt_rel"
         "@[<v 2>--ADT env %s ---------------------------------@ " loc;
       print_dbg ~flushed:false ~header:false "domains:@ %a"
-        Domains.pp env.domains;
+        Domains.pp domains;
       print_dbg ~header:false "---------------------"
     end
 
@@ -327,18 +327,6 @@ let assume_th_elt t th_elt _ =
     failwith "This Theory does not support theories extension"
   | _ -> t
 
-let tighten_domain r nd env =
-  { env with domains = Domains.tighten r nd env.domains }
-
-(* Update the domains of the semantic values [r1] and [r2] according to
-   the substitution `r1 |-> r2`.
-
-   @raise Domain.Inconsistent if this substitution is inconsistent with
-          the current environment [env]. *)
-let assume_subst ~ex r1 r2 env =
-  let domains = Domains.subst ~ex r1 r2 env.domains in
-  { env with domains }
-
 (* Update the domains of the semantic values [r1] and [r2] according to the
    disequality [r1 <> r2].
 
@@ -355,37 +343,37 @@ let assume_subst ~ex r1 r2 env =
    @raise Domain.Inconsistent if the disequality is inconsistent with
           the current environment [env]. *)
 let assume_distinct =
-  let aux ~ex r1 r2 env =
+  let aux ~ex r1 r2 domains =
     match Th.embed r1 with
     | Constr { c_args; _ } when List.length c_args = 0 ->
       begin
-        let d1 = Domains.get r1 env.domains in
-        let d2 = Domains.get r2 env.domains in
+        let d1 = Domains.get r1 domains in
+        let d2 = Domains.get r2 domains in
         match Domain.as_singleton d1 with
         | Some (c, ex') ->
           let ex = Ex.union ex ex' in
           let nd = Domain.remove ~ex c d2 in
-          tighten_domain r2 nd env
-        | None -> env
+          Domains.tighten r2 nd domains
+        | None -> domains
       end
     | _ ->
       (* If `d1` is a singleton domain but its constructor has a payload,
          we cannot tighten the domain of `r2` because they could have
          distinct payloads. *)
-      env
-  in fun ~ex r1 r2 env ->
-    aux ~ex r1 r2 env |> aux ~ex r2 r1
+      domains
+  in fun ~ex r1 r2 domains ->
+    aux ~ex r1 r2 domains |> aux ~ex r2 r1
 
 (* Assumes the tester `((_ is c) r)` where [r] can be a constructor
    application or a uninterpreted semantic value.
 
    @raise Domain.Inconsistent if we already know that the value of [r]
           cannot be an application of the constructor [c]. *)
-let assume_is_constr ~ex r c env =
-  let d1 = Domains.get r env.domains in
+let assume_is_constr ~ex r c domains =
+  let d1 = Domains.get r domains in
   let d2 = Domain.singleton ~ex:Explanation.empty c in
   let nd = Domain.intersect ~ex d1 d2 in
-  tighten_domain r nd env
+  Domains.tighten r nd domains
 
 (* Assume `(not ((_ is c) r))` where [r] can be a constructor application
    or a uninterpreted semantic value.
@@ -394,49 +382,35 @@ let assume_is_constr ~ex r c env =
 
    @raise Domain.Inconsistent if we already know that the value of [r] has to
           be an application of the constructor [c]. *)
-let assume_not_is_constr ~ex r c env =
-  let d = Domains.get r env.domains in
+let assume_not_is_constr ~ex r c domains =
+  let d = Domains.get r domains in
   let nd = Domain.remove ~ex c d in
-  tighten_domain r nd env
+  Domains.tighten r nd domains
 
-let add r uf env =
+let add r uf domains =
   match X.type_info r with
   | Ty.Tadt _ ->
     Debug.add r;
     let rr, _ = Uf.find_r uf r in
-    { env with domains = Domains.add rr env.domains }
+    Domains.add rr domains
   | _ ->
-    env
+    domains
 
-let is_adt r =
-  match X.type_info r with
-  | Ty.Tadt _ -> true
-  | _ -> false
-
-let add_rec r uf env =
-  List.fold_left (fun env lf -> add lf uf env) env (X.leaves r)
+let add_rec r uf domains =
+  List.fold_left (fun env lf -> add lf uf env) domains (X.leaves r)
 
 let add env uf r t =
   if Options.get_disable_adts () then
-    env, []
+    env, Uf.domains uf, []
   else
-    let env = add r uf env in
     let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
-    { env with delayed }, eqs
+    { env with delayed }, Uf.domains uf, eqs
 
-let assume_literals la uf env =
+let assume_literals la uf domains =
   List.fold_left
-    (fun env lit ->
+    (fun domains lit ->
        let open Xliteral in
        match lit with
-       | Eq (r1, r2) as l, _, ex, Th_util.Subst when is_adt r1 ->
-         Debug.assume l;
-         (* Needed for models generation because fresh terms are not added with
-            the function add. *)
-         let env = add_rec r1 uf env in
-         let env = add_rec r2 uf env in
-         assume_subst ~ex r1 r2 env
-
        | Distinct (false, [r1; r2]) as l, _, ex, _ when is_adt r2 ->
          Debug.assume l;
          let rr1, ex1 = Uf.find_r uf r1 in
@@ -447,7 +421,7 @@ let assume_literals la uf env =
          let ex = Ex.union ex1 @@ Ex.union ex2 ex in
          (* Needed for models generation because fresh terms are not added with
             the function add. *)
-         let env = add_rec rr1 uf env in
+         let env = add_rec rr1 uf domains in
          let env = add_rec rr2 uf env in
          assume_distinct ~ex rr1 rr2 env
 
@@ -455,23 +429,16 @@ let assume_literals la uf env =
          Debug.assume l;
          let r, ex1 = Uf.find_r uf r in
          let ex = Ex.union ex1 ex in
-         assume_is_constr ~ex r c env
+         assume_is_constr ~ex r c domains
 
        | Builtin (false, Sy.IsConstr c, [r]) as l, _, ex, _ ->
          Debug.assume l;
          let r, ex1 = Uf.find_r uf r in
          let ex = Ex.union ex1 ex in
-         assume_not_is_constr ~ex r c env
+         assume_not_is_constr ~ex r c domains
 
-       | _ ->
-         (* We ignore [Eq] literals that aren't substitutions as the propagation
-            of such equalities will produce substitutions later.
-            More precisely, the equation [Eq (r1, r2)] will produce two
-            substitutions:
-              [Eq (r1, rr)] and [Eq (r2, rr)]
-            where [rr] is the new class representative. *)
-         env
-    ) env la
+       | _ -> domains
+    ) domains la
 
 (* For a uninterpreted semantic value [r] and [c] a constructor of the form:
      (cons (d1 ty1) ... (dn tyn))
@@ -513,7 +480,7 @@ let build_constr_eq r c =
   | Select _ ->
     assert false
 
-let propagate_domains env =
+let propagate_domains new_terms domains =
   Domains.propagate
     (fun (eqs, new_terms) rr d ->
        match Domain.as_singleton d with
@@ -527,7 +494,7 @@ let propagate_domains env =
          end
        | None ->
          eqs, new_terms
-    ) ([], env.new_terms) env.domains
+    ) ([], new_terms) domains
 
 (* Remove duplicate literals in the list [la]. *)
 let remove_redundancies la =
@@ -552,27 +519,30 @@ let count_splits env la =
     ) env.size_splits la
 
 let assume env uf la =
-  Debug.pp_env "before assume" env;
+  let ds = Uf.domains uf in
+  let domains = Uf.Domains.find (module Domains) ds in
+  Debug.pp_domains "before assume" domains;
   (* should be done globally in CCX *)
   let la = remove_redundancies la in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
-  let env =
+  let domains =
     try
-      assume_literals la uf env
+      assume_literals la uf domains
     with Domain.Inconsistent ex ->
-      raise_notrace (Ex.Inconsistent (ex, env.classes))
+      raise_notrace (Ex.Inconsistent (ex, Uf.cl_extract uf))
   in
-  let (assume, new_terms), domains = propagate_domains env in
+  let (assume, new_terms), domains = propagate_domains env.new_terms domains in
   let assume = List.rev_append assume result.assume in
   let env = {
-    delayed; domains;
-    classes = Uf.cl_extract uf;
+    delayed;
     size_splits = count_splits env la;
     new_terms;
   }
   in
-  Debug.pp_env "after assume" env;
-  env, Sig_rel.{ assume; remove = [] }
+  Debug.pp_domains "after assume" domains;
+  env,
+  Uf.Domains.add (module Domains) domains ds,
+  Sig_rel.{ assume; remove = [] }
 
 (* ################################################################ *)
 
@@ -620,13 +590,15 @@ let pick_delayed_destructor env =
 (* Do a case-split by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
-let case_split env _uf ~for_model =
+let case_split env uf ~for_model =
   if Options.get_disable_adts () || not (Options.get_enable_adts_cs())
   then
     []
   else begin
     assert (not for_model);
-    if Options.get_debug_adt () then Debug.pp_env "before cs" env;
+    if Options.get_debug_adt () then
+      Debug.pp_domains "before cs"
+        (Uf.Domains.find (module Domains) (Uf.domains uf));
     match pick_delayed_destructor env with
     | Some (r, d) ->
       if Options.get_debug_adt () then
@@ -644,24 +616,25 @@ let case_split env _uf ~for_model =
 
 let optimizing_objective _env _uf _o = None
 
-let query env uf (ra, _, ex, _) =
+let query _env uf (ra, _, ex, _) =
   if Options.get_disable_adts () then None
   else
+    let domains = Uf.Domains.find (module Domains) (Uf.domains uf) in
     try
       match ra with
       | Xliteral.Builtin(true, Sy.IsConstr c, [r]) ->
         let rr, _ = Uf.find_r uf r in
-        ignore (assume_is_constr ~ex rr c env);
+        ignore (assume_is_constr ~ex rr c domains);
         None
 
       | Xliteral.Builtin(false, Sy.IsConstr c, [r]) ->
         let rr, _ = Uf.find_r uf r in
-        ignore (assume_not_is_constr ~ex rr c env);
+        ignore (assume_not_is_constr ~ex rr c domains);
         None
 
       | _ ->
         None
     with
-    | Domain.Inconsistent ex -> Some (ex, env.classes)
+    | Domain.Inconsistent ex -> Some (ex, Uf.cl_extract uf)
 
 (* ################################################################ *)

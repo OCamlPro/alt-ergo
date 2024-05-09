@@ -89,13 +89,13 @@ type t = {
      state of the solver to their explanation. *)
 }
 
-let empty _ = {
+let empty uf = {
   pending_deds      = ME2.empty;
   guarded_pos_deds  = ME.empty;
   guarded_neg_deds  = ME.empty;
   assumed_pos_preds = ME.empty;
   assumed_neg_preds = ME.empty;
-}
+}, Uf.domains uf
 
 let is_ite =
   let ite = Symbols.Op Symbols.Tite in
@@ -135,8 +135,8 @@ let add_aux env t =
         let guarded_neg_deds = add_to_guarded p t t2 env.guarded_neg_deds in
         {env with guarded_pos_deds; guarded_neg_deds}
 
-let add env _ _ t =
-  add_aux env t, []
+let add env uf _ t =
+  add_aux env t, Uf.domains uf, []
 
 (* Extract all the assumed predicates with their explanation from the input of
    the function assume below. *)
@@ -180,8 +180,9 @@ let extract_pending_deductions env =
 (* Save in the environment env all the assumed predicates of la. Produce new
    deductions implied by these new assumed predicates.
    Eventually, return all the pending deductions. *)
-let assume env _ la =
-  if Options.get_disable_ites () then env, { Sig_rel.assume = []; remove = [] }
+let assume env uf la =
+  if Options.get_disable_ites () then
+    env, Uf.domains uf, { Sig_rel.assume = []; remove = [] }
   else
     let env =
       TB.fold
@@ -209,7 +210,7 @@ let assume env _ la =
         )(extract_preds env la) env
     in
     let env, deds = extract_pending_deductions env in
-    env, { Sig_rel.assume = deds; remove = [] }
+    env, Uf.domains uf, { Sig_rel.assume = deds; remove = [] }
 
 let case_split _env _uf ~for_model:_ = []
 

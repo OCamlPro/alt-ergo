@@ -34,6 +34,77 @@ type t
 
 type r = Shostak.Combine.r
 
+type _ id = ..
+(** Extensible type for global domains identifiers, see {!Domains}. *)
+
+module type Domains = sig
+  (** Module signature for global domains used by the union-find module.
+
+      The union-find module updates global domains when equivalence classes are
+      merged. *)
+
+  type t
+  (** The type of global domains. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for global domains. *)
+
+  type _ id += Id : t id
+  (** Id used by the union-find module to dispatch to this module. Must be
+      unique (i.e. do not re-export the [Id] from another module). *)
+
+  val empty : t
+  (** The empty domain. *)
+
+  val filter_ty : Ty.t -> bool
+  (** Limit the type of terms that this module cares about. Only substitutions
+      of representatives for which [filter_ty (type_info r)] holds will be
+      propagated to this module. *)
+
+  val add : r -> t -> t
+  (** [add r t] is called when the representative [r] is added to the
+      union-find, if it has a type that matches [filter_ty].
+
+      {b Note}: unlike [Relation.add], this function is called even for
+      "dynamic" representatives added by [X.make] or AC normalization. *)
+
+  exception Inconsistent of Explanation.t
+  (** Raised by [subst] below when an inconsistency is found while merging the
+      domains.*)
+
+  val subst : ex:Explanation.t -> r -> r -> t -> t
+  (** [subst ~ex rr nrr t] is called when the representatives [rr] and [nrr] are
+      merged with explanation [ex]. [nrr] is the new representative; [rr] should
+      no longer be tracked and the intersection of domains should be associated
+      with [nrr].
+
+      The explanation [ex] justifies the equality [rr = nrr].
+
+      @raise Inconsistent if the domains for [rr] and [nrr] are incompatible. *)
+end
+
+type 'a domains = (module Domains with type t = 'a)
+(** The type for global domain modules with storage type ['a]. *)
+
+module Domains : sig
+  (** Maps from domain module to an instance of the corresponding type. *)
+
+  type t
+  (** The [Domains.t] type maps domain modules (of type ['a domains]) to an
+      associated domain of the corresponding type ['a]. *)
+
+  val empty : t
+  (** [empty] maps all domain modules [D] to its default domain [D.empty]. *)
+
+  val find : 'a domains -> t -> 'a
+  (** [find (module D) t] returns the global domain associated with the domain
+      module [D]. Defaults to [D.empty]. *)
+
+  val add : 'a domains -> 'a -> t -> t
+  (** [add (module D) d t] registers the global domain [d] for the domain module
+      [D]. Overwrite any pre-existing global domain associated with [D]. *)
+end
+
 module LX = Shostak.L
 
 val empty : t
@@ -44,6 +115,10 @@ val mem : t -> Expr.t -> bool
 val find : t -> Expr.t -> r * Explanation.t
 
 val find_r : t -> r -> r * Explanation.t
+
+val domains : t -> Domains.t
+
+val set_domains : t -> Domains.t -> t
 
 val union :
   t -> r -> r -> Explanation.t ->

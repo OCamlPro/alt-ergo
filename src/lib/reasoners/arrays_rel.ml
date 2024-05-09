@@ -94,7 +94,7 @@ type t =
   }
 
 
-let empty _ =
+let empty uf =
   {gets  = G.empty;
    tbset = TBS.empty;
    split = LRset.empty;
@@ -102,7 +102,7 @@ let empty _ =
    seen  = Tmap.empty;
    new_terms = E.Set.empty;
    size_splits = Numbers.Q.one;
-  }
+  }, Uf.domains uf
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
@@ -428,10 +428,10 @@ let assume env uf la =
     Conseq.fold (fun (a,ex) l ->
         ((Literal.LTerm a, ex, Th_util.Other)::l)) atoms []
   in
-  env, { Sig_rel.assume = l; remove = [] }
+  env, Uf.domains uf, { Sig_rel.assume = l; remove = [] }
 
 let query _ _ _ = None
-let add env _ _ _ = env, []
+let add env uf _ _ = env, Uf.domains uf, []
 
 let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []

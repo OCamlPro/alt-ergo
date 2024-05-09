@@ -45,7 +45,7 @@ type 'a facts = {
 }
 
 type 'a result = {
-  assume : 'a fact list;
+  assume: 'a fact list;
   remove: Expr.t list;
 }
 
@@ -54,10 +54,11 @@ module type RELATION = sig
 
   val timer : Timers.ty_module
 
-  val empty : Expr.Set.t list -> t
+  val empty : Uf.t -> t * Uf.Domains.t
 
   val assume : t ->
-    Uf.t -> (Shostak.Combine.r input) list -> t * Shostak.Combine.r result
+    Uf.t -> (Shostak.Combine.r input) list ->
+    t * Uf.Domains.t * Shostak.Combine.r result
   val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
 
   val case_split :
@@ -80,7 +81,7 @@ module type RELATION = sig
       Returns [None] if the theory cannot optimize the objective. *)
 
   val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
-    t * (Shostak.Combine.r Xliteral.view * Explanation.t) list
+    t * Uf.Domains.t * (Shostak.Combine.r Xliteral.view * Explanation.t) list
   (** add a representant to take into account *)
 
   val instantiate :

@@ -32,13 +32,13 @@ type t = unit
 
 let timer = Timers.M_Records
 
-let empty _ = ()
-let assume _ _ _ =
-  (), { Sig_rel.assume = []; remove = []}
+let empty uf = (), Uf.domains uf
+let assume _ uf _ =
+  (), Uf.domains uf, { Sig_rel.assume = []; remove = [] }
 let query _ _ _ = None
 let case_split _env _uf ~for_model:_ = []
 let optimizing_objective _env _uf _o = None
-let add env _ _ _ = env, []
+let add env uf _ _ = env, Uf.domains uf, []
 let new_terms _ = Expr.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
