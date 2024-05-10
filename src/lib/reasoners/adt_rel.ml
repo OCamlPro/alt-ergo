@@ -453,12 +453,14 @@ let assume_literals la uf env =
 
        | Builtin (true, Sy.IsConstr c, [r]) as l, _, ex, _ ->
          Debug.assume l;
-         let r, _ = Uf.find_r uf r in
+         let r, ex1 = Uf.find_r uf r in
+         let ex = Ex.union ex1 ex in
          assume_is_constr ~ex r c env
 
        | Builtin (false, Sy.IsConstr c, [r]) as l, _, ex, _ ->
          Debug.assume l;
-         let r, _ = Uf.find_r uf r in
+         let r, ex1 = Uf.find_r uf r in
+         let ex = Ex.union ex1 ex in
          assume_not_is_constr ~ex r c env
 
        | _ ->
