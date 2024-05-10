@@ -30,6 +30,7 @@
     (pps
       ppx_blob
       ppx_deriving.ord
+      ppx_deriving.eq
       ppx_deriving.show
       ppx_deriving.enum
       ppx_deriving.fold

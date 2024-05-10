@@ -22,6 +22,11 @@
    Input_frontend
    Signals_profiling
    Solving_loop)
+  (preprocess
+    (pps
+      ppx_deriving.eq
+    )
+  )
 )
 
 (generate_sites_module

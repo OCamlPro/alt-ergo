@@ -14,7 +14,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type prelude = Fpa | Ria | Nra
+type prelude = Fpa | Ria | Nra [@@deriving eq]
 
 let pp_prelude ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
@@ -25,6 +25,7 @@ type t =
   | Prelude of prelude
   | ADT
   | AC
+[@@deriving eq]
 
 let pp ppf = function
   | Prelude p -> pp_prelude ppf p

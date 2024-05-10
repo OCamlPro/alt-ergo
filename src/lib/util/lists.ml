@@ -32,6 +32,27 @@ let is_empty = function
   | [] -> true
   | _ -> false
 
+let rec mem eq x = function
+  | [] -> false
+  | a::l -> eq a x || mem eq x l
+
+let rec assoc eq x = function
+  | [] -> raise Not_found
+  | (a,b)::l -> if eq a x then b else assoc eq x l
+
+let rec assoc_opt eq x = function
+    [] -> None
+  | (a,b)::l -> if eq a x then Some b else assoc_opt eq x l
+
+let rec mem_assoc eq x = function
+  | [] -> false
+  | (a, _) :: l -> eq a x || mem_assoc eq x l
+
+let rec remove_assoc eq x = function
+  | [] -> []
+  | (a, _ as pair) :: l ->
+    if eq a x then l else pair :: remove_assoc eq x l
+
 let apply f l =
   let res, same =
     List.fold_left

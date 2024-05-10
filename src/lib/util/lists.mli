@@ -38,6 +38,21 @@
 val is_empty : 'a list -> bool
 (** Is the list empty? *)
 
+val mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
+(** Similar to [List.mem] but use a monomorphic comparison function. *)
+
+val assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
+(** Similar to [List.assoc] but use a monomorphic comparison function. *)
+
+val assoc_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
+(** Similar to [List.assoc_opt] but use a monomorphic comparison function. *)
+
+val mem_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> bool
+(** Similar to [List.mem_assoc] but use a monomorphic comparison function. *)
+
+val remove_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> ('a * 'b) list
+(** Similar to [List.remove_assoc] but use a monomorphic comparison function. *)
+
 val apply : ('a -> 'a) -> 'a list -> 'a list * bool
 (** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
     same such that: (1) "same" is true if and only if a_i == a_i for
