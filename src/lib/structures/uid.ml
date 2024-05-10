@@ -35,23 +35,6 @@ type t =
   | Hstring : Hstring.t -> t
   | Dolmen : 'a DE.id -> t
 
-(** Helper function: returns the basename of a dolmen path, since in AE
-    the problems are contained in one-file (for now at least), the path is
-    irrelevant and only the basename matters *)
-let get_basename = function
-  | DStd.Path.Local { name; }
-  | Absolute { name; path = []; } -> name
-  | Absolute { name; path; } ->
-    Fmt.failwith
-      "Expected an empty path to the basename: \"%s\" but got: [%a]."
-      name (fun fmt l ->
-          match l with
-          | h :: t ->
-            Format.fprintf fmt "%s" h;
-            List.iter (Format.fprintf fmt "; %s") t
-          | _ -> ()
-        ) path
-
 let[@inline always] of_dolmen id = Dolmen id
 let[@inline always] of_hstring hs = Hstring hs
 let[@inline always] of_string s = of_hstring @@ Hstring.make s
@@ -62,7 +45,7 @@ let hash = function
 
 let pp ppf = function
   | Hstring hs -> Hstring.print ppf hs
-  | Dolmen { path; _ } -> Fmt.string ppf @@ get_basename path
+  | Dolmen id -> DE.Id.print ppf id
 
 let show = Fmt.to_to_string pp
 

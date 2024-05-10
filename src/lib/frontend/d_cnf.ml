@@ -192,24 +192,17 @@ let builtin_term t = Dl.Typer.T.builtin_term t
 
 let builtin_ty t = Dl.Typer.T.builtin_ty t
 
-let ty name ty =
+let ty (ty_cst : DE.ty_cst) ty =
+  let name = get_basename ty_cst.path in
   DStd.Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@
   fun env s ->
   builtin_ty @@
   Dolmen_type.Base.app0 (module Dl.Typer.T) env s ty
 
-let builtin_enum = function
-  | Ty.Tsum (name, cstrs) as ty_ ->
-    let ty_cst =
-      DStd.Expr.Id.mk ~builtin:B.Base
-        (DStd.Path.global (Uid.show name))
-        DStd.Expr.{ arity = 0; alias = No_alias }
-    in
-    let cstrs =
-      List.map (fun c -> DStd.Path.global (Uid.show c), []) cstrs
-    in
-    let _, cstrs = DStd.Expr.Term.define_adt ty_cst [] cstrs in
-    let dty = DT.apply ty_cst [] in
+let fpa_rounding_mode, rounding_modes, add_rounding_modes =
+  match DT.view Fpa_rounding.fpa_rounding_mode_dty with
+  | `App ((`Generic ty_cst), []) ->
+    let cstrs = Fpa_rounding.d_cstrs in
     let add_cstrs map =
       List.fold_left (fun map ((c : DE.term_cst), _) ->
           let name = get_basename c.path in
@@ -220,17 +213,14 @@ let builtin_enum = function
                  (module Dl.Typer.T) env c) map)
         map cstrs
     in
-    Cache.store_ty ty_cst ty_;
-    dty,
+    Cache.store_ty ty_cst Fpa_rounding.fpa_rounding_mode;
+    Fpa_rounding.fpa_rounding_mode_dty,
     cstrs,
     fun map ->
       map
-      |> ty (Uid.show name) dty
+      |> ty ty_cst Fpa_rounding.fpa_rounding_mode_dty
       |> add_cstrs
   | _ -> assert false
-
-let fpa_rounding_mode, rounding_modes, add_rounding_modes =
-  builtin_enum Fpa_rounding.fpa_rounding_mode
 
 module Const = struct
   open DE
