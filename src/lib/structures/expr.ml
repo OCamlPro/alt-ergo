@@ -71,7 +71,7 @@ and quantified = {
   user_trs : trigger list;
   binders : binders;
   sko_v : t list; (* This list has to be ordered for the skolemization. *)
-  sko_vty : Ty.t list;
+  sko_vty : Ty.t list; (* This list has to be ordered for the skolemization. *)
   loc : Loc.t;
   kind : decl_kind;
 }
@@ -1444,7 +1444,10 @@ and mk_forall_bis (q : quantified) =
 (* If [f] is a formula of the form [x = a -> P(x)] where [a] doesn't content
    [x], this function produces the substitution { x |-> a }.
 
-   *Note*: this heuristic isn't used if the user has defined filters.
+   Notice that formulas [x = a -> P(x)] are represented by
+   [Clause (x <> a, P(x), _)] or [Clause (P(x), x <> a, _)].
+
+   {b Note}: this heuristic isn't used if the user has defined filters.
 
    @return [None] if the formula hasn't the right form. *)
 and find_particular_subst =
