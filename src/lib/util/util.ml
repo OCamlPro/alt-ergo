@@ -47,14 +47,10 @@ let () =
       | _ -> None
     )
 
-module MI = Map.Make(struct type t = int
-    let compare (x: int) y = Stdlib.compare x y end)
-
-module SI = Set.Make(struct type t = int
-    let compare (x: int) y = Stdlib.compare x y end)
+module MI = Map.Make (Int)
+module SI = Set.Make (Int)
 
 module MS = Map.Make(String)
-
 module SS = Set.Make(String)
 
 

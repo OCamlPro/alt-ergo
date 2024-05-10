@@ -164,7 +164,10 @@ end = struct
     | Bor -> Fmt.pf ppf "bvor"
     | Bxor -> Fmt.pf ppf "bvxor"
 
-  let equal_binop : binop -> binop -> bool = Stdlib.(=)
+  let equal_binop op1 op2 =
+    match op1, op2 with
+    | Band, Band | Bor, Bor | Bxor, Bxor -> true
+    | _ -> false
 
   let hash_binop : binop -> int = Hashtbl.hash
 

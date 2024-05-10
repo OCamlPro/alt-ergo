@@ -155,7 +155,7 @@ module Vheap = Heap.Make(struct
 
     (* Note: comparison is flipped because we want maximum weight first and
        [Heap] is a min-heap. *)
-    let compare (a : t) (b : t) = Stdlib.compare b.weight a.weight
+    let compare (a : t) (b : t) = Float.compare b.weight a.weight
   end)
 
 let is_semantic (a : Atom.atom) =
@@ -571,7 +571,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let var_bump_activity env (v : Atom.var) =
     v.weight <- v.weight +. env.var_inc;
-    if (Stdlib.compare v.weight 1e100) > 0 then begin
+    if Float.compare v.weight 1e100 > 0 then begin
       Vec.iter
         (fun (v : Atom.var) ->
            v.weight <- v.weight *. 1e-100
@@ -584,7 +584,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let clause_bump_activity env (c : Atom.clause) =
     c.activity <- c.activity +. env.clause_inc;
-    if (Stdlib.compare c.activity 1e20) > 0 then begin
+    if Float.compare c.activity 1e20 > 0 then begin
       Vec.iter (fun (clause : Atom.clause) ->
           clause.activity <- clause.activity *. 1e-20
         ) env.learnts;
