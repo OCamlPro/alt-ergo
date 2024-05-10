@@ -525,8 +525,7 @@ let type_body name args = Decls.body name args
 
 
 (* smart constructors *)
-(* HACK: we should create a unique Dolmen identifier here. *)
-let tunit = Text ([], Uid.of_string "unit")
+let tunit = Text ([], Uid.of_dolmen Dolmen.Std.Expr.Ty.Const.unit)
 
 let text l s = Text (l, s)
 
