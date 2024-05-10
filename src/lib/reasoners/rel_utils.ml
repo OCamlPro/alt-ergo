@@ -233,14 +233,13 @@ module type Domain = sig
       returned domain is identical to the domain of [d], only the
       justifications are changed. *)
 
-  val intersect : ex:Explanation.t -> t -> t -> t
-  (** [intersect ~ex d1 d2] returns a new domain [d] that subsumes both [d1]
-      and [d2]. The explanation [ex] justifies that the two domains can be
-      merged.
+  val intersect : t -> t -> t
+  (** [intersect d1 d2] returns a new domain [d] that subsumes both [d1]
+      and [d2]. Any explanation justifying that [d1] and [d2] apply to the
+      same value must have been added to [d1] and [d2].
 
       @raise Inconsistent if [d1] and [d2] are not compatible (the
-      intersection would be empty). The justification always includes the
-      justification [ex] used for the intersection. *)
+      intersection would be empty). *)
 
 
   val fold_leaves : (X.r -> t -> 'a -> 'a) -> X.r -> t -> 'a -> 'a
@@ -452,7 +451,7 @@ struct
     | od ->
       (* Both domains are already valid for [r], we can intersect them
           without additional justifications. *)
-      let d = Domain.intersect ~ex:Explanation.empty od d in
+      let d = Domain.intersect od d in
       if Domain.equal od d then
         t
       else
@@ -462,7 +461,7 @@ struct
     | exception Not_found ->
       (* We need to catch [Not_found] because of fresh terms that can be added
           by the solver and for which we don't call [add]. *)
-      let d = Domain.intersect ~ex:Explanation.empty d (create_domain r) in
+      let d = Domain.intersect d (create_domain r) in
       let domains = MX.add r d t.domains in
       let changed = if changed then SX.add r t.changed else t.changed in
       let leaves_map = r_add r t.leaves_map in
@@ -478,7 +477,8 @@ struct
     | parents ->
       SX.fold (fun r t ->
           let d =
-            try MX.find r t.domains
+            (* Need to add [ex] to be a valid domain for nrr *)
+            try Domain.add_explanation ~ex (MX.find r t.domains)
             with Not_found ->
               (* [r] was in the [leaves_map] to it must have a domain *)
               assert false
@@ -496,7 +496,7 @@ struct
                 We need to notify changed to either of these constraints, so we
                 must notify if the domain is different from *either* the old
                 domain of [r] or the old domain of [nr]. *)
-            let nnd = Domain.intersect ~ex d nd in
+            let nnd = Domain.intersect d nd in
             let nr_changed = not (Domain.equal nnd nd) in
             let r_changed = not (Domain.equal nnd d) in
             let domains =
@@ -515,7 +515,7 @@ struct
                 were applying to [r], and they only need to be notified if the
                 new domain is different from the old domain of [r]. *)
             let default = create_domain nr in
-            let nd = Domain.intersect ~ex d default in
+            let nd = Domain.intersect d default in
             let r_changed = not (Domain.equal nd d) in
             (* Make sure to not add more constraints than necessary for the
                representative domain. *)
@@ -562,7 +562,8 @@ struct
       )
 
     let update ~ex handle domain =
-      let domain = Domain.intersect ~ex handle.domain domain in
+      let domain = Domain.add_explanation ~ex domain in
+      let domain = Domain.intersect handle.domain domain in
       if not (Domain.equal domain handle.domain) then (
         set_changed handle;
         handle.domain <- domain

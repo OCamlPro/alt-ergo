@@ -80,12 +80,12 @@ let value b = b.bits_set
 let is_fully_known b =
   Z.(equal (shift_right (bits_known b + ~$1) b.width) ~$1)
 
-let intersect ~ex b1 b2 =
+let intersect b1 b2 =
   let width = b1.width in
   let bits_set = Z.logor b1.bits_set b2.bits_set in
   let bits_clr = Z.logor b1.bits_clr b2.bits_clr in
   bitlist ~width ~bits_set ~bits_clr
-    (Ex.union b1.ex (Ex.union ex b2.ex))
+    (Ex.union b1.ex b2.ex)
 
 let concat b1 b2 =
   let bits_set = Z.(logor (b1.bits_set lsl b2.width) b2.bits_set)
