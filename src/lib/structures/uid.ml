@@ -32,7 +32,7 @@ module DStd = Dolmen.Std
 module DE = DStd.Expr
 
 type t =
-  | Fake of Hstring.t
+  | Hstring of Hstring.t
   | Unique of { name : Hstring.t; index : int }
 
 (** Helper function: returns the basename of a dolmen path, since in AE
@@ -56,28 +56,28 @@ let[@inline always] of_dolmen DE.{ path; index; _ } =
   let name = Hstring.make @@ get_basename path in
   Unique { name; index = (index :> int) }
 
-let[@inline always] of_hstring hs = Fake hs
+let[@inline always] of_hstring hs = Hstring hs
 let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
 let hash = function
-  | Fake hs -> Hstring.hash hs
+  | Hstring hs -> Hstring.hash hs
   | Unique { index; _ } -> index
 
 let pp ppf = function
-  | Fake hs -> Hstring.print ppf hs
+  | Hstring hs -> Hstring.print ppf hs
   | Unique { name; _ } -> Hstring.print ppf name
 
 let show = Fmt.to_to_string pp
 
 let equal u1 u2 =
   match u1, u2 with
-  | Fake hs1, Fake hs2 -> Hstring.equal hs1 hs2
+  | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
   | Unique { index = i1; _ }, Unique { index = i2; _ }-> i1 = i2
   | _ -> false
 
 let compare u1 u2 =
   match u1, u2 with
-  | Fake hs1, Fake hs2 -> Hstring.compare hs1 hs2
+  | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
   | Unique { index = i1; _ }, Unique { index = i2; _ } -> i1 - i2
   | _ -> -1
 
