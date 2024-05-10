@@ -588,11 +588,9 @@ module Shostak(X : ALIEN) = struct
                 and [y = x] cannot be both present)
        Ensures: there are no trivial equalities [x = x] in the result. *)
 
-    let equal_pair_simple_term ((a1, b1) as p1) ((a2, b2) as p2) =
-      if p1 == p2 then true
-      else
-        let eq = equal_simple_term X.equal in
-        eq a1 a2 && eq b1 b2
+    let equal_pair_simple_term (a1, b1) (a2, b2) =
+      let eq = equal_simple_term X.equal in
+      eq a1 a2 && eq b1 b2
 
     let slice t u  =
       let f_add (s1,s2) acc =
