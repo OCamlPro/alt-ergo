@@ -70,7 +70,7 @@ let formats_list =
 
 let format_parser s =
   try
-    Ok (List.assoc s formats_list)
+    Ok (Lists.assoc String.equal s formats_list)
   with
     Not_found ->
     Error (`Msg (Format.sprintf
@@ -170,6 +170,7 @@ module Debug = struct
     | Warnings
     | Commands
     | Optimize
+  [@@deriving eq]
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
@@ -457,13 +458,13 @@ let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
     _use_fpa (theories)
   =
-  set_no_ac (not (List.mem Theories.AC theories));
+  set_no_ac (not (Lists.mem Theories.equal Theories.AC theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_restricted restricted;
-  set_disable_adts (not (List.mem Theories.ADT theories));
+  set_disable_adts (not (Lists.mem Theories.equal Theories.ADT theories));
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
   set_theory_preludes (Theories.preludes theories);
@@ -1313,7 +1314,7 @@ let parse_theory_opt =
 
   let inequalities_plugin =
     let load_inequalities_plugin debug path =
-      let debug = List.exists (List.mem Debug.Fm) debug in
+      let debug = List.exists (Lists.mem Debug.equal Debug.Fm) debug in
       match path with
       | "" ->
         if debug then
@@ -1449,7 +1450,7 @@ let parse_theory_opt =
           | [], [] -> Ok th
         in
         Result.bind theories @@ fun theories ->
-        if List.mem Theories.(Prelude Fpa) en then
+        if Lists.mem Theories.equal Theories.(Prelude Fpa) en then
           if List.for_all (fun th ->
               match (th : Theories.t) with
               | Prelude Nra | Prelude Ria -> false

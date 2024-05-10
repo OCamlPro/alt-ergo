@@ -552,7 +552,7 @@ module Shostak(X : ALIEN) = struct
 
     exception Valid
 
-    let add elt l = if List.mem elt l then l else elt::l
+    let add elt l = if Lists.mem (equal_signed X.equal) elt l then l else elt::l
 
     let get_vars = List.fold_left
         (fun ac st -> match st.bv with
@@ -587,11 +587,17 @@ module Shostak(X : ALIEN) = struct
        Ensures: there are no duplicates in the result (in particular, [x = y]
                 and [y = x] cannot be both present)
        Ensures: there are no trivial equalities [x = x] in the result. *)
+
+    let equal_pair_simple_term (a1, b1) (a2, b2) =
+      let eq = equal_simple_term X.equal in
+      eq a1 a2 && eq b1 b2
+
     let slice t u  =
       let f_add (s1,s2) acc =
         let b =
           equal_simple_term X.equal s1 s2
-          || List.mem (s1,s2) acc || List.mem (s2,s1) acc
+          || Lists.mem equal_pair_simple_term (s1,s2) acc
+          || Lists.mem equal_pair_simple_term (s2,s1) acc
         in
         if b then acc else (s1,s2)::acc
       in let rec f_rec acc = function

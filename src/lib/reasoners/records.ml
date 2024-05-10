@@ -257,7 +257,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_access field e ty acc =
     let xe = is_mine e in
     let abs_right_xe, acc =
-      try List.assoc xe acc, acc
+      try Lists.assoc X.equal xe acc, acc
       with Not_found ->
         let left_abs_xe2, acc = X.abstract_selectors xe acc in
         match X.type_info left_abs_xe2 with
@@ -364,7 +364,7 @@ module Shostak (X : ALIEN) = struct
 
 
   let orient_solved p v pb =
-    if List.mem p (X.leaves v) then raise Util.Unsolvable;
+    if Lists.mem X.equal p (X.leaves v) then raise Util.Unsolvable;
     Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
   let solve r1 r2 (pb : _ Sig.solve_pb) =
