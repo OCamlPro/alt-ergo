@@ -208,7 +208,7 @@ let calc_destructor d e uf =
   let r, ex = Uf.find uf e in
   match Th.embed r with
   | Constr { c_args; _ } ->
-    begin match Lists.assoc Hstring.equal d c_args with
+    begin match Lists.assoc Uid.equal d c_args with
       | v -> Some (v, ex)
       | exception Not_found -> None
     end

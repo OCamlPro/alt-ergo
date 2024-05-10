@@ -89,8 +89,23 @@ let hstring_ae_reprs =
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
 let fpa_rounding_mode =
-  let fake_reprs = List.map Uid.of_hstring hstring_smt_reprs in
-  Ty.Tsum (Uid.of_string "RoundingMode", fake_reprs)
+  let module DStd = Dolmen.Std in
+  let cstrs =
+    List.map
+      (fun cstr ->
+         DStd.Expr.Id.mk ~builtin:DStd.Builtin.Base
+           (DStd.Path.global @@ Hstring.view cstr)
+           DStd.Expr.{ arity = 0; alias = No_alias }
+         |> Uid.of_dolmen
+      )
+      hstring_smt_reprs
+  in
+  let name =
+    DStd.Expr.Ty.Const.mk
+      (DStd.Path.global "RoundingMode") 0
+    |> Uid.of_dolmen
+  in
+  Ty.Tsum (name, cstrs)
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in

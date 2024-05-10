@@ -30,9 +30,7 @@
 
 module DE = Dolmen.Std.Expr
 
-type t = private
-  | Hstring of Hstring.t
-  | Unique of { name : Hstring.t; index : int }
+type t
 
 val of_dolmen : 'a DE.Id.t -> t
 val of_string : string -> t
@@ -42,7 +40,6 @@ val pp : t Fmt.t
 val show : t -> string
 val equal : t -> t -> bool
 val compare : t -> t -> int
-val list_assoc : t -> (t * 'a) list -> 'a
 
 module Set : Set.S with type elt = t
 module Map : Map.S with type key = t

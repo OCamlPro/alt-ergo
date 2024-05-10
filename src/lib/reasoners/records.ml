@@ -123,7 +123,7 @@ module Shostak (X : ALIEN) = struct
     | Access (a, x, ty) ->
       begin
         match normalize x with
-        | Record (lbs, _) -> Uid.list_assoc a lbs
+        | Record (lbs, _) -> Lists.assoc Uid.equal a lbs
         | x_n -> Access (a, x_n, ty)
       end
     | Other _ -> v
@@ -326,7 +326,7 @@ module Shostak (X : ALIEN) = struct
      | Record (lbs, ty) ->
       Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
      | Access (lb, e', _) when compare_mine x e' = 0 ->
-      Uid.list_assoc lb s
+      Lists.assoc Uid.equal lb s
      | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
      | Other _ -> e
   *)

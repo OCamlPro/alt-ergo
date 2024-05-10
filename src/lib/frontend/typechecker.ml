@@ -210,7 +210,7 @@ module Types = struct
         Errors.typing_error WrongNumberOfLabels loc;
       List.iter
         (fun (lb, _) ->
-           try ignore (Uid.list_assoc lb l)
+           try ignore (Lists.assoc Uid.equal lb l)
            with Not_found ->
              Errors.typing_error
                (WrongLabel((Hstring.make @@ Uid.show lb), ty)) loc) lbs;
@@ -869,7 +869,8 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.Trecord { Ty.name = g; lbs; _ } ->
           begin
             try
-              TTdot(te, Hstring.make a), Uid.list_assoc (Uid.of_string a) lbs
+              TTdot(te, Hstring.make a),
+              Lists.assoc Uid.equal (Uid.of_string a) lbs
             with Not_found ->
               let g = Uid.show g in
               Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc

@@ -32,8 +32,8 @@ module DStd = Dolmen.Std
 module DE = DStd.Expr
 
 type t =
-  | Hstring of Hstring.t
-  | Unique of { name : Hstring.t; index : int }
+  | Hstring : Hstring.t -> t
+  | Dolmen : 'a DE.id -> t
 
 (** Helper function: returns the basename of a dolmen path, since in AE
     the problems are contained in one-file (for now at least), the path is
@@ -52,38 +52,32 @@ let get_basename = function
           | _ -> ()
         ) path
 
-let[@inline always] of_dolmen DE.{ path; index; _ } =
-  let name = Hstring.make @@ get_basename path in
-  Unique { name; index = (index :> int) }
-
+let[@inline always] of_dolmen id = Dolmen id
 let[@inline always] of_hstring hs = Hstring hs
 let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
 let hash = function
   | Hstring hs -> Hstring.hash hs
-  | Unique { index; _ } -> index
+  | Dolmen { index; _ } -> (index :> int)
 
 let pp ppf = function
   | Hstring hs -> Hstring.print ppf hs
-  | Unique { name; _ } -> Hstring.print ppf name
+  | Dolmen { path; _ } -> Fmt.string ppf @@ get_basename path
 
 let show = Fmt.to_to_string pp
 
 let equal u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
-  | Unique { index = i1; _ }, Unique { index = i2; _ }-> i1 = i2
-  | _ -> false
+  | Dolmen id1, Dolmen id2 -> DE.Id.equal id1 id2
+  | _ ->
+    Hstring.equal (Hstring.make @@ show u1) (Hstring.make @@ show u2)
 
 let compare u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
-  | Unique { index = i1; _ }, Unique { index = i2; _ } -> i1 - i2
-  | _ -> -1
-
-let rec list_assoc x = function
-  | [] -> raise Not_found
-  | (y, v) :: l -> if equal x y then v else list_assoc x l
+  | Dolmen id1, Dolmen id2 -> DE.Id.compare id1 id2
+  | _ -> Hstring.compare (Hstring.make @@ show u1) (Hstring.make @@ show u2)
 
 module Set = Set.Make
     (struct
