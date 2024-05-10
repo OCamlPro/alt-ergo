@@ -104,7 +104,7 @@ module Cache = struct
   let find_ty id =
     HT.find ae_ty_ht (Id id)
 
-  let fresh_ty ?(is_var = true) ?(id = None) () =
+  let fresh_ty ?(is_var = true) ?id () =
     if is_var
     then Ty.fresh_tvar ()
     else
@@ -113,11 +113,11 @@ module Cache = struct
       | None -> Ty.fresh_empty_text ()
 
   let update_ty_store ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id:(Some id) () in
+    let ty = fresh_ty ~is_var ~id () in
     store_ty id ty
 
   let update_ty_store_ret ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id:(Some id) () in
+    let ty = fresh_ty ~is_var ~id () in
     store_ty id ty;
     ty
 
