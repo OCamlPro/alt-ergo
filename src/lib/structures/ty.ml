@@ -530,9 +530,15 @@ let tunit = Text ([], Uid.of_dolmen Dolmen.Std.Expr.Ty.Const.unit)
 let text l s = Text (l, s)
 
 let fresh_empty_text =
+  let module DStd = Dolmen.Std in
   let cpt = ref (-1) in
   fun () ->
-    incr cpt; text [] (Uid.of_string ("'_c"^(string_of_int !cpt)))
+    incr cpt;
+    let id =
+      let path = DStd.Path.global @@ Fmt.str "'_c%d" !cpt in
+      DStd.Expr.Ty.Const.mk path 0
+    in
+    text [] (Uid.of_dolmen id)
 
 let tsum s lc = Tsum (s, lc)
 
