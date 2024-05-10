@@ -95,6 +95,11 @@ and semantic_trigger =
 
 and trigger = {
   content : t list;
+  (* [content] must be kept sorted in [pat_weight] (see below) order for
+     matching.
+
+     [mk_trigger] enforces this, but functions that modify [content] and must
+     preserve this order. *)
   semantic : semantic_trigger list;
   hyp : t list;
   t_depth : int;
