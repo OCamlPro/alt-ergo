@@ -93,6 +93,10 @@ and semantic_trigger =
 
 and trigger = private {
   content : t list;
+  (** List of terms that must be present for this trigger to match.
+
+      Sorted using matching heuristics; the first term is estimated as the
+      least likely to match. *)
   semantic : semantic_trigger list;
   hyp : t list;
   t_depth : int;
