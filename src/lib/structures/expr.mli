@@ -91,10 +91,12 @@ and semantic_trigger =
   | IsTheoryConst of t
   | LinearDependency of t * t
 
-and trigger = (*private*) {
+and trigger = private {
   content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
+  (** List of terms that must be present for this trigger to match.
+
+      Sorted using matching heuristics; the first term is estimated as the
+      least likely to match. *)
   semantic : semantic_trigger list;
   hyp : t list;
   t_depth : int;
@@ -192,6 +194,7 @@ val print_tagged_classes : Format.formatter -> Set.t list -> unit
 
 (** smart constructors for terms *)
 
+val mk_trigger : ?user:bool -> ?depth:int -> ?hyp:t list -> t list -> trigger
 val mk_term : Symbols.t -> t list -> Ty.t -> t
 val vrai : t
 val faux : t

@@ -177,15 +177,9 @@ let rec make_term quant_basename t =
 
 and make_trigger ~in_theory name quant_basename hyp (e, from_user) =
   let content = List.map (make_term quant_basename) e in
-  let t_depth =
-    List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
-  let trigger =
-    { E.content ; t_depth; semantic = []; (* will be set by theories *)
-      hyp; from_user;
-    }
-  in
+  let trigger = E.mk_trigger ~user:from_user ~hyp content in
   E.clean_trigger ~in_theory name trigger
 
 and make_form name_base ~toplevel f loc ~decl_kind : E.t =

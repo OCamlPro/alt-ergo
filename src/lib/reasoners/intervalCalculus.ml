@@ -2481,48 +2481,6 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
   env, insts
 
 
-let separate_semantic_triggers =
-  fun th_form ->
-  let { E.user_trs; _ } as q =
-    match E.form_view th_form with
-    | E.Lemma q -> q
-    | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> assert false
-  in
-  let r_triggers =
-    List.rev_map
-      (fun tr ->
-         (* because sem-triggers will be set by theories *)
-         assert (tr.E.semantic == []);
-         let syn, sem =
-           List.fold_left
-             (fun (syn, sem) t ->
-                match E.term_view t with
-                | { E.f = Symbols.In (lb, ub); xs = [x]; _ } ->
-                  syn, (E.Interval (x, lb, ub)) :: sem
-
-                | { E.f = Symbols.MapsTo x; xs = [t]; _ } ->
-                  syn, (E.MapsTo (x, t)) :: sem
-
-                | { E.f = Sy.Op Not_theory_constant; xs = [x]; _ } ->
-                  syn, (E.NotTheoryConst x) :: sem
-
-                | { E.f = Sy.Op Is_theory_constant; xs = [x]; _ } ->
-                  syn, (E.IsTheoryConst x) :: sem
-
-                | { E.f = Sy.Op Linear_dependency; xs = [x;y]; _ } ->
-                  syn, (E.LinearDependency(x,y)) :: sem
-
-                | _ -> t::syn, sem
-             )([], []) (List.rev tr.E.content)
-         in
-         {tr with E.content = syn; semantic = sem}
-      )user_trs
-  in
-  E.mk_forall
-    q.E.name q.E.loc q.E.binders (List.rev r_triggers) q.E.main
-    ~toplevel:true ~decl_kind:E.Dtheory
-
 let assume_th_elt t th_elt dep =
   let { Expr.axiom_kind; ax_form; th_name; extends; _ } = th_elt in
   let kd_str =
@@ -2530,15 +2488,13 @@ let assume_th_elt t th_elt dep =
   in
   match extends with
   | Util.NIA | Util.NRA | Util.FPA | Util.RIA ->
-    let th_form = separate_semantic_triggers ax_form in
-    let th_elt = {th_elt with Expr.ax_form} in
     if get_debug_fpa () >= 2 then
       Printer.print_dbg
         ~module_name:"IntervalCalculus" ~function_name:"assume_th_elt"
         "[Theory %s][%s] %a"
-        th_name kd_str E.print th_form;
-    assert (not (ME.mem th_form t.th_axioms));
-    {t with th_axioms = ME.add th_form (th_elt, dep) t.th_axioms}
+        th_name kd_str E.print ax_form;
+    assert (not (ME.mem ax_form t.th_axioms));
+    {t with th_axioms = ME.add ax_form (th_elt, dep) t.th_axioms}
 
   | _ -> t
 
