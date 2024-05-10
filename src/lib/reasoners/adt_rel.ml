@@ -439,18 +439,28 @@ let assume_literals la uf env =
 
        | Distinct (false, [r1; r2]) as l, _, ex, _ when is_adt r2 ->
          Debug.assume l;
+         let rr1, ex1 = Uf.find_r uf r1 in
+         let rr2, ex2 = Uf.find_r uf r2 in
+         (* The explanation [ex] explains why [r1] and [r2] are distinct,
+            which isn't sufficient to justify why [rr1] and [rr2] are
+            distinct. *)
+         let ex = Ex.union ex1 @@ Ex.union ex2 ex in
          (* Needed for models generation because fresh terms are not added with
             the function add. *)
-         let env = add_rec r1 uf env in
-         let env = add_rec r2 uf env in
-         assume_distinct ~ex r1 r2 env
+         let env = add_rec rr1 uf env in
+         let env = add_rec rr2 uf env in
+         assume_distinct ~ex rr1 rr2 env
 
        | Builtin (true, Sy.IsConstr c, [r]) as l, _, ex, _ ->
          Debug.assume l;
+         let r, ex1 = Uf.find_r uf r in
+         let ex = Ex.union ex1 ex in
          assume_is_constr ~ex r c env
 
        | Builtin (false, Sy.IsConstr c, [r]) as l, _, ex, _ ->
          Debug.assume l;
+         let r, ex1 = Uf.find_r uf r in
+         let ex = Ex.union ex1 ex in
          assume_not_is_constr ~ex r c env
 
        | _ ->
