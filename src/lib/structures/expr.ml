@@ -95,8 +95,6 @@ and semantic_trigger =
 
 and trigger = {
   content : t list;
-  (* this field is filled (with a part of 'content' field) by theories
-     when assume_th_elt is called *)
   semantic : semantic_trigger list;
   hyp : t list;
   t_depth : int;
@@ -843,6 +841,50 @@ let is_ite s = match s with
   | Sy.Op Sy.Tite -> true
   | _ -> false
 
+let pat_weight s t =
+  let sf = (term_view s).f in
+  let tf = (term_view t).f in
+  match sf, tf with
+  | Symbols.Name _, Symbols.Op _ -> -1
+  | Symbols.Op _, Symbols.Name _ -> 1
+  | _ -> depth t - depth s
+
+let separate_semantic_triggers content =
+  let syn, sem =
+    List.fold_left
+      (fun (syn, sem) t ->
+         match term_view t with
+         | { f = Symbols.In (lb, ub); xs = [x]; _ } ->
+           syn, (Interval (x, lb, ub)) :: sem
+
+         | { f = Symbols.MapsTo x; xs = [t]; _ } ->
+           syn, (MapsTo (x, t)) :: sem
+
+         | { f = Sy.Op Not_theory_constant; xs = [x]; _ } ->
+           syn, (NotTheoryConst x) :: sem
+
+         | { f = Sy.Op Is_theory_constant; xs = [x]; _ } ->
+           syn, (IsTheoryConst x) :: sem
+
+         | { f = Sy.Op Linear_dependency; xs = [x;y]; _ } ->
+           syn, (LinearDependency(x,y)) :: sem
+
+         | _ -> t::syn, sem
+      )([], []) (List.rev content)
+  in
+  syn, sem
+
+let mk_trigger ?user:(from_user = false) ?depth ?(hyp = []) content =
+  let t_depth =
+    match depth with
+    | Some t_depth -> t_depth
+    | None ->
+      List.fold_left (fun z t -> max z t.depth) 0 content
+  in
+  let content = List.stable_sort pat_weight content in
+  let content, semantic = separate_semantic_triggers content in
+  { content ; semantic ; hyp ; t_depth ; from_user }
+
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let d = match l with
@@ -1375,9 +1417,11 @@ let rec apply_subst_aux (s_t, s_ty) t =
 
 and apply_subst_trigger subst ({ content; _ } as tr) =
   {tr with
-   content = List.map (apply_subst_aux subst) content;
-   (* semantic_trigger = done on theory side *)
-   (* hyp = done on theory side *)
+   content =
+     List.rev_map (apply_subst_aux subst) content |>
+     List.stable_sort pat_weight
+     (* semantic_trigger = done on theory side *)
+     (* hyp = done on theory side *)
   }
 
 (* *1* We should never subst formulas inside termes. We could allow to
@@ -1643,12 +1687,7 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
     | Dpredicate t | Dfunction t ->
       if type_info t != Ty.Tbool then []
       else
-        [ { content = [t];
-            hyp = [];
-            semantic = [];
-            t_depth = t.depth;
-            from_user = false;
-          } ]
+        [ mk_trigger ~depth:t.depth [t] ]
     | Dtheory | Dobjective -> []
     | Daxiom
     | Dgoal ->
@@ -1664,12 +1703,7 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
               TSet.exists (cand_is_more_general t) others then
              acc
            else
-             { content = [t];
-               hyp = [];
-               semantic = [];
-               t_depth = t.depth;
-               from_user = false;
-             } :: acc
+             mk_trigger ~depth:t.depth [t] ::acc
         )cand []
 
 let free_type_vars_as_types e =
@@ -2212,6 +2246,7 @@ module Triggers = struct
         if sz_l = sz_s then trig
         else
           let content = TMap.fold (fun t _ acc -> t :: acc) res [] in
+          let content = List.stable_sort pat_weight content in
           if Options.get_verbose () then
             Printer.print_dbg ~module_name:"Cnf"
               ~function_name:"clean_trigger"
@@ -2258,15 +2293,7 @@ module Triggers = struct
       aux vars (STRS.empty, Var.Map.empty) e
 
   let triggers_of_list l =
-    List.map
-      (fun content ->
-         { content;
-           semantic = [];
-           hyp = [];
-           from_user = false;
-           t_depth = List.fold_left (fun z t -> max z (depth t)) 0 content
-         }
-      ) l
+    List.map mk_trigger l
 
   (* Should return false iff lit_view fails with Failure _, but this version
      does not build the literal view. *)

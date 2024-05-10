@@ -1655,14 +1655,11 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     mk_expr ~loc ~name_base ~decl_kind
   in
   let content = List.map mk_expr e in
-  let t_depth =
-    List.fold_left (fun z t -> max z (E.depth t)) 0 content in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
-  let trigger =
-    { E.content; t_depth; semantic = []; (* will be set by theories *)
-      hyp; from_user; }
-  in
+  let trigger = E.mk_trigger ~user:from_user ~hyp content in
+  if not in_theory && not (Lists.is_empty trigger.semantic) then
+    Errors.typing_error ThSemTriggerError loc;
   E.clean_trigger ~in_theory name trigger
 
 (** Preprocesses the body of a goal by:

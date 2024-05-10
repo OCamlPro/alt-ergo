@@ -1,0 +1,4 @@
+logic r : real
+
+goal g : r <>
+  float32(NearestTiesToEven, 12960.0087890625 * float32(NearestTiesToEven, 12960.008976179617))
