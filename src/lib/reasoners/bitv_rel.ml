@@ -100,7 +100,7 @@ module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
         match bv with
         | Bitv.Cte z ->
           (* Nothing to update, but still check for consistency! *)
-          ignore @@ intersect ~ex:Ex.empty bl (exact sz z Ex.empty);
+          ignore @@ intersect bl (exact sz z Ex.empty);
           acc, bl_tail
         | Other r -> fold_signed f r bl acc, bl_tail
         | Ext (r, r_size, i, j) ->

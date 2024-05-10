@@ -87,14 +87,13 @@ val value : t -> Z.t
     [b] is not fully known, then only the known bits (those that are set in
     [bits_known b]) are meaningful; unknown bits are set to [0]. *)
 
-val intersect : ex:Explanation.t -> t -> t -> t
-(** [intersect ~ex b1 b2] returns a new bitlist [b] that subsumes both [b1] and
-    [b2]. The explanation [ex] justifies that the two bitlists can be merged.
+val intersect : t -> t -> t
+(** [intersect b1 b2] returns a new bitlist [b] that subsumes both [b1] and
+    [b2]. Any explanation justifying that [b1] and [b2] apply to the same
+    value must have been added to [b1] and [b2].
 
     Raises [Inconsistent] if [b1] and [b2] are not compatible (i.e. there are
-    bits set in one bitlist and cleared in the other). The justification
-    includes the justifications of [b1] and [b2], as well as the justification
-    [ex] for the intersection. *)
+    bits set in one bitlist and cleared in the other). *)
 
 val lognot : t -> t
 (** [lognot b] swaps the bits that are set and cleared. *)
