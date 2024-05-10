@@ -558,12 +558,11 @@ let t_adt ?(body=None) s ty_vars =
   ty
 
 let trecord ?(sort_fields = false) ~record_constr lv name lbs =
-  let lbs, record_constr =
+  let lbs =
     if sort_fields then
-      List.sort (fun (l1, _) (l2, _) -> Uid.compare l1 l2) lbs, record_constr
-      (* TODO: FIIIIXXX *)
-      (*       Format.sprintf "%s___%s" record_constr n *)
-    else lbs, record_constr
+      List.sort (fun (l1, _) (l2, _) -> Uid.compare l1 l2) lbs
+    else
+      lbs
   in
   Trecord { record_constr; args = lv; name; lbs = lbs}
 

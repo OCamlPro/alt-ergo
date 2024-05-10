@@ -46,7 +46,7 @@ let unsupported msg =
     (fun str -> Errors.(run_error (Unsupported_feature str)))
     msg
 
-type id = Id : 'a DE.id -> id
+type id = Id : 'a DE.id -> id[@@unboxed]
 
 module HT =
   Hashtbl.Make (struct

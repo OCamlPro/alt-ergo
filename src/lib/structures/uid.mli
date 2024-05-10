@@ -30,7 +30,9 @@
 
 module DE = Dolmen.Std.Expr
 
-type t
+type t = private
+  | Hstring of Hstring.t
+  | Unique of { name : Hstring.t; index : int }
 
 val of_dolmen : 'a DE.Id.t -> t
 val of_string : string -> t

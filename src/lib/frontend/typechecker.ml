@@ -159,7 +159,12 @@ module Types = struct
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
       let sort_fields = String.equal record_constr "{" in
-      let record_constr = Uid.of_string record_constr in
+      let record_constr =
+        if sort_fields then
+          Uid.of_string @@ Fmt.str "%s___%s" record_constr id
+        else
+          Uid.of_string record_constr
+      in
       let ty =
         Ty.trecord ~sort_fields ~record_constr ty_vars
           (Uid.of_string id) (List.map (fun (s, ty) -> Uid.of_string s, ty) lbs)
