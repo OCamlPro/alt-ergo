@@ -1990,7 +1990,7 @@ module Triggers = struct
 
     | { f = Op (Access a1) ; xs=[t1]; _ },
       { f = Op (Access a2) ; xs=[t2]; _ } ->
-      let c = Hstring.compare a1 a2 in (* should be Hstring.compare *)
+      let c = Uid.compare a1 a2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Access _); _ }, _ -> -1
@@ -1998,7 +1998,7 @@ module Triggers = struct
 
     | { f = Op (Destruct a1) ; xs = [t1]; _ },
       { f = Op (Destruct a2) ; xs = [t2]; _ } ->
-      let c = Hstring.compare a1 a2 in (* should be Hstring.compare *)
+      let c = Uid.compare a1 a2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Destruct _); _ }, _ -> -1
