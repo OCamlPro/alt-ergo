@@ -70,11 +70,9 @@ and quantified = {
   toplevel : bool;
   user_trs : trigger list;
   binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
-  sko_v : t list;
-  sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
+  sko_v : t list; (* This list has to be ordered for the skolemization. *)
+  sko_vty : Ty.t list; (* This list has to be ordered for the skolemization. *)
+  loc : Loc.t;
   kind : decl_kind;
 }
 
@@ -1471,6 +1469,11 @@ and mk_forall_bis (q : quantified) =
   if Var.Map.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
   else
     let q = {q with binders} in
+    (* Attempt to reduce the number of quantifiers. We try to find a
+       particular substitution [sbs] such that the application of [sbs]
+       on [q.main] produces a formula [g] such that
+       - [g] has less free term variables than [q.main] in [binders];
+       - the universal closures of [f] and [g] are equivalent. *)
     match find_particular_subst binders q.user_trs q.main with
     | None -> mk_forall_ter q
 
@@ -1487,10 +1490,17 @@ and mk_forall_bis (q : quantified) =
         let q = {q with binders; user_trs = trs; sko_v; main = f } in
         mk_forall_bis q
 
+(* If [f] is a formula of the form [x = a -> P(x)] where [a] doesn't content
+   [x], this function produces the substitution { x |-> a }.
+
+   Notice that formulas [x = a -> P(x)] are represented by
+   [Clause (x <> a, P(x), _)] or [Clause (P(x), x <> a, _)].
+
+   {b Note}: this heuristic isn't used if the user has defined filters.
+
+   @return [None] if the formula hasn't the right form. *)
 and find_particular_subst =
   let exception Found of Var.t * t in
-  (* ex: in "forall x, y : int. x <> 1 or f(y) = x+1 or P(x,y)",
-     x can be replaced with 1 *)
   let rec find_subst v tv f =
     match form_view f with
     | Unit _ | Lemma _ | Skolem _ | Let _ | Iff _ | Xor _ -> ()
@@ -1513,6 +1523,7 @@ and find_particular_subst =
       | _ -> ()
   in
   fun binders trs f ->
+    (* TODO: move the test for `trs` outside. *)
     if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
        has_semantic_triggers trs
     then
@@ -2039,6 +2050,7 @@ module Triggers = struct
 
   let not_pure t = not t.pure
 
+  (* Collect all the term variables in [t] that are in the set [bv]. *)
   let vars_of_term bv acc t =
     Var.Map.fold
       (fun v _ acc ->
@@ -2046,12 +2058,19 @@ module Triggers = struct
       )
       t.vars acc
 
+  (* TODO: we should define here a predicate `good_triggers`
+     and call it with List.filter in the appropriate locations. *)
   let filter_good_triggers (bv, vty) trs =
     List.filter
       (fun { content = l; _ } ->
+         (* Check if the multi-trigger covers all the type and term
+            variables. *)
          not (List.exists not_pure l) &&
          let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
          let s2 = List.fold_left vty_of_term Svty.empty l in
+         (* TODO: we can replace `Var.Set.subset bv s1`
+            by `Var.Seq.equal bv s1`. By construction `s1` is
+            a subset of `bv`. *)
          Var.Set.subset bv s1 && Svty.subset vty s2 )
       trs
 
@@ -2392,7 +2411,9 @@ module Triggers = struct
         Var.Map.fold (fun v _ s -> Var.Set.add v s) binders Var.Set.empty
       in
       match decl_kind, f with
-      | Dtheory, _ -> assert false
+      | Dtheory, _ ->
+        (* TODO: Add Dobjective here. We never generate triggers for them. *)
+        assert false
       | (Dpredicate e | Dfunction e), _ ->
         let defn = match f with
           | { f = (Sy.Form Sy.F_Iff | Sy.Lit Sy.L_eq) ; xs = [e1; e2]; _ } ->

@@ -48,8 +48,13 @@ type term_view = private {
   ty: Ty.t;
   bind : bind_kind;
   tag: int;
-  vars : (Ty.t * int) Var.Map.t; (* vars to types and nb of occurences *)
+  vars : (Ty.t * int) Var.Map.t;
+  (** Map of free term variables in the term to their type and
+      number of occurrences. *)
+
   vty : Ty.Svty.t;
+  (** Map of free type variables in the term. *)
+
   depth: int;
   nb_nodes : int;
   pure : bool;
@@ -64,16 +69,49 @@ and bind_kind =
 
 and quantified = private {
   name : string;
+  (** Name of the lemma. This field is used by printers. *)
+
   main : t;
+  (** The underlying formula. *)
+
   toplevel : bool;
+  (** Determine if the quantified formula is at the top level.
+      This flag is important for the prenex polymorphism.
+      - If this flag is [true], all the free type variables of [main]
+        are implicitely considered as quantified.
+      - Otherwise, the free type variables of the lemma are the
+        same as the underlying formula [main] and are stored in the field
+        [sko_vty]. *)
+
   user_trs : trigger list;
+  (** List of the triggers defined by the user.
+
+      The solver doesn't generate multi-triggers if the user has defined
+      some multi-triggers. *)
+
   binders : binders;
-  (* These fields should be (ordered) lists ! important for skolemization *)
+  (** The ordered list of quantified term variables of [main].
+
+      This list has to be ordered for the skolemization. *)
+
   sko_v : t list;
+  (** Set of all the free variables of the quantified formula. In other words,
+      this set is always the complementary of [binders] in the set of
+      free variables of [main].
+
+      The purpose of this field is to retrieve these variables quickly while
+      performing the lazy skolemization in the SAT solver (see [skolemize]). *)
+
   sko_vty : Ty.t list;
-  loc : Loc.t; (* location of the "GLOBAL" axiom containing this quantified
-                  formula. It forms with name a unique id *)
+  (** The set of free type variables. In particular this set is always
+      empty if we are the top level. *)
+
+  loc : Loc.t;
+  (** Location of the "GLOBAL" axiom containing this quantified formula. It
+      forms with name a unique identifier. *)
+
   kind : decl_kind;
+  (** Kind of declaration. *)
 }
 
 and letin = private {
@@ -271,10 +309,30 @@ val max_ground_terms_rec_of_form : t -> Set.t
 
 val make_triggers:
   t -> binders -> decl_kind -> Util.matching_env -> trigger list
+(** [make_triggers f binders decl menv] generate multi-triggers for the
+    formula [f] and binders [binders].
 
+    For axioms, we try to produce multi-triggers in the following order
+    (if we succeed to produce at least one multi-trigger, we don't try other
+    strategies):
+    1. In greedy mode:
+    - Mono-triggers without variables;
+    - Mono-triggers with variables;
+    - Multi-triggers without variables;
+    - Multi-triggers with variables.
+      2. Otherwise:
+    - Mono and multi-triggers without variables;
+    - Mono and multi-triggers with variables.
+
+    Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
+    if other mono-triggers have been generated.
+
+    The matching environment [env] is used to limit the number of
+    multi-triggers generated per axiom. *)
+
+val clean_trigger: in_theory:bool -> string -> trigger -> trigger
 (** clean trigger:
     remove useless terms in multi-triggers after inlining of lets*)
-val clean_trigger: in_theory:bool -> string -> trigger -> trigger
 
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
