@@ -41,7 +41,7 @@ let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
 let hash = function
   | Hstring hs -> Hstring.hash hs
-  | Dolmen { index; _ } -> (index :> int)
+  | Dolmen id -> DE.Id.hash id
 
 let pp ppf = function
   | Hstring hs -> Hstring.print ppf hs
