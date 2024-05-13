@@ -273,24 +273,25 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
     let rec subset_seq ~strict i1 s1 i2 s2 =
       if i2.ub < i1.lb then
         (* i1 is entirely after i2; skip i2 *)
-        match Seq.uncons s2 with
+        match Stdcompat.Seq.uncons s2 with
         | None -> false
         | Some (i2', s2') -> subset_seq ~strict:false i1 s1 i2' s2'
       else
         i2.lb <= i1.lb && i1.ub <= i2.ub &&
         let strict = strict && i1.lb = i2.lb && i1.ub = i2.ub in
-        match Seq.uncons s1 with
-        | None -> not strict || Option.is_some (Seq.uncons s2)
+        match Stdcompat.Seq.uncons s1 with
+        | None -> not strict || Option.is_some (Stdcompat.Seq.uncons s2)
         | Some (i1', s1') ->
           if strict then
-            match Seq.uncons s2 with
+            match Stdcompat.Seq.uncons s2 with
             | None -> false
             | Some (i2', s2') -> subset_seq ~strict:true i1' s1' i2' s2'
           else
             subset_seq ~strict:false i1' s1' i2 s2
 
     let subset ?(strict = false) u1 u2 =
-      match Seq.uncons (to_seq u1), Seq.uncons (to_seq u2) with
+      let uncons = Stdcompat.Seq.uncons in
+      match uncons (to_seq u1), uncons (to_seq u2) with
       | None, None -> not strict
       | Some _, None -> false
       | None, Some _ -> true
