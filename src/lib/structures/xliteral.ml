@@ -143,7 +143,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
 
   type t = { at : atom; neg : bool; tpos : int; tneg : int }
 
-  let compare a1 a2 = compare a1.tpos a2.tpos
+  let compare a1 a2 = Int.compare a1.tpos a2.tpos
   let equal a1 a2 = a1.tpos = a2.tpos (* XXX == *)
   let hash a1 = a1.tpos
   let uid a1 = a1.tpos

@@ -167,7 +167,8 @@ end = struct
   let equal_binop op1 op2 =
     match op1, op2 with
     | Band, Band | Bor, Bor | Bxor, Bxor -> true
-    | _ -> false
+    | Band, _ | _, Band -> false
+    | Bor, Bxor | Bxor, Bor -> false
 
   let hash_binop : binop -> int = Hashtbl.hash
 
