@@ -63,7 +63,7 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [installing informations]: https://ocamlpro.github.io/alt-ergo/Install/index.html
 [https://alt-ergo.ocamlpro.com]: https://alt-ergo.ocamlpro.com
 [latest]: https://alt-ergo.ocamlpro.com/http/alt-ergo-2.3.2/alt-ergo-2.3.2.tar.gz
-[license section]: https://ocamlpro.github.io/alt-ergo/About/license.html
+[license section]: https://ocamlpro.github.io/alt-ergo/About/licenses/index.html
 [LRI]: https://www.lri.fr
 [OCamlPro]: https://www.ocamlpro.com
 [OCamlPro non-commercial license 1.0]: ./licenses/OCamlPro-Non-Commercial-License.txt
