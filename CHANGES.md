@@ -1,3 +1,12 @@
+## v2.5.4
+
+### Bug fixes
+
+* Fix a long-standing soundness issue in the FPA module (#1122, originally
+  reported in #1111)
+* Dolmen frontend incorrectly allowed semantic triggers outside of theory
+  extensions (#1122)
+
 ## v2.5.3
 
 ### Build
