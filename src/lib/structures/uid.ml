@@ -53,14 +53,13 @@ let equal u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
   | Dolmen id1, Dolmen id2 -> DE.Id.equal id1 id2
-  | _ ->
-    Hstring.equal (Hstring.make @@ show u1) (Hstring.make @@ show u2)
+  | _ -> String.equal (show u1) (show u2)
 
 let compare u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
   | Dolmen id1, Dolmen id2 -> DE.Id.compare id1 id2
-  | _ -> Hstring.compare (Hstring.make @@ show u1) (Hstring.make @@ show u2)
+  | _ -> String.compare (show u1) (show u2)
 
 module Set = Set.Make
     (struct
