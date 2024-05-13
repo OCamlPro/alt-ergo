@@ -121,7 +121,7 @@ let get_timers () = (Lazy.force state).timers
 let set_sigprof () =
   let tm =
     let v = Options.get_profiling_period () in
-    if (Stdlib.compare v 0.) > 0 then v else -. v
+    if (Float.compare v 0.) > 0 then v else -. v
   in
   ignore
     (Unix.setitimer Unix.ITIMER_PROF
@@ -643,9 +643,9 @@ let switch fmt =
 let float_print =
   let open Format in
   fun fmt v ->
-    if Stdlib.(=) v 0. then fprintf fmt "--     "
-    else if (Stdlib.compare v 10.) < 0 then fprintf fmt "%0.5f" v
-    else if (Stdlib.compare v 100.) < 0 then fprintf fmt "%0.4f" v
+    if Float.equal v 0. then fprintf fmt "--     "
+    else if Float.compare v 10. < 0 then fprintf fmt "%0.5f" v
+    else if Float.compare v 100. < 0 then fprintf fmt "%0.4f" v
     else fprintf fmt "%0.3f" v
 
 let line_of_module =

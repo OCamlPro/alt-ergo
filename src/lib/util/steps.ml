@@ -115,8 +115,7 @@ let incr k =
       naive_steps := !naive_steps + n;
   end;
   if !steps_bound <> -1
-  && ((Stdlib.compare !steps !steps_bound > 0)
-      || (Stdlib.compare !naive_steps !steps_bound > 0)) then
+  && (!steps > !steps_bound || !naive_steps > !steps_bound) then
     begin
       let n =
         if !naive_steps > 0 then !naive_steps

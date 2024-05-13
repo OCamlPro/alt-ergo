@@ -121,8 +121,6 @@ type t =
   | MapsTo of Var.t
   | Let
 
-type s = t
-
 let mangle ns s =
   match ns with
   | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
@@ -219,7 +217,7 @@ let compare_forms f1 f2 =
   Util.compare_algebraic f1 f2
     (function
       | F_Unit b1, F_Unit b2
-      | F_Clause b1, F_Clause b2 -> Stdlib.compare b1 b2
+      | F_Clause b1, F_Clause b2 -> Bool.compare b1 b2
       | _, (F_Unit _ | F_Clause _ | F_Lemma | F_Skolem
            | F_Iff | F_Xor) ->
         assert false
@@ -237,10 +235,10 @@ let compare_bounds a b =
   let c = Ty.compare a.sort b.sort in
   if c <> 0 then c
   else
-    let c = Stdlib.compare a.is_open b.is_open in
+    let c = Bool.compare a.is_open b.is_open in
     if c <> 0 then c
     else
-      let c = Stdlib.compare a.is_lower b.is_lower in
+      let c = Bool.compare a.is_lower b.is_lower in
       if c <> 0 then c
       else compare_bounds_kind a.kind b.kind
 
@@ -503,7 +501,7 @@ let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
 
 module Labels = Hashtbl.Make(struct
-    type t = s
+    type nonrec t = t
     let equal = equal
     let hash = hash
   end)
@@ -517,7 +515,7 @@ let label t = try Labels.find labels t with Not_found -> Hstring.empty
 let clear_labels () = Labels.clear labels
 
 module Set : Set.S with type elt = t =
-  Set.Make (struct type t=s let compare=compare end)
+  Set.Make (struct type nonrec t = t let compare=compare end)
 
 module Map : Map.S with type key = t =
-  Map.Make (struct type t = s let compare = compare end)
+  Map.Make (struct type nonrec t = t let compare = compare end)

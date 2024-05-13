@@ -42,6 +42,7 @@ type rounding_mode =
   | Up
   | Down
   | NearestTiesToAway
+[@@deriving ord]
 
 let cstrs =
   [
@@ -215,7 +216,7 @@ module MQ =
         else
           let c = exp1 - exp2 in
           if c <> 0 then c
-          else Stdlib.compare mode1 mode2
+          else compare_rounding_mode mode1 mode2
   end)
 
 let cache = ref MQ.empty

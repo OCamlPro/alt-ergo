@@ -73,7 +73,7 @@ module Make (Th : Theory.S) = struct
         SE.fold
           (fun f mp ->
              let w = var_inc +. try ME.find f mp with Not_found -> 0. in
-             stable := !stable && (Stdlib.compare w 1e100) <= 0;
+             stable := !stable && (Float.compare w 1e100) <= 0;
              ME.add f w mp
           )(Ex.bj_formulas_of expl) mp
       in
@@ -116,9 +116,9 @@ module Make (Th : Theory.S) = struct
       let dec =
         List.fast_sort
           (fun (_, x1, b1) (_, x2, b2) ->
-             let c = Stdlib.compare b2 b1 in
+             let c = Bool.compare b2 b1 in
              if c <> 0 then c
-             else Stdlib.compare x2 x1
+             else Float.compare x2 x1
           )dec
       in
       (*
@@ -1156,7 +1156,7 @@ module Make (Th : Theory.S) = struct
     let ti = Options.get_timelimit_interpretation () in
     if not i || (* not asked to gen a model *)
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
-       Stdlib.(=) ti 0. (* no time allocated for extra model search *)
+       Float.equal ti 0. (* no time allocated for extra model search *)
     then
       i_dont_know env (Timeout ProofSearch)
     else

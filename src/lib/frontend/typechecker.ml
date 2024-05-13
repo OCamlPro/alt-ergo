@@ -87,7 +87,7 @@ module Types = struct
       List.for_all2
         (fun pp x ->
            match pp with
-           | PPTvarid (y, _) -> Stdlib.(=) x y
+           | PPTvarid (y, _) -> String.equal x y
            | _ -> false
         ) lpp lvars
     with Invalid_argument _ -> false
@@ -119,7 +119,7 @@ module Types = struct
     | PPTexternal (l, s, loc) ->
       begin
         match rectype with
-        | Some (id, vars, ty) when Stdlib.(=) s id &&
+        | Some (id, vars, ty) when String.equal s id &&
                                    equal_pp_vars l vars -> ty
         | _ ->
           try

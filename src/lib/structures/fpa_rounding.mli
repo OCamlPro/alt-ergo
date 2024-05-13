@@ -40,6 +40,7 @@ type rounding_mode =
   | Up
   | Down
   | NearestTiesToAway
+[@@deriving ord]
 
 (** Equal to ["RoundingMode"], the SMT2 type of rounding modes. *)
 val fpa_rounding_mode_type_name : string
