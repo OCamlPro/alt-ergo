@@ -1065,6 +1065,8 @@ let rec mk_expr
                "main" term of the interval. For instance, [e in [i, ?]]
                becomes `semantic_trigger (let x = e in i ≤ x)`.
             *)
+            if decl_kind != E.Dtheory then
+              Errors.typing_error ThSemTriggerError loc;
             let xs, trigger =
               Option.value ~default:([], trigger) @@ destruct_let trigger
             in
