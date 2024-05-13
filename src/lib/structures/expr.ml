@@ -1437,7 +1437,7 @@ and mk_forall_bis (q : quantified) =
   if SMap.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
   else
     let q = {q with binders} in
-    match find_particular_subst binders q.user_trs q.main with
+    match find_particular_subst q.kind binders q.user_trs q.main with
     | None -> mk_forall_ter q
 
     | Some sbs ->
@@ -1476,8 +1476,10 @@ and find_particular_subst =
 
       | _ -> ()
   in
-  fun binders trs f ->
-    if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
+  fun decl_kind binders trs f ->
+    (* https://github.com/OCamlPro/alt-ergo/issues/1111 *)
+    let in_theory = decl_kind == Dtheory in
+    if in_theory || not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
        has_semantic_triggers trs
     then
       None
