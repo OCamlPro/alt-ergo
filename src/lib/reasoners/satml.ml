@@ -681,6 +681,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       with Not_found -> ()
     done
 
+  (* Variables are relevant if they are in the [lazy_cnf]. Semantic variables
+     are always relevant: otherwise, since they are local to the current branch
+     and not added to the [var_order], they would never get decided.
+
+     Only used when [Options.get_cdcl_tableaux_inst ()] is enabled. *)
+  let is_relevant env (v : Atom.var) =
+    is_semantic v.pa ||
+    Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf
+
   (* annule tout jusqu'a lvl *exclu*  *)
   let cancel_until env lvl =
     if Options.get_debug_sat () then
@@ -737,9 +746,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          heap. *)
       if Options.get_cdcl_tableaux_inst () then
         VH.filter_map_inplace (fun v () ->
-            if
-              Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf
-            then (
+            if is_relevant env v then (
               insert_var_order env v; None
             ) else
               Some ()
@@ -1788,7 +1795,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
          Note that we can only do this if [get_cdcl_tableaux_inst ()] is [true],
          because otherwise instantiation requires a complete boolean model. *)
-      if Matoms.mem v.pa env.lazy_cnf || Matoms.mem v.na env.lazy_cnf then
+      if is_relevant env v then
         make_decision env atom
       else (
         VH.add env.irrelevants v ();
