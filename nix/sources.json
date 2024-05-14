@@ -49,5 +49,18 @@
         "url": "https://github.com/Armael/pp_loc/archive/d8162fd289849ea2f4125054ab88540416bdaa25.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "2.1.0"
+    },
+    "landmarks": {
+      "branch": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
+      "description": "A Simple Profiling Library for OCaml",
+      "homepage": "https://github.com/LexiFi/landmarks",
+      "owner": "LexiFi",
+      "repo": "landmarks",
+      "rev": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
+      "sha256": "02lr5grxcczikkdvz75vhrpgpfnq7z9svzgxxvimll0ijplgp6js",
+      "type": "tarball",
+      "url": "https://github.com/LexiFi/landmarks/archive/b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7.tar.gz",
+      "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+      "version": "dev"
     }
 }

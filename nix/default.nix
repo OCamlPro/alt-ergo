@@ -10,6 +10,8 @@ import sources.nixpkgs {
         dolmen = pkgs.callPackage ./dolmen.nix { };
         dolmen_type = pkgs.callPackage ./dolmen_type.nix { };
         dolmen_loop = pkgs.callPackage ./dolmen_loop.nix { };
+        landmarks = pkgs.callPackage ./landmarks.nix { };
+        landmarks-ppx = pkgs.callPackage ./landmarks-ppx.nix { };
       });
     })
   ];
