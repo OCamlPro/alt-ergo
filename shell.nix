@@ -38,5 +38,7 @@ pkgs.mkShell {
     odoc
     ppx_deriving
     stdcompat
+    landmarks
+    landmarks-ppx
   ];
 }
