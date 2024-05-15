@@ -1,6 +1,6 @@
 
    Alt-Ergo: The SMT Solver For Software Verification
-   Copyright (C) 2013-2023 --- OCamlPro SAS
+   Copyright (C) 2013-2024 --- OCamlPro SAS
 
    This is an exceptional free release of Alt-Ergo dual-licensed
    under the OCamlPro-Non-Commercial-License and
@@ -22,9 +22,6 @@
    Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout
 
    CNRS - INRIA - Universite Paris Sud
-
-   Until 2013, some parts of this code were released under
-   the Apache Software License version 2.0.
 
    ---------------------------------------------------------------
 
