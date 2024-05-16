@@ -22,7 +22,7 @@ All the files of this project, with the exception of the preludes and plugins, a
 As an exception, Alt-Ergo Club members at the Gold level can use these same files
 under the terms of :download:`Apache Software License version 2.0 <Apache-License-2.0.txt>`.
 
-Note that plugins or preludes may have different licenses. Please referer to
+Note that plugins or preludes may have different licenses. Please refer to
 their directory.
 
 In case of doubt, please refer to the header of each file to know under which
@@ -36,5 +36,5 @@ We publish our releases on GitHub and opam repository under the license
 The same exceptions as above apply to the plugins and preludes.
 
 We also publish a free release of Alt-Ergo under the terms of
-:download:`CeCILL-C License v1 <CeCILL-C-License-v1.txt>`.
+:download:`Apache Software License version 2.0 <Apache-License-2.0.txt>`
 The packages of the free releases are suffixed with `-free` on the opam repository.
