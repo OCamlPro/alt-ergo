@@ -54,11 +54,22 @@ module type RELATION = sig
 
   val timer : Timers.ty_module
 
-  val empty : Uf.t -> t * Uf.Domains.t
+  val empty : Uf.t -> t * Uf.GlobalDomains.t
+  (** [empty uf] creates a new environment for this relation and allows for the
+      registration of global domains in the union-find.
+
+      The second component of the pair should be [Uf.domains uf] with any
+      domains that the relation requires added. *)
 
   val assume : t ->
     Uf.t -> (Shostak.Combine.r input) list ->
-    t * Uf.Domains.t * Shostak.Combine.r result
+    t * Uf.GlobalDomains.t * Shostak.Combine.r result
+  (** [assume env uf la] adds and processes the literals in [la] to the
+      environment [env].
+
+      The second value returned by this function can be used to update any
+      relevant domain. *)
+
   val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
 
   val case_split :
@@ -81,7 +92,8 @@ module type RELATION = sig
       Returns [None] if the theory cannot optimize the objective. *)
 
   val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
-    t * Uf.Domains.t * (Shostak.Combine.r Xliteral.view * Explanation.t) list
+    t * Uf.GlobalDomains.t *
+    (Shostak.Combine.r Xliteral.view * Explanation.t) list
   (** add a representant to take into account *)
 
   val instantiate :

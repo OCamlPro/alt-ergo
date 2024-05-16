@@ -35,13 +35,21 @@ type t
 type r = Shostak.Combine.r
 
 type _ id = ..
-(** Extensible type for global domains identifiers, see {!Domains}. *)
+(** Extensible type for global domains identifiers, see {!GlobalDomains}. *)
 
-module type Domains = sig
+module type GlobalDomain = sig
   (** Module signature for global domains used by the union-find module.
 
-      The union-find module updates global domains when equivalence classes are
-      merged. *)
+      A global domain records a set of potentially correlated values for
+      multiple variables at once. This is typically, but not necessarily, an
+      associative mapping of variables to their own independent domain.
+
+      {b Note}: This module signature only contains the bare minimum for
+      interaction with the union-find module to be able to update the global
+      domains appropriately when new terms are introduced and equivalence
+      classes are merged. In particular, it purposefully provides no facility
+      to access or modify the global domain to allow more flexibility in the
+      to the implementer. *)
 
   type t
   (** The type of global domains. *)
@@ -50,8 +58,10 @@ module type Domains = sig
   (** Pretty-printer for global domains. *)
 
   type _ id += Id : t id
-  (** Id used by the union-find module to dispatch to this module. Must be
-      unique (i.e. do not re-export the [Id] from another module). *)
+  (** Unique identifier for this module. Used for dispatch by the union-find.
+
+      {b Warning}: This identifier must be unique; do not re-export the [Id]
+      from another module (e.g. through [include]). *)
 
   val empty : t
   (** The empty domain. *)
@@ -70,7 +80,7 @@ module type Domains = sig
 
   exception Inconsistent of Explanation.t
   (** Raised by [subst] below when an inconsistency is found while merging the
-      domains.*)
+      domains. *)
 
   val subst : ex:Explanation.t -> r -> r -> t -> t
   (** [subst ~ex rr nrr t] is called when the representatives [rr] and [nrr] are
@@ -83,24 +93,26 @@ module type Domains = sig
       @raise Inconsistent if the domains for [rr] and [nrr] are incompatible. *)
 end
 
-type 'a domains = (module Domains with type t = 'a)
-(** The type for global domain modules with storage type ['a]. *)
+type 'a global_domain = (module GlobalDomain with type t = 'a)
+(** The type of global domain modules with a given storage type (see
+    {!GlobalDomain}). *)
 
-module Domains : sig
-  (** Maps from domain module to an instance of the corresponding type. *)
+module GlobalDomains : sig
+  (** This module provides a registry type to access and update a single
+      "current" instance associated with multiple global domain types. *)
 
   type t
-  (** The [Domains.t] type maps domain modules (of type ['a domains]) to an
+  (** Maps global domain modules (of type ['a global_domain]) to an
       associated domain of the corresponding type ['a]. *)
 
   val empty : t
-  (** [empty] maps all domain modules [D] to its default domain [D.empty]. *)
+  (** [empty] maps all domain modules [D] to their default domain [D.empty]. *)
 
-  val find : 'a domains -> t -> 'a
+  val find : 'a global_domain -> t -> 'a
   (** [find (module D) t] returns the global domain associated with the domain
       module [D]. Defaults to [D.empty]. *)
 
-  val add : 'a domains -> 'a -> t -> t
+  val add : 'a global_domain -> 'a -> t -> t
   (** [add (module D) d t] registers the global domain [d] for the domain module
       [D]. Overwrite any pre-existing global domain associated with [D]. *)
 end
@@ -116,9 +128,9 @@ val find : t -> Expr.t -> r * Explanation.t
 
 val find_r : t -> r -> r * Explanation.t
 
-val domains : t -> Domains.t
+val domains : t -> GlobalDomains.t
 
-val set_domains : t -> Domains.t -> t
+val set_domains : t -> GlobalDomains.t -> t
 
 val union :
   t -> r -> r -> Explanation.t ->

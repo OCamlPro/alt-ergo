@@ -265,7 +265,7 @@ end
 module type Domains = sig
   (** Extended signature for global domains. *)
 
-  include Uf.Domains
+  include Uf.GlobalDomain
 
   type elt
   (** The type of domains contained in the map. Each domain of type [elt]

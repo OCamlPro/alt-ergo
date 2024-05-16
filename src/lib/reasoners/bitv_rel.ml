@@ -490,11 +490,11 @@ let empty uf =
   { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
   ; constraints = Constraints.empty
   ; size_splits = Q.one },
-  Uf.Domains.add (module Domains) Domains.empty (Uf.domains uf)
+  Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf)
 
 let assume env uf la =
   let ds = Uf.domains uf in
-  let domain = Uf.Domains.find (module Domains) ds in
+  let domain = Uf.GlobalDomains.find (module Domains) ds in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let (domain, constraints, eqs, size_splits) =
     try
@@ -549,7 +549,7 @@ let assume env uf la =
     { result with assume = List.rev_append assume result.assume }
   in
   { delayed ; constraints ; size_splits },
-  Uf.Domains.add (module Domains) domain ds,
+  Uf.GlobalDomains.add (module Domains) domain ds,
   result
 
 let query _ _ _ = None
@@ -558,7 +558,7 @@ let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
     []
   else
-    let domain = Uf.Domains.find (module Domains) (Uf.domains uf) in
+    let domain = Uf.GlobalDomains.find (module Domains) (Uf.domains uf) in
     (* Look for representatives with minimal, non-fully known, domain size.
 
        We first look among the constrained variables, then if there are no

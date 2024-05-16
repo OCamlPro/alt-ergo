@@ -249,7 +249,7 @@ end
 
 let empty uf = {
   size_splits = Numbers.Q.one
-}, Uf.Domains.add (module Domains) Domains.empty (Uf.domains uf)
+}, Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf)
 
 (* Update the counter of case-split size in [env]. *)
 let count_splits env la =
@@ -347,7 +347,7 @@ let propagate_domains domains =
 
 let assume env uf la =
   let ds = Uf.domains uf in
-  let domains = Uf.Domains.find (module Domains) ds in
+  let domains = Uf.GlobalDomains.find (module Domains) ds in
   Debug.pp_domains domains;
   let env = count_splits env la in
   let domains =
@@ -358,7 +358,7 @@ let assume env uf la =
   in
   let assume, domains = propagate_domains domains in
   env,
-  Uf.Domains.add (module Domains) domains ds,
+  Uf.GlobalDomains.add (module Domains) domains ds,
   Sig_rel.{ assume; remove = [] }
 
 let can_split env n =
@@ -382,7 +382,7 @@ let case_split env uf ~for_model =
           match best with
           | Some (n, _, _) when n <= cd -> best
           | _ -> Some (cd, r, Domain.choose d)
-      ) (Uf.Domains.find (module Domains) (Uf.domains uf)) None
+      ) (Uf.GlobalDomains.find (module Domains) (Uf.domains uf)) None
   in
   match best with
   | Some (n, r, c) ->

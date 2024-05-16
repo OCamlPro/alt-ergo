@@ -167,9 +167,9 @@ module Domains = struct
       internal_update r nd t
     | Alien _ | Constr _ | Select _ -> t
 
-  (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d] contains
-      in the current domain of [r]. The representative [r] is marked [changed]
-      after this call if the domain [d] is strictly smaller. *)
+  (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d]
+      contained in the current domain of [r]. The representative [r] is marked
+      [changed] after this call if the domain [d] is strictly smaller. *)
   let tighten r d t =
     let od = get r t in
     (* For sake of completeness, the domain [d] has to be a subset of the old
@@ -268,7 +268,7 @@ let empty uf = {
   delayed = Rel_utils.Delayed.create ~is_ready dispatch;
   size_splits = Numbers.Q.one;
   new_terms = SE.empty;
-}, Uf.Domains.add (module Domains) Domains.empty (Uf.domains uf)
+}, Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf)
 
 (* ################################################################ *)
 (*BISECT-IGNORE-BEGIN*)
@@ -520,7 +520,7 @@ let count_splits env la =
 
 let assume env uf la =
   let ds = Uf.domains uf in
-  let domains = Uf.Domains.find (module Domains) ds in
+  let domains = Uf.GlobalDomains.find (module Domains) ds in
   Debug.pp_domains "before assume" domains;
   (* should be done globally in CCX *)
   let la = remove_redundancies la in
@@ -541,7 +541,7 @@ let assume env uf la =
   in
   Debug.pp_domains "after assume" domains;
   env,
-  Uf.Domains.add (module Domains) domains ds,
+  Uf.GlobalDomains.add (module Domains) domains ds,
   Sig_rel.{ assume; remove = [] }
 
 (* ################################################################ *)
@@ -598,7 +598,7 @@ let case_split env uf ~for_model =
     assert (not for_model);
     if Options.get_debug_adt () then
       Debug.pp_domains "before cs"
-        (Uf.Domains.find (module Domains) (Uf.domains uf));
+        (Uf.GlobalDomains.find (module Domains) (Uf.domains uf));
     match pick_delayed_destructor env with
     | Some (r, d) ->
       if Options.get_debug_adt () then
@@ -619,7 +619,7 @@ let optimizing_objective _env _uf _o = None
 let query _env uf (ra, _, ex, _) =
   if Options.get_disable_adts () then None
   else
-    let domains = Uf.Domains.find (module Domains) (Uf.domains uf) in
+    let domains = Uf.GlobalDomains.find (module Domains) (Uf.domains uf) in
     try
       match ra with
       | Xliteral.Builtin(true, Sy.IsConstr c, [r]) ->
