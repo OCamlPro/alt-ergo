@@ -27,10 +27,9 @@
 
 module Sy = Symbols
 module E  = Expr
-module Hs = Hstring
 
 type 'a abstract =
-  | Cons of Hs.t * Ty.t
+  | Cons of Uid.t * Ty.t
   (* [Cons(hs, ty)] represents a constructor of an enum type of type [ty]. *)
 
   | Alien of 'a
@@ -70,7 +69,7 @@ module Shostak (X : ALIEN) = struct
     open Printer
 
     let print fmt = function
-      | Cons (hs,_) -> Format.fprintf fmt "%s" (Hs.view hs)
+      | Cons (hs,_) -> Format.fprintf fmt "%a" Uid.pp hs
       | Alien x -> Format.fprintf fmt "%a" X.print x
 
     let solve_bis a b =
@@ -112,7 +111,7 @@ module Shostak (X : ALIEN) = struct
   let compare_mine c1 c2 =
     match c1 , c2 with
     | Cons (h1,ty1) , Cons (h2,ty2)  ->
-      let n = Hs.compare h1 h2 in
+      let n = Uid.compare h1 h2 in
       if n <> 0 then n else Ty.compare ty1 ty2
     | Alien r1, Alien r2 -> X.str_cmp r1 r2
     | Alien _ , Cons _   -> 1
@@ -121,12 +120,12 @@ module Shostak (X : ALIEN) = struct
   let compare x y = compare_mine (embed x) (embed y)
 
   let equal s1 s2 = match s1, s2 with
-    | Cons (h1,ty1) , Cons (h2,ty2)  -> Hs.equal h1 h2 && Ty.equal ty1 ty2
+    | Cons (h1,ty1) , Cons (h2,ty2)  -> Uid.equal h1 h2 && Ty.equal ty1 ty2
     | Alien r1, Alien r2 -> X.equal r1 r2
     | Alien _ , Cons _  | Cons _  , Alien _  -> false
 
   let hash = function
-    | Cons (h, ty) -> Hstring.hash h + 19 * Ty.hash ty
+    | Cons (h, ty) -> Uid.hash h + 19 * Ty.hash ty
     | Alien r -> X.hash r
 
   let leaves _ = []
@@ -152,7 +151,7 @@ module Shostak (X : ALIEN) = struct
 
   let solve a b =
     match embed a, embed b with
-    | Cons(c1,_) , Cons(c2,_) when Hs.equal c1 c2 -> []
+    | Cons(c1,_) , Cons(c2,_) when Uid.equal c1 c2 -> []
     | Cons(_,_) , Cons(_,_) -> raise Util.Unsolvable
     | Cons _     , Alien r2   -> [r2,a]
     | Alien r1   , Cons _     -> [r1,b]

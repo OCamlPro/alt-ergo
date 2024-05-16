@@ -29,15 +29,12 @@ module X = Shostak.Combine
 module Ex = Explanation
 module E = Expr
 module SE = E.Set
-module Hs = Hstring
 module Sy = Symbols
 module MX = Shostak.MXH
 module SX = Shostak.SXH
 module LR = Uf.LX
-module HSS = Hs.Set
 module Th = Shostak.Adt
 module SLR = Set.Make(LR)
-module MHs = Hs.Map
 
 let timer = Timers.M_Adt
 
@@ -46,27 +43,27 @@ module Domain = struct
      assigned to the semantic value has to use a constructor lying in the
      domain. *)
   type t = {
-    constrs : HSS.t;
+    constrs : Uid.Set.t;
     ex : Ex.t;
   }
 
   exception Inconsistent of Ex.t
 
   let[@inline always] as_singleton { constrs; ex } =
-    if HSS.cardinal constrs = 1 then
-      Some (HSS.choose constrs, ex)
+    if Uid.Set.cardinal constrs = 1 then
+      Some (Uid.Set.choose constrs, ex)
     else
       None
 
   let domain ~constrs ex =
-    if HSS.is_empty constrs then
+    if Uid.Set.is_empty constrs then
       raise @@ Inconsistent ex
     else
       { constrs; ex }
 
-  let[@inline always] singleton ~ex c = { constrs = HSS.singleton c; ex }
+  let[@inline always] singleton ~ex c = { constrs = Uid.Set.singleton c; ex }
 
-  let[@inline always] subset d1 d2 = HSS.subset d1.constrs d2.constrs
+  let[@inline always] subset d1 d2 = Uid.Set.subset d1.constrs d2.constrs
 
   let unknown ty =
     match ty with
@@ -76,31 +73,31 @@ module Domain = struct
       let constrs =
         List.fold_left
           (fun acc Ty.{ constr; _ } ->
-             HSS.add constr acc
-          ) HSS.empty body
+             Uid.Set.add constr acc
+          ) Uid.Set.empty body
       in
-      assert (not @@ HSS.is_empty constrs);
+      assert (not @@ Uid.Set.is_empty constrs);
       { constrs; ex = Ex.empty }
     | _ ->
       (* Only ADT values can have a domain. This case shouldn't happen since
          we check the type of semantic values in both [add] and [assume]. *)
       assert false
 
-  let equal d1 d2 = HSS.equal d1.constrs d2.constrs
+  let equal d1 d2 = Uid.Set.equal d1.constrs d2.constrs
 
   let pp ppf d =
     Fmt.(braces @@
-         iter ~sep:comma HSS.iter Hstring.print) ppf d.constrs;
+         iter ~sep:comma Uid.Set.iter Uid.pp) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
   let intersect ~ex d1 d2 =
-    let constrs = HSS.inter d1.constrs d2.constrs in
+    let constrs = Uid.Set.inter d1.constrs d2.constrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
     domain ~constrs ex
 
   let remove ~ex c d =
-    let constrs = HSS.remove c d.constrs in
+    let constrs = Uid.Set.remove c d.constrs in
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
 end
@@ -208,7 +205,7 @@ let calc_destructor d e uf =
   let r, ex = Uf.find uf e in
   match Th.embed r with
   | Constr { c_args; _ } ->
-    begin match Lists.assoc Hstring.equal d c_args with
+    begin match Lists.assoc Uid.equal d c_args with
       | v -> Some (v, ex)
       | exception Not_found -> None
     end
@@ -489,7 +486,7 @@ let build_constr_eq r c =
           try Ty.assoc_destrs c body with Not_found -> assert false
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
-        let cons = E.mk_constr (Hstring.view c) xs ty in
+        let cons = E.mk_constr c xs ty in
         let r', ctx = X.make cons in
         (* In the current implementation of `X.make`, we produce
            a nonempty context only for interpreted semantic values
@@ -497,7 +494,7 @@ let build_constr_eq r c =
            values `cons` never involves such values. *)
         assert (Lists.is_empty ctx);
         let eq = Shostak.L.(view @@ mk_eq r r') in
-        Some (eq, E.mk_constr (Hstring.view c) xs ty)
+        Some (eq, E.mk_constr c xs ty)
 
       | _ -> assert false
     end
@@ -588,7 +585,7 @@ let constr_of_destr ty d =
         let r =
           List.find
             (fun Ty.{ destrs; _ } ->
-               List.exists (fun (d', _) -> Hstring.equal d d') destrs
+               List.exists (fun (d', _) -> Uid.equal d d') destrs
             ) cases
         in
         r.constr
@@ -597,7 +594,7 @@ let constr_of_destr ty d =
 
   | _ -> assert false
 
-exception Found of X.r * Hstring.t
+exception Found of X.r * Uid.t
 
 (* Pick a delayed destructor application in [env.delayed]. Returns [None]
    if there is no delayed destructor. *)
@@ -629,7 +626,7 @@ let case_split env _uf ~for_model =
       if Options.get_debug_adt () then
         Printer.print_dbg ~flushed:false
           ~module_name:"Adt_rel" ~function_name:"case_split"
-          "found r = %a and d = %a@ " X.print r Hstring.print d;
+          "found r = %a and d = %a@ " X.print r Uid.pp d;
       (* CS on negative version would be better in general. *)
       let c = constr_of_destr (X.type_info r) d in
       let cs =  LR.mkv_builtin false (Sy.IsConstr c) [r] in

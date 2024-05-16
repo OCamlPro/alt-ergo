@@ -160,28 +160,28 @@ module Main_Default : S = struct
            | Tvar _ -> assert false
 
            | Text (_, hs) | Tsum (hs, _) | Trecord { name = hs; _ } when
-               Hstring.Map.mem hs mp -> mp
+               Uid.Map.mem hs mp -> mp
 
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
-             Hstring.Map.add hs (Text(l, hs)) mp
+             Uid.Map.add hs (Text(l, hs)) mp
 
            | Tsum (hs, _) ->
-             Hstring.Map.add hs ty mp
+             Uid.Map.add hs ty mp
 
            | Trecord { name; _ } ->
              (* cannot do better for records ? *)
-             Hstring.Map.add name ty mp
+             Uid.Map.add name ty mp
 
            | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
-             Hstring.Map.add hs ty mp
-        )sty Hstring.Map.empty
+             Uid.Map.add hs ty mp
+        )sty Uid.Map.empty
 
     let print_types_decls ?(header=true) types =
       let open Ty in
       print_dbg ~flushed:false ~header "@[<v 2>(* types decls: *)@ ";
-      Hstring.Map.iter
+      Uid.Map.iter
         (fun _ ty ->
            match ty with
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
@@ -193,10 +193,10 @@ module Main_Default : S = struct
                | [] -> assert false
                | e::l ->
                  let print fmt e =
-                   Format.fprintf fmt " | %s" (Hstring.view e)
+                   Format.fprintf fmt " | %a" Uid.pp e
                  in
-                 print_dbg ~flushed:false ~header:false "%s@ %a@ "
-                   (Hstring.view e)
+                 print_dbg ~flushed:false ~header:false "%a@ %a@ "
+                   Uid.pp e
                    (pp_list_no_space print) l;
              end
 
@@ -206,11 +206,11 @@ module Main_Default : S = struct
                | [] -> assert false
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
-                   Format.fprintf fmt " ; %s :%a"
-                     (Hstring.view lbl) Ty.print ty in
+                   Format.fprintf fmt " ; %a :%a"
+                     Uid.pp lbl Ty.print ty in
                  print_dbg ~flushed:false ~header:false
-                   "{ %s : %a%a"
-                   (Hstring.view lbl) Ty.print ty
+                   "{ %a : %a%a"
+                   Uid.pp lbl Ty.print ty
                    (pp_list_no_space print) l;
                  print_dbg ~flushed:false ~header:false " }@ "
              end

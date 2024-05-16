@@ -27,14 +27,13 @@
 
 module Sy = Symbols
 module E  = Expr
-module Hs = Hstring
 
 type 'a abstract =
-  | Constr of { c_name : Hs.t ; c_ty : Ty.t ; c_args : (Hs.t * 'a) list }
+  | Constr of { c_name : Uid.t ; c_ty : Ty.t ; c_args : (Uid.t * 'a) list }
   (* [Cons { c_name; c_ty; c_args }] reprensents the application of the
      constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
 
-  | Select of { d_name : Hs.t ; d_ty : Ty.t ; d_arg : 'a }
+  | Select of { d_name : Uid.t ; d_ty : Ty.t ; d_arg : 'a }
   (* [Select { d_name; d_ty; d_arg }] represents the destructor [d_name] of
      the ADT [d_ty] on the ADT value [d_arg]. *)
 
@@ -61,7 +60,7 @@ let constr_of_destr ty dest =
       try
         List.find
           (fun { Ty.destrs; _ } ->
-             List.exists (fun (d, _) -> Hstring.equal dest d) destrs
+             List.exists (fun (d, _) -> Uid.equal dest d) destrs
           ) cases
       with Not_found -> assert false (* invariant *)
     end
@@ -99,7 +98,7 @@ module Shostak (X : ALIEN) = struct
     | None -> Alien r
 
   let pp_field ppf (lbl, v) =
-    Fmt.pf ppf "%a : %a" Hstring.print lbl X.print v
+    Fmt.pf ppf "%a : %a" Uid.pp lbl X.print v
 
   let print ppf = function
     | Alien x ->
@@ -107,11 +106,11 @@ module Shostak (X : ALIEN) = struct
 
     | Constr { c_name; c_args; _ } ->
       Fmt.pf ppf "%a@[(%a@])"
-        Hs.print c_name
+        Uid.pp c_name
         Fmt.(list ~sep:semi pp_field) c_args
 
     | Select d ->
-      Fmt.pf ppf "%a#!!%a" X.print d.d_arg Hs.print d.d_name
+      Fmt.pf ppf "%a#!!%a" X.print d.d_arg Uid.pp d.d_name
 
 
   let is_mine u =
@@ -125,7 +124,7 @@ module Shostak (X : ALIEN) = struct
       match embed d_arg with
       | Constr c ->
         begin
-          try snd @@ List.find (fun (lbl, _) -> Hs.equal d_name lbl) c.c_args
+          try snd @@ List.find (fun (lbl, _) -> Uid.equal d_name lbl) c.c_args
           with Not_found ->
             Printer.print_err "is_mine %a failed" print u;
             assert false
@@ -136,13 +135,13 @@ module Shostak (X : ALIEN) = struct
     match s1, s2 with
     | Alien r1, Alien r2 -> X.equal r1 r2
     | Constr c1, Constr c2 ->
-      Hstring.equal c1.c_name c2.c_name &&
+      Uid.equal c1.c_name c2.c_name &&
       Ty.equal c1.c_ty c2.c_ty &&
       begin
         try
           List.iter2
             (fun (hs1, v1) (hs2, v2) ->
-               assert (Hs.equal hs1 hs2);
+               assert (Uid.equal hs1 hs2);
                if not (X.equal v1 v2) then raise Exit
             ) c1.c_args c2.c_args;
           true
@@ -152,7 +151,7 @@ module Shostak (X : ALIEN) = struct
       end
 
     | Select d1, Select d2 ->
-      Hstring.equal d1.d_name d2.d_name &&
+      Uid.equal d1.d_name d2.d_name &&
       Ty.equal d1.d_ty d2.d_ty &&
       X.equal d1.d_arg d2.d_arg
 
@@ -205,10 +204,10 @@ module Shostak (X : ALIEN) = struct
     | Constr { c_name ; c_ty ; c_args } ->
       List.fold_left
         (fun acc (_, r) -> acc * 7 + X.hash r)
-        (Hstring.hash c_name + 7 * Ty.hash c_ty) c_args
+        (Uid.hash c_name + 7 * Ty.hash c_ty) c_args
 
     | Select { d_name ; d_ty ; d_arg } ->
-      ((Hstring.hash d_name + 11 * Ty.hash d_ty)) * 11 + X.hash d_arg
+      ((Uid.hash d_name + 11 * Ty.hash d_ty)) * 11 + X.hash d_arg
 
   let leaves r =
     match r with
@@ -254,7 +253,7 @@ module Shostak (X : ALIEN) = struct
     | _, Alien _ -> -1
 
     | Constr c1, Constr c2 ->
-      let c = Hstring.compare c1.c_name c2.c_name in
+      let c = Uid.compare c1.c_name c2.c_name in
       if c <> 0 then c
       else
         let c = Ty.compare c1.c_ty c2.c_ty in
@@ -264,7 +263,7 @@ module Shostak (X : ALIEN) = struct
             try
               List.iter2
                 (fun (hs1, v1) (hs2, v2) ->
-                   assert (Hs.equal hs1 hs2);
+                   assert (Uid.equal hs1 hs2);
                    let c = X.str_cmp v1 v2 in
                    if c <> 0 then raise (Util.Cmp c);
                 )c1.c_args c2.c_args;
@@ -277,7 +276,7 @@ module Shostak (X : ALIEN) = struct
     | _, Constr _ -> -1
 
     | Select d1, Select d2 ->
-      let c = Hstring.compare d1.d_name d2.d_name in
+      let c = Uid.compare d1.d_name d2.d_name in
       if c <> 0 then c
       else
         let c = Ty.compare d1.d_ty d2.d_ty in
@@ -325,7 +324,7 @@ module Shostak (X : ALIEN) = struct
           in
           let xs = List.map (fun (_, ty) -> E.fresh_name ty) destrs in
           let cons =
-            E.mk_term (Sy.constr (Hs.view constr)) xs (X.type_info d_arg)
+            E.mk_term (Sy.constr constr) xs (X.type_info d_arg)
           in
           if Options.get_debug_adt () then
             Printer.print_dbg ~flushed:false
@@ -369,13 +368,13 @@ module Shostak (X : ALIEN) = struct
       Sig.{ pb with sbt = (r, r1) :: pb.sbt }
 
     | Constr c1, Constr c2 ->
-      if not (Hstring.equal c1.c_name c2.c_name) then raise Util.Unsolvable;
+      if not (Uid.equal c1.c_name c2.c_name) then raise Util.Unsolvable;
       try
         Sig.{pb with
              eqs =
                List.fold_left2
                  (fun eqs (hs1, v1) (hs2, v2) ->
-                    assert (Hstring.equal hs1 hs2);
+                    assert (Uid.equal hs1 hs2);
                     (v1, v2) :: eqs
                  )pb.eqs c1.c_args c2.c_args
             }

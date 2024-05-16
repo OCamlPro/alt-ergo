@@ -263,8 +263,8 @@ val mk_ite : t -> t -> t -> t
 
 (** smart constructor for datatypes. *)
 
-val mk_constr : string -> t list -> Ty.t -> t
-val mk_tester : string -> t -> t
+val mk_constr : Uid.t -> t list -> Ty.t -> t
+val mk_tester : Uid.t -> t -> t
 
 (** Substitutions *)
 

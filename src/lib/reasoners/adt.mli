@@ -27,8 +27,8 @@
 
 type 'a abstract =
   | Constr of
-      { c_name : Hstring.t ; c_ty : Ty.t ; c_args : (Hstring.t * 'a) list }
-  | Select of { d_name : Hstring.t ; d_ty : Ty.t ; d_arg : 'a }
+      { c_name : Uid.t ; c_ty : Ty.t ; c_args : (Uid.t * 'a) list }
+  | Select of { d_name : Uid.t ; d_ty : Ty.t ; d_arg : 'a }
 
   | Alien of 'a
 

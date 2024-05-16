@@ -107,15 +107,15 @@ module Pp_smtlib_term = struct
 
         | Sy.L_built (Sy.IsConstr hs), [e] ->
           if Options.get_output_smtlib () then
-            fprintf fmt "((_ is %a) %a)" Hstring.print hs print e
+            fprintf fmt "((_ is %a) %a)" Uid.pp hs print e
           else
-            fprintf fmt "(%a ? %a)" print e Hstring.print hs
+            fprintf fmt "(%a ? %a)" print e Uid.pp hs
 
         | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
           if Options.get_output_smtlib () then
-            fprintf fmt "(not ((_ is %a) %a))" Hstring.print hs print e
+            fprintf fmt "(not ((_ is %a) %a))" Uid.pp hs print e
           else
-            fprintf fmt "not (%a ? %a)" print e Hstring.print hs
+            fprintf fmt "not (%a ? %a)" print e Uid.pp hs
 
         | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
           | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -148,9 +148,9 @@ module Pp_smtlib_term = struct
 
     | Sy.Op (Sy.Access field), [e] ->
       if Options.get_output_smtlib () then
-        fprintf fmt "(%s %a)" (Hstring.view field) print e
+        fprintf fmt "(%a %a)" Uid.pp field print e
       else
-        fprintf fmt "%a.%s" print e (Hstring.view field)
+        fprintf fmt "%a.%a" print e Uid.pp field
 
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
@@ -158,8 +158,8 @@ module Pp_smtlib_term = struct
           assert (List.length xs = List.length lbs);
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
-              fprintf fmt "%s%s = %a"  (if first then "" else "; ")
-                (Hstring.view field) print e;
+              fprintf fmt "%s%a = %a"  (if first then "" else "; ")
+                Uid.pp field print e;
               false
             ) true lbs xs);
           fprintf fmt "}";
@@ -174,7 +174,7 @@ module Pp_smtlib_term = struct
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-      fprintf fmt "%a(%a)" Hstring.print hs print_list l
+      fprintf fmt "%a(%a)" Uid.pp hs print_list l
 
     | Sy.Op _, [e1; e2] ->
       if Options.get_output_smtlib () then
@@ -183,7 +183,7 @@ module Pp_smtlib_term = struct
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
     | Sy.Op Sy.Destruct hs, [e] ->
-      fprintf fmt "%a#%a" print e Hstring.print hs
+      fprintf fmt "%a#%a" print e Uid.pp hs
 
 
     | Sy.In(lb, rb), [t] ->

@@ -26,7 +26,7 @@
 (**************************************************************************)
 
 (*type 'a abstract*)
-type 'a abstract = Cons of Hstring.t * Ty.t |  Alien of 'a
+type 'a abstract = Cons of Uid.t * Ty.t |  Alien of 'a
 
 module type ALIEN = sig
   include Sig.X

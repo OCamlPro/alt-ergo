@@ -25,8 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DE = Dolmen.Std.Expr
 module Hs = Hstring
-
 module Q = Numbers.Q
 module Z = Numbers.Z
 
@@ -85,8 +85,16 @@ let hstring_ae_reprs =
 
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
-let fpa_rounding_mode =
-  Ty.Tsum (Hs.make "RoundingMode", hstring_smt_reprs)
+let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
+  let module DStd = Dolmen.Std in
+  (* We may use the builtin type `DStd.Expr.Ty.roundingMode` here. *)
+  let ty_cst = DE.Ty.Const.mk (DStd.Path.global "RoundingMode") 0 in
+  let cstrs =
+    List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) cstrs
+  in
+  let _, cstrs = DE.Term.define_adt ty_cst [] cstrs in
+  DE.Ty.apply ty_cst [], cstrs,
+  Ty.Tsum (Uid.of_dolmen ty_cst, List.map (fun (c, _) -> Uid.of_dolmen c) cstrs)
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in
