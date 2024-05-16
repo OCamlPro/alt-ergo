@@ -62,7 +62,7 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [LRI]: https://www.lri.fr
 [OCamlPro]: https://www.ocamlpro.com
 [opam]: https://opam.ocaml.org
-[LICENSE]: https://github.com/OCamlPro/alt-ergo/LICENSE.md
+[LICENSE]: https://github.com/OCamlPro/alt-ergo/?tab=License-1-ov-file
 [releases' page]: https://github.com/OCamlPro/alt-ergo/releases/
 [Satisfiability Modulo Theories]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
 [try Alt-Ergo]: https://alt-ergo.ocamlpro.com/try.html
