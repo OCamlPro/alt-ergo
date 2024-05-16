@@ -56,15 +56,15 @@ type t = {
   r7: Rel7.t;
 }
 
-let empty classes = {
-  r1=Rel1.empty classes;
-  r2=Rel2.empty classes;
-  r3=Rel3.empty classes;
-  r4=Rel4.empty classes;
-  r5=Rel5.empty classes;
-  r6=Rel6.empty classes;
-  r7=Rel7.empty classes;
-}
+let empty uf =
+  let r1, doms1 = Rel1.empty uf in
+  let r2, doms2 = Rel2.empty (Uf.set_domains uf doms1) in
+  let r3, doms3 = Rel3.empty (Uf.set_domains uf doms2) in
+  let r4, doms4 = Rel4.empty (Uf.set_domains uf doms3) in
+  let r5, doms5 = Rel5.empty (Uf.set_domains uf doms4) in
+  let r6, doms6 = Rel6.empty (Uf.set_domains uf doms5) in
+  let r7, doms7 = Rel7.empty (Uf.set_domains uf doms6) in
+  {r1; r2; r3; r4; r5; r6; r7}, doms7
 
 let (|@|) l1 l2 =
   if l1 == [] then l2
@@ -73,35 +73,36 @@ let (|@|) l1 l2 =
 
 let assume env uf sa =
   Options.exec_thread_yield ();
-  let env1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
+  let env1, doms1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
     Timers.with_timer Rel1.timer Timers.F_assume @@ fun () ->
     Rel1.assume env.r1 uf sa
   in
-  let env2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
+  let env2, doms2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
     Timers.with_timer Rel2.timer Timers.F_assume @@ fun () ->
-    Rel2.assume env.r2 uf sa
+    Rel2.assume env.r2 (Uf.set_domains uf doms1) sa
   in
-  let env3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
+  let env3, doms3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
     Timers.with_timer Rel3.timer Timers.F_assume @@ fun () ->
-    Rel3.assume env.r3 uf sa
+    Rel3.assume env.r3 (Uf.set_domains uf doms2) sa
   in
-  let env4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
+  let env4, doms4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
     Timers.with_timer Rel4.timer Timers.F_assume @@ fun () ->
-    Rel4.assume env.r4 uf sa
+    Rel4.assume env.r4 (Uf.set_domains uf doms3) sa
   in
-  let env5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
+  let env5, doms5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
     Timers.with_timer Rel5.timer Timers.F_assume @@ fun () ->
-    Rel5.assume env.r5 uf sa
+    Rel5.assume env.r5 (Uf.set_domains uf doms4) sa
   in
-  let env6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
+  let env6, doms6, ({ assume = a6; remove = rm6}:_ Sig_rel.result) =
     Timers.with_timer Rel6.timer Timers.F_assume @@ fun () ->
-    Rel6.assume env.r6 uf sa
+    Rel6.assume env.r6 (Uf.set_domains uf doms5) sa
   in
-  let env7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
+  let env7, doms7, ({ assume = a7; remove = rm7}:_ Sig_rel.result) =
     Timers.with_timer Rel7.timer Timers.F_assume @@ fun () ->
-    Rel7.assume env.r7 uf sa
+    Rel7.assume env.r7 (Uf.set_domains uf doms6) sa
   in
   {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
+  doms7,
   ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
      remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
    : _ Sig_rel.result)
@@ -174,14 +175,14 @@ let optimizing_objective env uf o =
 
 let add env uf r t =
   Options.exec_thread_yield ();
-  let r1, eqs1 =Rel1.add env.r1 uf r t in
-  let r2, eqs2 =Rel2.add env.r2 uf r t in
-  let r3, eqs3 =Rel3.add env.r3 uf r t in
-  let r4, eqs4 =Rel4.add env.r4 uf r t in
-  let r5, eqs5 =Rel5.add env.r5 uf r t in
-  let r6, eqs6 =Rel6.add env.r6 uf r t in
-  let r7, eqs7 =Rel7.add env.r7 uf r t in
-  {r1;r2;r3;r4;r5;r6;r7;},eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
+  let r1, doms1, eqs1 =Rel1.add env.r1 uf r t in
+  let r2, doms2, eqs2 =Rel2.add env.r2 (Uf.set_domains uf doms1) r t in
+  let r3, doms3, eqs3 =Rel3.add env.r3 (Uf.set_domains uf doms2) r t in
+  let r4, doms4, eqs4 =Rel4.add env.r4 (Uf.set_domains uf doms3) r t in
+  let r5, doms5, eqs5 =Rel5.add env.r5 (Uf.set_domains uf doms4) r t in
+  let r6, doms6, eqs6 =Rel6.add env.r6 (Uf.set_domains uf doms5) r t in
+  let r7, doms7, eqs7 =Rel7.add env.r7 (Uf.set_domains uf doms6) r t in
+  {r1;r2;r3;r4;r5;r6;r7;},doms7,eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5|@|eqs6|@|eqs7
 
 
 let instantiate ~do_syntactic_matching t_match env uf selector =

@@ -94,6 +94,12 @@ module Domain = struct
     domain ~constrs ex
 end
 
+let is_enum_ty = function
+  | Ty.Tsum _ -> true
+  | _ -> false
+
+let is_enum r = is_enum_ty (X.type_info r)
+
 module Domains = struct
   (** The type of simple domain maps. A domain map maps each representative
       (semantic value, of type [X.r]) to its associated domain. *)
@@ -108,6 +114,8 @@ module Domains = struct
         in [propagation]. *)
   }
 
+  type _ Uf.id += Id : t Uf.id
+
   let pp ppf t =
     Fmt.(iter_bindings ~sep:semi MX.iter
            (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
@@ -116,6 +124,8 @@ module Domains = struct
       ppf t.domains
 
   let empty = { domains = MX.empty; changed = SX.empty }
+
+  let filter_ty = is_enum_ty
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
@@ -134,16 +144,14 @@ module Domains = struct
         Domain.unknown (X.type_info r)
 
   let add r t =
-    if MX.mem r t.domains then t
-    else
-      match Th.embed r with
-      | Cons _ -> t
-      | _ ->
-        (* We have to add a default domain if the key `r` isn't in map in order
-           to be sure that the case-split mechanism will attempt to choose a
-           value for it. *)
-        let nd = Domain.unknown (X.type_info r) in
-        internal_update r nd t
+    match Th.embed r with
+    | Alien _ when not (MX.mem r t.domains) ->
+      (* We have to add a default domain if the key `r` isn't in map in order
+         to be sure that the case-split mechanism will attempt to choose a
+         value for it. *)
+      let nd = Domain.unknown (X.type_info r) in
+      internal_update r nd t
+    | Cons _ | Alien _ -> t
 
   (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d] contains
       in the current domain of [r]. The representative [r] is marked [changed]
@@ -163,6 +171,8 @@ module Domains = struct
     let changed = SX.remove r t.changed in
     { domains ; changed }
 
+  exception Inconsistent = Domain.Inconsistent
+
   (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
       domains, merging the corresponding domains as appropriate.
 
@@ -177,7 +187,7 @@ module Domains = struct
       let t = remove r t in
       tighten nr nd t
 
-    | exception Not_found -> t
+    | exception Not_found -> add nr t
 
   let fold f t acc = MX.fold f t.domains acc
 
@@ -196,16 +206,6 @@ module Domains = struct
 end
 
 type t = {
-  domains : Domains.t;
-  (* Map of class representatives of enum semantic values to their
-     domains. *)
-
-  classes : Expr.Set.t list;
-  (* State of the union-find represented by all its equivalence classes.
-     This state is kept for debugging purposes only. It is updated with
-     [Uf.cl_extract] after assuming literals of the theory and returned by
-     queries in case of inconsistency. *)
-
   size_splits : Numbers.Q.t
   (* Estimate the number of case-splits performed by the theory. The
      estimation is updated while assuming new literals of the theory.
@@ -236,18 +236,16 @@ module Debug = struct
       Printer.print_dbg ~module_name:"Enum_rel" ~function_name:"add"
         "%a" X.print r
 
-  let pp_env env =
+  let pp_domains domains =
     if Options.get_debug_sum () then
       Printer.print_dbg ~module_name:"Enum_rel"
-        "The environment before assuming:@ @[%a@]" Domains.pp env.domains
+        "The environment before assuming:@ @[%a@]" Domains.pp domains
 end
 (*BISECT-IGNORE-END*)
 
-let empty classes = {
-  domains = Domains.empty;
-  classes = classes;
+let empty uf = {
   size_splits = Numbers.Q.one
-}
+}, Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf)
 
 (* Update the counter of case-split size in [env]. *)
 let count_splits env la =
@@ -259,18 +257,10 @@ let count_splits env la =
          | _ -> nb
       ) env.size_splits la
   in
-  {env with size_splits = nb}
+  {size_splits = nb}
 
-let tighten_domain rr nd env =
-  { env with domains = Domains.tighten rr nd env.domains }
-
-(* Update the domains of the semantic values [r1] and [r2] according to
-   the substitution `r1 |-> r2`.
-
-   @raise Domain.Inconsistent if this substitution is inconsistent with
-          the current environment [env]. *)
-let assume_subst ~ex r1 r2 env =
-  { env with domains = Domains.subst ~ex r1 r2 env.domains }
+let tighten_domain rr nd domains =
+  Domains.tighten rr nd domains
 
 (* Update the domains of the semantic values [r1] and [r2] according to the
    disequality [r1 <> r2].
@@ -288,17 +278,17 @@ let assume_subst ~ex r1 r2 env =
 
    @raise Domain.Inconsistent if the disequality is inconsistent with
           the current environment [env]. *)
-let assume_distinct ~ex r1 r2 env =
-  let d1 = Domains.get r1 env.domains in
-  let d2 = Domains.get r2 env.domains in
+let assume_distinct ~ex r1 r2 domains =
+  let d1 = Domains.get r1 domains in
+  let d2 = Domains.get r2 domains in
   let env =
     match Domain.as_singleton d1 with
     | Some (c, ex1) ->
       let ex = Ex.union ex1 ex in
       let nd = Domain.remove ~ex c d2 in
-      tighten_domain r2 nd env
+      tighten_domain r2 nd domains
     | None ->
-      env
+      domains
   in
   match Domain.as_singleton d2 with
   | Some (c, ex2) ->
@@ -308,57 +298,38 @@ let assume_distinct ~ex r1 r2 env =
   | None ->
     env
 
-let is_enum r =
-  match X.type_info r with
-  | Ty.Tsum _ -> true
-  | _ -> false
-
-let add r uf env =
+let add r uf domains =
   match X.type_info r with
   | Ty.Tsum _ ->
     Debug.add r;
     let rr, _ = Uf.find_r uf r in
-    { env with domains = Domains.add rr env.domains }
+    Domains.add rr domains
   | _ ->
-    env
+    domains
 
-let add_rec r uf env =
-  List.fold_left (fun env leaf -> add leaf uf env) env (X.leaves r)
+let add_rec r uf domains =
+  List.fold_left (fun env leaf -> add leaf uf env) domains (X.leaves r)
 
-let add env uf r _t = add r uf env, []
+let add env uf _r _t =
+  env, Uf.domains uf, []
 
-let assume_literals la uf env =
+let assume_literals la uf domains =
   List.fold_left
-    (fun env lit ->
+    (fun domains lit ->
        let open Xliteral in
        match lit with
-       | Eq (r1, r2) as l, _, ex, Th_util.Subst when is_enum r1 ->
-         Debug.assume l;
-         (* Needed for models generation because fresh terms are not added with
-            the function add. *)
-         let env = add_rec r1 uf env in
-         let env = add_rec r2 uf env in
-         assume_subst ~ex r1 r2 env
-
        | Distinct (false, [r1; r2]) as l, _, ex, _ when is_enum r2 ->
          Debug.assume l;
          (* Needed for models generation because fresh terms are not added with
             the function add. *)
-         let env = add_rec r1 uf env in
-         let env = add_rec r2 uf env in
-         assume_distinct ~ex r1 r2 env
+         let domains = add_rec r1 uf domains in
+         let domains = add_rec r2 uf domains in
+         assume_distinct ~ex r1 r2 domains
 
-       | _ ->
-         (* We ignore [Eq] literals that aren't substitutions as the propagation
-            of such equalities will produce substitutions later.
-            More precisely, the equation [Eq (r1, r2)] will produce two
-            substitutions:
-              [Eq (r1, rr)] and [Eq (r2, rr)]
-            where [rr] is the new class representative. *)
-         env
-    ) env la
+       | _ -> domains
+    ) domains la
 
-let propagate_domains env =
+let propagate_domains domains =
   Domains.propagate
     (fun eqs rr d ->
        match Domain.as_singleton d with
@@ -368,21 +339,23 @@ let propagate_domains env =
          eq :: eqs
        | None ->
          eqs
-    ) [] env.domains
+    ) [] domains
 
 let assume env uf la =
-  Debug.pp_env env;
+  let ds = Uf.domains uf in
+  let domains = Uf.GlobalDomains.find (module Domains) ds in
+  Debug.pp_domains domains;
   let env = count_splits env la in
-  let classes = Uf.cl_extract uf in
-  let env = { env with classes = classes } in
-  let env =
+  let domains =
     try
-      assume_literals la uf env
+      assume_literals la uf domains
     with Domain.Inconsistent ex ->
-      raise_notrace (Ex.Inconsistent (ex, env.classes))
+      raise_notrace (Ex.Inconsistent (ex, Uf.cl_extract uf))
   in
-  let assume, domains = propagate_domains env in
-  { env with domains }, Sig_rel.{ assume; remove = [] }
+  let assume, domains = propagate_domains domains in
+  env,
+  Uf.GlobalDomains.add (module Domains) domains ds,
+  Sig_rel.{ assume; remove = [] }
 
 let can_split env n =
   let m = Options.get_max_split () in
@@ -405,7 +378,7 @@ let case_split env uf ~for_model =
           match best with
           | Some (n, _, _) when n <= cd -> best
           | _ -> Some (cd, r, Domain.choose d)
-      ) env.domains None
+      ) (Uf.GlobalDomains.find (module Domains) (Uf.domains uf)) None
   in
   match best with
   | Some (n, r, c) ->

@@ -236,8 +236,13 @@ module type Domain = sig
   exception Inconsistent of Explanation.t
   (** Exception raised by [intersect] when an inconsistency is detected. *)
 
+  val filter_ty : Ty.t -> bool
+  (** Filter for the types of values this domain can be attached to. *)
+
   val unknown : Ty.t -> t
-  (** [unknown ty] returns a full domain for values of type [t]. *)
+  (** [unknown ty] returns a full domain for values of type [t].
+
+      @raises Invalid_argument if [filter_ty ty] does not hold. *)
 
   val add_explanation : ex:Explanation.t -> t -> t
   (** [add_explanation ~ex d] adds the justification [ex] to the domain d. The
@@ -269,28 +274,13 @@ module type Domain = sig
 end
 
 module type Domains = sig
-  type t
-  (** The type of domain maps. A domain map maps each representative (semantic
-      value, of type [X.r]) to its associated domain. *)
+  (** Extended signature for global domains. *)
 
-  val pp : t Fmt.t
-  (** Pretty-printer for domain maps. *)
-
-  val empty : t
-  (** The empty domain map. *)
+  include Uf.GlobalDomain
 
   type elt
   (** The type of domains contained in the map. Each domain of type [elt]
       applies to a single semantic value. *)
-
-  exception Inconsistent of Explanation.t
-  (** Exception raised by [update], [subst] and [structural_propagation] when
-      an inconsistency is detected. *)
-
-  val add : X.r -> t -> t
-  (** [add r t] adds a domain for [r] in the domain map. If [r] does not
-      already have an associated domain, a fresh domain will be created for
-      [r] using [Domain.unknown]. *)
 
   val get : X.r -> t -> elt
   (** [get r t] returns the domain currently associated with [r] in [t]. *)
@@ -298,14 +288,6 @@ module type Domains = sig
   val fold_leaves : (X.r -> elt -> 'a -> 'a) -> t -> 'a -> 'a
   (** [fold f t acc] folds [f] over all the domains in [t] that are associated
       with leaves. *)
-
-  val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
-  (** [subst ~ex p v d] replaces all the instances of [p] with [v] in all
-      domains, merging the corresponding domains as appropriate.
-
-      The explanation [ex] justifies the equality [p = v].
-
-      @raise Inconsistent if this causes any domain in [d] to become empty. *)
 
   val has_changed : t -> bool
   (** Returns [true] if any element is marked as changed. This can be used to
@@ -399,15 +381,18 @@ struct
     (** Map from leaves to the *tracked* representatives that contains them *)
   }
 
+  type _ Uf.id += Id : t Uf.id
+
   let pp ppf t =
     Fmt.(iter_bindings ~sep:semi MX.iter
            (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
-         |> braces
         )
       ppf t.domains
 
   let empty =
     { domains = MX.empty ; changed = SX.empty ; leaves_map = MX.empty }
+
+  let filter_ty = Domain.filter_ty
 
   let r_add r leaves_map =
     List.fold_left (fun leaves_map leaf ->
@@ -423,9 +408,7 @@ struct
       ) r ()
 
   let add r t =
-    match MX.find r t.domains with
-    | _ -> t
-    | exception Not_found ->
+    if MX.mem r t.domains then t else
       (* Note: we do not need to mark [r] as needing propagation, because no
           constraints applied to it yet. Any constraint that apply to [r] will
           already be marked as pending due to being newly added. *)
@@ -484,65 +467,51 @@ struct
       ) t.leaves_map acc
 
   let subst ~ex rr nrr t =
-    match MX.find rr t.leaves_map with
-    | parents ->
-      SX.fold (fun r t ->
-          let d =
-            (* Need to add [ex] to be a valid domain for nrr *)
-            try Domain.add_explanation ~ex (MX.find r t.domains)
-            with Not_found ->
-              (* [r] was in the [leaves_map] to it must have a domain *)
-              assert false
-          in
-          let changed = SX.mem r t.changed in
-          let t = remove r t in
-          let nr = X.subst rr nrr r in
-          match MX.find nr t.domains with
-          | nd ->
-            (* If there is an existing domain for [nr], there might be
-                constraints applying to [nr] prior to the substitution, and the
-                constraints that used to apply to [r] will also apply to [nr]
-                after the substitution.
+    (* Need to add [ex] to be a valid domain for [nrr] *)
+    let d = Domain.add_explanation ~ex (get rr t) in
+    let changed = SX.mem rr t.changed in
+    let t = remove rr t in
+    match MX.find nrr t.domains with
+    | nd ->
+      (* If there is an existing domain for [nrr], there might be
+          constraints applying to [nrr] prior to the substitution, and the
+          constraints that used to apply to [rr] will also apply to [nrr]
+          after the substitution.
 
-                We need to notify changed to either of these constraints, so we
-                must notify if the domain is different from *either* the old
-                domain of [r] or the old domain of [nr]. *)
-            let nnd = Domain.intersect d nd in
-            let nr_changed = not (Domain.equal nnd nd) in
-            let r_changed = not (Domain.equal nnd d) in
-            let domains =
-              if nr_changed then MX.add nr nnd t.domains else t.domains
-            in
-            let changed = changed || r_changed || nr_changed in
-            let changed =
-              if changed then SX.add nr t.changed else t.changed
-            in
-            { t with domains; changed }
-          | exception Not_found ->
-            (* If there is no existing domain for [nr], there were no
-                constraints applying to [nr] prior to the substitution.
-
-                The only constraints that need to be notified are those that
-                were applying to [r], and they only need to be notified if the
-                new domain is different from the old domain of [r]. *)
-            let default = create_domain nr in
-            let nd = Domain.intersect d default in
-            let r_changed = not (Domain.equal nd d) in
-            (* Make sure to not add more constraints than necessary for the
-               representative domain. *)
-            let nd = if Domain.equal nd default then default else nd in
-            let domains = MX.add nr nd t.domains in
-            let leaves_map = r_add nr t.leaves_map in
-            let changed = changed || r_changed in
-            let changed =
-              if changed then SX.add nr t.changed else t.changed
-            in
-            { domains; changed; leaves_map }
-        ) parents t
+          We need to notify changed to either of these constraints, so we
+          must notify if the domain is different from *either* the old
+          domain of [rr] or the old domain of [nrr]. *)
+      let nnd = Domain.intersect d nd in
+      let nrr_changed = not (Domain.equal nnd nd) in
+      let rr_changed = not (Domain.equal nnd d) in
+      let domains =
+        if nrr_changed then MX.add nrr nnd t.domains else t.domains
+      in
+      let changed = changed || rr_changed || nrr_changed in
+      let changed =
+        if changed then SX.add nrr t.changed else t.changed
+      in
+      { t with domains; changed }
     | exception Not_found ->
-      (* We are not tracking any semantic value that have [r] as a leaf, so we
-          have nothing to do. *)
-      t
+      (* If there is no existing domain for [nr], there were no
+          constraints applying to [nr] prior to the substitution.
+
+          The only constraints that need to be notified are those that
+          were applying to [r], and they only need to be notified if the
+          new domain is different from the old domain of [r]. *)
+      let default = create_domain nrr in
+      let nd = Domain.intersect d default in
+      let rr_changed = not (Domain.equal nd d) in
+      (* Make sure to not add more constraints than necessary for the
+          representative domain. *)
+      let nd = if Domain.equal nd default then default else nd in
+      let domains = MX.add nrr nd t.domains in
+      let leaves_map = r_add nrr t.leaves_map in
+      let changed = changed || rr_changed in
+      let changed =
+        if changed then SX.add nrr t.changed else t.changed
+      in
+      { domains; changed; leaves_map }
 
   let has_changed t =
     not @@ SX.is_empty t.changed
