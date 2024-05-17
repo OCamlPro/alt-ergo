@@ -5,6 +5,9 @@ let
 in
 
 pkgs.mkShell {
+  # Required for correct locales on non-NixOS,
+  # see https://nixos.wiki/wiki/Locales
+  LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
   nativeBuildInputs = with ocamlPackages; [
     pkgs.ocamlformat
     pkgs.sphinx
