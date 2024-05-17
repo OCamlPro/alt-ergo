@@ -5,6 +5,7 @@ let
 in
 
 pkgs.mkShell {
+  LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
   nativeBuildInputs = with ocamlPackages; [
     pkgs.ocamlformat
     pkgs.sphinx
