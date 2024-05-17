@@ -35,7 +35,7 @@ We publish our releases on GitHub and opam repository under the license
 The same exceptions as above apply to the plugins and preludes.
 
 We also publish a free release of Alt-Ergo under the terms of
-[CeCILL-C License v1](CeCILL-C-License-v1.txt).
+[CeCILL-C License v1](licenses/CeCILL-C-License-v1.txt).
 The packages of the free releases are suffixed with `-free` on the opam repository.
 
 ## Plugins
