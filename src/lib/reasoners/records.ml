@@ -244,11 +244,10 @@ module Shostak (X : ALIEN) = struct
 
   let subst p v r = is_mine (subst_rec p v r)
 
-  let is_mine_symb_aux sy = match sy with
+  let is_mine_symb sy =
+    match sy with
     | Symbols.Op (Symbols.Record | Symbols.Access _) -> true
     | _ -> false
-
-  let is_mine_symb sy _ty = is_mine_symb_aux sy
 
   let abstract_access field e ty acc =
     let xe = is_mine e in
@@ -328,7 +327,7 @@ module Shostak (X : ALIEN) = struct
      | Other _ -> e
   *)
 
-  let fully_interpreted = is_mine_symb_aux
+  let fully_interpreted = is_mine_symb
 
   let rec term_extract r =
     match X.extract r with

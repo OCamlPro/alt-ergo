@@ -39,8 +39,8 @@ module type S = sig
   (* builds an embeded semantic value from an AC term *)
   val make : Expr.t -> r * Expr.t list
 
-  (* tells whether the given term is AC*)
-  val is_mine_symb : Sy.t -> Ty.t -> bool
+  (* Tells whether the given symbol is AC. *)
+  val is_mine_symb : Sy.t -> bool
 
   (* compares two AC semantic values *)
   val compare : t -> t -> int
@@ -238,7 +238,7 @@ module Make (X : Sig.X) = struct
          got %i (%a)." (List.length xs) Expr.print_list xs;
       assert false
 
-  let is_mine_symb sy _ = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
+  let is_mine_symb sy = (not @@ Options.get_no_ac ()) && Sy.is_ac sy
 
   let type_info { t = ty; _ } = ty
 

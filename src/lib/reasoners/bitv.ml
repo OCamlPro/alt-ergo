@@ -344,7 +344,7 @@ module Shostak(X : ALIEN) = struct
 
   let timer = Timers.M_Bitv
 
-  let is_mine_symb sy _ =
+  let is_mine_symb sy =
     match sy with
     | Sy.Bitv _
     | Op (Concat | Extract _ | BV2Nat | BVnot | BVand | BVor | BVxor)

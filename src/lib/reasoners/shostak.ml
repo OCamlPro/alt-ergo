@@ -351,14 +351,14 @@ struct
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let { Expr.f = sb; ty; _ } = Expr.term_view t in
+    let { Expr.f = sb; _ } = Expr.term_view t in
     let not_restricted = not @@ Options.get_restricted () in
     match
-      ARITH.is_mine_symb sb ty,
-      not_restricted && RECORDS.is_mine_symb sb ty,
-      not_restricted && BITV.is_mine_symb sb ty,
-      not_restricted && ADT.is_mine_symb sb ty,
-      AC.is_mine_symb sb ty
+      ARITH.is_mine_symb sb,
+      not_restricted && RECORDS.is_mine_symb sb,
+      not_restricted && BITV.is_mine_symb sb,
+      not_restricted && ADT.is_mine_symb sb,
+      AC.is_mine_symb sb
     with
     | true, false, false, false, false ->
       Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () ->
@@ -385,14 +385,14 @@ struct
 
     | _ -> assert false
 
-  let fully_interpreted sb ty =
+  let fully_interpreted sb =
     let not_restricted = not @@ Options.get_restricted () in
     match
-      ARITH.is_mine_symb sb ty,
-      not_restricted && RECORDS.is_mine_symb sb ty,
-      not_restricted && BITV.is_mine_symb sb ty,
-      not_restricted && ADT.is_mine_symb sb ty,
-      AC.is_mine_symb sb ty
+      ARITH.is_mine_symb sb,
+      not_restricted && RECORDS.is_mine_symb sb,
+      not_restricted && BITV.is_mine_symb sb,
+      not_restricted && ADT.is_mine_symb sb,
+      AC.is_mine_symb sb
     with
     | true, false, false, false, false ->
       ARITH.fully_interpreted sb
@@ -408,12 +408,12 @@ struct
       false
     | _ -> assert false
 
-  let is_solvable_theory_symbol sb ty =
-    ARITH.is_mine_symb sb ty ||
+  let is_solvable_theory_symbol sb =
+    ARITH.is_mine_symb sb ||
     not (Options.get_restricted ()) &&
-    (RECORDS.is_mine_symb sb ty ||
-     BITV.is_mine_symb sb ty ||
-     ADT.is_mine_symb sb ty)
+    (RECORDS.is_mine_symb sb ||
+     BITV.is_mine_symb sb ||
+     ADT.is_mine_symb sb)
 
   let is_a_leaf r = match r.v with
     | Term _ | Ac _ -> true
@@ -424,13 +424,12 @@ struct
     | [] -> assert false
     | [r,1] -> r
     | _ ->
-      let ty = ac.Sig.t in
       match
-        ARITH.is_mine_symb ac.Sig.h ty,
-        RECORDS.is_mine_symb ac.Sig.h ty,
-        BITV.is_mine_symb ac.Sig.h ty,
-        ADT.is_mine_symb ac.Sig.h ty,
-        AC.is_mine_symb ac.Sig.h ty with
+        ARITH.is_mine_symb ac.Sig.h,
+        RECORDS.is_mine_symb ac.Sig.h,
+        BITV.is_mine_symb ac.Sig.h,
+        ADT.is_mine_symb ac.Sig.h,
+        AC.is_mine_symb ac.Sig.h with
       (*AC.is_mine may say F if Options.get_no_ac is set to F dynamically *)
       | true, false, false, false, false ->
         ARITH.color ac
