@@ -80,6 +80,8 @@ end
 
 let timer = Timers.M_Arrays
 
+module H = Ephemeron.K1.Make (Expr)
+
 type t =
   {gets  : G.t;               (* l'ensemble des "get" croises*)
    tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
@@ -88,6 +90,7 @@ type t =
    seen  : E.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
    new_terms : E.Set.t;
    size_splits : Numbers.Q.t;
+   cached_relevant_terms : (G.t * S.t TBS.t) H.t;
   }
 
 
@@ -99,6 +102,7 @@ let empty uf =
    seen  = Tmap.empty;
    new_terms = E.Set.empty;
    size_splits = Numbers.Q.one;
+   cached_relevant_terms = H.create 1024;
   }, Uf.domains uf
 
 (*BISECT-IGNORE-BEGIN*)
@@ -184,12 +188,12 @@ let merge_revelant_terms (gets, tbset) (g, t) =
    presence of very large terms in the problem.
 
    See issue https://github.com/OCamlPro/alt-ergo/issues/1123 *)
-let rec relevant_terms t =
+let rec relevant_terms env t =
   let { E.f; xs; ty; _ } = E.term_view t in
   let gets, tbset =
     List.fold_left
       (fun acc x ->
-         merge_revelant_terms acc (cached_relevant_terms x)
+         merge_revelant_terms acc (cached_relevant_terms env x)
       ) (G.empty, TBS.empty) xs
   in
   match Sy.is_get f, Sy.is_set f, xs with
@@ -199,16 +203,13 @@ let rec relevant_terms t =
   | false, false, _ -> (gets,tbset)
   | _  -> assert false
 
-and cached_relevant_terms =
-  let module H = Ephemeron.K1.Make (Expr) in
-  let cache : (G.t * S.t TBS.t) H.t = H.create 1024
-  in fun t ->
-    match H.find cache t with
-    | r -> r
-    | exception Not_found ->
-      let r = relevant_terms t in
-      H.add cache t r;
-      r
+and cached_relevant_terms env t =
+  match H.find env.cached_relevant_terms t with
+  | r -> r
+  | exception Not_found ->
+    let r = relevant_terms env t in
+    H.add env.cached_relevant_terms t r;
+    r
 
 (* met a jour les composantes gets et tbset de env avec les termes
    contenus dans les atomes de la *)
@@ -218,7 +219,7 @@ let new_terms env la =
       (fun acc x ->
          match X.term_extract x with
          | Some t, _ ->
-           merge_revelant_terms acc @@ cached_relevant_terms t
+           merge_revelant_terms acc @@ cached_relevant_terms env t
          | None, _   -> acc
       )acc (X.leaves r)
   in
