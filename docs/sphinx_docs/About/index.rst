@@ -8,7 +8,7 @@ Additonal informations about Alt-Ergo
    :maxdepth: 2
    :caption: Contents
 
-   Licenses                   <licenses/index>
+   Licenses                  <license.md>
    Changes                   <changes.md>
    Try-Alt-Ergo              <https://alt-ergo.ocamlpro.com/try.html>
    Alt-Ergo's website        <https://alt-ergo.ocamlpro.com/>
