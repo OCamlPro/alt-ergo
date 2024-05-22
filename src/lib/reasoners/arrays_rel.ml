@@ -80,6 +80,8 @@ end
 
 let timer = Timers.M_Arrays
 
+module H = Ephemeron.K1.Make (Expr)
+
 type t =
   {gets  : G.t;               (* l'ensemble des "get" croises*)
    tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
@@ -88,6 +90,7 @@ type t =
    seen  : E.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
    new_terms : E.Set.t;
    size_splits : Numbers.Q.t;
+   cached_relevant_terms : (G.t * S.t TBS.t) H.t;
   }
 
 
@@ -99,6 +102,7 @@ let empty uf =
    seen  = Tmap.empty;
    new_terms = E.Set.empty;
    size_splits = Numbers.Q.one;
+   cached_relevant_terms = H.create 1024;
   }, Uf.domains uf
 
 (*BISECT-IGNORE-BEGIN*)
@@ -166,16 +170,46 @@ module Debug = struct
 end
 (*BISECT-IGNORE-END*)
 
-(* met a jour gets et tbset en utilisant l'ensemble des termes donne*)
-let rec update_gets_sets acc t =
+let merge_revelant_terms (gets, tbset) (g, t) =
+  let gets = G.union gets g in
+  let tbset =
+    TBS.merge
+      (fun _ s1 s2 ->
+         match s1, s2 with
+         | Some s1, Some s2 -> Some (S.union s1 s2)
+         | Some s, None | None, Some s -> Some s
+         | None, None -> None
+      ) tbset t
+  in
+  gets, tbset
+
+(* Collects all the select or store subterms of the term [t]
+   for the instantiation engine. Use a weak cache to avoid a bottleneck in
+   presence of very large terms in the problem.
+
+   See issue https://github.com/OCamlPro/alt-ergo/issues/1123 *)
+let rec relevant_terms env t =
   let { E.f; xs; ty; _ } = E.term_view t in
-  let gets, tbset = List.fold_left update_gets_sets acc xs in
+  let gets, tbset =
+    List.fold_left
+      (fun acc x ->
+         merge_revelant_terms acc (cached_relevant_terms env x)
+      ) (G.empty, TBS.empty) xs
+  in
   match Sy.is_get f, Sy.is_set f, xs with
   | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
   | false, true , [a;i;v] ->
     gets, TBS.add a {s=t; st=a; si=i; sv=v; sty=ty} tbset
   | false, false, _ -> (gets,tbset)
   | _  -> assert false
+
+and cached_relevant_terms env t =
+  match H.find env.cached_relevant_terms t with
+  | r -> r
+  | exception Not_found ->
+    let r = relevant_terms env t in
+    H.add env.cached_relevant_terms t r;
+    r
 
 (* met a jour les composantes gets et tbset de env avec les termes
    contenus dans les atomes de la *)
@@ -184,7 +218,8 @@ let new_terms env la =
     List.fold_left
       (fun acc x ->
          match X.term_extract x with
-         | Some t, _ -> update_gets_sets acc t
+         | Some t, _ ->
+           merge_revelant_terms acc @@ cached_relevant_terms env t
          | None, _   -> acc
       )acc (X.leaves r)
   in
@@ -198,7 +233,6 @@ let new_terms env la =
       ) (env.gets,env.tbset) la
   in
   {env with gets=gets; tbset=tbset}
-
 
 (* mise a jour de env avec les instances
    1) p   => p_ded
