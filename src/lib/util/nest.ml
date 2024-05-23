@@ -74,24 +74,21 @@ type node = {
 (* Type of a hyperedge. *)
 and edge = node list ref
 
-module Heap = struct
-  include Binary_heap.Make
-      (struct
-        type t = node
-        let compare { weight = w1; _ } { weight = w2; _ } = w1 - w2
-      end)
+module Hp =
+  Heap.MakeOrdered
+    (struct
+      type t = node
+      let compare { weight = w1; _ } { weight = w2; _ } = w1 - w2
 
-  let create =
-    let dummy_edge : node list ref = ref [] in
-    let dummy = {
-      id = Term.Const.Int.int "0" (* dummy *);
-      outgoing = dummy_edge;
-      in_degree = -1;
-      weight = -1;
-    }
-    in
-    create ~dummy
-end
+      let default =
+        let dummy_edge : node list ref = ref [] in
+        {
+          id = Term.Const.Int.int "0" (* dummy *);
+          outgoing = dummy_edge;
+          in_degree = -1;
+          weight = -1;
+        }
+    end)
 
 let (let*) = Option.bind
 
@@ -117,9 +114,9 @@ let def_of_dstr dstr =
 
    @return a heap that contains all the nodes of this graph without ingoing
    hyperedges. *)
-let build_graph (defs : ty_def list) : Heap.t =
+let build_graph (defs : ty_def list) : Hp.t =
   let map : (ty_def, edge) Hashtbl.t = Hashtbl.create 17 in
-  let hp : Heap.t = Heap.create 17 in
+  let hp : Hp.t = Hp.create 17 in
   List.iter (fun d -> Hashtbl.add map d (ref [])) defs;
   List.iter
     (fun def ->
@@ -152,7 +149,7 @@ let build_graph (defs : ty_def list) : Heap.t =
                   ) 0 dstrs
               in
               node.in_degree <- in_degree;
-              if in_degree = 0 then Heap.add hp node
+              if in_degree = 0 then Hp.insert hp node
            ) cases
     ) defs;
   hp
@@ -182,10 +179,10 @@ let add_cstr, find_weight, reinit =
    Kahn's algorithm. *)
 let add_nest n =
   let hp = build_graph n in
-  while not @@ Heap.is_empty hp do
+  while not @@ Hp.is_empty hp do
     (* Loop invariant: the set of nodes in heap [hp] is exactly
        the set of the nodes of the graph without ingoing hyperedge. *)
-    let { id; outgoing; in_degree; _ } = Heap.pop_minimum hp in
+    let { id; outgoing; in_degree; _ } = Hp.pop_minimum hp in
     add_cstr @@ Uid.of_dolmen id;
     assert (in_degree = 0);
     outgoing :=
@@ -194,7 +191,7 @@ let add_nest n =
            assert (node.in_degree > 0);
            let node = { node with in_degree = node.in_degree - 1 } in
            if node.in_degree = 0 then (
-             Heap.add hp node;
+             Hp.insert hp node;
              None
            ) else (
              Some node

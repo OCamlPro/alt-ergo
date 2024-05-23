@@ -35,33 +35,7 @@ module type RankedType = sig
   val compare : t -> t -> int
 end
 
-module type S = sig
-  type elt
-
-  type t
-
-  val make : int -> elt -> t
-
-  val in_heap : elt -> bool
-
-  val decrease : t -> elt -> unit
-
-  val increase : t -> elt -> unit
-
-  val size : t -> int
-
-  val is_empty : t -> bool
-
-  val insert : t -> elt -> unit
-
-  val grow_to_by_double : t -> int -> unit
-
-  val remove_min : t -> elt
-
-  val filter : t -> (elt -> bool) -> unit
-end
-
-module Make(Rank : RankedType) = struct
+module MakeRanked(Rank : RankedType) = struct
   type elt = Rank.t
 
   type t = { heap : elt Vec.t } [@@unboxed]
@@ -69,7 +43,7 @@ module Make(Rank : RankedType) = struct
   (* Negative value; used to indicate an element is not in the heap *)
   let absent = -1
 
-  let make sz dummy = { heap = Vec.make ~dummy sz }
+  let create sz dummy = { heap = Vec.make ~dummy sz }
 
   let[@inline] left i = (i lsl 1) + 1 (* i*2 + 1 *)
   let[@inline] right i = (i + 1) lsl 1 (* (i + 1) * 2*)
@@ -148,7 +122,7 @@ module Make(Rank : RankedType) = struct
   let[@inline] grow_to_by_double { heap } sz =
     Vec.grow_to_by_double heap sz
 
-  let remove_min ({ heap } as s) =
+  let pop_minimum ({ heap } as s) =
     match Vec.size heap with
     | 0 -> raise Not_found
     | 1 ->
@@ -164,4 +138,37 @@ module Make(Rank : RankedType) = struct
       (* enforce heap invariants *)
       if Vec.size s.heap > 1 then percolate_down s y;
       x
+end
+
+module type OrderedTypeDefault = sig
+  type t
+
+  val compare : t -> t -> int
+
+  val default : t
+end
+
+module MakeOrdered(V : OrderedTypeDefault) = struct
+  type entry = { value : V.t ; mutable index : int }
+  type elt = V.t
+
+  module H = MakeRanked
+      (struct
+        type t = entry
+
+        let index e = e.index
+
+        let set_index e i = e.index <- i
+
+        let compare x y = V.compare x.value y.value
+      end)
+
+  let entry value = { value ; index = -1 }
+
+  type t = H.t
+
+  let create n = H.create n (entry V.default)
+  let is_empty = H.is_empty
+  let insert h v = H.insert h (entry v)
+  let pop_minimum h = (H.pop_minimum h).value
 end

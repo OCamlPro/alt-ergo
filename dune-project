@@ -91,7 +91,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (odoc :with-doc)
   ppx_deriving
   stdcompat
-  bheap
  )
  (conflicts
   (ppxlib (< 0.30.0))

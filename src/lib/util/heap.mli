@@ -62,13 +62,14 @@ end
 
 (** {2 Priority heaps} *)
 
-module type S = sig
-  type elt
+module MakeRanked(Rank : RankedType) : sig
+  type elt = Rank.t
+  (** The type of elements of the heap. *)
 
   type t
   (** The type of heaps. *)
 
-  val make : int -> elt -> t
+  val create : int -> elt -> t
   (** Create a heap with the given initial size and dummy element. *)
 
   val in_heap : elt -> bool
@@ -87,13 +88,13 @@ module type S = sig
   (** Is the heap empty ? *)
 
   val insert : t -> elt -> unit
-  (** Inset a new element in the heap. *)
+  (** Insert a new element in the heap. *)
 
   val grow_to_by_double: t -> int -> unit
   (** Grow the size of the heap by multiplying it by 2
       until it is at least the size specified. *)
 
-  val remove_min : t -> elt
+  val pop_minimum : t -> elt
   (** Remove the minimum element from the heap and return it.
 
       @raise Not_found if the heap is empty. *)
@@ -102,4 +103,35 @@ module type S = sig
   (** Filter elements in the heap. *)
 end
 
-module Make(Rank : RankedType) : S with type elt = Rank.t
+(** {2 Ordered priority heaps} *)
+
+module type OrderedTypeDefault = sig
+  type t
+
+  val compare : t -> t -> int
+
+  val default : t
+  (** Dummy value used in the heap. *)
+end
+
+module MakeOrdered(V : OrderedTypeDefault) : sig
+  type elt = V.t
+  (** The type of elements of the heap. *)
+
+  type t
+  (** The type of heaps. *)
+
+  val create : int -> t
+  (** Create a heap with the given initial size. *)
+
+  val is_empty : t -> bool
+  (** Is the heap empty ? *)
+
+  val insert : t -> elt -> unit
+  (** Insert a new element in the heap. *)
+
+  val pop_minimum : t -> elt
+  (** Remove the minimum element from the heap and return it.
+
+      @raise Not_found if the heap is empty. *)
+end

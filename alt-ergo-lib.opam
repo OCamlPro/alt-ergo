@@ -31,7 +31,6 @@ depends: [
   "odoc" {with-doc}
   "ppx_deriving"
   "stdcompat"
-  "bheap"
 ]
 conflicts: [
   "ppxlib" {< "0.30.0"}

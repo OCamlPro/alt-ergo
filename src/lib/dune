@@ -25,7 +25,6 @@
     alt_ergo_prelude
     fmt
     stdcompat
-    bheap
   )
   (preprocess
     (pps

@@ -43,6 +43,5 @@ pkgs.mkShell {
     stdcompat
     landmarks
     landmarks-ppx
-    bheap
   ];
 }
