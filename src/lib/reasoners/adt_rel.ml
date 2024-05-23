@@ -133,6 +133,10 @@ module Domains = struct
 
         We don't store domains for constructors and selectors. *)
 
+    enums : Uid.t MX.t;
+    (** Map of tracked representatives for which the next constructor is an
+        enum. This field is used for sake of performance. *)
+
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
         in [propagation]. *)
@@ -147,14 +151,30 @@ module Domains = struct
         )
       ppf t.domains
 
-  let empty = { domains = MX.empty; changed = SX.empty }
+  let empty = { domains = MX.empty; enums = MX.empty; changed = SX.empty }
 
   let filter_ty = is_adt_ty
 
+  let is_enum r d =
+    match X.type_info r with
+    | Ty.Tadt (name, params) ->
+      let Adt cases = Ty.type_body name params in
+      let c = Domain.choose d in
+      if Lists.is_empty @@ Ty.assoc_destrs c cases then
+        Some c
+      else
+        None
+    | _ -> assert false
+
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
+    let enums =
+      match is_enum r nd with
+      | Some c -> MX.add r c t.enums
+      | None -> MX.remove r t.enums
+    in
     let changed = SX.add r t.changed in
-    { domains; changed }
+    { domains; enums; changed }
 
   let get r t =
     match Th.embed r with
@@ -192,8 +212,9 @@ module Domains = struct
 
   let remove r t =
     let domains = MX.remove r t.domains in
+    let enums = MX.remove r t.enums in
     let changed = SX.remove r t.changed in
-    { domains ; changed }
+    { domains ; enums; changed }
 
   exception Inconsistent = Domain.Inconsistent
 
@@ -227,6 +248,8 @@ module Domains = struct
     acc, { t with changed = SX.empty }
 
   let fold f t = MX.fold f t.domains
+
+  let fold_enums f t = MX.fold f t.enums
 end
 
 let calc_destructor d e uf =
@@ -604,31 +627,35 @@ let pick_delayed_destructor env uf =
     None
   with Found (r, d) -> Some (r, d)
 
-let is_enum ty c =
-  match ty with
-  | Ty.Tadt (name, params) ->
-    let Adt cases = Ty.type_body name params in
-    Lists.is_empty @@ Ty.assoc_destrs c cases
-  | _ -> assert false
-
 let pick_tightenable_domain ~for_model uf =
   let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-  Domains.fold
-    (fun r d best ->
-       let rr, _ = Uf.find_r uf r in
-       match Th.embed rr with
-       | Constr _ ->
-         best
-       | _ ->
+  let r = Domains.fold_enums
+      (fun r c best ->
+         let rr, _ = Uf.find_r uf r in
+         let d = Domains.get rr ds in
          let cd = Domain.cardinal d in
-         let c = Domain.choose d in
-         if for_model || is_enum (X.type_info r) c then
-           match best with
-           | Some (n, _, _) when n <= cd -> best
-           | Some _ | None -> Some (cd, r, c)
-         else
-           best
-    ) ds None
+         match Th.embed rr, best with
+         | Constr _, _ -> best
+         | _, Some (n, _, _) when n <= cd -> best
+         | _ -> Some (cd, r, c)
+      ) ds None
+  in
+  match r with
+  | Some _ as r -> r
+  | None ->
+    if for_model then
+      Domains.fold
+        (fun r d best ->
+           let rr, _ = Uf.find_r uf r in
+           let cd = Domain.cardinal d in
+           match Th.embed rr, best with
+           | Constr _, _ -> best
+           | _, Some (n, _, _) when n <= cd -> best
+           | _ ->
+             let c = Domain.choose d in
+             Some (cd, r, c)
+        ) ds None
+    else None
 
 let can_split env n =
   let m = Options.get_max_split () in
