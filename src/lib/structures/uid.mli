@@ -33,7 +33,6 @@ module DE = Dolmen.Std.Expr
 type t = private
   | Hstring : Hstring.t -> t
   | Dolmen : 'a DE.id -> t
-  (*   | Cstr : DE.term_cst DE.id -> t *)
 
 val of_dolmen : 'a DE.Id.t -> t
 val of_string : string -> t

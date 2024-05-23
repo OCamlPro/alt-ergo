@@ -135,7 +135,8 @@ module Domains = struct
 
     enums : Uid.t MX.t;
     (** Map of tracked representatives for which the next constructor is an
-        enum. This field is used for sake of performance. *)
+        enum. This field is used for sake of performance during casesplit
+        rounds. *)
 
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
@@ -607,80 +608,75 @@ let constr_of_destr ty d =
 
 exception Found of X.r * Uid.t
 
-(* Pick a delayed destructor application in [env.delayed]. Returns [None]
-   if there is no delayed destructor. *)
-let pick_delayed_destructor env uf =
-  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-  try
-    Rel_utils.Delayed.iter_delayed
-      (fun r sy _e ->
-         match sy with
-         | Sy.Destruct destr ->
-           let d = Domains.get r ds in
-           if Domain.cardinal d > 1 then
-             raise_notrace @@ Found (r, destr)
-           else
-             ()
-         | _ ->
-           ()
-      ) env.delayed;
-    None
-  with Found (r, d) -> Some (r, d)
-
-let pick_tightenable_domain ~for_model uf =
-  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-  let r = Domains.fold_enums
-      (fun r c best ->
-         let rr, _ = Uf.find_r uf r in
-         let d = Domains.get rr ds in
-         let cd = Domain.cardinal d in
-         match Th.embed rr, best with
-         | Constr _, _ -> best
-         | _, Some (n, _, _) when n <= cd -> best
-         | _ -> Some (cd, r, c)
-      ) ds None
-  in
-  match r with
-  | Some _ as r -> r
-  | None ->
-    if for_model then
-      Domains.fold
-        (fun r d best ->
-           let rr, _ = Uf.find_r uf r in
-           let cd = Domain.cardinal d in
-           match Th.embed rr, best with
-           | Constr _, _ -> best
-           | _, Some (n, _, _) when n <= cd -> best
-           | _ ->
-             let c = Domain.choose d in
-             Some (cd, r, c)
-        ) ds None
-    else None
-
 let can_split env n =
   let m = Options.get_max_split () in
   Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
 
 let (let*) = Option.bind
 
-(* Do a case-split by choosing a semantic value [r] and constructor [c]
+(* Do a casesplit by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
-let case_split_destructor env uf =
+let split_delayed_destructor env uf =
   if not @@ Options.get_enable_adts_cs () then
     None
   else
-    let* r, d = pick_delayed_destructor env uf in
-    let c = constr_of_destr (X.type_info r) d in
-    Some (LR.mkv_builtin false (Sy.IsConstr c) [r])
+    let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+    try
+      Rel_utils.Delayed.iter_delayed
+        (fun r sy _e ->
+           match sy with
+           | Sy.Destruct destr ->
+             let d = Domains.get r ds in
+             if Domain.cardinal d > 1 then
+               raise_notrace @@ Found (r, destr)
+             else
+               ()
+           | _ ->
+             ()
+        ) env.delayed;
+      None
+    with Found (r, d) ->
+      let c = constr_of_destr (X.type_info r) d in
+      Some (LR.mkv_builtin false (Sy.IsConstr c) [r])
 
-(* Do a case-split by choosing a semantic value [r] whose the domain is as
-   small as possible.
+(* Pick a enum constructor in a tracked domain with minimal cardinal.
+   Returns [None] if there is no such constructor. *)
+let pick_enum ds uf =
+  Domains.fold_enums
+    (fun r c best ->
+       let rr, _ = Uf.find_r uf r in
+       let d = Domains.get rr ds in
+       let cd = Domain.cardinal d in
+       match Th.embed rr, best with
+       | Constr _, _ -> best
+       | _, Some (n, _, _) when n <= cd -> best
+       | _ -> Some (cd, r, c)
+    ) ds None
 
-   If [for_model] is [false], we consider only constructors without payload. In
-   particular, if [r] has no constructors without payload in its domain, we
-   don't case-split on it. *)
-let case_split_best ~for_model env uf =
+(* Pick a constructor in a tracked domain with minimal cardinal.
+   Returns [None] if there is no such constructor. *)
+let pick_best ~for_model ds uf =
+  if for_model then
+    Domains.fold
+      (fun r d best ->
+         let rr, _ = Uf.find_r uf r in
+         let cd = Domain.cardinal d in
+         match Th.embed rr, best with
+         | Constr _, _ -> best
+         | _, Some (n, _, _) when n <= cd -> best
+         | _ ->
+           let c = Domain.choose d in
+           Some (cd, r, c)
+      ) ds None
+  else None
+
+let pick_tightenable_domain ~for_model uf =
+  let open Util in
+  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+  (pick_enum ds <?> pick_best ~for_model ds) uf
+
+let split_best_domain ~for_model env uf =
   let* n, r, c = pick_tightenable_domain ~for_model uf in
   let n = Numbers.Q.from_int n in
   if for_model || can_split env n then
@@ -691,18 +687,15 @@ let case_split_best ~for_model env uf =
   else
     None
 
+let next_casesplit ~for_model env =
+  let open Util in
+  (split_delayed_destructor env) <?> (split_best_domain ~for_model env)
+
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then
     []
   else begin
-    let cs =
-      match case_split_destructor env uf with
-      | Some _ as cs ->
-        assert (not (Options.get_enable_adts_cs ()) || not for_model);
-        cs
-      | None -> case_split_best ~for_model env uf
-    in
-    match cs with
+    match next_casesplit ~for_model env uf with
     | Some cs ->
       if Options.get_debug_adt () then begin
         Debug.pp_domains "before cs"

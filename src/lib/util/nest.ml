@@ -36,7 +36,7 @@ open DE
 
 type t = Dolmen.Std.Expr.ty_def list
 
-(* A nest is the set of all the constructors in a mutually recursive definition
+(* A nest is the set of all the constructors of a mutually recursive definition
    of ADTs.
 
    For each type ty of a nest, we denote by S(ty) the set of all the

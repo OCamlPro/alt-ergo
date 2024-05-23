@@ -135,3 +135,6 @@ val print_list_pp:
   Format.formatter -> 'a list -> unit
 
 val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
+
+val (<?>) : ('a -> 'b option) -> ('a -> 'b option) -> 'a -> 'b option
+(** [(f <?> g) x] returns [f x] if [f x] succeeded, [g x] otherwise. *)
