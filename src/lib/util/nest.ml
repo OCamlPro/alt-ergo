@@ -137,7 +137,7 @@ let build_graph (defs : ty_def list) : Hp.t =
               let in_degree =
                 Array.fold_left
                   (fun acc2 dstr ->
-                     let d = let* dstr in def_of_dstr dstr in
+                     let d = let* dstr = dstr in def_of_dstr dstr in
                      match d with
                      | Some d ->
                        begin match Hashtbl.find map d with
