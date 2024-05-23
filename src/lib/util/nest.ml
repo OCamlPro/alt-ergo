@@ -36,18 +36,20 @@ open DE
 
 type t = Dolmen.Std.Expr.ty_def list
 
-(* Recall that a (directed) hypergraph is a set of nodes and hyperedges where
-   hyperedges join subsets of nodes.
+(* A nest is the set of all the constructors in a mutually recursive definition
+   of ADTs.
 
-   To generate our total order on constructors of a same nest, we build
-   in the function [build_graph] a hypergraph where:
-   - the set of nodes is the set of all the constructors of the nest;
-   - for each type [ty] of the nest, we denote by S(ty) the set
-       of all the constructors of this type and G(ty) the set of
-       the constructors with an argument of type [ty].
+   For each type ty of a nest, we denote by S(ty) the set of all the
+   constructors of this type in this nest and G(ty) the set of the constructors
+   with an argument of type ty in this nest.
 
-       Forall the type [ty] of the nest, there is a an edge from S(ty) to
-       G(ty).
+   Recall that a (directed) hypergraph is a set of nodes and hyperedges between
+   subsets of these nodes.
+
+   To generate our total order of a nest, we build in [build_graph] a hypergraph
+   where:
+   - the nodes are all the constructors of the nest;
+   - for all type ty of the nest, there is a a hyperedge from S(ty) to G(ty).
 
     In particular, our graph has exactly one outgoing hyperedge per node. *)
 
@@ -61,7 +63,7 @@ type node = {
      during the sorting (see [add_nest]). *)
 
   mutable outgoing : edge;
-  (* Hyperedge from a subset S in S(ty) to a subset G in G(ty) where [ty] is
+  (* Hyperedge from a subset S in S(ty) to a subset G in G(ty) where ty is
      the type of [id]. At the beginning, we have S = S(ty) and G = G(ty).
 
      One use a double indirection because this hyperedge is shared between

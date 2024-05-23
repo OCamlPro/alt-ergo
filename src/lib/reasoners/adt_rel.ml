@@ -40,7 +40,7 @@ module TSet = Set.Make
     (struct
       type t = Uid.t
 
-      (* We use a dedicated total order on the constructor to ensure
+      (* We use a dedicated total order on the constructors to ensure
          the termination of the model generation. *)
       let compare = Nest.compare
     end)
@@ -53,9 +53,6 @@ module Domain = struct
      domain. *)
   type t = {
     constrs : TSet.t;
-    (* The constructors are sorted by the module [Topological_order]
-       in order to ensure the termination of the model generation. *)
-
     ex : Ex.t;
   }
 
