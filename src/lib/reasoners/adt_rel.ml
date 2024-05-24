@@ -133,11 +133,6 @@ module Domains = struct
 
         We don't store domains for constructors and selectors. *)
 
-    enums : Uid.t MX.t;
-    (** Map of tracked representatives for which the next constructor is an
-        enum. This field is used for sake of performance during casesplit
-        rounds. *)
-
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
         in [propagation]. *)
@@ -152,30 +147,14 @@ module Domains = struct
         )
       ppf t.domains
 
-  let empty = { domains = MX.empty; enums = MX.empty; changed = SX.empty }
+  let empty = { domains = MX.empty; changed = SX.empty }
 
   let filter_ty = is_adt_ty
 
-  let is_enum r d =
-    match X.type_info r with
-    | Ty.Tadt (name, params) ->
-      let Adt cases = Ty.type_body name params in
-      let c = Domain.choose d in
-      if Lists.is_empty @@ Ty.assoc_destrs c cases then
-        Some c
-      else
-        None
-    | _ -> assert false
-
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
-    let enums =
-      match is_enum r nd with
-      | Some c -> MX.add r c t.enums
-      | None -> MX.remove r t.enums
-    in
     let changed = SX.add r t.changed in
-    { domains; enums; changed }
+    { domains; changed }
 
   let get r t =
     match Th.embed r with
@@ -213,9 +192,8 @@ module Domains = struct
 
   let remove r t =
     let domains = MX.remove r t.domains in
-    let enums = MX.remove r t.enums in
     let changed = SX.remove r t.changed in
-    { domains ; enums; changed }
+    { domains ; changed }
 
   exception Inconsistent = Domain.Inconsistent
 
@@ -249,8 +227,6 @@ module Domains = struct
     acc, { t with changed = SX.empty }
 
   let fold f t = MX.fold f t.domains
-
-  let fold_enums f t = MX.fold f t.enums
 end
 
 let calc_destructor d e uf =
@@ -608,10 +584,6 @@ let constr_of_destr ty d =
 
 exception Found of X.r * Uid.t
 
-let can_split env n =
-  let m = Options.get_max_split () in
-  Numbers.Q.(compare (mult n env.size_splits) m) <= 0 || Numbers.Q.sign m < 0
-
 let (let*) = Option.bind
 
 (* Do a casesplit by choosing a semantic value [r] and constructor [c]
@@ -640,56 +612,35 @@ let split_delayed_destructor env uf =
       let c = constr_of_destr (X.type_info r) d in
       Some (LR.mkv_builtin false (Sy.IsConstr c) [r])
 
-(* Pick a enum constructor in a tracked domain with minimal cardinal.
+(* Pick a constructor in a tracked domain with minimal cardinal.
    Returns [None] if there is no such constructor. *)
-let pick_enum ds uf =
-  Domains.fold_enums
-    (fun r c best ->
+let pick_best ds uf =
+  Domains.fold
+    (fun r d best ->
        let rr, _ = Uf.find_r uf r in
-       let d = Domains.get rr ds in
        let cd = Domain.cardinal d in
        match Th.embed rr, best with
        | Constr _, _ -> best
        | _, Some (n, _, _) when n <= cd -> best
-       | _ -> Some (cd, r, c)
+       | _ ->
+         let c = Domain.choose d in
+         Some (cd, r, c)
     ) ds None
 
-(* Pick a constructor in a tracked domain with minimal cardinal.
-   Returns [None] if there is no such constructor. *)
-let pick_best ~for_model ds uf =
-  if for_model then
-    Domains.fold
-      (fun r d best ->
-         let rr, _ = Uf.find_r uf r in
-         let cd = Domain.cardinal d in
-         match Th.embed rr, best with
-         | Constr _, _ -> best
-         | _, Some (n, _, _) when n <= cd -> best
-         | _ ->
-           let c = Domain.choose d in
-           Some (cd, r, c)
-      ) ds None
-  else None
-
-let pick_tightenable_domain ~for_model uf =
-  let open Util in
-  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-  (pick_enum ds <?> pick_best ~for_model ds) uf
-
-let split_best_domain ~for_model env uf =
-  let* n, r, c = pick_tightenable_domain ~for_model uf in
-  let n = Numbers.Q.from_int n in
-  if for_model || can_split env n then
+let split_best_domain ~for_model uf =
+  if not for_model then
+    None
+  else
+    let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+    let* _, r, c = pick_best ds uf in
     let _, cons = Option.get @@ build_constr_eq r c in
     let nr, ctx = X.make cons in
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
-  else
-    None
 
 let next_casesplit ~for_model env =
   let open Util in
-  (split_delayed_destructor env) <?> (split_best_domain ~for_model env)
+  (split_delayed_destructor env) <?> (split_best_domain ~for_model)
 
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then

@@ -49,9 +49,9 @@ type t = Dolmen.Std.Expr.ty_def list
    To generate our total order of a nest, we build in [build_graph] a hypergraph
    where:
    - the nodes are all the constructors of the nest;
-   - for all type ty of the nest, there is a a hyperedge from S(ty) to G(ty).
+   - for all type ty of the nest, there is a hyperedge from S(ty) to G(ty).
 
-    In particular, our graph has exactly one outgoing hyperedge per node. *)
+   In particular, our graph has exactly one outgoing hyperedge per node. *)
 
 (* Node of the hypergraph. *)
 type node = {
@@ -187,18 +187,14 @@ let add_nest n =
     let { id; outgoing; in_degree; _ } = Hp.pop_minimum hp in
     add_cstr @@ Uid.of_dolmen id;
     assert (in_degree = 0);
-    outgoing :=
-      List.filter_map
-        (fun node ->
-           assert (node.in_degree > 0);
-           let node = { node with in_degree = node.in_degree - 1 } in
-           if node.in_degree = 0 then (
-             Hp.insert hp node;
-             None
-           ) else (
-             Some node
-           )
-        ) !outgoing
+    List.iter
+      (fun node ->
+         assert (node.in_degree > 0);
+         node.in_degree <- node.in_degree - 1;
+         if node.in_degree = 0 then
+           Hp.insert hp node
+      ) !outgoing;
+    outgoing := [];
   done
 
 let compare (id1 : Uid.t) (id2 : Uid.t) =
