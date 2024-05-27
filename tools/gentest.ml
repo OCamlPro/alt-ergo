@@ -398,8 +398,7 @@ let () =
      ; "--no-minimal-bj" ])
   ; ("runtest", "optimize",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
-     ; "--optimize" ])]
+     ; "--frontend dolmen" ])]
   in
   let cmds = List.map (fun (group, name, args) ->
       let args = shared @ args in

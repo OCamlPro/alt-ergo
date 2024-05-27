@@ -57,8 +57,8 @@ module Mode : S with type t = Util.mode
 
 (** 1. Options that can be updated anytime. *)
 
-(** Option for enabling/disabling the optimization engine. *)
-module Optimize : S with type t = bool
+(** Option for enabling/disabling strict mode engine. *)
+module StrictMode : S with type t = bool
 
 (** 2. Options that can only be updated during start mode. *)
 

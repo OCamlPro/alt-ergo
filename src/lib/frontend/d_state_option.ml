@@ -92,8 +92,8 @@ let create_opt_only_start_mode
 
 (* Any mode options. *)
 
-module Optimize =
-  (val (create_opt "optimize" O.get_optimize))
+module StrictMode =
+  (val (create_opt "strict_mode" O.get_strict_mode))
 
 (* Start mode options. *)
 
