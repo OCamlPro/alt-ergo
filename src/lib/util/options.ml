@@ -96,7 +96,15 @@ end
 type instantiation_heuristic = INormal | IAuto | IGreedy
 type interpretation = INone | IFirst | IEvery | ILast
 
-type input_format = Native | Smtlib2 | Why3 (* | SZS *) | Unknown of string
+(* As in Dolmen *)
+type smtlib2_version = [ `Latest | `V2_6 | `Poly ]
+
+type input_format =
+  | Native
+  | Smtlib2 of smtlib2_version
+  | Why3
+  (* | SZS *)
+  | Unknown of string
 type output_format = input_format
 
 type model_type = Value | Constraints
@@ -104,7 +112,8 @@ type model_type = Value | Constraints
 let match_extension e =
   match e with
   | ".ae" -> Native
-  | ".smt2" | ".psmt2" -> Smtlib2
+  | ".smt2" -> Smtlib2 `Latest
+  | ".psmt2" -> Smtlib2 `Poly
   | ".why" | ".mlw" -> Why3
   (* | ".szs" -> SZS *)
   | s -> Unknown s
@@ -370,16 +379,6 @@ let equal_mode a b =
   | IEvery, _ | _, IEvery -> false
   | ILast, ILast -> true
 
-let equal_output_format a b =
-  match a, b with
-  | Smtlib2, Smtlib2 -> true
-  | Smtlib2, _ | _, Smtlib2 -> false
-  | Unknown n1, Unknown n2 -> String.equal n1 n2
-  | Unknown _, _ | _, Unknown _ -> false
-  | Native, Native -> true
-  | Native, _ | _, Native -> false
-  | Why3, Why3 -> true
-
 let equal_mode_type a b =
   match a, b with
   | Constraints, Constraints -> true
@@ -395,7 +394,10 @@ let get_last_interpretation () = equal_mode !interpretation ILast
 let get_interpretation_use_underscore () = !interpretation_use_underscore
 let get_objectives_in_interpretation () = !objectives_in_interpretation
 let get_output_format () = !output_format
-let get_output_smtlib () = equal_output_format !output_format Smtlib2
+let get_output_smtlib () =
+  match !output_format with
+  | Smtlib2 _ -> true
+  | _ -> false
 let get_model_type () = !model_type
 let get_model_type_constraints () = equal_mode_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
@@ -653,7 +655,7 @@ let set_file_for_js filename =
 (* Printer **)
 let pp_comment fmt msg =
   match get_output_format () with
-  | Smtlib2 -> Format.fprintf fmt "; %s" msg;
+  | Smtlib2 _ -> Format.fprintf fmt "; %s" msg;
   | Native | Why3 | Unknown _ -> Format.fprintf fmt "%s" msg
 
 let[@inline always] heavy_assert p =

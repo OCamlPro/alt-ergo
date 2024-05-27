@@ -61,8 +61,10 @@ let formats_list =
   ["native", Native;
    "altergo", Native;
    "alt-ergo", Native;
-   "smtlib2", Smtlib2;
-   "smt-lib2", Smtlib2;
+   "smtlib2", Smtlib2 `Latest;
+   "smt-lib2", Smtlib2 `Latest;
+   "psmt2", Smtlib2 `Poly;
+   "smtlib2-v2.6", Smtlib2 `V2_6;
    "why3", Why3]
 
 let format_parser s =
@@ -75,7 +77,9 @@ let format_parser s =
 
 let format_to_string = function
   | Native -> "native"
-  | Smtlib2 -> "smtlib2"
+  | Smtlib2 `V2_6 -> "smtlib2-v2.6"
+  | Smtlib2 `Poly -> "psmt2"
+  | Smtlib2 `Latest -> "smtlib2"
   | Why3 -> "why3"
   | Unknown s -> Format.sprintf "Unknown %s" s
 
