@@ -198,7 +198,7 @@ module Domains = struct
       with Not_found ->
         Domain.unknown (X.type_info r)
 
-  let add r t =
+  let init r t =
     match Th.embed r with
     | Alien _ when not (MX.mem r t.domains) ->
       (* We have to add a default domain if the key `r` is not in map in order
@@ -243,7 +243,7 @@ module Domains = struct
       let t = remove r t in
       tighten nr nd t
 
-    | exception Not_found -> add nr t
+    | exception Not_found -> init nr t
 
   (* [propagate f a t] iterates on all the changed domains of [t] since the
      last call of [propagate]. The list of changed domains is flushed after
@@ -438,7 +438,7 @@ let add r uf domains =
   | Ty.Tadt _ ->
     Debug.add r;
     let rr, _ = Uf.find_r uf r in
-    Domains.add rr domains
+    Domains.init rr domains
   | _ ->
     domains
 

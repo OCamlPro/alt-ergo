@@ -211,6 +211,136 @@ end = struct
     MX.iter (fun r -> OMap.iter (fun op -> Expr.Set.iter (f r op))) t.used_by
 end
 
+module type Map_like = sig
+  (** Minimal signature for a persistent map type, used by [EphemeralMap]. *)
+
+  type 'a t
+
+  type key
+
+  val find : key -> 'a t -> 'a
+
+  val add : key -> 'a -> 'a t -> 'a t
+end
+
+module type Hashtbl_like = sig
+  (** Minimal signature for an imperative map type, used by [EphemeralMap]. *)
+
+  type 'a t
+
+  type key
+
+  val create : int -> 'a t
+
+  val find : 'a t -> key -> 'a
+
+  val replace : 'a t -> key -> 'a -> unit
+
+  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+end
+
+module EphemeralMap
+    (MX : Map_like)
+    (HX : Hashtbl_like with type key = MX.key)
+  : sig
+    (** This module implements an ephemeral (mutable) interface for efficient
+        (repeated) lookup and update to the underlying persistent map, as well
+        as conversion functions between persistent and ephemeral maps. *)
+
+    type 'a t
+    (** The type of ephemeral maps with values of type ['a]. *)
+
+    type key = MX.key
+    (** The type of keys in the ephemeral map. *)
+
+    module Entry : sig
+      (** Entries associate a (mutable) content to keys in the map. *)
+
+      type 'a t
+      (** The type of entries with values ['a]. *)
+
+      val content : 'a t -> 'a
+      (** [content e] is the content associated with [key e] in the map. *)
+
+      val set_content : 'a t -> 'a -> unit
+      (** [set_content e v] sets the content of entry [e] to [v]. This
+          overwrites any pre-existing content associated with [e]. *)
+    end
+
+    val entry : 'a t -> key -> 'a Entry.t
+    (** [entry t k] returns an entry associated with key [k] in the map.
+
+        Each key is associated with a single entry: calling [entry t k] several
+        times will always return the same entry. *)
+
+    val edit : default:(key -> 'a) -> 'a MX.t -> 'a t
+    (** [edit ~default t] returns an ephemeral copy of [t] for edition.
+
+        The [default] argument is used to compute a default value for missing
+        keys. *)
+
+    val snapshot : 'a t -> 'a MX.t
+    (** [snapshot t] computes a persistent snapshot of the ephemeral map [t],
+        applying all the changes made using [set_content]. Entries that were
+        never written to using [set_content] are unchanged, even if they contain
+        a [default] value due to not present in the map when it was [edit]ed. *)
+  end =
+struct
+  type key = MX.key
+
+  module Entry = struct
+    type 'a t =
+      { key : MX.key
+      ; mutable value : 'a
+      ; mutable dirty : bool
+      ; dirty_cache : 'a t HX.t }
+
+    let content { value; _ } = value
+
+    let set_dirty handle =
+      if not handle.dirty then (
+        handle.dirty <- true;
+        HX.replace handle.dirty_cache handle.key handle
+      )
+
+    let set_content handle value =
+      set_dirty handle;
+      handle.value <- value
+  end
+
+  type 'a t =
+    { values : 'a MX.t
+    ; handles : 'a Entry.t HX.t
+    ; dirty_cache : 'a Entry.t HX.t
+    ; default : MX.key -> 'a }
+
+  let entry t r =
+    try HX.find t.handles r with Not_found ->
+      let handle =
+        { Entry.key = r
+        ; value = (try MX.find r t.values with Not_found -> t.default r)
+        ; dirty = false
+        ; dirty_cache = t.dirty_cache }
+      in
+      HX.replace t.handles r handle;
+      handle
+
+  let edit ~default t =
+    let size = 17 in
+    { values = t
+    ; handles = HX.create size
+    ; dirty_cache = HX.create size
+    ; default }
+
+  let snapshot t =
+    let persistent = t.values in
+    HX.fold (fun repr handle t ->
+        (* NB: we are in the [dirty_cache] so we know that the domain has been
+           updated. *)
+        MX.add repr (Entry.content handle) t
+      ) t.dirty_cache persistent
+end
+
 module type Domain = sig
   type t
   (** The type of domains for a single value.
@@ -233,6 +363,12 @@ module type Domain = sig
   val filter_ty : Ty.t -> bool
   (** Filter for the types of values this domain can be attached to. *)
 
+  type constant
+  (** The type of constant values. *)
+
+  val constant : constant -> t
+  (** [constant c] returns the singleton domain {m \{ c \}}. *)
+
   val unknown : Ty.t -> t
   (** [unknown ty] returns a full domain for values of type [t].
 
@@ -250,634 +386,865 @@ module type Domain = sig
 
       @raise Inconsistent if [d1] and [d2] are not compatible (the
       intersection would be empty). *)
-
-
-  val fold_leaves : (X.r -> t -> 'a -> 'a) -> X.r -> t -> 'a -> 'a
-  (** [fold_leaves f r t acc] folds [f] over the leaves of [r], deconstructing
-      the domain [t] according to the structure of [r].
-
-      It is assumed that [t] already contains any justification required for
-      it to apply to [r].
-
-      @raise Inconsistent if [r] cannot possibly be in the domain of [t]. *)
-
-  val map_leaves : (X.r -> t) -> X.r -> t
-  (** [map_leaves f r] is the "inverse" of [fold_leaves] in the sense that
-      it rebuilds a domain for [r] by using [f] to access the domain for each
-      of [r]'s leaves. *)
 end
 
-module type Domains = sig
-  (** Extended signature for global domains. *)
+module type OffsetDomain = sig
+  (** This module represents domains to which (constant) offsets can be added or
+      removed. It extends the [Domain] signature. *)
 
-  include Uf.GlobalDomain
+  include Domain
 
-  type elt
-  (** The type of domains contained in the map. Each domain of type [elt]
-      applies to a single semantic value. *)
+  val add_offset : t -> constant -> t
+  (** [add_offset ofs d] adds the offset [ofs] to domain [d]. *)
 
-  val get : X.r -> t -> elt
-  (** [get r t] returns the domain currently associated with [r] in [t]. *)
+  val sub_offset : t -> constant -> t
+  (** [sub_offset ofs d] removes the offset [ofs] from domain [d]. *)
+end
 
-  val fold_leaves : (X.r -> elt -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold f t acc] folds [f] over all the domains in [t] that are associated
-      with leaves. *)
+module type EphemeralDomainMap = sig
+  (** This module provides a signature for ephemeral domain maps: imperative
+      mappings from some key type to a domain type. *)
 
-  val has_changed : t -> bool
-  (** Returns [true] if any element is marked as changed. This can be used to
-      avoid unnecessary calls to [edit].
+  type t
+  (** The type of ephemeral domain maps, i.e. an imperative structure mapping
+      keys to their current domain. *)
 
-      Elements are marked as changed when their domain shrinks due to a call to
-      [subst], or through the ephemeral API. Elements can be unmarked by
-      [clear_changed] in the ephemeral API. *)
+  type key
+  (** The type of keys in the ephemeral map. *)
 
-  module Ephemeral : sig
-    type handle
-    (** A mutable handle to the domain associated with a semantic value. Can be
-        used to access and update the domain. *)
+  type domain
+  (** The type of domains. *)
 
-    val (!!) : handle -> elt
-    (** Return the domain associated with the [handle]. *)
+  module Entry : sig
+    type t
+    (** A mutable entry associated with a given key. Can be used to access and
+        update the associated domain imperatively. A single (physical) entry is
+        associated with a given key. *)
 
-    val update : ex:Explanation.t -> handle -> elt -> unit
-    (** Intersect the domain associated with the [handle] with the provided
+    val domain : t -> domain
+    (** Return the domain associated with this entry. *)
+
+    val set_domain : t -> domain -> unit
+    (** Intersect the domain associated with this entry and the provided
         [domain]. The explanation [ex] justifies that the [domain] applies to
-        the [handle]'s representative.
-
-        If this changes the domain associated with the handle, the handle is
-        marked as changed.
+        the entry's key.
 
         @raise Domain.Inconsistent if the intersection is empty. *)
-
-    type t
-    (** Mutable mappings from semantic values to [domain]s. *)
-
-    val handle : t -> X.r -> handle
-    (** [handle t r] returns the [handle] associated with [r].
-
-        There is a unique handle associated with each semantic value [r] that is
-        created on-the-fly when [handle t r] is called for the first time.
-
-        The domain associated with the handle is initialized from the
-        underlying persistent domain the first time it is accessed, and updated
-        with [update]. *)
-
-    val structural_propagation : t -> X.r -> unit
-    (** Perform structural propagation for the given representative.
-
-        More precisely, if [r] is a leaf, the domain of [r] is propagated to any
-        semantic value that contains [r] as a leaf according to the structure of
-        that semantic value (using [Domain.map_leaves]); if [r] is not a leaf,
-        its domain is propagated to any of the leaves it contains.
-
-        We only perform *forward* structural propagation: if structural
-        propagation causes a domain of a leaf or parent to be changed, then we
-        only mark that leaf or parent as changed.
-
-        @raise Inconsistent if an inconsistency if detected during structural
-        propagation. *)
-
-    val iter_changed : (X.r -> unit) -> t -> unit
-    (** Iterate over all the semantic values that have been marked as changed
-        since the last call to [clear_changed]. Values are marked as changed by
-        [update] whenever their domain shrinks.
-
-        {b Warning}: The behavior is not specified if the ephemeral domain is
-        modified during iteration, such as by calling [update] or
-        [structural_propagation]. *)
-
-    val clear_changed : t -> unit
-    (** Remove the [changed] flag from all values. *)
   end
 
-  val edit : t -> Ephemeral.t
-  (** [edit d] returns an ephemeral version of the domain that can be used for
-      editing. *)
+  val entry : t -> key -> Entry.t
+  (** [entry t k] returns the [handle] associated with [k].
 
-  val snapshot : Ephemeral.t -> t
-  (** [snapshot e] returns a persistent version of [e]. *)
+      There is a unique entry associated with each key [k] that is created
+      on-the-fly when [handle t k] is called for the first time.
+
+      The domain associated with the entry is initialized from the underlying
+      persistent domain the first time it is accessed, and updated with
+      [update]. *)
 end
 
-module Domains_make(Domain : Domain) : Domains with type elt = Domain.t =
+module type OrderedType = sig
+  (** Module signature for an ordered type equipped with a [compare] function.
+
+      This is similar to [Set.OrderedType] and [Map.OrderedType], but includes
+      pre-built [Set] and [Map] modules. *)
+
+  type t
+
+  val pp : t Fmt.t
+
+  val compare : t -> t -> int
+
+  module Set : Set.S with type elt = t
+
+  module Map : Map.S with type key = t
+end
+
+module type ComparableType = sig
+  (** Module signature combining [OrderedType] and [Hashtbl.HashedType].
+
+      This includes a pre-built [Table] module that implements the [Hashtbl.S]
+      signature. *)
+
+  include OrderedType
+
+  val equal : t -> t -> bool
+
+  val hash : t -> int
+
+  module Table : Hashtbl.S with type key = t
+end
+
+module DomainMap
+    (X : ComparableType)
+    (D : Domain)
+  : sig
+    (** A persistent map to a domain type, with an ephemeral interface. *)
+
+    type t
+    (** The type of domain maps. *)
+
+    val pp : t Fmt.t
+    (** Pretty-printer for domain maps. *)
+
+    val empty : t
+    (** The empty domain map. *)
+
+    type key = X.t
+    (** The type of keys in the map. *)
+
+    type domain = D.t
+    (** The type of per-variable domains. *)
+
+    val find : key -> t -> domain
+    (** Find the domain associatd with the given key.
+
+        @raise Not_found if there is no domain associated with the key. *)
+
+    val add : key -> domain -> t -> t
+    (** Adds a domain associated with a given key.
+
+        {b Warning}: If the key is not constant, [add] updates the domain
+        associated with the variable part of the key, and hence influences the
+        domains of other keys that have the same variable part as this key. *)
+
+    val remove : key -> t -> t
+    (** Removes the domain associated with a single variable. This will
+        effectively remove the domains associated with all keys that have the
+        same variable part. *)
+
+    val needs_propagation : t -> bool
+    (** Returns [true] if the domain map needs propagation, i.e. if the domain
+        associated with any variable has changed. *)
+
+    module Ephemeral : EphemeralDomainMap
+      with type key = key and type domain = domain
+
+    val edit :
+      notify:(key -> unit) -> default:(key -> domain) -> t -> Ephemeral.t
+    (** Create an ephemeral domain map from the current domain map.
+
+        [notify] will be called whenever the domain associated with a variable
+        changes. *)
+
+    val snapshot : Ephemeral.t -> t
+    (** Convert back a (modified) ephemeral domain map into a persistent one. *)
+  end
+
+=
 struct
-  type elt = Domain.t
+  module MX = X.Map
+  module SX = X.Set
+  module HX = X.Table
+  module EX = EphemeralMap(MX)(HX)
 
-  exception Inconsistent = Domain.Inconsistent
+  type t =
+    { domains : D.t MX.t
+    ; changed : SX.t }
 
-  type t = {
-    domains : Domain.t MX.t ;
-    (** Map from tracked representatives to their domain *)
+  type key = X.t
 
-    changed : SX.t ;
-    (** Representatives whose domain has changed since the last flush *)
-
-    leaves_map : SX.t MX.t ;
-    (** Map from leaves to the *tracked* representatives that contains them *)
-  }
-
-  type _ Uf.id += Id : t Uf.id
+  type domain = D.t
 
   let pp ppf t =
-    Fmt.(iter_bindings ~sep:semi MX.iter
-           (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
-        )
+    Fmt.iter_bindings ~sep:Fmt.semi MX.iter
+      (Fmt.box @@ Fmt.pair ~sep:(Fmt.any " ->@ ") X.pp D.pp)
       ppf t.domains
 
   let empty =
-    { domains = MX.empty ; changed = SX.empty ; leaves_map = MX.empty }
+    { domains = MX.empty
+    ; changed = SX.empty }
 
-  let filter_ty = Domain.filter_ty
+  let find x t = MX.find x t.domains
 
-  let r_add r leaves_map =
-    List.fold_left (fun leaves_map leaf ->
-        MX.update leaf (function
-            | Some parents -> Some (SX.add r parents)
-            | None -> Some (SX.singleton r)
-          ) leaves_map
-      ) leaves_map (X.leaves r)
+  let remove x t =
+    { domains = MX.remove x t.domains
+    ; changed = SX.remove x t.changed }
 
-  let create_domain r =
-    Domain.map_leaves (fun r ->
-        Domain.unknown (X.type_info r)
-      ) r
+  let add x d t = { t with domains = MX.add x d t.domains }
 
-  let add r t =
-    if MX.mem r t.domains then t else
-      (* Note: we do not need to mark [r] as needing propagation, because no
-          constraints applied to it yet. Any constraint that apply to [r] will
-          already be marked as pending due to being newly added. *)
-      let d = create_domain r in
-      let domains = MX.add r d t.domains in
-      let leaves_map = r_add r t.leaves_map in
-      { t with domains; leaves_map }
-
-  let r_remove r leaves_map =
-    List.fold_left (fun leaves_map leaf ->
-        MX.update leaf (function
-            | Some parents ->
-              let parents = SX.remove r parents in
-              if SX.is_empty parents then None else Some parents
-            | None -> None
-          ) leaves_map
-      ) leaves_map (X.leaves r)
-
-  let remove r t =
-    let changed = SX.remove r t.changed in
-    let domains = MX.remove r t.domains in
-    let leaves_map = r_remove r t.leaves_map in
-    { changed; domains; leaves_map }
-
-  let get r t =
-    (* We need to catch [Not_found] because of fresh terms that can be added
-        by the solver and for which we don't call [add]. Note that in this
-        case, only structural constraints can apply to [r]. *)
-    try MX.find r t.domains with Not_found -> create_domain r
-
-  (* Marked as unsafe because we trust the [changed] flag from the caller. *)
-  let unsafe_update ?(changed = true) r d t =
-    match MX.find r t.domains with
-    | od ->
-      (* Both domains are already valid for [r], we can intersect them
-          without additional justifications. *)
-      let d = Domain.intersect od d in
-      if Domain.equal od d then
-        t
-      else
-        let domains = MX.add r d t.domains in
-        let changed = if changed then SX.add r t.changed else t.changed in
-        { t with domains; changed }
-    | exception Not_found ->
-      (* We need to catch [Not_found] because of fresh terms that can be added
-          by the solver and for which we don't call [add]. *)
-      let d = Domain.intersect d (create_domain r) in
-      let domains = MX.add r d t.domains in
-      let changed = if changed then SX.add r t.changed else t.changed in
-      let leaves_map = r_add r t.leaves_map in
-      { domains; changed; leaves_map }
-
-  let fold_leaves f t acc =
-    MX.fold (fun r _ acc ->
-        f r (get r t) acc
-      ) t.leaves_map acc
-
-  let subst ~ex rr nrr t =
-    (* Need to add [ex] to be a valid domain for [nrr] *)
-    let d = Domain.add_explanation ~ex (get rr t) in
-    let changed = SX.mem rr t.changed in
-    let t = remove rr t in
-    match MX.find nrr t.domains with
-    | nd ->
-      (* If there is an existing domain for [nrr], there might be
-          constraints applying to [nrr] prior to the substitution, and the
-          constraints that used to apply to [rr] will also apply to [nrr]
-          after the substitution.
-
-          We need to notify changed to either of these constraints, so we
-          must notify if the domain is different from *either* the old
-          domain of [rr] or the old domain of [nrr]. *)
-      let nnd = Domain.intersect d nd in
-      let nrr_changed = not (Domain.equal nnd nd) in
-      let rr_changed = not (Domain.equal nnd d) in
-      let domains =
-        if nrr_changed then MX.add nrr nnd t.domains else t.domains
-      in
-      let changed = changed || rr_changed || nrr_changed in
-      let changed =
-        if changed then SX.add nrr t.changed else t.changed
-      in
-      { t with domains; changed }
-    | exception Not_found ->
-      (* If there is no existing domain for [nr], there were no
-          constraints applying to [nr] prior to the substitution.
-
-          The only constraints that need to be notified are those that
-          were applying to [r], and they only need to be notified if the
-          new domain is different from the old domain of [r]. *)
-      let default = create_domain nrr in
-      let nd = Domain.intersect d default in
-      let rr_changed = not (Domain.equal nd d) in
-      (* Make sure to not add more constraints than necessary for the
-          representative domain. *)
-      let nd = if Domain.equal nd default then default else nd in
-      let domains = MX.add nrr nd t.domains in
-      let leaves_map = r_add nrr t.leaves_map in
-      let changed = changed || rr_changed in
-      let changed =
-        if changed then SX.add nrr t.changed else t.changed
-      in
-      { domains; changed; leaves_map }
-
-  let has_changed t =
-    not @@ SX.is_empty t.changed
+  let needs_propagation t = not (SX.is_empty t.changed)
 
   module Ephemeral = struct
-    type handle =
-      { repr : X.r
-      ; mutable domain : Domain.t
-      ; mutable dirty : bool
-      ; dirty_cache : handle HX.t
-      ; mutable changed : bool
-      ; changed_set : handle HX.t
-      }
+    type nonrec key = key
+    type nonrec domain = domain
 
-    let (!!) handle = handle.domain
+    module Entry = struct
+      type t =
+        { entry : domain EX.Entry.t
+        ; key : key
+        ; notify : X.t -> unit }
 
-    let set_dirty handle =
-      if not handle.dirty then (
-        handle.dirty <- true;
-        HX.replace handle.dirty_cache handle.repr handle
-      )
+      let domain { entry ; _ } = EX.Entry.content entry
 
-    let set_changed handle =
-      if not handle.changed then (
-        set_dirty handle;
-        handle.changed <- true;
-        HX.replace handle.changed_set handle.repr handle
-      )
+      let set_domain { entry ; notify ; key } dom =
+        EX.Entry.set_content entry @@ dom;
+        notify key
+    end
 
-    let update ~ex handle domain =
-      let domain = Domain.add_explanation ~ex domain in
-      let domain = Domain.intersect handle.domain domain in
-      if not (Domain.equal domain handle.domain) then (
-        set_changed handle;
-        handle.domain <- domain
-      )
+    type t =
+      { domains : domain EX.t
+      ; notify : X.t -> unit }
 
-    type nonrec t =
-      { persistent : t
-      ; handles : handle HX.t
-      ; dirty_cache : handle HX.t
-      ; changed_set : handle HX.t }
-
-    let handle t r =
-      try HX.find t.handles r with Not_found ->
-        let handle =
-          { repr = r
-          ; domain = get r t.persistent
-          ; dirty = false
-          ; dirty_cache = t.dirty_cache
-          ; changed = false
-          ; changed_set = t.changed_set }
-        in
-        HX.add t.handles r handle;
-        handle
-
-    let structural_propagation t r =
-      (* Structural propagation is always correct and does not require
-         explanations because it follows the structure of the semantic value
-         itself. *)
-      let get r = !!(handle t r) in
-      let update r d = update ~ex:Explanation.empty (handle t r) d in
-      if X.is_a_leaf r then
-        match MX.find r t.persistent.leaves_map with
-        | parents ->
-          SX.iter (fun parent ->
-              if X.is_a_leaf parent then
-                assert (X.equal r parent)
-              else
-                update parent (Domain.map_leaves get parent)
-            ) parents
-        | exception Not_found -> ()
-      else
-        Domain.fold_leaves (fun r d () -> update r d) r (get r) ()
-
-    let iter_changed f t = HX.iter (fun r _ -> f r) t.changed_set
-
-    let clear_changed t =
-      HX.iter (fun _ h -> h.changed <- false) t.changed_set;
-      HX.clear t.changed_set
+    let entry t x =
+      { Entry.entry = EX.entry t.domains x
+      ; key = x
+      ; notify = t.notify }
   end
 
-  let edit t =
-    let size = 17 in
-    let ephemeral =
-      { Ephemeral.persistent = { t with changed = SX.empty }
-      ; handles = HX.create size
-      ; dirty_cache = HX.create size
-      ; changed_set = HX.create size }
-    in
-    SX.iter (fun r ->
-        Ephemeral.set_changed (Ephemeral.handle ephemeral r)
-      ) t.changed;
-    ephemeral
+  let edit ~notify ~default t =
+    SX.iter notify t .changed;
+
+    { Ephemeral.domains = EX.edit ~default t.domains
+    ; notify }
 
   let snapshot t =
-    assert (SX.is_empty t.Ephemeral.persistent.changed);
-    HX.fold (fun repr handle domains ->
-        unsafe_update
-          ~changed:handle.Ephemeral.changed repr handle.domain domains
-      ) t.Ephemeral.dirty_cache t.persistent
+    { domains = EX.snapshot t.Ephemeral.domains
+    ; changed = SX.empty }
 end
 
-(** The ['c acts] type is used to register new facts and constraints in
-    [Constraint.simplify]. *)
-type 'c acts =
-  { acts_add_lit_view : X.r L.view -> unit
-  (** Assert a semantic literal. *)
-  ; acts_add_eq : X.r -> X.r -> unit
-  (** Assert equality between two semantic values. *)
-  ; acts_add_constraint : 'c -> unit
-  (** Assert a new constraint. *)
-  }
 
-module type Constraint = sig
+module BinRel(X : OrderedType)(W : OrderedType) : sig
+  (** This module provides a thin abstraction to keep track of binary relations
+      between values of two different types. *)
+
   type t
-  (** The type of constraints.
-
-      Constraints apply to semantic values of type [X.r] as arguments. *)
-
-  val pp : t Fmt.t
-  (** Pretty-printer for constraints. *)
-
-  val compare : t -> t -> int
-  (** Comparison function for constraints. The comparison function is
-      arbitrary and has no semantic meaning. You should not depend on any of
-      its properties, other than it defines an (arbitrary) total order on
-      constraint representations. *)
-
-  val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold_args f c acc] folds function [f] over the arguments of constraint
-      [c].
-
-      During propagation, the constraint {b MUST} only look at (and update)
-      the domains associated of its arguments; it is not allowed to look at
-      the domains of other semantic values. This allows efficient updates of
-      the pending constraints. *)
-
-  val subst : X.r -> X.r -> t -> t
-  (** [subst p v cs] replaces all the instances of [p] with [v] in the
-      constraint.
-
-      Substitution can perform constraint simplification. *)
-
-  val simplify : t -> t acts -> bool
-  (** [simplify c acts] simplifies the constraint [c] by calling appropriate
-      functions on [acts].
-
-      {b Note}: All the facts and constraints added through [acts] must be
-      logically implied by [c] {b only}. Doing otherwise is a {b soundness bug}.
-
-      Returns [true] if the constraint has been fully simplified and can
-      be removed, and [false] otherwise.
-
-      {b Note}: Returning [true] will cause the constraint to be removed, even
-      if it was re-added with [acts_add_constraint]. If you want to add new
-      facts/constraints but keep the existing constraint (usually a bad idea),
-      return [false] instead. *)
-end
-
-type 'a explained = { value : 'a ; explanation : Explanation.t }
-
-let explained ~ex value = { value ; explanation = ex }
-
-module Constraints_make(Constraint : Constraint) : sig
-  type t
-  (** The type of constraint sets. A constraint set records a set of
-      constraints that applies to semantic values, and remembers the relation
-      between constraints and semantic values.
-
-      The constraints applying to a given semantic value can be recovered using
-      the [iter_pending] functions.
-
-      New constraints are marked as "pending" when added to the constraint set
-      (whether by a call to [add] or following a substitution). These
-      constraints should ultimately be propagated; they can be accessed through
-      the [iter_pending]. Once pending constraints have been propagated, the
-      "pending" constraints should be cleared with [clear_pending]. *)
-
-  val pp : t Fmt.t
-  (** Pretty-printer for constraint sets. *)
+  (** The type of binary relations between [X.t] and [W.t]. *)
 
   val empty : t
-  (** The empty constraint set. *)
+  (** The empty relation. *)
 
-  val add : ex:Explanation.t -> Constraint.t -> t -> t
-  (** [add ~ex c t] adds the constraint [c] to the set [t].
+  val add : X.t -> W.t -> t -> t
+  (** [add x w r] adds the tuple [(x, w)] to the relation. *)
 
-      The explanation [ex] justifies that the constraint [c] holds. If the same
-       constraint is added multiple times with different explanations, only one
-       of the explanations for the constraint will be kept. *)
+  val add_many : X.t -> W.Set.t -> t -> t
 
-  val subst : ex:Explanation.t -> X.r -> X.r -> t -> t
-  (** [subst ~ex p v t] replaces all instances of [p] with [v] in the
-      constraints.
+  val range : X.t -> t -> W.Set.t
 
-      The explanation [ex] justifies the equality [p = v]. *)
+  val remove_dom : X.t -> t -> t
+  (** [remove_dom x r] removes all tuples of the form [(x, _)] from the
+      relation. *)
 
-  val iter_parents : (Constraint.t explained -> unit) -> X.r -> t -> unit
-  (** [iter_parents f r t] calls [f] on all the constraints that apply directly
-      to [r] (precisely, all the constraints [r] is an argument of). *)
+  val remove_range : W.t -> t -> t
+  (** [remove_range w r] removes all tuples of the form [(_, w)] from the
+      relation. *)
 
-  val iter_pending : (Constraint.t explained -> unit) -> t -> unit
-  (** [iter_pending f t] calls [f] on all the constraints currently marked as
-      pending. Constraints are marked as pending when they are added, including
-      when a new constraint is added due to substitution of an old constraint
-      (whether the old constraint was pending or not). *)
+  val transfer_dom : X.t -> X.t -> t -> t
+  (** [transfer_dom x x' r] replaces all tuples of the form [(x, w)] in the
+      relation with the corresponding [(x', w)] tuple. *)
 
-  val clear_pending : t -> t
-  (** [clear_pending t] returns a copy of [t] except that no constraints are
-      marked as pending. *)
+  val iter_range : X.t -> (W.t -> unit) -> t -> unit
+  (** [iter_range x f r] calls [f] on all the [w] such that [(x, w)] is in the
+      relation. *)
 
-  val has_pending : t -> bool
-  (** [has_pending t] returns [true] if there is any constraint marked as
-      pending. Hence if [has_pending t] returns [false], [iter_pending] and
-      [clear_pending] are guaranteed to be no-ops. Should only be used for
-      optimization. *)
-
-  val fold_args : (X.r -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold_args f t acc] folds [f] over all the term representatives that are
-      arguments of at least one constraint. *)
-
-  val simplify_pending :
-    (X.r L.view * Explanation.t) list -> t ->
-    (X.r L.view * Explanation.t) list * t
-    (** Simplify the pending constraints. This takes as argument a list of
-        (explained) literals, and returns a list of (explained) literals, so
-        that constraint simplification is able to propagate new literals
-        (typically equalities) to the UF module. *)
+  val fold_range : X.t -> (W.t -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold_range x f r acc] folds [f] over all the [w] such that [(x, w)] is in
+      the relation.*)
 end = struct
-  module CS = Set.Make(struct
-      type t = Constraint.t explained
+  module MX = X.Map
+  module MW = W.Map
+  module SX = X.Set
+  module SW = W.Set
 
-      let compare a b = Constraint.compare a.value b.value
-    end)
+  type t =
+    { watches : SW.t MX.t ;
+      (** Reverse map from variables to their watches. Used to trigger watches
+          when a domain changes. *)
 
-  type t = {
-    args_map : CS.t MX.t ;
-    (** Mapping from semantic values to constraints involving them *)
+      watching : SX.t MW.t
+      (** Map from watches to the variables they watch. Used to be able to
+          remove watches. *)
+    }
 
-    leaves_map : CS.t MX.t ;
-    (** Mapping from semantic values to constraints they are a leaf of *)
-
-    active : CS.t ;
-    (** Set of all currently active constraints, i.e. constraints that must
-        hold in a model and will be propagated.  *)
-
-    pending : CS.t ;
-    (** Set of active constraints that have not yet been propagated *)
-  }
-
-  let pp ppf { active; _ } =
-    Fmt.(
-      braces @@ hvbox @@
-      iter ~sep:semi CS.iter @@
-      using (fun { value; _ } -> value) @@
-      box ~indent:2 @@ braces @@
-      Constraint.pp
-    ) ppf active
+  let range x t =
+    try MX.find x t.watches with Not_found -> W.Set.empty
 
   let empty =
-    { args_map = MX.empty
-    ; leaves_map = MX.empty
-    ; active = CS.empty
-    ; pending = CS.empty }
+    { watches = MX.empty
+    ; watching = MW.empty }
 
-  let cs_add c r cs_map =
-    MX.update r (function
-        | Some cs -> Some (CS.add c cs)
-        | None -> Some (CS.singleton c)
-      ) cs_map
-
-  let fold_leaves f c acc =
-    Constraint.fold_args (fun r acc ->
-        List.fold_left (fun acc r -> f r acc) acc (X.leaves r)
-      ) c acc
-
-  let add ~ex c t =
-    let c = explained ~ex c in
-    (* Note: use [CS.find] here, not [CS.mem], to ensure we use the same
-       explanation for [c] in the [pending] and [active] sets. *)
-    if CS.mem c t.active then t else
-      let active = CS.add c t.active in
-      let args_map =
-        Constraint.fold_args (cs_add c) c.value t.args_map
-      in
-      let leaves_map = fold_leaves (cs_add c) c.value t.leaves_map in
-      let pending = CS.add c t.pending in
-      { active; args_map; leaves_map; pending }
-
-  let cs_remove c r cs_map =
-    MX.update r (function
-        | Some cs ->
-          let cs = CS.remove c cs in
-          if CS.is_empty cs then None else Some cs
-        | None -> None
-      ) cs_map
-
-  let remove c t =
-    let active = CS.remove c t.active in
-    let args_map =
-      Constraint.fold_args (cs_remove c) c.value t.args_map
+  let add x w t =
+    let watches =
+      MX.update x (function
+          | None -> Some (SW.singleton w)
+          | Some ws -> Some (SW.add w ws)) t.watches
+    and watching =
+      MW.update w (function
+          | None -> Some (SX.singleton x)
+          | Some xs -> Some (SX.add x xs)) t.watching
     in
-    let leaves_map = fold_leaves (cs_remove c) c.value t.leaves_map in
-    let pending = CS.remove c t.pending in
-    { active; args_map; leaves_map; pending }
+    { watches ; watching }
 
-  let subst ~ex rr nrr t =
-    match MX.find rr t.leaves_map with
-    | cs ->
-      CS.fold (fun c t ->
-          let t = remove c t  in
-          let ex = Explanation.union ex c.explanation in
-          add ~ex (Constraint.subst rr nrr c.value) t
-        ) cs t
+  let add_many x ws t =
+    let watches =
+      MX.update x (function
+          | None -> Some ws
+          | Some ws' -> Some (SW.union ws ws')) t.watches
+    and watching =
+      SW.fold (fun w watching ->
+          MW.update w (function
+              | None -> Some (SX.singleton x)
+              | Some xs -> Some (SX.add x xs)) watching
+        ) ws t.watching
+    in
+    { watches ; watching }
+
+  let remove_range w t =
+    match MW.find w t.watching with
+    | xs ->
+      let watches =
+        SX.fold (fun x watches ->
+            MX.update x (function
+                | None ->
+                  (* maps must be mutual inverses *)
+                  assert false
+                | Some ws ->
+                  let ws = SW.remove w ws in
+                  if SW.is_empty ws then None else Some ws
+              ) watches
+          ) xs t.watches
+      in
+      let watching = MW.remove w t.watching in
+      { watches ; watching }
     | exception Not_found -> t
 
-  let iter_parents f r t =
-    match MX.find r t.args_map with
-    | cs -> CS.iter f cs
+  let remove_dom x t =
+    match MX.find x t.watches with
+    | ws ->
+      let watching =
+        SW.fold (fun w watching ->
+            MW.update w (function
+                | None ->
+                  (* maps must be mutual inverses *)
+                  assert false
+                | Some xs ->
+                  let xs = SX.remove x xs in
+                  if SX.is_empty xs then None else Some xs
+              ) watching
+          ) ws t.watching
+      and watches = MX.remove x t.watches in
+      { watches ; watching }
+    | exception Not_found -> t
+
+  let fold_range x f t acc =
+    match MX.find x t.watches with
+    | ws -> SW.fold f ws acc
+    | exception Not_found -> acc
+
+  let iter_range x f t =
+    match MX.find x t.watches with
+    | ws -> SW.iter f ws
     | exception Not_found -> ()
 
-  let iter_pending f t =
-    CS.iter f t.pending
-
-  let clear_pending t =
-    { t with pending = CS.empty }
-
-  let has_pending t = not @@ CS.is_empty t.pending
-
-  let fold_args f c acc =
-    MX.fold (fun r _ acc ->
-        f r acc
-      ) c.args_map acc
-
-  let simplify_pending =
-    (* Recursion needed because adding new constraints changes the pending set
-       and they also need to be simplified *)
-    let rec simplify_aux eqs t to_simplify =
-      let eqs = ref eqs in
-      let to_add = ref CS.empty in
-      let t =
-        CS.fold (fun ({ value; explanation } as c) t ->
-            let acts_add_lit_view l =
-              eqs := (l, explanation) :: !eqs
-            in
-            let acts_add_eq u v =
-              acts_add_lit_view (Uf.LX.mkv_eq u v)
-            in
-            let acts_add_constraint c =
-              let c = { value = c; explanation } in
-              if not (CS.mem c t.active) then
-                to_add := CS.add c !to_add
-            in
-            let acts =
-              { acts_add_lit_view
-              ; acts_add_eq
-              ; acts_add_constraint } in
-            if Constraint.simplify value acts then
-              remove c t
-            else
-              t
-          ) to_simplify t
+  let transfer_dom x x' t =
+    match MX.find x t.watches with
+    | ws ->
+      let watching =
+        SW.fold (fun w watching ->
+            MW.update w (function
+                | None ->
+                  (* maps must be mutual inverses *)
+                  assert false
+                | Some xs ->
+                  Some (SX.add x' (SX.remove x xs))
+              ) watching
+          ) ws t.watching
+      and watches =
+        MX.update x' (function
+            | None -> Some ws
+            | Some ws' -> Some (SW.union ws ws')
+          ) (MX.remove x t.watches)
       in
-      let to_add = !to_add in
-      if CS.is_empty to_add then
-        !eqs, t
-      else
-        let t = CS.fold (fun c t -> add ~ex:c.explanation c.value t) to_add t in
-        simplify_aux !eqs t to_add
+      { watches ; watching }
+    | exception Not_found -> t
+end
+
+(** Implementation of the [ComparableType] interface for semantic values. *)
+module XComparable : ComparableType with type t = X.r = struct
+  type t = X.r
+
+  let pp = X.print
+
+  let equal = X.equal
+
+  let hash = X.hash
+
+  let compare = X.hash_cmp
+
+  module Set = SX
+
+  module Map = MX
+
+  module Table = HX
+end
+
+module type NormalForm = sig
+  (** Module signature for normal form computation. *)
+
+  type constant
+  (** The type of constant values. *)
+
+  type atom
+  (** The type of atomic variables that cannot be decomposed further. *)
+
+  type composite
+  (** The type of composite variables that are obtained through a combination of
+      atomic variables (e.g. a multi-variate polynomial). *)
+
+  type t =
+    | Constant of constant
+    (** A constant value. *)
+    | Atom of atom * constant
+    (** An atomic variable with a constant offset. *)
+    | Composite of composite * constant
+    (** A composite variable with a constant offset. *)
+  (** The type of normal forms. *)
+
+  type expr
+  (** The underlying type of non-normalized expressions. *)
+
+  val normal_form : expr -> t
+  (** [normal_form e] computes the normal form of expression [e]. *)
+end
+
+module type CompositeType = sig
+  (** Extension of the [ComparableType] signature for composite types, i.e.
+      types that are built up from a collection of smaller components. *)
+
+  include ComparableType
+
+  type atom
+  (** The type of atoms that build up a composite value. *)
+
+  val fold : (atom -> 'a -> 'a) -> t -> 'a -> 'a
+  (** [fold f c acc] folds [f] over all the atoms that make up [c]. *)
+end
+
+module type CompositeDomain = sig
+  (** Module signature to build a domain for a composite type from the domain of
+      its component atoms. *)
+
+  type var
+  (** The type of (composite) variables. *)
+
+  type atom
+  (** The type of atomic variables. *)
+
+  type domain
+  (** The type of domains we are building. *)
+
+  val map_domain : (atom -> domain) -> var -> domain
+  (** [map_domain f c] constructs a domain for [c] from a function [f] that
+      returns the domain of an atom. *)
+end
+
+type ('a, 'c, 'w) events =
+  { evt_atomic_change : 'a -> unit
+  ; evt_composite_change : 'c -> unit
+  (** Called by the ephemeral interface when the domain associated with a
+      variable changes. *)
+  ; evt_watch_trigger : 'w -> unit
+  (** Called by the ephemeral interface when a watcher is triggered. *)
+  }
+(** Handlers for events used by the ephemeral interface. *)
+
+module type VariableType = sig
+  (** Extension of the [ComparableType] signature for variables that have an
+      associated type. *)
+
+  include ComparableType
+
+  val type_info : t -> Ty.t
+  (** [type_info x] returns the type of variable [x]. *)
+end
+
+module Domains_make
+    (D : OffsetDomain)
+    (A : VariableType)
+    (C : CompositeType with type atom = A.t)
+    (CD : CompositeDomain
+     with type var = C.t
+      and type atom = A.t
+      and type domain = D.t)
+    (NF : NormalForm
+     with type atom = A.t
+      and type composite = C.t
+      and type constant = D.constant
+      and type expr = X.r)
+    (W : OrderedType)
+  : sig
+    include Uf.GlobalDomain
+
+    val get : X.r -> t -> D.t
+    (** [get r t] returns the domain associated with semantic value [r]. *)
+
+    val watch : W.t -> X.r -> t -> t
+    (** [watch w r t] associated the watch [w] with the domain of semantic value
+        [r]. The watch [w] is triggered whenever the domain associated with [r]
+        changes, and is preserved across substitutions (i.e. if [r] becomes
+        [nr], [w] will be transfered to [nr]).
+
+        {b Note}: The watch [w] is also immediately triggered for a first
+        propagation. *)
+
+    val unwatch : W.t -> t -> t
+    (** [unwatch w] removes [w] from all watch lists. It will no longer be
+        triggered.
+
+        {b Note}: If [w] has already been triggered, it is not removed from the
+        triggered list. *)
+
+    val needs_propagation : t -> bool
+    (** Returns [true] if the domains needs propagation, i.e. if any variable's
+        domain has changed. *)
+
+    val variables : t -> A.Set.t
+    (** Returns the set of atomic variables that are currently being tracked. *)
+
+    val parents : t -> C.Set.t A.Map.t
+    (** Returns a map from atomic variables to all the composite variables that
+        contain them and are currently being tracked. *)
+
+    module Ephemeral : EphemeralDomainMap
+      with type key = X.r
+       and type domain = D.t
+
+    val edit : events:(A.t, C.t, W.t) events -> t -> Ephemeral.t
+    (** [edit ~events t] returns an ephemeral copy of the domains for edition.
+
+        The [events] argument is used to notify the caller about domain changes
+        and watches being triggered.
+
+        {b Note}: Any domain that has changed or watches that have been
+        triggered through the persistent API (e.g. due to substitutions) are
+        immediately notified through the appropriare [events] callback. *)
+
+    val snapshot : Ephemeral.t -> t
+    (** Converts back an ephemeral domain into a persistent one. *)
+  end
+=
+struct
+  module DMA = DomainMap(A)(D)
+  module DMC = DomainMap(C)(D)
+
+  module AW = BinRel(A)(W)
+  module CW = BinRel(C)(W)
+
+  type t =
+    { atoms : DMA.t
+    (* Map from atomic variables to their (non-default) domain. *)
+    ; atom_watches : AW.t
+    (* Map (and reverse map) from atomic variables to the watches that must be
+       triggered when their domain gets updated. *)
+    ; variables : A.Set.t
+    (* Set of all atomic variables being tracked. *)
+    ; composites : DMC.t
+    (* Map from composite variables to their (non-default) domain. *)
+    ; composite_watches : CW.t
+    (* Map (and reverse map) from composite variables to the watches that must
+       be triggered when their domain gets udpated. *)
+    ; parents : C.Set.t A.Map.t
+    (* Reverse map from atomic variables to the composite variables that
+       contain them. Useful for structural propagation. *)
+    ; triggers : W.Set.t
+    (* Watches that have been triggered. They will be immediately notified
+       when [edit] is called. *)
+    }
+
+  let pp ppf { atoms ; composites ; _ }  =
+    DMA.pp ppf atoms;
+    DMC.pp ppf composites
+
+  let empty =
+    { atoms = DMA.empty
+    ; atom_watches = AW.empty
+    ; variables = A.Set.empty
+    ; composites = DMC.empty
+    ; composite_watches = CW.empty
+    ; parents = A.Map.empty
+    ; triggers = W.Set.empty
+    }
+
+  type _ Uf.id += Id : t Uf.id
+
+  let filter_ty = D.filter_ty
+
+  exception Inconsistent = D.Inconsistent
+
+  let watch w r t =
+    let t = { t with triggers = W.Set.add w t.triggers } in
+    match NF.normal_form r with
+    | Constant _ -> t
+    | Atom (a, _) ->
+      { t with atom_watches = AW.add a w t.atom_watches }
+    | Composite (c, _) ->
+      { t with composite_watches = CW.add c w t.composite_watches }
+
+  let unwatch w t =
+    { atoms = t.atoms
+    ; atom_watches = AW.remove_range w t.atom_watches
+    ; variables = t.variables
+    ; composites = t.composites
+    ; composite_watches = CW.remove_range w t.composite_watches
+    ; parents = t.parents
+    ; triggers = t.triggers }
+
+  let needs_propagation t =
+    DMA.needs_propagation t.atoms ||
+    DMC.needs_propagation t.composites ||
+    not (W.Set.is_empty t.triggers)
+
+  let variables { variables ; _ } = variables
+
+  let parents { parents ; _ } = parents
+
+  let track c parents =
+    C.fold (fun a t ->
+        A.Map.update a (function
+            | Some cs -> Some (C.Set.add c cs)
+            | None -> Some (C.Set.singleton c)
+          ) t
+      ) c parents
+
+  let untrack c parents =
+    C.fold (fun a t ->
+        A.Map.update a (function
+            | Some cs ->
+              let cs = C.Set.remove c cs in
+              if C.Set.is_empty cs then None else Some cs
+            | None -> None
+          ) t
+      ) c parents
+
+  let init r t =
+    match NF.normal_form r with
+    | Constant _ -> t
+    | Atom (a, _) ->
+      { t with variables = A.Set.add a t.variables }
+    | Composite (c, _) ->
+      { t with parents = track c t.parents }
+
+  let default_atom a = D.unknown (A.type_info a)
+
+  let find_or_default_atom a t =
+    try DMA.find a t.atoms
+    with Not_found -> default_atom a
+
+  let default_composite c = CD.map_domain default_atom c
+
+  let find_or_default_composite c t =
+    try DMC.find c t.composites
+    with Not_found -> default_composite c
+
+  let find_or_default x t =
+    match x with
+    | NF.Constant c ->
+      D.constant c
+    | NF.Atom (a, o) ->
+      D.add_offset (find_or_default_atom a t) o
+    | NF.Composite (c, o) ->
+      D.add_offset (find_or_default_composite c t) o
+
+  let get r t = find_or_default (NF.normal_form r) t
+
+  let subst ~ex rr nrr t =
+    let rrd, ws, t =
+      match NF.normal_form rr with
+      | Constant _ -> invalid_arg "subst: cannot substitute a constant"
+      | Atom (a, o) ->
+        let variables = A.Set.remove a t.variables in
+        D.add_offset (find_or_default_atom a t) o,
+        AW.range a t.atom_watches,
+        { t with
+          atoms = DMA.remove a t.atoms ;
+          atom_watches = AW.remove_dom a t.atom_watches ;
+          variables }
+      | Composite (c, o) ->
+        let parents = untrack c t.parents in
+        D.add_offset (find_or_default_composite c t) o,
+        CW.range c t.composite_watches,
+        { t with
+          composites = DMC.remove c t.composites ;
+          composite_watches = CW.remove_dom c t.composite_watches ;
+          parents }
     in
-    fun eqs t ->
-      if CS.is_empty t.pending then eqs, t else
-        simplify_aux eqs t t.pending
+    (* Add [ex] to justify that it applies to [nrr] *)
+    let rrd = D.add_explanation ~ex rrd in
+    let nrr_nf = NF.normal_form nrr in
+    let nrrd = find_or_default nrr_nf t in
+    let nnrrd = D.intersect nrrd rrd in
+    let t =
+      if D.equal nnrrd rrd then t
+      else { t with triggers = W.Set.union ws t.triggers }
+    in
+    let t =
+      match nrr_nf with
+      | Constant _ -> t
+      | Atom (a, _) ->
+        let atom_watches = AW.add_many a ws t.atom_watches in
+        let variables = A.Set.add a t.variables in
+        { t with atom_watches ; variables }
+      | Composite (c, _) ->
+        let composite_watches = CW.add_many c ws t.composite_watches in
+        let parents = track c t.parents in
+        { t with composite_watches ; parents }
+    in
+    if D.equal nnrrd nrrd then t
+    else
+      match nrr_nf with
+      | Constant _ ->
+        (* [nrrd] is [D.constant c] which must be a singleton; if we
+           shrunk it, it can only be empty. *)
+        assert false
+      | Atom (a, o) ->
+        let triggers = W.Set.union (AW.range a t.atom_watches) t.triggers in
+        let atoms = DMA.add a (D.sub_offset nnrrd o) t.atoms in
+        { t with atoms ; triggers }
+      | Composite (c, o) ->
+        let triggers =
+          W.Set.union (CW.range c t.composite_watches) t.triggers
+        in
+        let composites = DMC.add c (D.sub_offset nnrrd o) t.composites in
+        { t with composites ; triggers }
+
+  module Ephemeral = struct
+    type key = X.r
+    type domain = D.t
+
+    module Entry = struct
+      type t =
+        | Constant of NF.constant
+        | Atom of DMA.Ephemeral.Entry.t * NF.constant
+        | Composite of DMC.Ephemeral.Entry.t * NF.constant
+
+      let domain = function
+        | Constant c -> D.constant c
+        | Atom (a, o) ->
+          D.add_offset (DMA.Ephemeral.Entry.domain a) o
+        | Composite (c, o) ->
+          D.add_offset (DMC.Ephemeral.Entry.domain c) o
+
+      let set_domain e d =
+        match e with
+        | Constant _ -> assert false
+        | Atom (a, o) ->
+          DMA.Ephemeral.Entry.set_domain a (D.sub_offset d o)
+        | Composite (c, o) ->
+          DMC.Ephemeral.Entry.set_domain c (D.sub_offset d o)
+    end
+
+    type t =
+      { atoms : DMA.Ephemeral.t
+      ; atom_watches : AW.t
+      ; variables : A.Set.t
+      ; composites : DMC.Ephemeral.t
+      ; composite_watches : CW.t
+      ; parents : C.Set.t A.Map.t }
+
+    let entry t r =
+      match NF.normal_form r with
+      | NF.Constant c ->
+        Entry.Constant c
+      | NF.Atom (a, o) ->
+        Atom (DMA.Ephemeral.entry t.atoms a, o)
+      | NF.Composite (c, o) ->
+        Entry.Composite (DMC.Ephemeral.entry t.composites c, o)
+  end
+
+  let edit ~events t =
+    W.Set.iter events.evt_watch_trigger t.triggers;
+
+    let notify_atom a =
+      events.evt_atomic_change a;
+      AW.iter_range a events.evt_watch_trigger t.atom_watches
+    and notify_composite c =
+      events.evt_composite_change c;
+      CW.iter_range c events.evt_watch_trigger t.composite_watches
+    in
+
+    { Ephemeral.atoms =
+        DMA.edit
+          ~notify:notify_atom ~default:default_atom
+          t.atoms
+    ; atom_watches = t.atom_watches
+    ; variables = t.variables
+    ; composites =
+        DMC.edit
+          ~notify:notify_composite ~default:default_composite
+          t.composites
+    ; composite_watches = t.composite_watches
+    ; parents = t.parents }
+
+  let snapshot t =
+    { atoms = DMA.snapshot t.Ephemeral.atoms
+    ; atom_watches = t.Ephemeral.atom_watches
+    ; variables = t.Ephemeral.variables
+    ; composites = DMC.snapshot t.Ephemeral.composites
+    ; composite_watches = t.Ephemeral.composite_watches
+    ; parents = t.Ephemeral.parents
+    ; triggers = W.Set.empty }
+end
+
+(** Wrapper around an ephemeral domain map to access domains associated with a
+    representative computed by the [Uf] module. *)
+module UfHandle
+    (D : Domain)
+    (DM : EphemeralDomainMap with type key = X.r and type domain = D.t)
+  : sig
+    include EphemeralDomainMap with type key = X.r and type domain = D.t
+
+    val wrap : Uf.t -> DM.t -> t
+  end
+=
+struct
+  type key = X.r
+
+  type domain = DM.domain
+
+  module Entry = struct
+    type t =
+      { repr : X.r
+      ; handle : DM.Entry.t
+      ; explanation : Explanation.t }
+
+    let domain { repr ; handle ; explanation = ex } =
+      if Explanation.is_empty ex then DM.Entry.domain handle
+      else
+        D.intersect (D.unknown (X.type_info repr)) @@
+        D.add_explanation ~ex (DM.Entry.domain handle)
+
+    let set_domain { handle ; explanation = ex ; _ } d =
+      DM.Entry.set_domain handle (D.add_explanation ~ex d)
+  end
+
+  type t =
+    { uf : Uf.t
+    ; cache : Entry.t HX.t
+    ; domains : DM.t }
+
+  let entry t r =
+    try HX.find t.cache r with Not_found ->
+      let r, explanation = Uf.find_r t.uf r in
+      let h =
+        { Entry.repr = r
+        ; handle = DM.entry t.domains r
+        ; explanation }
+      in
+      HX.replace t.cache r h; h
+
+  let wrap uf t =
+    { uf ; cache = HX.create 17 ; domains = t }
+end
+
+module HandleNotations
+    (D : Domain)
+    (E : EphemeralDomainMap with type domain = D.t) =
+struct
+  let (!!) = E.Entry.domain
+
+  let update ~ex entry domain =
+    let current = E.Entry.domain entry in
+    let domain = D.intersect current (D.add_explanation ~ex domain) in
+    if not (D.equal domain current) then
+      E.Entry.set_domain entry domain
 end

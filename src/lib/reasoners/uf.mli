@@ -68,8 +68,8 @@ module type GlobalDomain = sig
       of representatives for which [filter_ty (type_info r)] holds will be
       propagated to this module. *)
 
-  val add : r -> t -> t
-  (** [add r t] is called when the representative [r] is added to the
+  val init : r -> t -> t
+  (** [init r t] is called when the representative [r] is added to the
       union-find, if it has a type that matches [filter_ty].
 
       {b Note}: unlike [Relation.add], this function is called even for

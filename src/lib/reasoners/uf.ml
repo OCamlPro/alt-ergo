@@ -88,7 +88,7 @@ module type GlobalDomain = sig
 
   val filter_ty : Ty.t -> bool
 
-  val add : X.r -> t -> t
+  val init : X.r -> t -> t
 
   exception Inconsistent of Explanation.t
 
@@ -135,7 +135,7 @@ module GlobalDomains = struct
   let init r t =
     let ty = X.type_info r in
     MapI.map (function B ((module D) as dom, d) as b ->
-        if D.filter_ty ty then B (dom, D.add r d) else b
+        if D.filter_ty ty then B (dom, D.init r d) else b
       ) t
 
   let add (type a) ((module D) as dom : a global_domain) v t =
