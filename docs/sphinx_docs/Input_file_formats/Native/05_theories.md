@@ -77,10 +77,26 @@ type fpa_rounding_mode =
   | NearestTiesToAway
     (** To nearest, tie breaking away from zero *)
 
-(** The first int is the mantissa's size, including the implicit bit.
+(** The first int [prec] is the mantissa's size, including the implicit bit.
 
-    The second int is the exponent of the minimal representable normalized
-    number. *)
+    The second int [exp] is the absolute value of the exponent of the smallest
+    representable positive number. Note that this is not the `emin` value
+    defined in IEEE-754, which represents the minimum exponent of the smallest
+    normal positive number.
+
+    The result of a call to [float(prec, exp, rm, x)] is always of the form:
+
+      (-1)^s * c * 2^q
+
+    where [s] is [0] or [1], [c] is an integer with at most [prec - 1] binary
+    digits (that is, [0 <= c < 2^(prec - 1)]), and [q >= exp] is an integer.
+
+    Given `eb` the number of bits of the exponent and `sb` the number of bits
+    of the significand (including the hidden bit), `prec` and `exp` are
+    computed as follows:
+
+      prec = sb
+      exp = (1 lsl (eb - 1)) + sb - 3 *)
 logic float: int, int, fpa_rounding_mode, real -> real
 ```
 
