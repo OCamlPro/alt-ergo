@@ -589,23 +589,16 @@ let (let*) = Option.bind
 (* Do a cases-plit by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
-let split_delayed_destructor env uf =
+let split_delayed_destructor env _uf =
   if not @@ Options.get_enable_adts_cs () then
     None
   else
-    let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
     try
       Rel_utils.Delayed.iter_delayed
         (fun r sy _e ->
            match sy with
-           | Sy.Destruct destr ->
-             let d = Domains.get r ds in
-             if Domain.cardinal d > 1 then
-               raise_notrace @@ Found (r, destr)
-             else
-               ()
-           | _ ->
-             ()
+           | Sy.Destruct destr -> raise_notrace @@ Found (r, destr)
+           | _ -> ()
         ) env.delayed;
       None
     with Found (r, d) ->
