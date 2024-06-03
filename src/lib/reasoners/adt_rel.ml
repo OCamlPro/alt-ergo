@@ -586,7 +586,7 @@ exception Found of X.r * Uid.t
 
 let (let*) = Option.bind
 
-(* Do a casesplit by choosing a semantic value [r] and constructor [c]
+(* Do a cases-plit by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
 let split_delayed_destructor env uf =
@@ -638,7 +638,7 @@ let split_best_domain ~for_model uf =
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
 
-let next_casesplit ~for_model env =
+let next_case_split ~for_model env =
   let open Util in
   (split_delayed_destructor env) <?> (split_best_domain ~for_model)
 
@@ -646,7 +646,7 @@ let case_split env uf ~for_model =
   if Options.get_disable_adts () then
     []
   else begin
-    match next_casesplit ~for_model env uf with
+    match next_case_split ~for_model env uf with
     | Some cs ->
       if Options.get_debug_adt () then begin
         Debug.pp_domains "before cs"

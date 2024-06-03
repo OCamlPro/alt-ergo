@@ -401,7 +401,7 @@ module Shostak (X : ALIEN) = struct
 
 
   let assign_value _ _ _ =
-    (* Model generation is performed by the casesplit mechanism
+    (* Model generation is performed by the case-split mechanism
        in [Adt_rel]. *)
     None
 
