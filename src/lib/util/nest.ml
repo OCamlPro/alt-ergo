@@ -175,7 +175,7 @@ let add_cstr, find_weight, reinit =
     H.clear order
   in add_cstr, find_weight, reinit
 
-(* Sort the constructors of the nest using a sorting based on the
+(* Sort the constructors of the nest using a sorting based on
    Kahn's algorithm. *)
 let add_nest n =
   let hp = build_graph n in
