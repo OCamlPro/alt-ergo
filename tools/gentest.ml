@@ -262,11 +262,6 @@ end = struct
                 }
               | "fpa" ->
                 {acc with filters = Some ["fpa"]}
-              | "optimize" -> {
-                  acc with
-                  exclude = "legacy" :: acc.exclude;
-                  filters = Some ["optimize"]
-                }
               | _ -> acc
           )
             Test.base_params
@@ -395,11 +390,7 @@ let () =
      [ "--output=smtlib2"
      ; "--frontend dolmen"
      ; "--sat-solver CDCL"
-     ; "--no-minimal-bj" ])
-  ; ("runtest", "optimize",
-     [ "--output=smtlib2"
-     ; "--frontend dolmen"
-     ; "--optimize" ])]
+     ; "--no-minimal-bj" ])]
   in
   let cmds = List.map (fun (group, name, args) ->
       let args = shared @ args in

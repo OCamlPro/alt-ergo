@@ -154,6 +154,9 @@ module type S = sig
 
       @return [None] if there is no objective or the environment is
       unsatisfiable. *)
+
+  val supports_optimization : bool
+  (** Returns whether the solver supports optimization. *)
 end
 
 

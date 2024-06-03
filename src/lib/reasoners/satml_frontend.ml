@@ -1378,6 +1378,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let get_objectives env = env.last_saved_objectives
 
+  let supports_optimization = true
+
   let reinit_ctx () =
     Steps.reinit_steps ();
     Th.reinit_cpt ();

@@ -88,11 +88,12 @@ let unsupported_opt opt =
   in
   warning "unsupported option %s" opt
 
-let enable_maxsmt b =
+let on_strict_mode b =
+  (* For now, strict mode only disables optimization. *)
   if b then
-    DStd.Extensions.Smtlib2.(enable maxsmt)
-  else
     DStd.Extensions.Smtlib2.(disable maxsmt)
+  else
+    DStd.Extensions.Smtlib2.(enable maxsmt)
 
 let cmd_on_modes st modes cmd =
   match O.get_input_format () with
@@ -523,33 +524,15 @@ let main () =
   in
 
   let set_sat_solver sat st =
-    let optim = DO.Optimize.get st in
-    match sat with
-    | Util.Tableaux | Tableaux_CDCL when optim ->
-      warning
-        "Sat-solver %a is incompatible with optimization: ignoring command."
-        Util.pp_sat_solver
-        sat;
-      st
-    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
-      O.set_sat_solver sat;
-      (* `make_sat` returns the sat solver corresponding to the new sat_solver
-         option. *)
-      DO.SatSolver.set sat st
+    O.set_sat_solver sat;
+    (* `make_sat` returns the sat solver corresponding to the new sat_solver
+       option. *)
+    DO.SatSolver.set sat st
   in
 
-  let set_optimize optim st =
-    let sat = DO.SatSolver.get st in
-    match sat with
-    | Util.Tableaux | Tableaux_CDCL when optim ->
-      warning
-        "Sat-solver %a is incompatible with optimization: ignoring command."
-        Util.pp_sat_solver
-        sat;
-      st
-    | Tableaux | Tableaux_CDCL | CDCL | CDCL_Tableaux ->
-      enable_maxsmt optim;
-      DO.Optimize.set optim st
+  let set_strict_mode strict_mode st =
+    on_strict_mode strict_mode;
+    DO.StrictMode.set strict_mode st
   in
 
   let handle_option st_loc name (value : DStd.Term.t) st =
@@ -661,12 +644,11 @@ let main () =
         | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
         | Some i -> Options.set_profiling true i
       end; st
-    | ":optimization", Symbol { name = Simple b; _} ->
+    | ":strict-mode", Symbol { name = Simple b; _} ->
       begin
         match bool_of_string_opt b with
         | None -> print_wrn_opt ~name st_loc "bool" value; st
-        | Some b ->
-          set_optimize b st
+        | Some b -> set_strict_mode b st
       end
     | ":steps-bound", Symbol { name = Simple level; _ } ->
       begin
@@ -679,42 +661,54 @@ let main () =
   in
 
   let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
-    let contents = `Optimize (term, is_max) in
-    let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
-    let cnf =
-      D_cnf.make (State.get State.logic_file st).loc
-        (State.get solver_ctx_key st).ctx stmt
-    in
-    (* Using both optimization and incremental mode may be wrong if
-       some optimization constraints aren't at the toplevel.
-       See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
-    if State.get incremental_depth st > 0 then
-      warning "Optimization constraints in presence of push \
-               and pop statements are not correctly processed.";
-    State.set solver_ctx_key (
-      let solver_ctx = State.get solver_ctx_key st in
-      { solver_ctx with ctx = cnf }
-    ) st
+    let module Sat = (val DO.SatSolverModule.get st) in
+    if not Sat.supports_optimization then (
+      recoverable_error "the selected solver does not support optimization";
+      st
+    ) else
+      let contents = `Optimize (term, is_max) in
+      let stmt =
+        { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
+      in
+      let cnf =
+        D_cnf.make (State.get State.logic_file st).loc
+          (State.get solver_ctx_key st).ctx stmt
+      in
+      (* Using both optimization and incremental mode may be wrong if
+         some optimization constraints aren't at the toplevel.
+         See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
+      if State.get incremental_depth st > 0 then
+        warning "Optimization constraints in presence of push \
+                 and pop statements are not correctly processed.";
+      State.set solver_ctx_key (
+        let solver_ctx = State.get solver_ctx_key st in
+        { solver_ctx with ctx = cnf }
+      ) st
   in
 
   let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
+    let module Sat = (val DO.SatSolverModule.get st) in
     let () =
       if Options.get_interpretation () then
-        match State.get partial_model_key st with
-        | Some Model ((module SAT), partial_model) ->
-          let objectives = SAT.get_objectives partial_model in
-          begin
-            match objectives with
-            | Some o ->
-              if not @@ Objective.Model.has_no_limit o then
-                warning "Some objectives cannot be fulfilled";
-              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
-            | None ->
-              recoverable_error "No objective generated"
-          end
-        | None ->
+        if not Sat.supports_optimization then
           recoverable_error
-            "Model generation is disabled (try --produce-models)"
+            "the selected solver does not support optimization"
+        else
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            let objectives = SAT.get_objectives partial_model in
+            begin
+              match objectives with
+              | Some o ->
+                if not @@ Objective.Model.has_no_limit o then
+                  warning "Some objectives cannot be fulfilled";
+                Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+              | None ->
+                recoverable_error "No objective generated"
+            end
+          | None ->
+            recoverable_error
+              "Model generation is disabled (try --produce-models)"
     in
     st
   in
@@ -943,7 +937,7 @@ let main () =
         |> State.set partial_model_key None
         |> State.set solver_ctx_key empty_solver_ctx
         |> DO.Mode.clear
-        |> DO.Optimize.clear
+        |> DO.StrictMode.clear
         |> DO.ProduceAssignment.clear
         |> DO.init
         |> State.set named_terms Util.MS.empty
@@ -1025,10 +1019,7 @@ let main () =
   in
   let d_fe filename =
     let logic_file, st = mk_state filename in
-    let () =
-      (* Activating maxsmt if the optimize option is ON. *)
-      enable_maxsmt (O.get_optimize ())
-    in
+    let () = on_strict_mode (O.get_strict_mode ()) in
     try
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->

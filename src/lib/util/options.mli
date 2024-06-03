@@ -182,7 +182,7 @@ val set_debug_warnings : bool -> unit
 (** Set [debug_commands] accessible with {!val:get_debug_commands} *)
 val set_debug_commands : bool -> unit
 
-(** Set [debug_optimize] accessible with {!val:get_optimize} *)
+(** Set [debug_optimize] accessible with {!val:get_debug_optimize} *)
 val set_debug_optimize : bool -> unit
 
 (** Set [profiling] accessible with {!val:get_profiling} *)
@@ -227,8 +227,8 @@ val set_input_format : input_format option -> unit
 *)
 val set_interpretation : interpretation -> unit
 
-(** Set [optimize] accessible with {!val:get_optimize}. *)
-val set_optimize : bool -> unit
+(** Set [strict_mode] accessible with {!val:get_strict_mode}. *)
+val set_strict_mode : bool -> unit
 
 (** [dump_models] accessible with {!val:get_dump_models}. *)
 val set_dump_models : bool -> unit
@@ -740,8 +740,8 @@ val get_timelimit_per_goal : unit -> bool
 val get_interpretation : unit -> bool
 (** Default to [false] *)
 
-(** [true] if optimization is activated. *)
-val get_optimize : unit -> bool
+(** [true] if strict mode is enabled. *)
+val get_strict_mode : unit -> bool
 
 (** [true] if the interpretation for each goal or check-sat is
     printed. *)

@@ -1012,16 +1012,18 @@ let parse_output_opt =
     Term.(const not $ no_tableaux_cdcl_in_theories)
   in
 
-  let optim =
-    let doc =
-      "Enable model optimization (experimental)."
+  let strict_mode =
+    let strict_mode_arg =
+      let doc =
+        "Enable strict mode (compliance with SMT-LIB standard)"
+      in
+      Arg.(value & flag & info ["strict"] ~doc ~docs:s_models)
     in
-    Arg.(value & flag & info ["optimize"] ~doc ~docs:s_models)
+    Term.(const Options.set_strict_mode $ strict_mode_arg)
   in
 
   let set_sat_options =
-    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th optim =
-      set_optimize optim;
+    let set_sat_options sat_solver cdcl_tableaux_inst cdcl_tableaux_th () =
       begin match sat_solver with
         | Util.CDCL_Tableaux ->
           set_sat_solver sat_solver;
@@ -1033,10 +1035,6 @@ let parse_output_opt =
           set_cdcl_tableaux_inst false;
           set_cdcl_tableaux_th false;
           Ok ()
-        | s when optim ->
-          Fmt.error
-            "--optimize is not compatible with Sat solver %a@."
-            Util.pp_sat_solver s;
         | _ ->
           set_sat_solver sat_solver;
           set_cdcl_tableaux_inst false;
@@ -1047,7 +1045,7 @@ let parse_output_opt =
     let term =
       Term.(
         const set_sat_options $ sat_solver $ cdcl_tableaux_inst
-        $ cdcl_tableaux_th $ optim
+        $ cdcl_tableaux_th $ strict_mode
       )
     in
     Term.term_result' term
