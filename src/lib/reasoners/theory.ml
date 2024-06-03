@@ -525,7 +525,7 @@ module Main_Default : S = struct
     let r =
       try
         if t.choices == [] then
-          (* We haven't make choice yet. Initialize the environment
+          (* We have not make choice yet. Initialize the environment
              [gamma_finite] with [gamma]. *)
           let t = reset_case_split_env t in
           look_for_sat ~for_model t [] []

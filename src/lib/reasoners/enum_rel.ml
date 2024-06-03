@@ -268,7 +268,7 @@ let tighten_domain rr nd domains =
    This function alone isn't sufficient to produce a complete decision
    procedure for the Enum theory. For instance, let's assume we have three
    semantic values [r1], [r2] and [r3] whose the domain is `{C1, C2}`. It's
-   clear that `(distinct r1 r2 r3)` is unsatisfiable but we haven't enough
+   clear that `(distinct r1 r2 r3)` is unsatisfiable but we have not enough
    information to discover this contradiction.
 
    Now, if we produce a case-split for one of these semantic values,
