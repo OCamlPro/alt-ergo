@@ -667,7 +667,9 @@ let main () =
       st
     ) else
       let contents = `Optimize (term, is_max) in
-      let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
+      let stmt =
+        { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
+      in
       let cnf =
         D_cnf.make (State.get State.logic_file st).loc
           (State.get solver_ctx_key st).ctx stmt
