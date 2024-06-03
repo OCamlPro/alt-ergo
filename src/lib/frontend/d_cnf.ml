@@ -429,6 +429,14 @@ let smt_fpa_builtins =
         | n, m -> term_app env s (smt_round n m)
         | exception Failure _ -> `Not_found
       end
+    | Id { ns = Term ; name = Simple "ae.float16" } ->
+      term_app env s (smt_round 11 24)
+    | Id { ns = Term ; name = Simple "ae.float32" } ->
+      term_app env s (smt_round 24 149)
+    | Id { ns = Term ; name = Simple "ae.float64" } ->
+      term_app env s (smt_round 53 1074)
+    | Id { ns = Term ; name = Simple "ae.float128" } ->
+      term_app env s (smt_round 113 16494)
     | Dl.Typer.T.Id id -> begin
         match DStd.Id.Map.find_exn id other_builtins env s with
         | e -> e
