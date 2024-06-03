@@ -122,7 +122,7 @@ module MakeRanked(Rank : RankedType) = struct
   let[@inline] grow_to_by_double { heap } sz =
     Vec.grow_to_by_double heap sz
 
-  let pop_minimum ({ heap } as s) =
+  let pop_min ({ heap } as s) =
     match Vec.size heap with
     | 0 -> raise Not_found
     | 1 ->
@@ -170,5 +170,5 @@ module MakeOrdered(V : OrderedTypeDefault) = struct
   let create n = H.create n (entry V.default)
   let is_empty = H.is_empty
   let insert h v = H.insert h (entry v)
-  let pop_minimum h = (H.pop_minimum h).value
+  let pop_min h = (H.pop_min h).value
 end

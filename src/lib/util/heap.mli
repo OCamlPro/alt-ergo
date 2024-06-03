@@ -94,7 +94,7 @@ module MakeRanked(Rank : RankedType) : sig
   (** Grow the size of the heap by multiplying it by 2
       until it is at least the size specified. *)
 
-  val pop_minimum : t -> elt
+  val pop_min : t -> elt
   (** Remove the minimum element from the heap and return it.
 
       @raise Not_found if the heap is empty. *)
@@ -130,7 +130,7 @@ module MakeOrdered(V : OrderedTypeDefault) : sig
   val insert : t -> elt -> unit
   (** Insert a new element in the heap. *)
 
-  val pop_minimum : t -> elt
+  val pop_min : t -> elt
   (** Remove the minimum element from the heap and return it.
 
       @raise Not_found if the heap is empty. *)

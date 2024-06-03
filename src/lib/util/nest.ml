@@ -181,7 +181,7 @@ let add_nest n =
   while not @@ Hp.is_empty hp do
     (* Loop invariant: the set of nodes in heap [hp] is exactly
        the set of the nodes of the graph without ingoing hyperedge. *)
-    let { id; outgoing; in_degree; _ } = Hp.pop_minimum hp in
+    let { id; outgoing; in_degree; _ } = Hp.pop_min hp in
     add_cstr @@ Uid.of_dolmen id;
     assert (in_degree = 0);
     List.iter

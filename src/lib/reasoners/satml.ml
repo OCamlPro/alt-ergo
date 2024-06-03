@@ -1827,7 +1827,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.next_split <- None;
           pick_branch_aux env atom
         | None ->
-          match Vheap.pop_minimum env.order with
+          match Vheap.pop_min env.order with
           | v -> pick_branch_aux env v.na
           | exception Not_found ->
             if Options.get_cdcl_tableaux_inst () then
