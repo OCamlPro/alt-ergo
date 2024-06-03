@@ -32,7 +32,6 @@ module DStd = Dolmen.Std
 module DE = DStd.Expr
 module DT = DE.Ty
 module B = Dolmen.Std.Builtin
-open DE
 
 type t = Dolmen.Std.Expr.ty_def list
 
@@ -55,7 +54,7 @@ type t = Dolmen.Std.Expr.ty_def list
 
 (* Node of the hypergraph. *)
 type node = {
-  id : term_cst;
+  id : DE.term_cst;
   (* Dolmen constructor identifier. *)
 
   weight : int;
@@ -85,7 +84,7 @@ module Hp =
       let default =
         let dummy_edge : node list ref = ref [] in
         {
-          id = Term.Const.Int.int "0" (* dummy *);
+          id = DE.Term.Const.Int.int "0" (* dummy *);
           outgoing = dummy_edge;
           in_degree = -1;
           weight = -1;
@@ -116,17 +115,17 @@ let def_of_dstr dstr =
 
    @return a heap that contains all the nodes of this graph without ingoing
    hyperedges. *)
-let build_graph (defs : ty_def list) : Hp.t =
-  let map : (ty_def, edge) Hashtbl.t = Hashtbl.create 17 in
+let build_graph (defs : DE.ty_def list) : Hp.t =
+  let map : (DE.ty_def, edge) Hashtbl.t = Hashtbl.create 17 in
   let hp : Hp.t = Hp.create 17 in
   List.iter (fun d -> Hashtbl.add map d (ref [])) defs;
   List.iter
     (fun def ->
        match def with
-       | Abstract -> assert false
-       | Adt { cases; _ } ->
+       | DE.Abstract -> assert false
+       | DE.Adt { cases; _ } ->
          Array.iter
-           (fun { cstr; dstrs; _ } ->
+           (fun DE.{ cstr; dstrs; _ } ->
               let node = {
                 id = cstr;
                 outgoing = Hashtbl.find map def;
