@@ -615,23 +615,26 @@ let split_delayed_destructor env uf =
 (* Pick a constructor in a tracked domain with minimal cardinal.
    Returns [None] if there is no such constructor. *)
 let pick_best ds =
-  Domains.fold
-    (fun r d best ->
-       let cd = Domain.cardinal d in
-       match Th.embed r, best with
-       | Constr _, _ -> best
-       | _, Some (n, _, _) when n <= cd -> best
-       | _ ->
-         let c = Domain.choose d in
-         Some (cd, r, c)
-    ) ds None
+  let* _, r, c =
+    Domains.fold
+      (fun r d best ->
+         let cd = Domain.cardinal d in
+         match Th.embed r, best with
+         | Constr _, _ -> best
+         | _, Some (n, _, _) when n <= cd -> best
+         | _ ->
+           let c = Domain.choose d in
+           Some (cd, r, c)
+      ) ds None
+  in
+  Some (r, c)
 
 let split_best_domain ~for_model uf =
   if not for_model then
     None
   else
     let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-    let* _, r, c = pick_best ds in
+    let* r, c = pick_best ds in
     let _, cons = Option.get @@ build_constr_eq r c in
     let nr, ctx = X.make cons in
     assert (Lists.is_empty ctx);
