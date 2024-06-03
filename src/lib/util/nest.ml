@@ -162,20 +162,18 @@ module H = Hashtbl.Make (Uid)
 let add_cstr, find_weight, reinit =
   let ctr = ref 0 in
   let order : int H.t = H.create 100 in
-  (* add_weight *)
-  (fun cstr ->
-     H.add order cstr !ctr;
-     incr ctr),
-  (* find_weight *)
-  (fun cstr ->
-     try
-       H.find order cstr
-     with Not_found ->
-       Fmt.failwith "cannot find uid %a" Uid.pp cstr),
-  (* reinit *)
-  (fun () ->
-     ctr := 0;
-     H.clear order)
+  let add_cstr cstr =
+    H.add order cstr !ctr;
+    incr ctr
+  and find_weight cstr =
+    try
+      H.find order cstr
+    with Not_found ->
+      Fmt.failwith "cannot find uid %a" Uid.pp cstr
+  and reinit () =
+    ctr := 0;
+    H.clear order
+  in add_cstr, find_weight, reinit
 
 (* Sort the constructors of the nest using a sorting based on the
    Kahn's algorithm. *)
