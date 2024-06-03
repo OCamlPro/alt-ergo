@@ -64,7 +64,7 @@ let recoverable_error ?(code = 1) =
       let () =
         if msg <> "" then
           match Options.get_output_format () with
-          | Smtlib2 -> Printer.print_smtlib_err "%s" msg
+          | Smtlib2 _ -> Printer.print_smtlib_err "%s" msg
           | _ -> Printer.print_err "%s" msg
       in
       if Options.get_exit_on_error () then exit code)
@@ -83,7 +83,7 @@ let warning (msg : ('a, Format.formatter, unit, unit, unit, 'b) format6) : 'a =
 let unsupported_opt opt =
   let () =
     match Options.get_output_format () with
-    | Options.Smtlib2 -> Printer.print_std "unsupported"
+    | Smtlib2 _ -> Printer.print_std "unsupported"
     | _ -> ()
   in
   warning "unsupported option %s" opt
@@ -95,11 +95,12 @@ let enable_maxsmt b =
     DStd.Extensions.Smtlib2.(disable maxsmt)
 
 let cmd_on_modes st modes cmd =
-  if O.get_input_format () = Some Options.Smtlib2 then begin
+  match O.get_input_format () with
+  | Some Smtlib2 _ ->
     let curr_mode = DO.Mode.get st in
     if not @@ (List.exists (Util.equal_mode curr_mode)) modes then
       Errors.forbidden_command curr_mode cmd
-  end
+  | _ -> ()
 
 (* Dolmen util *)
 
@@ -406,7 +407,8 @@ let main () =
     if Options.get_infer_output_format () then
       match fmt with
       | ".ae" -> Options.set_output_format Native
-      | ".smt2" | ".psmt2" -> Options.set_output_format Smtlib2
+      | ".smt2" -> Options.set_output_format (Smtlib2 `Latest)
+      | ".psmt2" -> Options.set_output_format (Smtlib2 `Poly)
       | s ->
         warning
           "The output format %s is not supported by the Dolmen frontend."
@@ -464,21 +466,8 @@ let main () =
     let lang =
       match Options.get_input_format () with
       | Some Native -> Some Dl.Logic.Alt_ergo
-      | Some Smtlib2 -> Some (Dl.Logic.Smtlib2 `Poly)
-      | None ->
-        (* Dolmen auto-detects .smt2 files as adhering to the SMT-LIB standard,
-           but we want to allow the polymorphic extensions instead. *)
-        let filename =
-          if Filename.check_suffix path ".zip" then
-            Filename.chop_extension path
-          else
-            path
-        in
-        if Filename.check_suffix filename ".smt2" then
-          Some (Dl.Logic.Smtlib2 `Poly)
-        else
-          None
-      | Some (Why3 | Unknown _) -> None
+      | Some Smtlib2 version -> Some (Dl.Logic.Smtlib2 version)
+      | Some (Why3 | Unknown _) | None -> None
     in
     let source =
       if Filename.check_suffix path ".zip" then (

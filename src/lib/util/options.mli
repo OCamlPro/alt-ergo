@@ -55,14 +55,26 @@ type interpretation =
   | ILast        (** Compute only the last interpretation just before
                      returning SAT/Unknown *)
 
+type smtlib2_version =
+  [ `Latest
+  (** Latest version of the SMT-LIB standard. *)
+  | `V2_6
+  (** {{: https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf }
+      The SMT-LIB standard: Version 2.6} *)
+  | `Poly
+    (** Polymorphic extension of the SMT-LIB standard.
+
+        See the {{: https://inria.hal.science/hal-01960203/document } tool
+        paper} *)
+  ]
+(** Version of the SMT-LIB standard used. *)
+
 (** Type used to describe the type of input wanted by
     {!val:set_input_format} *)
 type input_format =
   | Native                     (** Native Alt-Ergo format  *)
-  | Smtlib2
-  (** {{:
-      http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf}
-      Smtlib} default format *)
+  | Smtlib2 of smtlib2_version
+  (** {{: https://smt-lib.org/language.shtml} SMT-LIB} default format. *)
   | Why3                       (** Why3 file format *)
   (*   | SZS                        * Not yet implemented SZS format   *)
   | Unknown of string          (** Unknown file format *)

@@ -74,7 +74,9 @@ let get_input_parser fmt =
   set_output_format fmt;
   match fmt with
   | Options.Native -> find_parser ".ae" "native"
-  | Options.Smtlib2 -> find_parser ".smt2" "smtlib2"
+  | Options.Smtlib2 _ ->
+    (* NB: the legacy frontend is always using psmt2 *)
+    find_parser ".smt2" "smtlib2"
   | Options.Why3 -> find_parser ".why" "why3"
   | Options.Unknown s -> find_parser s s
 

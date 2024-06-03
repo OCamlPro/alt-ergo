@@ -39,7 +39,7 @@ let get_input_format = function
   | None -> None
   | Some f -> match f with
     | Native -> Some Options.Native
-    | Smtlib2 -> Some Options.Smtlib2
+    | Smtlib2 -> Some (Options.Smtlib2 `Poly)
     | Why3 -> Some Options.Why3
     | Unknown s -> Some (Options.Unknown s)
 
@@ -47,7 +47,7 @@ let get_output_format = function
   | None -> None
   | Some f -> match f with
     | Native -> Some Options.Native
-    | Smtlib2 -> Some Options.Smtlib2
+    | Smtlib2 -> Some (Options.Smtlib2 `Poly)
     | Why3 -> Some Options.Why3
     | Unknown s -> Some (Options.Unknown s)
 

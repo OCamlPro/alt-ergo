@@ -68,7 +68,7 @@ let print_status status steps =
   in
   let validity_mode =
     match Options.get_output_format () with
-    | Smtlib2 -> false
+    | Smtlib2 _ -> false
     | Native | Why3 | Unknown _ -> true
   in
   let get_goal_name d =

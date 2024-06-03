@@ -151,7 +151,7 @@ let clean_wrn_print = ref true
 
 let pp_smt clean_print =
   let smt = match Options.get_output_format () with
-    | Smtlib2 -> true
+    | Smtlib2 _ -> true
     | Native | Why3 | Unknown _ -> false
   in Format.sprintf
     (if smt && !clean_print then
@@ -198,7 +198,7 @@ let force_new_line formatter =
 
 let init_output_format () =
   match Options.get_output_format () with
-  | Smtlib2 ->
+  | Smtlib2 _ ->
     add_smt (Options.Output.get_fmt_diagnostic ())
   | Native | Why3 | Unknown _ -> ()
 
