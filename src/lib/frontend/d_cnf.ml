@@ -692,7 +692,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       in
       Cache.store_ty ty_c ty
 
-    | Tadt (hs, tyl, false), Some (Adt { cases; ty = ty_c; _ }) ->
+    | Tadt (hs, tyl, _), Some (Adt { cases; ty = ty_c; _ }) ->
       let rev_cs =
         Array.fold_left (
           fun accl DE.{ cstr; dstrs; _ } ->
