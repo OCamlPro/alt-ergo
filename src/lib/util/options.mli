@@ -59,12 +59,13 @@ type smtlib2_version =
   [ `Latest
   (** Latest version of the SMT-LIB standard. *)
   | `V2_6
-  (** The SMT-LIB standard: Version 2.6
-      https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf *)
+  (** {{: https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf }
+      The SMT-LIB standard: Version 2.6} *)
   | `Poly
     (** Polymorphic extension of the SMT-LIB standard.
 
-        See https://inria.hal.science/hal-01960203/document *)
+        See the {{: https://inria.hal.science/hal-01960203/document } tool
+        paper} *)
   ]
 (** Version of the SMT-LIB standard used. *)
 
@@ -73,9 +74,7 @@ type smtlib2_version =
 type input_format =
   | Native                     (** Native Alt-Ergo format  *)
   | Smtlib2 of smtlib2_version
-  (** SMT-LIB default format.
-
-      See https://smt-lib.org/language.shtml. *)
+  (** {{: https://smt-lib.org/language.shtml} SMT-LIB} default format. *)
   | Why3                       (** Why3 file format *)
   (*   | SZS                        * Not yet implemented SZS format   *)
   | Unknown of string          (** Unknown file format *)
