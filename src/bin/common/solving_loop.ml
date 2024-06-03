@@ -661,42 +661,52 @@ let main () =
   in
 
   let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
-    let contents = `Optimize (term, is_max) in
-    let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
-    let cnf =
-      D_cnf.make (State.get State.logic_file st).loc
-        (State.get solver_ctx_key st).ctx stmt
-    in
-    (* Using both optimization and incremental mode may be wrong if
-       some optimization constraints aren't at the toplevel.
-       See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
-    if State.get incremental_depth st > 0 then
-      warning "Optimization constraints in presence of push \
-               and pop statements are not correctly processed.";
-    State.set solver_ctx_key (
-      let solver_ctx = State.get solver_ctx_key st in
-      { solver_ctx with ctx = cnf }
-    ) st
+    let module Sat = (val DO.SatSolverModule.get st) in
+    if not Sat.supports_optimization then (
+      recoverable_error "the selected solver does not support optimization";
+      st
+    ) else
+      let contents = `Optimize (term, is_max) in
+      let stmt = { Typer_Pipe.id; contents; loc; attrs = []; implicit = false } in
+      let cnf =
+        D_cnf.make (State.get State.logic_file st).loc
+          (State.get solver_ctx_key st).ctx stmt
+      in
+      (* Using both optimization and incremental mode may be wrong if
+         some optimization constraints aren't at the toplevel.
+         See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
+      if State.get incremental_depth st > 0 then
+        warning "Optimization constraints in presence of push \
+                 and pop statements are not correctly processed.";
+      State.set solver_ctx_key (
+        let solver_ctx = State.get solver_ctx_key st in
+        { solver_ctx with ctx = cnf }
+      ) st
   in
 
   let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
+    let module Sat = (val DO.SatSolverModule.get st) in
     let () =
       if Options.get_interpretation () then
-        match State.get partial_model_key st with
-        | Some Model ((module SAT), partial_model) ->
-          let objectives = SAT.get_objectives partial_model in
-          begin
-            match objectives with
-            | Some o ->
-              if not @@ Objective.Model.has_no_limit o then
-                warning "Some objectives cannot be fulfilled";
-              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
-            | None ->
-              recoverable_error "No objective generated"
-          end
-        | None ->
+        if not Sat.supports_optimization then
           recoverable_error
-            "Model generation is disabled (try --produce-models)"
+            "the selected solver does not support optimization"
+        else
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            let objectives = SAT.get_objectives partial_model in
+            begin
+              match objectives with
+              | Some o ->
+                if not @@ Objective.Model.has_no_limit o then
+                  warning "Some objectives cannot be fulfilled";
+                Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+              | None ->
+                recoverable_error "No objective generated"
+            end
+          | None ->
+            recoverable_error
+              "Model generation is disabled (try --produce-models)"
     in
     st
   in

@@ -118,3 +118,26 @@ Some errors are unescapable though. It its the case of syntax error in commands.
 Let us check that we can parse psmt2 files with a .smt2 extension. No output,
 no errors expected.
   $ alt-ergo poly.smt2 -i psmt2 --type-only
+
+Now we check that we have a proper error message when optimizing with the
+Tableaux solver.
+
+  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo --sat-solver Tableaux 2>/dev/null
+  (error "the selected solver does not support optimization")
+  [1]
+
+  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo --sat-solver Tableaux 2>/dev/null
+  
+  unknown
+  (error "the selected solver does not support optimization")
+  [1]
+
+  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo --continue-on-error --sat-solver Tableaux 2>/dev/null
+  (error "the selected solver does not support optimization")
+  
+  unknown
+
+  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo --continue-on-error --sat-solver Tableaux 2>/dev/null
+  
+  unknown
+  (error "the selected solver does not support optimization")
