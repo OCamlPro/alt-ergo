@@ -589,7 +589,7 @@ let (let*) = Option.bind
 (* Do a cases-plit by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
-let split_delayed_destructor env _uf =
+let split_delayed_destructor env =
   if not @@ Options.get_enable_adts_cs () then
     None
   else
@@ -637,9 +637,10 @@ let split_best_domain ~for_model uf =
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
 
-let next_case_split ~for_model env =
-  let open Util in
-  (split_delayed_destructor env) <?> (split_best_domain ~for_model)
+let next_case_split ~for_model env uf =
+  match split_delayed_destructor env with
+  | Some _ as r -> r
+  | None -> split_best_domain ~for_model uf
 
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then

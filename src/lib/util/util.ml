@@ -205,8 +205,3 @@ let rec print_list_pp ~sep ~pp fmt = function
 
 let internal_error msg =
   Format.kasprintf (fun s -> raise (Internal_error s)) msg
-
-let (<?>) f g x =
-  match f x with
-  | Some _ as r -> r
-  | None -> g x
