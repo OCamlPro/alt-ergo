@@ -272,8 +272,7 @@ module Env = struct
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
     | Ty.Tadt (name, []) ->
-      let Ty.{ cases; kind } = Ty.type_body name [] in
-      assert (Stdlib.(kind = Ty.Enum));
+      let cases = Ty.type_body name [] in
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
         (fun m c ->
@@ -299,8 +298,7 @@ module Env = struct
   let find_builtin_cstr ty n =
     match ty with
     | Ty.Tadt (name, []) ->
-      let Ty.{ cases; kind } = Ty.type_body name [] in
-      assert (Stdlib.(kind = Ty.Enum));
+      let cases = Ty.type_body name [] in
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.find (Uid.equal n) cstrs
     | _ ->
@@ -1003,9 +1001,7 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          let Ty.{ cases; _ } = Ty.type_body name params in
-          cases
+        | Ty.Tadt (name, params) -> Ty.type_body name params
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
@@ -1411,9 +1407,7 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) ->
-          let Ty.{ cases; _ } = Ty.type_body name params in
-          cases
+        | Ty.Tadt (name, params) -> Ty.type_body name params
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
 
