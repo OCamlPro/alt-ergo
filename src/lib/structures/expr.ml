@@ -2134,16 +2134,14 @@ module Triggers = struct
              else Var.Map.add v (mk_term (Sy.var Var.underscore) [] ty) sbt
           )t.vars Var.Map.empty
       in
-      (* TODO: remove the useless returned boolean value. *)
-      if Var.Map.is_empty sbt then t, true
-      else
-        apply_subst (sbt, Ty.esubst) t, false
+      if Var.Map.is_empty sbt then t
+      else apply_subst (sbt, Ty.esubst) t
     in
     fun bv ((t,vt,vty) as e) ->
       let s = Var.Set.diff vt bv in
       if Var.Set.is_empty s then e
       else
-        let t,_ = aux t s in
+        let t = aux t s in
         let vt = Var.Set.add Var.underscore (Var.Set.inter vt bv) in
         t,vt,vty
 
