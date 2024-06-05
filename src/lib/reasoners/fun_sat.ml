@@ -1275,10 +1275,6 @@ module Make (Th : Theory.S) = struct
     match Options.get_instantiation_heuristic () with
     | INormal ->
       (* TODO: check if this test still produces a wrong model. *)
-      (* S: This seems spurious!
-         On example UFDT/20170428-Barrett/cdt-cade2015/data/gandl/cotree/
-         x2015_09_10_16_49_52_978_1009894.smt_in.smt2,
-         this returns a wrong model. *)
       update_model_and_return_unknown
         env (Options.get_last_interpretation ())
         ~unknown_reason:Incomplete (* may becomes ModelGen *)
