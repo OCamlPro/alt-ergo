@@ -309,28 +309,25 @@ val make_triggers:
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
-    The following documentation describes the strategies used by SatML
-    to generate multi-triggers.
+    We can escape unbounded variables in patterns of multi-triggers, that
+    is replaced them by the underscore term. For instance, if [binders] is
+    the set [{x, y}] and [g(x, y, z)] is a pattern where [{(x, y, z)}] are
+    free term variables, we can replace [z] by [_].
 
-    Assuming that [Options.get_triggers_var ()] is [true] (the default),
-    we do not allow trigger variables in frugal, normal and greedy mode
-    but we allow them in greedier mode.
+    Our strategy for multi-trigger generations depends on the matching
+    environment [menv] as follows:
 
-    While generating multi-triggers (with at least two patterns), we can
-    escape free variables of their patterns that aren't bound in the quantified
-    formula.
-
-    The strategies of multi-trigger generations are:
-      1. In frugal and normal modes, we try in order:
+    If [menv.greedy] is [false], we try to generate in order:
     - Mono-triggers;
-    - Multi-triggers without escaping variables;
     - Multi-triggers with escaping variables.
-      2. In greedy mode, we try in order:
+
+    If [menv.greedy] is [true], we try to generate in order:
     - Mono and multi-triggers without escaping variables.
     - Mono and multi-triggers with escaping variables;
-      3. In greedier mode: same as greedy mode.
 
-    Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
+    If [menv.triggers_var] is [true], we allow variables as valid triggers.
+
+    {b Note}: Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
     if other mono-triggers have been generated.
 
     The matching environment [env] is used to limit the number of
