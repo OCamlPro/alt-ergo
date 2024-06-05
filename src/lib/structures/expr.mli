@@ -309,17 +309,26 @@ val make_triggers:
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
-    For axioms, we try to produce multi-triggers in the following order
-    (if we succeed to produce at least one multi-trigger, we don't try other
-    strategies):
-    1. In greedy mode:
-    - Mono-triggers without variables;
-    - Mono-triggers with variables;
-    - Multi-triggers without variables;
-    - Multi-triggers with variables.
-      2. Otherwise:
-    - Mono and multi-triggers without variables;
-    - Mono and multi-triggers with variables.
+    The following documentation describes the strategies used by SatML
+    to generate multi-triggers.
+
+    Assuming that [Options.get_triggers_var ()] is [true] (the default),
+    we do not allow trigger variables in frugal, normal and greedy mode
+    but we allow them in greedier mode.
+
+    While generating multi-triggers (with at least two patterns), we can
+    escape free variables of their patterns that aren't bound in the quantified
+    formula.
+
+    The strategies of multi-trigger generations are:
+      1. In frugal and normal modes, we try in order:
+    - Mono-triggers;
+    - Multi-triggers without escaping variables;
+    - Multi-triggers with escaping variables.
+      2. In greedy mode, we try in order:
+    - Mono and multi-triggers without escaping variables.
+    - Mono and multi-triggers with escaping variables;
+      3. In greedier mode: same as greedy mode.
 
     Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
     if other mono-triggers have been generated.

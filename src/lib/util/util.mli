@@ -102,7 +102,11 @@ val [@inline always] cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
 type matching_env =
   {
     nb_triggers : int;
+    (** Limit the number of trigger generated per axiom. *)
+
     triggers_var : bool;
+    (** If [true], we allow trigger variables during the trigger generation. *)
+
     no_ematching: bool;
     greedy : bool;
     use_cs : bool;

@@ -2115,6 +2115,16 @@ module Triggers = struct
         if c <> 0 then c else Var.Set.compare y1 y2
     end)
 
+  (* let's [e] be a subterm of a quantified formula [f] and [bv] the set
+     of quantified variables of [f]. Then [underscore bv e] returns the term
+     obtained by substituting all the free term variables in [e] that aren't
+     in [bv] by the underscore term.
+
+     For instance, if [f] is the formula:
+       forall x:int, forall y:int, g(x, y, z) = 0.
+     where the free variable of [g(x, y, z)] are exactly [{x, y, z}],
+     and [e = g(x, y, z)], then this function returns the term [g(x, y, _)]. *)
+  (* TODO: rename this function. *)
   let underscore =
     let aux t s =
       let sbt =
@@ -2124,6 +2134,7 @@ module Triggers = struct
              else Var.Map.add v (mk_term (Sy.var Var.underscore) [] ty) sbt
           )t.vars Var.Map.empty
       in
+      (* TODO: remove the useless returned boolean value. *)
       if Var.Map.is_empty sbt then t, true
       else
         apply_subst (sbt, Ty.esubst) t, false
@@ -2195,6 +2206,7 @@ module Triggers = struct
     let l_parties = parties menv bv vty terms escaped_vars in
     let lm = List.map (fun (lt, _, _) -> lt) l_parties in
     let mv , mt = List.partition (List.exists is_var) lm in
+    (* TODO: use List.compare_lengths *)
     let mv = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mv in
     let mt = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mt in
     let lm = if menv.Util.triggers_var then mt@mv else mt in
@@ -2232,6 +2244,9 @@ module Triggers = struct
     let mono = filter_interpreted_arith mono in
     if menv.Util.greedy then
       (* merge directly multi in mono if greedy is set *)
+      (* TODO: it's a really bad idea to merge these lists here because
+         the meaning of the returned pair depends of the current generation
+         mode. *)
       mono @ multi_triggers menv vterm vtype trs escaped_vars, []
     else
       mono,
