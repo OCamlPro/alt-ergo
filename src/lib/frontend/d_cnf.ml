@@ -1816,6 +1816,11 @@ let make dloc_file acc stmt =
     (* Axiom definitions *)
     | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
         implicit=_ } ->
+      let name =
+        match DStd.Tag.get t.term_tags DE.Tags.named with
+        | Some name -> name
+        | None -> name
+      in
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in
       (* Dolmen adds information about theory extensions and case splits in the
