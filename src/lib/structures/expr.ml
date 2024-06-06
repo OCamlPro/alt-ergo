@@ -1493,7 +1493,7 @@ and mk_forall_bis (q : quantified) =
    Notice that formulas [x = a -> P(x)] are represented by
    [Clause (x <> a, P(x), _)] or [Clause (P(x), x <> a, _)].
 
-   {b Note}: this heuristic isn't used if the user has defined filters.
+   {b Note}: this heuristic is not used if the user has defined filters.
 
    @return [None] if the formula hasn't the right form. *)
 and find_particular_subst =
@@ -1869,6 +1869,7 @@ module Triggers = struct
 
   module Svty = Ty.Svty
 
+  (* Set of patterns with their sets of free term and type variables. *)
   module STRS =
     Set.Make(
     struct
@@ -2115,6 +2116,13 @@ module Triggers = struct
         if c <> 0 then c else Var.Set.compare y1 y2
     end)
 
+  (* [underscore bv e] replaces all the free term variables in [e] that
+     are not in [bv] by the underscore term.
+
+     For instance with [bv = {x, y}] and [e = g(x, y, z)] where [{x, y, z}]
+     is the set of free term variables of [e], this functions returns the term
+     [g(x, y, _)]. *)
+  (* TODO: rename this function. *)
   let underscore =
     let aux t s =
       let sbt =
@@ -2124,18 +2132,23 @@ module Triggers = struct
              else Var.Map.add v (mk_term (Sy.var Var.underscore) [] ty) sbt
           )t.vars Var.Map.empty
       in
-      if Var.Map.is_empty sbt then t, true
-      else
-        apply_subst (sbt, Ty.esubst) t, false
+      if Var.Map.is_empty sbt then t
+      else apply_subst (sbt, Ty.esubst) t
     in
     fun bv ((t,vt,vty) as e) ->
       let s = Var.Set.diff vt bv in
       if Var.Set.is_empty s then e
       else
-        let t,_ = aux t s in
+        let t = aux t s in
         let vt = Var.Set.add Var.underscore (Var.Set.inter vt bv) in
         t,vt,vty
 
+  (* [parties mconf bv vty l escaped_vars] generates all the multi-triggers such
+     that their patterns lie in [l] and they cover all the free variables [bv]
+     and [vty].
+
+     If [escaped_vars] is [true], replace with the [underscore] variable the
+     free term variables of these patterns that do not lie in [bv]. *)
   let parties mconf bv vty l escaped_vars =
     let l =
       if mconf.Util.triggers_var then l
@@ -2156,6 +2169,8 @@ module Triggers = struct
                  let vty3 = Svty.union vty2 vty1 in
                  let e = t::l, bv3, vty3 in
                  if Var.Set.subset bv bv3 && Svty.subset vty vty3 then
+                   (* The multi-trigger [e] cover all the free variables [bv]
+                      and [vty]. *)
                    llt, SLLT.add e llt_ok
                  else
                    SLLT.add e llt, llt_ok
@@ -2169,32 +2184,44 @@ module Triggers = struct
     let l = STRS.elements s in (* remove redundancies in old l *)
     SLLT.elements (parties_rec (SLLT.empty, SLLT.empty) l)
 
+  (* Remove patterns in the list of multi-triggers [l] whose the set S of free
+     (term and type) variables satisfies one of these conditions:
+     - S is not maximal (for the inclusion order) among the set of free
+       variables of patterns in [l];
+     - S contains the union of [bv_a] and [vty_a];
+     - S is disjoint with the union of [bv_a] and [vty_a]. *)
   let simplification =
-    let strict_subset bv vty =
+    (* Check if there is a pattern in [l] whose the set of free variables
+       contains strictly the union of [bv] and [vty]. *)
+    let strict_subset bv vty l =
       List.exists
         (fun (_, bv',vty') ->
            (Var.Set.subset bv bv' && not(Var.Set.equal bv bv')
             && Svty.subset vty vty')
            || (Svty.subset vty vty' && not(Svty.equal vty vty')
-               && Var.Set.subset bv bv') )
-    in
-    let rec simpl_rec bv_a vty_a acc = function
-      | [] -> acc
-      | ((_, bv, vty) as e)::l ->
-        if strict_subset bv vty l || strict_subset bv vty acc ||
-           (Var.Set.subset bv_a bv && Svty.subset vty_a vty) ||
-           (Var.Set.equal (Var.Set.inter bv_a bv) Var.Set.empty &&
-            Svty.equal (Svty.inter vty_a vty) Svty.empty)
-        then simpl_rec bv_a vty_a acc l
-        else  simpl_rec bv_a vty_a (e::acc) l
+               && Var.Set.subset bv bv') ) l
     in fun bv_a vty_a l ->
-      simpl_rec bv_a vty_a [] l
+      let rec simpl_rec acc = function
+        | [] -> acc
+        | ((_, bv, vty) as e)::l ->
+          if strict_subset bv vty l || strict_subset bv vty acc ||
+             (Var.Set.subset bv_a bv && Svty.subset vty_a vty) ||
+             (Var.Set.equal (Var.Set.inter bv_a bv) Var.Set.empty &&
+              Svty.equal (Svty.inter vty_a vty) Svty.empty)
+          then simpl_rec acc l
+          else simpl_rec (e::acc) l
+      in
+      simpl_rec [] l
 
   let multi_triggers menv bv vty trs escaped_vars =
+    (* The simplification removes all the patterns of the multi-trigger [trs]
+       that cover all the free variables [bv] and [vty]. Indeed, such patterns
+       have already been generated as mono-trigger before. *)
     let terms = simplification bv vty trs in
     let l_parties = parties menv bv vty terms escaped_vars in
     let lm = List.map (fun (lt, _, _) -> lt) l_parties in
     let mv , mt = List.partition (List.exists is_var) lm in
+    (* TODO: use List.compare_lengths *)
     let mv = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mv in
     let mt = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mt in
     let lm = if menv.Util.triggers_var then mt@mv else mt in
@@ -2202,6 +2229,8 @@ module Triggers = struct
     at_most menv.Util.nb_triggers m
 
   let mono_triggers menv vterm vtype trs =
+    (* We only keep mono-trigger that cover all the free variables [vterm]
+       and [vtype]. *)
     let mono = List.filter
         (fun (_, bv_t, vty_t) ->
            Var.Set.subset vterm bv_t && Svty.subset vtype vty_t) trs
@@ -2232,6 +2261,9 @@ module Triggers = struct
     let mono = filter_interpreted_arith mono in
     if menv.Util.greedy then
       (* merge directly multi in mono if greedy is set *)
+      (* TODO: it's a really bad idea to merge these lists here because
+         the meaning of the returned pair depends of the current generation
+         mode. *)
       mono @ multi_triggers menv vterm vtype trs escaped_vars, []
     else
       mono,
@@ -2283,6 +2315,8 @@ module Triggers = struct
   let free_vars_as_set e =
     Var.Map.fold (fun v _ s -> Var.Set.add v s) e.vars Var.Set.empty
 
+  (* Collect all the subterms of the expression [e] that are pure and contain
+     at least one free (term or type) variables in [vars]. *)
   let potential_triggers =
     let has_bvar bv_lf bv =
       Var.Map.exists (fun e _ -> Var.Set.mem e bv) bv_lf
@@ -2297,15 +2331,15 @@ module Triggers = struct
         Var.Map.add let_v x lets, [let_e; in_e]
       | _ -> lets, e.xs
     in
-    let rec aux ((vterm, vtype) as vars) ((strs, lets) as acc) e =
-      let strs, lets =
+    let rec aux ((vterm, vtype) as vars) (strs, lets) e =
+      let strs =
         if e.pure && (has_bvar e.vars vterm || has_tyvar e.vty vtype) &&
            not (is_prefix e.f)
         then
           let vrs = free_vars_as_set e in
-          STRS.add (e, vrs, e.vty) strs, lets
+          STRS.add (e, vrs, e.vty) strs
         else
-          acc
+          strs
       in
       let lets, args = args_of e lets in
       List.fold_left (aux vars) (strs, lets) args
@@ -2322,6 +2356,8 @@ module Triggers = struct
     e.ty == Ty.Tbool &&
     match e.f with Sy.Form _ -> false | _ -> true
 
+  (* Keep only patterns in [full_trs] for which all the free term
+     variables are free in [f] with the same type. *)
   let trs_in_scope full_trs f =
     STRS.filter
       (fun (e, _, _) ->

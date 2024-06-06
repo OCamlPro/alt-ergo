@@ -309,19 +309,28 @@ val make_triggers:
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
-    For axioms, we try to produce multi-triggers in the following order
-    (if we succeed to produce at least one multi-trigger, we don't try other
-    strategies):
-    1. In greedy mode:
-    - Mono-triggers without variables;
-    - Mono-triggers with variables;
-    - Multi-triggers without variables;
-    - Multi-triggers with variables.
-      2. Otherwise:
-    - Mono and multi-triggers without variables;
-    - Mono and multi-triggers with variables.
+    An {e escaped variable} of a pattern is a variable that is not in [binders]
+    (but the variable is bound by an inner quantified formula). We can
+    replace escaped variables by the underscore variable [Var.underscore].
 
-    Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
+    For instance, if [binders] is the set [{x, y}] and [g(x, y, z)] is a
+    pattern where [{(x, y, z)}] are free term variables, we can replace [z]
+    by [_].
+
+    Our strategy for multi-trigger generations depends on the matching
+    environment [menv] as follows:
+
+    If [menv.greedy] is [false], we try to generate in order:
+    - Mono-triggers;
+    - Multi-triggers without escaped variables.
+
+    If [menv.greedy] is [true], we try to generate in order:
+    - Mono and multi-triggers with escaped variables.
+    - Mono and multi-triggers without escaped variables;
+
+    If [menv.triggers_var] is [true], we allow variables as valid triggers.
+
+    {b Note}: Mono-trigger with `Sy.Plus` or `Sy.Minus` top symbols are ignored
     if other mono-triggers have been generated.
 
     The matching environment [env] is used to limit the number of
