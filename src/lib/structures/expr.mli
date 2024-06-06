@@ -309,8 +309,9 @@ val make_triggers:
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
-    We can escape in generated patterns variables that are not bound in
-    [binders], that is replace them by the underscore variable [Var.underscore].
+    An {e escaped variable} of a pattern is a variable that is not in [binders]
+    (but the variable is bound by an inner quantified formula). We can
+    replace escaped variables by the underscore variable [Var.underscore].
 
     For instance, if [binders] is the set [{x, y}] and [g(x, y, z)] is a
     pattern where [{(x, y, z)}] are free term variables, we can replace [z]
@@ -321,11 +322,11 @@ val make_triggers:
 
     If [menv.greedy] is [false], we try to generate in order:
     - Mono-triggers;
-    - Multi-triggers with escaping variables.
+    - Multi-triggers without escaped variables.
 
     If [menv.greedy] is [true], we try to generate in order:
-    - Mono and multi-triggers without escaping variables.
-    - Mono and multi-triggers with escaping variables;
+    - Mono and multi-triggers with escaped variables.
+    - Mono and multi-triggers without escaped variables;
 
     If [menv.triggers_var] is [true], we allow variables as valid triggers.
 
