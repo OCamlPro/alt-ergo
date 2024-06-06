@@ -309,10 +309,12 @@ val make_triggers:
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
-    We can escape unbounded variables in patterns of multi-triggers, that
-    is replaced them by the underscore term. For instance, if [binders] is
-    the set [{x, y}] and [g(x, y, z)] is a pattern where [{(x, y, z)}] are
-    free term variables, we can replace [z] by [_].
+    We can escape in generated patterns variables that are not bound in
+    [binders], that is replace them by the underscore variable [Var.underscore].
+
+    For instance, if [binders] is the set [{x, y}] and [g(x, y, z)] is a
+    pattern where [{(x, y, z)}] are free term variables, we can replace [z]
+    by [_].
 
     Our strategy for multi-trigger generations depends on the matching
     environment [menv] as follows:

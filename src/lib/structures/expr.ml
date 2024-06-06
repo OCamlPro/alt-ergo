@@ -1493,7 +1493,7 @@ and mk_forall_bis (q : quantified) =
    Notice that formulas [x = a -> P(x)] are represented by
    [Clause (x <> a, P(x), _)] or [Clause (P(x), x <> a, _)].
 
-   {b Note}: this heuristic isn't used if the user has defined filters.
+   {b Note}: this heuristic is not used if the user has defined filters.
 
    @return [None] if the formula hasn't the right form. *)
 and find_particular_subst =
@@ -2117,7 +2117,7 @@ module Triggers = struct
     end)
 
   (* [underscore bv e] replaces all the free term variables in [e] that
-     aren't in [bv] by the underscore term.
+     are not in [bv] by the underscore term.
 
      For instance with [bv = {x, y}] and [e = g(x, y, z)] where [{x, y, z}]
      is the set of free term variables of [e], this functions returns the term
@@ -2147,8 +2147,8 @@ module Triggers = struct
      that their patterns lie in [l] and they cover all the free variables [bv]
      and [vty].
 
-     If [escaped_vars] is [true], replace the free term variables of these
-     patterns that do not lie in [bv]. *)
+     If [escaped_vars] is [true], replace with the [underscore] variable the
+     free term variables of these patterns that do not lie in [bv]. *)
   let parties mconf bv vty l escaped_vars =
     let l =
       if mconf.Util.triggers_var then l
@@ -2184,12 +2184,12 @@ module Triggers = struct
     let l = STRS.elements s in (* remove redundancies in old l *)
     SLLT.elements (parties_rec (SLLT.empty, SLLT.empty) l)
 
-  (* Simplify the multi-trigger [l] by removing a pattern [p] in [l] if
-     its set of free (term and type) variables:
-     - isn't maximal (for the inclusion) among the set of free variables of
-         patterns in [l];
-     - contains the union of [bv_a] and [vty_a];
-     - is disjoint with the union of [bv_a] and [vty_a]. *)
+  (* Remove patterns in the list of multi-triggers [l] whose the set S of free
+     (term and type) variables satisfies one of these conditions:
+     - S is not maximal (for the inclusion order) among the set of free
+       variables of patterns in [l];
+     - S contains the union of [bv_a] and [vty_a];
+     - S is disjoint with the union of [bv_a] and [vty_a]. *)
   let simplification =
     (* Check if there is a pattern in [l] whose the set of free variables
        contains strictly the union of [bv] and [vty]. *)
@@ -2214,7 +2214,7 @@ module Triggers = struct
       simpl_rec [] l
 
   let multi_triggers menv bv vty trs escaped_vars =
-    (* The simplification removed all the patterns of the multi-trigger [trs]
+    (* The simplification removes all the patterns of the multi-trigger [trs]
        that cover all the free variables [bv] and [vty]. Indeed, such patterns
        have already been generated as mono-trigger before. *)
     let terms = simplification bv vty trs in
@@ -2315,9 +2315,8 @@ module Triggers = struct
   let free_vars_as_set e =
     Var.Map.fold (fun v _ s -> Var.Set.add v s) e.vars Var.Set.empty
 
-  (* Collect all the subterms of the expression [e] that
-     are pure and contain at least one free (term or type) variables in
-     [vars]. *)
+  (* Collect all the subterms of the expression [e] that are pure and contain
+     at least one free (term or type) variables in [vars]. *)
   let potential_triggers =
     let has_bvar bv_lf bv =
       Var.Map.exists (fun e _ -> Var.Set.mem e bv) bv_lf
@@ -2357,7 +2356,7 @@ module Triggers = struct
     e.ty == Ty.Tbool &&
     match e.f with Sy.Form _ -> false | _ -> true
 
-  (* Keep only patterns in [full_trs] whose all the free term
+  (* Keep only patterns in [full_trs] for which all the free term
      variables are free in [f] with the same type. *)
   let trs_in_scope full_trs f =
     STRS.filter
