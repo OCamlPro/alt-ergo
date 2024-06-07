@@ -135,18 +135,14 @@ let build_graph (defs : DE.ty_def list) : Hp.t =
               in
               let in_degree =
                 Array.fold_left
-                  (fun acc2 dstr ->
-                     let d = let* dstr = dstr in def_of_dstr dstr in
-                     match d with
+                  (fun acc dstr ->
+                     match Option.bind dstr def_of_dstr with
                      | Some d ->
                        begin match Hashtbl.find map d with
-                         | used_by ->
-                           used_by := node :: !used_by;
-                           acc2 + 1
-                         | exception Not_found ->
-                           acc2
+                         | edge -> edge := node :: !edge; acc + 1
+                         | exception Not_found -> acc
                        end
-                     | None -> acc2
+                     | None -> acc
                   ) 0 dstrs
               in
               node.in_degree <- in_degree;
