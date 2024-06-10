@@ -45,4 +45,4 @@ val compare : Uid.t -> Uid.t -> int
                    been added with [add_nest] before. *)
 
 val reinit : unit -> unit
-(** [reinit ()] resets the internal order. *)
+(** [reinit ()] clears all the registered constructors by [add_nest]. *)
