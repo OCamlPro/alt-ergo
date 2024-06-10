@@ -1847,7 +1847,7 @@ let make dloc_file acc stmt =
     | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
         implicit=_ } ->
       let name =
-        match DStd.Tag.get t.term_tags lemma_attr with
+        match DStd.Tag.get t.term_tags lemma_name_attr with
         | Some n -> n
         | None ->
           match DStd.Tag.get t.term_tags DE.Tags.named with
