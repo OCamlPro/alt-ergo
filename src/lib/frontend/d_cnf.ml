@@ -444,10 +444,11 @@ let smt_fpa_builtins =
       end
     | _ -> `Not_found
 
-let lemma_attr : string DStd.Tag.t = DStd.Tag.create ()
+(* Custom attribute used to name lemmas. *)
+let lemma_name_attr : string DStd.Tag.t = DStd.Tag.create ()
 
 type _ Dl.Typer.T.err +=
-  | Expect_simple_sexpr
+  | Invalid_lemma_name
 
 let smt_tag_builtins =
   let module Type = Dl.Typer.T in
@@ -461,9 +462,9 @@ let smt_tag_builtins =
       make_op env s (fun ast t ->
           match t with
           | { term = Symbol { name = Simple name; _ }; _ } ->
-            [Type.Set (lemma_attr, name)]
+            [Type.Set (lemma_name_attr, name)]
           | _ ->
-            Type._error env (Ast ast) Expect_simple_sexpr
+            Type._error env (Ast ast) Invalid_lemma_name
         )
     | _ -> `Not_found
 
@@ -1845,8 +1846,11 @@ let make dloc_file acc stmt =
         implicit=_ } ->
       let name =
         match DStd.Tag.get t.term_tags lemma_attr with
-        | Some name -> name
-        | None -> name
+        | Some n -> n
+        | None ->
+          match DStd.Tag.get t.term_tags DE.Tags.named with
+          | Some n -> n
+          | None -> name
       in
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in
