@@ -736,7 +736,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             ) cases ([], true)
           in
           let uid = Uid.of_dolmen ty_c in
-          if is_enum && not contains_adts
+          if is_enum
           then (
             let ty = Ty.tsum uid cns in
             Cache.store_ty ty_c ty;
