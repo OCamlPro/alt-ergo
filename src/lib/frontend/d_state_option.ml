@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) 2013-2024 --- OCamlPro SAS                           *)
+(*     Copyright (C) 2022-2024 --- OCamlPro SAS                           *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
