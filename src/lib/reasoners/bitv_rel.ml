@@ -75,6 +75,9 @@ let is_bv_ty = function
 
 let is_bv_r r = is_bv_ty @@ X.type_info r
 
+let bitwidth r =
+  match X.type_info r with Tbitv n -> n | _ -> assert false
+
 module Interval_domain = struct
   type t = Intervals.Int.t
 
@@ -112,11 +115,7 @@ module Interval_domain = struct
     Intervals.Int.of_bounds ?ex (Closed n) (Closed n)
 
   let fold_leaves f r int acc =
-    let width =
-      match X.type_info r with
-      | Tbitv n -> n
-      | _ -> assert false
-    in
+    let width = bitwidth r in
     let j, acc =
       List.fold_left (fun (j, acc) { Bitv.bv; sz } ->
           (* sz = j - i + 1 => i = j - sz + 1 *)
@@ -170,49 +169,53 @@ module Bitlist_domain : Rel_utils.Domain with type t = Bitlist.t = struct
 
   let filter_ty = is_bv_ty
 
-  let fold_signed f { Bitv.value; negated } bl acc =
-    let bl = if negated then lognot bl else bl in
+  let fold_signed sz f { Bitv.value; negated } bl acc =
+    let bl = if negated then extract (lognot bl) 0 sz else bl in
     f value bl acc
 
   let fold_leaves f r bl acc =
-    fst @@ List.fold_left (fun (acc, bl) { Bitv.bv; sz } ->
+    let sz = bitwidth r in
+    let (acc, _, _) = List.fold_left (fun (acc, bl, w) { Bitv.bv; sz } ->
         (* Extract the bitlist associated with the current component *)
-        let mid = width bl - sz in
-        let bl_tail =
-          if mid = 0 then empty else
-            extract bl 0 (mid - 1)
-        in
-        let bl = extract bl mid (width bl - 1) in
+        let mid = w - sz in
+        let bl_tail = extract bl 0 mid in
+        let bl = extract bl mid (w - mid) in
 
         match bv with
         | Bitv.Cte z ->
+          assert (Z.numbits z <= sz);
           (* Nothing to update, but still check for consistency! *)
-          ignore @@ intersect bl (exact sz z Ex.empty);
-          acc, bl_tail
-        | Other r -> fold_signed f r bl acc, bl_tail
+          ignore @@ intersect bl (exact z Ex.empty);
+          acc, bl_tail, mid
+        | Other r -> fold_signed sz f r bl acc, bl_tail, mid
         | Ext (r, r_size, i, j) ->
           (* r<i, j> = bl -> r = ?^(r_size - j - 1) @ bl @ ?^i *)
-          assert (i + r_size - j - 1 + width bl = r_size);
-          let hi = Bitlist.unknown (r_size - j - 1) Ex.empty in
-          let lo = Bitlist.unknown i Ex.empty in
-          fold_signed f r (hi @ bl @ lo) acc, bl_tail
-      ) (acc, bl) (Shostak.Bitv.embed r)
+          assert (i + r_size - j - 1 + w - mid = r_size);
+          let hi = Bitlist.(extract unknown 0 (r_size - j - 1)) in
+          let lo = Bitlist.(extract unknown 0 i) in
+          let bl_hd = Bitlist.((hi lsl (j + 1)) lor (bl lsl i) lor lo) in
+          fold_signed r_size f r bl_hd acc,
+          bl_tail,
+          mid
+      ) (acc, bl, sz) (Shostak.Bitv.embed r)
+    in acc
 
-  let map_signed f { Bitv.value; negated } =
+  let map_signed sz f { Bitv.value; negated } =
     let bl = f value in
-    if negated then lognot bl else bl
+    if negated then extract (lognot bl) 0 sz else bl
 
   let map_leaves f r =
     List.fold_left (fun bl { Bitv.bv; sz } ->
-        concat bl @@
+        bl lsl sz lor
         match bv with
-        | Bitv.Cte z -> exact sz z Ex.empty
-        | Other r -> map_signed f r
-        | Ext (r, _r_size, i, j) -> extract (map_signed f r) i j
-      ) empty (Shostak.Bitv.embed r)
+        | Bitv.Cte z -> extract (exact z Ex.empty) 0 sz
+        | Other r -> map_signed sz f r
+        | Ext (r, r_sz, i, j) ->
+          extract (map_signed r_sz f r) i (j - i + 1)
+      ) (exact Z.zero Ex.empty) (Shostak.Bitv.embed r)
 
   let unknown = function
-    | Ty.Tbitv n -> unknown n Ex.empty
+    | Ty.Tbitv n -> extract unknown 0 n
     | _ ->
       (* Only bit-vector values can have bitlist domains. *)
       invalid_arg "unknown"
@@ -327,46 +330,51 @@ end = struct
     | Band | Bor | Bxor | Badd | Bmul -> true
     | Budiv | Burem | Bshl | Blshr -> false
 
-  let propagate_binop ~ex dx op dy dz =
+  let propagate_binop ~ex sz dx op dy dz =
     let open Bitlist_domains.Ephemeral in
+    let norm bl = Bitlist.extract bl 0 sz in
     match op with
     | Band ->
-      update ~ex dx (Bitlist.logand !!dy !!dz);
+      update ~ex dx @@ norm @@ Bitlist.logand !!dy !!dz;
       (* Reverse propagation for y: if [x = y & z] then:
          - Any [1] in [x] must be a [1] in [y]
          - Any [0] in [x] that is also a [1] in [z] must be a [0] in [y]
       *)
-      update ~ex dy (Bitlist.ones !!dx);
-      update ~ex dy Bitlist.(logor (zeroes !!dx) (lognot (ones !!dz)));
-      update ~ex dz (Bitlist.ones !!dx);
-      update ~ex dz Bitlist.(logor (zeroes !!dx) (lognot (ones !!dy)))
+      update ~ex dy @@ norm @@ Bitlist.ones !!dx;
+      update ~ex dy @@ norm @@
+      Bitlist.(logor (zeroes !!dx) (lognot (ones !!dz)));
+      update ~ex dz @@ norm @@ Bitlist.ones !!dx;
+      update ~ex dz @@ norm @@
+      Bitlist.(logor (zeroes !!dx) (lognot (ones !!dy)))
     | Bor ->
-      update ~ex dx (Bitlist.logor !!dy !!dz);
+      update ~ex dx @@ norm @@ Bitlist.logor !!dy !!dz;
       (* Reverse propagation for y: if [x = y | z] then:
          - Any [0] in [x] must be a [0] in [y]
          - Any [1] in [x] that is also a [0] in [z] must be a [1] in [y]
       *)
-      update ~ex dy (Bitlist.zeroes !!dx);
-      update ~ex dy Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
-      update ~ex dz (Bitlist.zeroes !!dx);
-      update ~ex dz Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
+      update ~ex dy @@ norm @@ Bitlist.zeroes !!dx;
+      update ~ex dy @@ norm @@
+      Bitlist.(logand (ones !!dx) (lognot (zeroes !!dz)));
+      update ~ex dz @@ norm @@ Bitlist.zeroes !!dx;
+      update ~ex dz @@ norm @@
+      Bitlist.(logand (ones !!dx) (lognot (zeroes !!dy)))
     | Bxor ->
-      update ~ex dx (Bitlist.logxor !!dy !!dz);
+      update ~ex dx @@ norm @@ Bitlist.logxor !!dy !!dz;
       (* x = y ^ z <-> y = x ^ z *)
-      update ~ex dy (Bitlist.logxor !!dx !!dz);
-      update ~ex dz (Bitlist.logxor !!dx !!dy)
+      update ~ex dy @@ norm @@ Bitlist.logxor !!dx !!dz;
+      update ~ex dz @@ norm @@ Bitlist.logxor !!dx !!dy
     | Badd ->
       (* TODO: full adder propagation *)
       ()
 
     | Bshl -> (* Only forward propagation for now *)
-      update ~ex dx (Bitlist.shl !!dy !!dz)
+      update ~ex dx (Bitlist.bvshl ~size:sz !!dy !!dz)
 
     | Blshr -> (* Only forward propagation for now *)
-      update ~ex dx (Bitlist.lshr !!dy !!dz)
+      update ~ex dx (Bitlist.bvlshr ~size:sz !!dy !!dz)
 
     | Bmul -> (* Only forward propagation for now *)
-      update ~ex dx (Bitlist.mul !!dy !!dz)
+      update ~ex dx @@ norm @@ Bitlist.mul !!dy !!dz
 
     | Budiv -> (* No bitlist propagation for now *)
       ()
@@ -434,13 +442,14 @@ end = struct
     let get r = handle dom r in
     match f with
     | Fbinop (op, x, y) ->
-      propagate_binop ~ex (get r) op (get x) (get y)
+      let n = bitwidth r in
+      propagate_binop ~ex n (get r) op (get x) (get y)
 
   let propagate_interval_fun_t ~ex dom r f =
     let get r = Interval_domains.Ephemeral.handle dom r in
     match f with
     | Fbinop (op, x, y) ->
-      let sz = match X.type_info r with Tbitv n -> n | _ -> assert false in
+      let sz = bitwidth r in
       propagate_interval_binop ~ex sz (get r) op (get x) (get y)
 
   type binrel = Rule | Rugt
@@ -628,9 +637,6 @@ end = struct
 
   let propagate_interval ~ex c dom =
     propagate_interval_repr ~ex dom c.repr
-
-  let bitwidth r =
-    match X.type_info r with Tbitv n -> n | _ -> assert false
 
   let const sz n =
     Shostak.Bitv.is_mine [ { bv = Cte (Z.extract n 0 sz); sz } ]
@@ -979,15 +985,15 @@ let rec mk_eq ex lhs w z =
     applies to [r], exposes the equality [r = bl] as a list of Xliteral values
     (accumulated into [acc]) so that the union-find learns about the equality *)
 let add_eqs =
-  let rec aux x x_sz acc bl =
-    let known = Bitlist.bits_known bl in
-    let width = Bitlist.width bl in
+  let rec aux x x_sz acc width bl =
+    let known = Z.lognot (Bitlist.unknown_bits bl) in
+    let known = Z.extract known 0 width in
     let nbits = Z.numbits known in
     assert (nbits <= width);
     if nbits = 0 then
       acc
     else if nbits < width then
-      aux x x_sz acc (Bitlist.extract bl 0 (nbits - 1))
+      aux x x_sz acc nbits (Bitlist.extract bl 0 nbits)
     else
       let nbits = Z.numbits (Z.extract (Z.lognot known) 0 width) in
       let v = Z.extract (Bitlist.value bl) nbits (width - nbits) in
@@ -997,10 +1003,10 @@ let add_eqs =
       if nbits = 0 then
         lits @ acc
       else
-        aux x x_sz (lits @ acc) (Bitlist.extract bl 0 (nbits - 1))
+        aux x x_sz (lits @ acc) nbits (Bitlist.extract bl 0 nbits)
   in
-  fun acc x bl ->
-    aux x (Bitlist.width bl) acc bl
+  fun acc x x_sz bl ->
+    aux x x_sz acc x_sz bl
 
 module Any_constraint = struct
   type t =
@@ -1030,32 +1036,6 @@ end
 
 module QC = Uqueue.Make(Any_constraint)
 
-(* Compute the number of most significant bits shared by [inf] and [sup].
-
-   Requires: [inf <= sup]
-   Ensures:
-    result is the greatest integer <= sz such that
-    inf<sz - result .. sz> = sup<sz - result .. sz>
-
-    In particular, [result = sz] iff [inf = sup] and [result = 0] iff the most
-    significant bits of [inf] and [sup] differ. *)
-let rec shared_msb sz inf sup =
-  let numbits_inf = Z.numbits inf in
-  let numbits_sup = Z.numbits sup in
-  assert (numbits_inf <= numbits_sup);
-  if numbits_inf = numbits_sup then
-    (* Top [sz - numbits_inf] bits are 0 in both; look at 1s *)
-    if numbits_inf = 0 then
-      sz
-    else
-      sz - numbits_inf +
-      shared_msb numbits_inf
-        (Z.extract (Z.lognot sup) 0 numbits_inf)
-        (Z.extract (Z.lognot inf) 0 numbits_inf)
-  else
-    (* Top [sz - numbits_sup] are 0 in both, the next significant bit differs *)
-    sz - numbits_sup
-
 let finite_lower_bound = function
   | Intervals_intf.Unbounded -> Z.zero
   | Closed n -> n
@@ -1082,23 +1062,24 @@ let finite_upper_bound ~size:sz = function
    For example, m = 48 and M = 52 (00110000 and 00110100 in binary) share their
    five most-significant bits, denoted [00110???]. Therefore, a bit-vector bl =
    [0??1???0] can be refined into [00110??0]. *)
-let constrain_bitlist_from_interval bv int =
+let constrain_bitlist_from_interval ~size:sz bv int =
   let open Bitlist_domains.Ephemeral in
-  let sz = Bitlist.width !!bv in
 
   let inf, inf_ex = Intervals.Int.lower_bound int in
   let inf = finite_lower_bound inf in
   let sup, sup_ex = Intervals.Int.upper_bound int in
   let sup = finite_upper_bound ~size:sz sup in
 
-  let nshared = shared_msb sz inf sup in
-  if nshared > 0 then
-    let ex = Ex.union inf_ex sup_ex in
-    let shared_bl =
-      Bitlist.exact nshared (Z.extract inf (sz - nshared) nshared) ex
-    in
-    update ~ex bv @@
-    Bitlist.concat shared_bl (Bitlist.unknown (sz - nshared) Ex.empty)
+  let distinct = Z.logxor inf sup in
+  (* If [distinct] is negative, [inf] and [sup] have different signs and there
+     are no significant shared bits. *)
+  if Z.sign distinct >= 0 then
+    let ofs = Z.numbits distinct in
+    update ~ex:Ex.empty bv @@
+    Bitlist.(
+      exact Z.((inf asr ofs) lsl ofs) (Ex.union inf_ex sup_ex) lor
+      extract unknown 0 ofs
+    )
 
 (* Algorithm 1 from
 
@@ -1112,7 +1093,7 @@ let constrain_bitlist_from_interval bv int =
    This function is a wrapper calling [Bitlist.increase_lower_bound] and
    [Bitlist.decrease_upper_bound] on all the constituent intervals of an union;
    see the documentation of these functions for details. *)
-let constrain_interval_from_bitlist int bv =
+let constrain_interval_from_bitlist ~size:sz int bv =
   let open Interval_domains.Ephemeral in
   let ex = Bitlist.explanation bv in
   (* Handy wrapper around [of_complement] *)
@@ -1129,7 +1110,7 @@ let constrain_interval_from_bitlist int bv =
   Intervals.Int.fold (fun acc i ->
       let { Intervals_intf.lb ; ub } = Intervals.Int.Interval.view i in
       let lb = finite_lower_bound lb in
-      let ub = finite_upper_bound ~size:(Bitlist.width bv) ub in
+      let ub = finite_upper_bound ~size:sz ub in
       let acc =
         match Bitlist.increase_lower_bound bv lb with
         | new_lb when Z.compare new_lb lb > 0 ->
@@ -1227,7 +1208,8 @@ let propagate_all eqs bcs bdom idom =
     touch_pending queue;
     HX.iter (fun r () ->
         HX.replace bitlist_changed r ();
-        constrain_interval_from_bitlist
+        let sz = bitwidth r in
+        constrain_interval_from_bitlist ~size:sz
           Interval_domains.Ephemeral.(handle idom r)
           Bitlist_domains.Ephemeral.(!!(handle bdom r))
       ) touched;
@@ -1241,7 +1223,8 @@ let propagate_all eqs bcs bdom idom =
     let bcs = Constraints.clear_pending bcs in
     while HX.length touched > 0 do
       HX.iter (fun r () ->
-          constrain_bitlist_from_interval
+          let sz = bitwidth r in
+          constrain_bitlist_from_interval ~size:sz
             Bitlist_domains.Ephemeral.(handle bdom r)
             Interval_domains.Ephemeral.(!!(handle idom r))
         ) touched;
@@ -1250,8 +1233,9 @@ let propagate_all eqs bcs bdom idom =
       assert (QC.is_empty queue);
 
       HX.iter (fun r () ->
+          let sz = bitwidth r in
           HX.replace bitlist_changed r ();
-          constrain_interval_from_bitlist
+          constrain_interval_from_bitlist ~size:sz
             Interval_domains.Ephemeral.(handle idom r)
             Bitlist_domains.Ephemeral.(!!(handle bdom r))
         ) touched;
@@ -1263,7 +1247,8 @@ let propagate_all eqs bcs bdom idom =
     let eqs =
       HX.fold (fun r () acc ->
           let d = Bitlist_domains.Ephemeral.(!!(handle bdom r)) in
-          add_eqs acc (Shostak.Bitv.embed r) d
+          let sz = bitwidth r in
+          add_eqs acc (Shostak.Bitv.embed r) sz d
         ) bitlist_changed eqs
     in
 
@@ -1381,7 +1366,7 @@ let case_split env uf ~for_model =
 
        [nunk] is the number of unknown bits. *)
     let f_acc r bl acc =
-      let nunk = Bitlist.num_unknown bl in
+      let nunk = Z.popcount (Bitlist.unknown_bits bl) in
       if nunk = 0 then
         acc
       else
@@ -1413,8 +1398,8 @@ let case_split env uf ~for_model =
     match SX.choose candidates with
     | r ->
       let bl = Bitlist_domains.get r domain in
-      let w = Bitlist.width bl in
-      let unknown = Z.extract (Z.lognot @@ Bitlist.bits_known bl) 0 w in
+      let w = bitwidth r in
+      let unknown = Z.extract (Bitlist.unknown_bits bl) 0 w in
       let bitidx = Z.numbits unknown  - 1 in
       let lhs =
         Shostak.Bitv.is_mine @@
@@ -1453,5 +1438,6 @@ let assume_th_elt t th_elt _ =
   | _ -> t
 
 module Test = struct
-  let shared_msb = shared_msb
+  let shared_msb sz inf sup =
+    sz - Z.numbits (Z.logxor inf sup)
 end

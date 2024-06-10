@@ -28,7 +28,9 @@
 (** Bit-lists provide a domain on bit-vectors that represent the known bits
     sets to [1] and [0], respectively.
 
-    This module provides an implementation of bitlists and related operators.*)
+    This module provides an implementation of bitlists and related operators.
+    The bitlists provided by this module do not have a fixed width, and can
+    represent arbitrary-precision integers. *)
 
 type t
 (** The type of bitlists.
@@ -49,22 +51,15 @@ val pp : t Fmt.t
 exception Inconsistent of Explanation.t
 (** Exception raised when an inconsistency is detected. *)
 
-val unknown : int -> Explanation.t -> t
-(** [unknown w ex] returns an bitlist of width [w] with no known bits. *)
-
-val empty : t
-(** An empty bitlist of width 0 and no explanation. *)
-
-val width : t -> int
-(** Returns the width of the bitlist. *)
+val unknown : t
+(** [unknown] is a bitlist that repersents all integers. *)
 
 val explanation : t -> Explanation.t
 (** Returns the explanation associated with the bitlist. See the type-level
     documentation for details. *)
 
-val exact : int -> Z.t -> Explanation.t -> t
-(** [exact w v ex] returns a bitlist of width [w] that represents the [w]-bits
-    constant [v]. *)
+val exact : Z.t -> Explanation.t -> t
+(** [exact v ex] returns a bitlist that represents the constant [v]. *)
 
 val equal : t -> t -> bool
 (** [equal b1 b2] returns [true] if the bitlists [b1] and [b2] are equal, albeit
@@ -82,16 +77,15 @@ val add_explanation : ex:Explanation.t -> t -> t
 (** [add_explanation ~ex b] adds the explanation [ex] to the bitlist [b]. The
     returned bitlist has both the explanation of [b] and [ex] as explanation. *)
 
-val bits_known : t -> Z.t
-(** [bits_known b] returns the sets of bits known to be either [1] or [0] as a
-    bitmask. *)
+val unknown_bits : t -> Z.t
+(** [unknown_bits b] returns the set of unknown (or undetermined) bits in [b].
 
-val num_unknown : t -> int
-(** [num_unknown b] returns the number of bits unknown in [b]. *)
+    The value of [Z.logand (Z.lognot (unknown_bits b)) n] is the same for any
+    [n] in the set represented by the bitlist [b]. *)
 
 val is_fully_known : t -> bool
 (** [is_fully_known b] determines if there are unknown bits in [b] or not.
-    [is_fully_known b] is [true] iff [num_unknown b] is [0]. *)
+    [is_fully_known b] is [true] iff [unknown_bits b] is [Z.zero]. *)
 
 val value : t -> Z.t
 (** [value b] returns the value associated with the bitlist [b]. If the bitlist
@@ -110,33 +104,38 @@ val lognot : t -> t
 (** [lognot b] swaps the bits that are set and cleared. *)
 
 val logand : t -> t -> t
-(** Bitwise and. *)
+(** Bit-wise and. *)
 
 val logor : t -> t -> t
-(** Bitwise or. *)
+(** Bit-wise or. *)
 
 val logxor : t -> t -> t
-(** Bitwise xor. *)
+(** Bit-wise xor. *)
 
 val mul : t -> t -> t
 (** Integer multiplication. *)
 
-val shl : t -> t -> t
-(** Logical left shift. *)
+val bvshl : size:int -> t -> t -> t
+(** Logical left shift, truncated to the [size] least significant bits. *)
 
-val lshr : t -> t -> t
-(** Logical right shift. *)
+val bvlshr : size:int -> t -> t -> t
+(** Logical right shift, truncated to the [size] least significant bits. *)
 
-val concat : t -> t -> t
-(** Bit-vector concatenation. *)
+val shift_left : t -> int -> t
+(** Shifts to the left. Equivalent to a multiplication by a power of [2]. The
+    second argument must be nonnegative. *)
 
-val ( @ ) : t -> t -> t
-(** Alias for [concat]. *)
+val shift_right : t -> int -> t
+(** Shifts to the right. This is an arithmetic shift, equivalent to a division
+    by a power of [2] with rounding towards -oo. The second argument must be
+    nonnegative. *)
 
 val extract : t -> int -> int -> t
-(** [extract b i j] returns the bitlist from index [i] to index [j] inclusive.
+(** [extract b off len] returns a nonnegative bitlist corresponding to bits
+    [off] to [off + len - 1] of [b].
 
-    The resulting bitlist has length [j - i + 1]. *)
+    {b Note}: This uses the same arguments as [Z.extract], not the arguments
+    from the SMT-LIB's [extract] primitive. *)
 
 val increase_lower_bound : t -> Z.t -> Z.t
 (** [increase_lower_bound b lb] returns the smallest integer [lb' >= lb] that
@@ -149,6 +148,26 @@ val decrease_upper_bound : t -> Z.t -> Z.t
     matches the bit-pattern in [b].
 
     @raise Not_found if no such integer exists. *)
+
+(** {2 Prefix and infix operators} *)
+
+val ( land ) : t -> t -> t
+(** Bit-wise logical and [logand]. *)
+
+val ( lor ) : t -> t -> t
+(** Bit-wise logical inclusive or [logor]. *)
+
+val ( lxor ) : t -> t -> t
+(** Bit-wise logical exclusive xor [logxor]. *)
+
+val ( ~! ) : t -> t
+(** Bit-wise logical negation [lognot]. *)
+
+val ( lsl ) : t -> int -> t
+(** Bit-wise shift to the left [shift_left]. *)
+
+val ( asr ) : t -> int -> t
+(** Bit-wise shift to the right [shift_right]. *)
 
 (**/**)
 

@@ -1,6 +1,30 @@
 open AltErgoLib
 open QCheck2
 
+module type FixedSizeBitVector = sig
+  type t = Bitlist.t
+
+  val shl : t -> t -> t
+
+  val lshr : t -> t -> t
+
+  val mul : t -> t -> t
+end
+
+let fixed_size_bit_vector n : (module FixedSizeBitVector) =
+  let open Bitlist in
+  let norm b = extract b 0 n in
+  let binop op x y = norm (op x y) in
+  (module struct
+    type t = Bitlist.t
+
+    let shl a b = bvshl ~size:n a b
+
+    let lshr a b = bvlshr ~size:n a b
+
+    let mul = binop mul
+  end)
+
 module IntSet : sig
   type t
 
@@ -134,10 +158,16 @@ let bitlist sz =
   in
   let* (set_bits, clr_bits) = bitlist sz in
   let set_bits =
-    Bitlist.ones @@ Bitlist.exact sz set_bits Explanation.empty
+    Bitlist.extract (
+      Bitlist.ones @@
+      Bitlist.exact set_bits Explanation.empty
+    ) 0 sz
   in
   let clr_bits =
-    Bitlist.zeroes @@ Bitlist.exact sz (Z.lognot clr_bits) Explanation.empty
+    Bitlist.extract (
+      Bitlist.zeroes @@
+      Bitlist.exact (Z.extract (Z.lognot clr_bits) 0 sz) Explanation.empty
+    ) 0 sz
   in
   return @@ Bitlist.intersect set_bits clr_bits
 
@@ -247,9 +277,7 @@ let test_bitlist_binop ~count sz zop bop =
           (Fmt.to_to_string Bitlist.pp))
     Gen.(pair (bitlist sz) (bitlist sz))
     (fun (s, t) ->
-       let u = bop s t in
-       Bitlist.width u = Bitlist.width s &&
-       Bitlist.width u = Bitlist.width t &&
+       let u = bop (fixed_size_bit_vector sz) s t in
        IntSet.subset
          (IntSet.map2 zop (of_bitlist s) (of_bitlist t))
          (of_bitlist u))
@@ -271,7 +299,7 @@ let zmul sz a b =
 
 let test_bitlist_mul sz =
   test_bitlist_binop ~count:1_000
-    sz (zmul sz) Bitlist.mul
+    sz (zmul sz) (fun (module BV) -> BV.mul)
 
 let () =
   Test.check_exn (test_bitlist_mul 3)
@@ -290,7 +318,7 @@ let () =
 
 let test_bitlist_shl sz =
   test_bitlist_binop ~count:1_000
-    sz (zshl sz) Bitlist.shl
+    sz (zshl sz) (fun (module BV) -> BV.shl)
 
 let () =
   Test.check_exn (test_bitlist_shl 3)
@@ -309,7 +337,7 @@ let () =
 
 let test_bitlist_lshr sz =
   test_bitlist_binop ~count:1_000
-    sz zlshr Bitlist.lshr
+    sz zlshr (fun (module BV) -> BV.lshr)
 
 let () =
   Test.check_exn (test_bitlist_lshr 3)
