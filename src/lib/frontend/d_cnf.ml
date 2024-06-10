@@ -444,11 +444,38 @@ let smt_fpa_builtins =
       end
     | _ -> `Not_found
 
+let lemma_attr : string DStd.Tag.t = DStd.Tag.create ()
+
+type _ Dl.Typer.T.err +=
+  | Expect_simple_sexpr
+
+let smt_tag_builtins =
+  let module Type = Dl.Typer.T in
+  let make_op env s f =
+    Dl.Typer.T.builtin_tags @@
+    Dolmen_type.Base.make_op1 (module Dl.Typer.T) env s f
+  in
+  fun env s ->
+    match s with
+    | Type.Id { ns = Attr ; name = Simple ":lemma" } ->
+      make_op env s (fun ast t ->
+          match t with
+          | { term = Symbol { name = Simple name; _ }; _ } ->
+            [Type.Set (lemma_attr, name)]
+          | _ ->
+            Type._error env (Ast ast) Expect_simple_sexpr
+        )
+    | _ -> `Not_found
+
 let builtins =
   fun _st (lang : Typer.lang) ->
   match lang with
   | `Logic Alt_ergo -> ae_fpa_builtins
-  | `Logic (Smtlib2 _) -> smt_fpa_builtins
+  | `Logic (Smtlib2 _) ->
+    (fun env s ->
+       match smt_fpa_builtins env s with
+       | `Not_found -> smt_tag_builtins env s
+       | r -> r)
   | _ -> fun _ _ -> `Not_found
 
 (** Translates dolmen locs to Alt-Ergo's locs *)
@@ -1817,7 +1844,7 @@ let make dloc_file acc stmt =
     | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
         implicit=_ } ->
       let name =
-        match DStd.Tag.get t.term_tags DE.Tags.named with
+        match DStd.Tag.get t.term_tags lemma_attr with
         | Some name -> name
         | None -> name
       in
