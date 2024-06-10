@@ -143,7 +143,7 @@ end
 module MFF = FF.Map
 module SFF = FF.Set
 
-module Vheap = Heap.Make(struct
+module Vheap = Heap.MakeRanked(struct
     type t = Atom.var
 
     let index (a : t) = a.hindex
@@ -478,7 +478,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       simpDB_props = 0;
 
-      order = Vheap.make 0 Atom.dummy_var; (* sera mis a jour dans solve *)
+      order = Vheap.create 0 Atom.dummy_var; (* sera mis a jour dans solve *)
 
       progress_estimate = 0.;
 
@@ -1827,7 +1827,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.next_split <- None;
           pick_branch_aux env atom
         | None ->
-          match Vheap.remove_min env.order with
+          match Vheap.pop_min env.order with
           | v -> pick_branch_aux env v.na
           | exception Not_found ->
             if Options.get_cdcl_tableaux_inst () then

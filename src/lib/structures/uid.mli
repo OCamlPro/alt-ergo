@@ -30,7 +30,9 @@
 
 module DE = Dolmen.Std.Expr
 
-type t
+type t = private
+  | Hstring : Hstring.t -> t
+  | Dolmen : 'a DE.id -> t
 
 val of_dolmen : 'a DE.Id.t -> t
 val of_string : string -> t

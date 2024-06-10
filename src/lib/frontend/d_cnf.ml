@@ -586,10 +586,11 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ }
+      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
+    Nest.add_nest [adt];
     let tyvl = Cache.store_ty_vars_ret id_ty in
     let rev_lbs =
       Array.fold_left (
@@ -610,9 +611,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let ty = Ty.trecord ~record_constr tyvl (Uid.of_dolmen ty_c) lbs in
     Cache.store_ty ty_c ty
 
-  | Some (
-      (Adt { cases; _ } as _adt)
-    ) ->
+  | Some ((Adt { cases; _ } as adt)) ->
+    Nest.add_nest [adt];
     let uid = Uid.of_dolmen ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     let rev_cs, is_enum =
@@ -624,7 +624,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
               if Array.length dstrs = 0
               then true
               else (
-                let ty = Ty.t_adt (Uid.of_dolmen ty_c) tyvl in
+                let ty = Ty.t_adt uid tyvl in
                 Cache.store_ty ty_c ty;
                 false
               )
@@ -711,10 +711,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       in
       Cache.store_ty ty_c ty
 
-    | Tadt (hs, tyl),
-      Some (
-        Adt { cases; ty = ty_c; _ }
-      ) ->
+    | Tadt (hs, tyl), Some (Adt { cases; ty = ty_c; _ }) ->
       let rev_cs =
         Array.fold_left (
           fun accl DE.{ cstr; dstrs; _ } ->
@@ -744,19 +741,21 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
     List.fold_left (
       fun (acc, ca) ty_c ->
         match DT.definition ty_c with
-        | Some (Adt { record; cases; _ }) as df
+        | Some (Adt { record; cases; _ } as df)
           when not record && Array.length cases > 1 ->
           df :: acc, true
-        | df -> df :: acc, ca
+        | Some (Adt _ as df) ->
+          df :: acc, ca
+        | Some Abstract | None ->
+          assert false
     ) ([], false) tdl
   in
+  Nest.add_nest rev_tdefs;
   let rev_l =
     List.fold_left (
       fun acc tdef ->
         match tdef with
-        | Some (
-            (DE.Adt { cases; record; ty = ty_c; }) as adt
-          ) ->
+        | DE.Adt { cases; record; ty = ty_c; } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
 
           let cns, is_enum =
@@ -784,8 +783,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             Cache.store_ty ty_c ty;
             (ty, Some adt) :: acc
           )
-        | None
-        | Some Abstract ->
+        | Abstract ->
           assert false (* unreachable in the second iteration *)
     ) [] (List.rev rev_tdefs)
   in
@@ -1009,8 +1007,7 @@ let rec mk_expr
 
           | B.Constructor _ ->
             let ty = dty_to_ty term_ty in
-            let sy = Sy.Op (Sy.Constr (Uid.of_dolmen tcst)) in
-            E.mk_term sy [] ty
+            E.mk_constr (Uid.of_dolmen tcst) [] ty
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1379,7 +1376,7 @@ let rec mk_expr
             let ty = dty_to_ty term_ty in
             begin match ty with
               | Ty.Tadt (_, _) ->
-                let sy = Sy.Op (Sy.Constr (Uid.of_dolmen tcst)) in
+                let sy = Sy.constr @@ Uid.of_dolmen tcst in
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term sy l ty
               | Ty.Trecord _ ->

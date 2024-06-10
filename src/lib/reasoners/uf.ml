@@ -1163,6 +1163,10 @@ type cache = {
       to ensure we don't generate twice an abstract value for a given symbol. *)
 }
 
+let is_destructor = function
+  | Sy.Op (Destruct _) -> true
+  | _ -> false
+
 (* The environment of the union-find contains almost a first-order model.
    There are two situations that require some computations to retrieve an
    appropriate model value:
@@ -1179,9 +1183,13 @@ let compute_concrete_model_of_val cache =
   and get_abstract_for = Cache.get_abstract_for cache.abstracts
   in fun env t ((mdl, mrepr) as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
-    if X.is_solvable_theory_symbol f ty
-    || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
-    || E.equal t E.vrai || E.equal t E.faux
+    (* TODO: We have to filter out destructors here as we don't consider
+       pending destructors as solvable theory symbols of the ADT theory.
+       We should check if these symbols can be defined as solvable to
+       remove this particular case here. *)
+    if X.is_solvable_theory_symbol f ty || is_destructor f
+       || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
+       || E.equal t E.vrai || E.equal t E.faux
     then
       (* These terms are built-in interpreted ones and we don't have
          to produce a definition for them. *)

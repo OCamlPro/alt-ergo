@@ -144,7 +144,7 @@ let bitv s =
         | _ -> assert false) Z.zero s
   in Bitv (String.length s, biv)
 let real r = Real (Q.of_string r)
-let constr s = Op (Constr s)
+let constr c = Op (Constr c)
 let destruct s = Op (Destruct s)
 
 let mk_bound kind sort ~is_open ~is_lower =

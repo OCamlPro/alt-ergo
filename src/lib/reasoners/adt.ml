@@ -401,12 +401,17 @@ module Shostak (X : ALIEN) = struct
 
 
   let assign_value _ _ _ =
-    Printer.print_err
-      "[ADTs.models] assign_value currently not implemented";
-    raise (Util.Not_implemented "Models for ADTs")
+    (* Model generation is performed by the case-split mechanism
+       in [Adt_rel]. *)
+    None
 
-  let to_model_term _r =
-    Printer.print_err
-      "[ADTs.models] to_model_term currently not implemented";
-    raise (Util.Not_implemented "Models for ADTs")
+  let to_model_term r =
+    match embed r with
+    | Constr { c_name; c_ty; c_args } ->
+      let args = Lists.try_map (fun (_, arg) -> X.to_model_term arg) c_args in
+      Option.bind args @@ fun args ->
+      Some (E.mk_constr c_name args c_ty)
+
+    | Select _ -> None
+    | Alien a -> X.to_model_term a
 end
