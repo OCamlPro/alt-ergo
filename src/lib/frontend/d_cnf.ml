@@ -464,6 +464,8 @@ let smt_tag_builtins =
           | { term = Symbol { name = Simple name; _ }; _ } ->
             [Type.Set (lemma_name_attr, name)]
           | _ ->
+            (* TODO: add a custom printer as soon as the issue
+               https://github.com/Gbury/dolmen/issues/218 is solved. *)
             Type._error env (Ast ast) Invalid_lemma_name
         )
     | _ -> `Not_found
