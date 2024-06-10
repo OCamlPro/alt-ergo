@@ -444,11 +444,41 @@ let smt_fpa_builtins =
       end
     | _ -> `Not_found
 
+(* Custom attribute used to name lemmas. *)
+let lemma_name_attr : string DStd.Tag.t = DStd.Tag.create ()
+
+type _ Dl.Typer.T.err +=
+  | Invalid_lemma_name
+
+let smt_tag_builtins =
+  let module Type = Dl.Typer.T in
+  let make_op env s f =
+    Dl.Typer.T.builtin_tags @@
+    Dolmen_type.Base.make_op1 (module Dl.Typer.T) env s f
+  in
+  fun env s ->
+    match s with
+    | Type.Id { ns = Attr ; name = Simple ":lemma" } ->
+      make_op env s (fun ast t ->
+          match t with
+          | { term = Symbol { name = Simple name; _ }; _ } ->
+            [Type.Set (lemma_name_attr, name)]
+          | _ ->
+            (* TODO: add a custom printer as soon as the issue
+               https://github.com/Gbury/dolmen/issues/218 is solved. *)
+            Type._error env (Ast ast) Invalid_lemma_name
+        )
+    | _ -> `Not_found
+
 let builtins =
   fun _st (lang : Typer.lang) ->
   match lang with
   | `Logic Alt_ergo -> ae_fpa_builtins
-  | `Logic (Smtlib2 _) -> smt_fpa_builtins
+  | `Logic (Smtlib2 _) ->
+    (fun env s ->
+       match smt_fpa_builtins env s with
+       | `Not_found -> smt_tag_builtins env s
+       | r -> r)
   | _ -> fun _ _ -> `Not_found
 
 (** Translates dolmen locs to Alt-Ergo's locs *)
@@ -1817,9 +1847,12 @@ let make dloc_file acc stmt =
     | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
         implicit=_ } ->
       let name =
-        match DStd.Tag.get t.term_tags DE.Tags.named with
-        | Some name -> name
-        | None -> name
+        match DStd.Tag.get t.term_tags lemma_name_attr with
+        | Some n -> n
+        | None ->
+          match DStd.Tag.get t.term_tags DE.Tags.named with
+          | Some n -> n
+          | None -> name
       in
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in
