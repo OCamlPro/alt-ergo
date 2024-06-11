@@ -1,0 +1,8 @@
+type 'a t
+logic p : 'a t, unit -> prop
+logic f : 'a t -> prop
+logic r : unit t
+
+axiom a : forall s:'a t. exists n:unit. p(s, n)
+
+goal g : f(r)
