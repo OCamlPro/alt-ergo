@@ -299,7 +299,7 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
         subset_seq ~strict i1 s1 i2 s2
 
     let equal u1 u2 =
-      Seq.equal Interval.equal (to_seq u1) (to_seq u2)
+      Stdcompat.Seq.equal Interval.equal (to_seq u1) (to_seq u2)
 
     let checked ((glb, u', gub) as u) =
       let rec loop ex = function
