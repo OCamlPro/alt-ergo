@@ -145,6 +145,12 @@ module Types = struct
     | Abstract ->
       let ty = Ty.text ty_vars (Uid.of_string id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
+    | Enum l ->
+      if not (Lists.is_empty ty_vars) then
+        Errors.typing_error (PolymorphicEnum id) loc;
+      let body = List.map (fun constr -> Uid.of_string constr, []) l in
+      let ty = Ty.t_adt ~enum:true ~body:(Some body) (Uid.of_string id) [] in
+      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
         List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
@@ -164,10 +170,6 @@ module Types = struct
             from_labels =
               List.fold_left
                 (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
-    | Enum l ->
-      let body = List.map (fun constr -> Uid.of_string constr, []) l in
-      let ty = Ty.t_adt ~enum:true ~body:(Some body) (Uid.of_string id) [] in
-      ty, { env with to_ty = MString.add id ty env.to_ty }
     | Algebraic l ->
       let l = (* convert ppure_type to Ty.t in l *)
         List.map (fun (constr, l) ->
