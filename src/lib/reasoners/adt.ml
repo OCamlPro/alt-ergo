@@ -54,9 +54,9 @@ let constr_of_destr ty dest =
       ~module_name:"Adt" ~function_name:"constr_of_destr"
       "ty = %a" Ty.print ty;
   match ty with
-  | Ty.Tadt (s, params, _) ->
+  | Ty.Tadt (s, params) ->
     begin
-      let Ty.Adt cases = Ty.type_body s params in
+      let Ty.{ cases; _ } = Ty.type_body s params in
       try
         List.find
           (fun { Ty.destrs; _ } ->
@@ -173,8 +173,8 @@ module Shostak (X : ALIEN) = struct
     in
     let xs = List.rev sx in
     match f, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params, _) ->
-      let Ty.Adt cases = Ty.type_body name params in
+    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
+      let Ty.{ cases; _ } = Ty.type_body name params in
       let case_hs =
         try Ty.assoc_destrs hs cases with Not_found -> assert false
       in

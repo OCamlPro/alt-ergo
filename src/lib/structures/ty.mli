@@ -53,13 +53,13 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Uid.t * t list * [`Adt | `Enum]
-  (** Application of algebraic data types. [Tadt (a, params, kind)] denotes
+  | Tadt of Uid.t * t list
+  (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
-      [params]. The flag [kind] determines if the ADT is an enum.
+      [params].
 
       For instance the type of integer lists can be represented by the
-      value [Tadt (Hstring.make "list", [Tint], `Adt)] where the identifier
+      value [Tadt (Hstring.make "list", [Tint]] where the identifier
       {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
   | Trecord of trecord
@@ -99,12 +99,21 @@ type adt_constr =
         their respective types *)
   }
 
-(** bodies of types definitions. Currently, bodies are inlined in the
+type adt_kind =
+  | Enum (* ADT whose all the constructors have no payload. *)
+  | Adt
+
+(** Bodies of types definitions. Currently, bodies are inlined in the
     type [t] for records and enumerations. But, this is not possible
     for recursive ADTs *)
-type type_body =
-  | Adt of adt_constr list
+type type_body = {
+  cases : adt_constr list;
   (** body of an algebraic datatype *)
+
+  kind : adt_kind
+  (** This flag is used by the case splitting mechanism of the ADT theory.
+      We perform eager splitting on ADT of kind [enum]. *)
+}
 
 module Svty : Set.S with type elt = int
 (** Sets of type variables, indexed by their identifier. *)
@@ -169,17 +178,13 @@ val text : t list -> Uid.t -> t
     given. *)
 
 val t_adt :
-  ?kind:[`Adt | `Enum] ->
-  ?body: ((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
+  ?body:((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
     then no definition will be registered for this type. The second
     argument is the name of the type. The third one provides its list
-    of arguments.
-
-    The flag [kind] is used to annotate ADT that are enum types. [`Adt]
-    kind is the default. *)
+    of arguments. *)
 
 val trecord :
   ?sort_fields:bool ->

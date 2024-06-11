@@ -546,8 +546,8 @@ and handle_ty_app ?(update = false) ty_c l =
         apply_ty_substs tysubsts tv
       )
 
-    | Tadt (hs, tyl, enum) ->
-      Tadt (hs, List.map (apply_ty_substs tysubsts) tyl, enum)
+    | Tadt (hs, tyl) ->
+      Tadt (hs, List.map (apply_ty_substs tysubsts) tyl)
 
     | Trecord ({ args; lbs; _ } as rcrd) ->
       Trecord {
@@ -565,7 +565,7 @@ and handle_ty_app ?(update = false) ty_c l =
   (* Recover the initial versions of the types and apply them on the provided
      type arguments stored in [tyl]. *)
   match Cache.find_ty ty_c with
-  | Tadt (hs, _, enum) -> Tadt (hs, tyl, enum)
+  | Tadt (hs, _) -> Tadt (hs, tyl)
 
   | Trecord { args; _ } as ty ->
     let tysubsts =
@@ -615,10 +615,9 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let uid = Uid.of_dolmen ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     Cache.store_ty ty_c (Ty.t_adt uid tyvl);
-    let rev_cs, is_enum =
+    let rev_cs =
       Array.fold_left (
-        fun (accl, is_enum) DE.{ cstr; dstrs; _ } ->
-          let is_enum = is_enum && Array.length dstrs = 0 in
+        fun accl DE.{ cstr; dstrs; _ } ->
           let rev_fields =
             Array.fold_left (
               fun acc tc_o ->
@@ -628,12 +627,11 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
                 | None -> assert false
             ) [] dstrs
           in
-          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl, is_enum
-      ) ([], true) cases
+          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl
+      ) [] cases
     in
     let body = Some (List.rev rev_cs) in
-    let kind = if is_enum then `Enum else `Adt in
-    let ty = Ty.t_adt ~kind ~body uid tyvl in
+    let ty = Ty.t_adt ~body uid tyvl in
     Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
@@ -693,7 +691,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       in
       Cache.store_ty ty_c ty
 
-    | Tadt (hs, tyl, _), Some (Adt { cases; ty = ty_c; _ }) ->
+    | Tadt (hs, tyl), Some (Adt { cases; ty = ty_c; _ }) ->
       let rev_cs =
         Array.fold_left (
           fun accl DE.{ cstr; dstrs; _ } ->
@@ -737,12 +735,6 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       fun acc tdef ->
         match tdef with
         | DE.Adt { cases; record; ty = ty_c; } as adt ->
-          let is_enum =
-            Array.fold_left (
-              fun is_enum DE.{ dstrs; _ } ->
-                is_enum && Array.length dstrs = 0
-            ) true cases
-          in
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
           let uid = Uid.of_dolmen ty_c in
           let ty =
@@ -750,8 +742,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             then
               Ty.trecord ~record_constr:uid tyvl uid []
             else
-              let kind = if is_enum then `Enum else `Adt in
-              Ty.t_adt ~kind uid tyvl
+              Ty.t_adt uid tyvl
           in
           Cache.store_ty ty_c ty;
           (ty, Some adt) :: acc

@@ -170,7 +170,7 @@ module Main_Default : S = struct
              (* cannot do better for records ? *)
              Uid.Map.add name ty mp
 
-           | Tadt (hs, _, _) ->
+           | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
              Uid.Map.add hs ty mp
         )sty Uid.Map.empty

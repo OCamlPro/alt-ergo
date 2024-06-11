@@ -83,14 +83,14 @@ module Domain = struct
 
   let unknown ty =
     match ty with
-    | Ty.Tadt (name, params, _) ->
+    | Ty.Tadt (name, params) ->
       (* Return the list of all the constructors of the type of [r]. *)
-      let Adt body = Ty.type_body name params in
+      let Ty.{ cases; _ } = Ty.type_body name params in
       let constrs =
         List.fold_left
           (fun acc Ty.{ constr; _ } ->
              TSet.add constr acc
-          ) TSet.empty body
+          ) TSet.empty cases
       in
       assert (not @@ TSet.is_empty constrs);
       { constrs; ex = Ex.empty }
@@ -156,7 +156,12 @@ module Domains = struct
 
   let is_enum r =
     match X.type_info r with
-    | Ty.Tadt (_, [], `Enum) -> true
+    | Ty.Tadt (name, params) ->
+      let Ty.{ kind; _ } = Ty.type_body name params in
+      begin match kind with
+        | Enum -> true
+        | Adt -> false
+      end
     | _ -> false
 
   let internal_update r nd t =
@@ -477,10 +482,10 @@ let build_constr_eq r c =
   match Th.embed r with
   | Alien r ->
     begin match X.type_info r with
-      | Ty.Tadt (name, params, _) as ty ->
-        let Ty.Adt body = Ty.type_body name params in
+      | Ty.Tadt (name, params) as ty ->
+        let Ty.{ cases; _ } = Ty.type_body name params in
         let ds =
-          try Ty.assoc_destrs c body with Not_found -> assert false
+          try Ty.assoc_destrs c cases with Not_found -> assert false
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
         let cons = E.mk_constr c xs ty in
@@ -578,9 +583,9 @@ let two = Numbers.Q.from_int 2
 (* TODO: we should compute this reverse map in `Ty` and store it there. *)
 let constr_of_destr ty d =
   match ty with
-  | Ty.Tadt (name, params, _) ->
+  | Ty.Tadt (name, params) ->
     begin
-      let Ty.Adt cases = Ty.type_body name params in
+      let Ty.{ cases; _ } = Ty.type_body name params in
       try
         let r =
           List.find

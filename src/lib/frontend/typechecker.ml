@@ -69,14 +69,10 @@ module Types = struct
     match ty with
     | Ty.Text (lty', s)
     | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty',`Adt) ->
+    | Ty.Tadt (s,lty') ->
       if List.length lty <> List.length lty' then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
-    | Ty.Tadt (s,lty',`Enum) ->
-      if List.length lty <> 0 || List.length lty' <> 0 then
-        Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
-      []
     | _ -> assert false
 
   let equal_pp_vars lpp lvars =
@@ -149,7 +145,7 @@ module Types = struct
       if not (Lists.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
       let body = List.map (fun constr -> Uid.of_string constr, []) l in
-      let ty = Ty.t_adt ~kind:`Enum ~body:(Some body) (Uid.of_string id) [] in
+      let ty = Ty.t_adt ~body:(Some body) (Uid.of_string id) [] in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
@@ -275,8 +271,9 @@ module Env = struct
   let add_fpa_enum map =
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
-    | Ty.Tadt (name, [], `Enum) ->
-      let Adt cases = Ty.type_body name [] in
+    | Ty.Tadt (name, []) ->
+      let Ty.{ cases; kind } = Ty.type_body name [] in
+      assert (Stdlib.(kind = Ty.Enum));
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
         (fun m c ->
@@ -301,8 +298,9 @@ module Env = struct
 
   let find_builtin_cstr ty n =
     match ty with
-    | Ty.Tadt (name, [], `Enum) ->
-      let Adt cases = Ty.type_body name [] in
+    | Ty.Tadt (name, []) ->
+      let Ty.{ cases; kind } = Ty.type_body name [] in
+      assert (Stdlib.(kind = Ty.Enum));
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.find (Uid.equal n) cstrs
     | _ ->
@@ -1005,8 +1003,8 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params, _) ->
-          let Ty.Adt cases = Ty.type_body name params in
+        | Ty.Tadt (name, params) ->
+          let Ty.{ cases; _ } = Ty.type_body name params in
           cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
@@ -1413,8 +1411,8 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params, _) ->
-          let Ty.Adt cases = Ty.type_body name params in
+        | Ty.Tadt (name, params) ->
+          let Ty.{ cases; _ } = Ty.type_body name params in
           cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
