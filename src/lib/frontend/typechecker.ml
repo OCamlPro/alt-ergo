@@ -302,7 +302,7 @@ module Env = struct
     | Ty.Tadt (name, [], true) ->
       let Adt cases = Ty.type_body name [] in
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
-      List.find (fun c -> String.equal n @@ Uid.show c) cstrs
+      List.find (Uid.equal n) cstrs
     | _ ->
       assert false
 
@@ -329,9 +329,9 @@ module Env = struct
     let nte = Fpa_rounding.string_of_rounding_mode NearestTiesToEven in
     let tname = Fpa_rounding.fpa_rounding_mode_ae_type_name in
     let float32 = float (int "24") (int "149") in
-    let float32d = float32 (mode nte) in
+    let float32d = float32 (mode (Uid.of_string nte)) in
     let float64 = float (int "53") (int "1074") in
-    let float64d = float64 (mode nte) in
+    let float64d = float64 (mode (Uid.of_string nte)) in
     let op n op profile =
       MString.add n @@ `Term (Symbols.Op op, profile, Other)
     in

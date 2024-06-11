@@ -660,6 +660,10 @@ let split_enum env uf =
   if can_split env n then
     let _, cons = Option.get @@ build_constr_eq r c in
     let nr, ctx = X.make cons in
+    (* In the current implementation of `X.make`, we produce
+       a nonempty context only for interpreted semantic values
+       of the `Arith` and `Records` theories. The semantic
+       values `cons` never involves such values. *)
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
   else
@@ -672,11 +676,11 @@ let split_best_domain ~for_model uf =
     let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
     let* r, c = pick_best ds in
     let _, cons = Option.get @@ build_constr_eq r c in
+    let nr, ctx = X.make cons in
     (* In the current implementation of `X.make`, we produce
        a nonempty context only for interpreted semantic values
        of the `Arith` and `Records` theories. The semantic
        values `cons` never involves such values. *)
-    let nr, ctx = X.make cons in
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
 

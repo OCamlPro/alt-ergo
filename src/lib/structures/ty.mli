@@ -59,8 +59,8 @@ type t =
       [params]. The flag [enum] determines if the ADT is an enum.
 
       For instance the type of integer lists can be represented by the
-      value [Tadt (Hstring.make "list", [Tint])] where the identifier "list"
-      denotes a polymorphic ADT defined by the user with [t_adt]. *)
+      value [Tadt (Hstring.make "list", [Tint], false)] where the identifier
+      {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
   | Trecord of trecord
   (** Record type. *)
@@ -176,7 +176,10 @@ val t_adt :
     its destructors with their respective types. If [body] is none,
     then no definition will be registered for this type. The second
     argument is the name of the type. The third one provides its list
-    of arguments. *)
+    of arguments.
+
+    The flag [enum] is used to annotate ADT whose all the constructors have no
+    payload. *)
 
 val trecord :
   ?sort_fields:bool ->
