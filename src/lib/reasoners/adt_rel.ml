@@ -156,7 +156,7 @@ module Domains = struct
 
   let is_enum r =
     match X.type_info r with
-    | Ty.Tadt (_, [], true) -> true
+    | Ty.Tadt (_, [], `Enum) -> true
     | _ -> false
 
   let internal_update r nd t =

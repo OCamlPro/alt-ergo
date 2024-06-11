@@ -632,7 +632,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       ) ([], true) cases
     in
     let body = Some (List.rev rev_cs) in
-    let ty = Ty.t_adt ~enum:is_enum ~body uid tyvl in
+    let kind = if is_enum then `Enum else `Adt in
+    let ty = Ty.t_adt ~kind ~body uid tyvl in
     Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
@@ -748,7 +749,9 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             if (record || Array.length cases = 1) && not contains_adts
             then
               Ty.trecord ~record_constr:uid tyvl uid []
-            else Ty.t_adt ~enum:is_enum uid tyvl
+            else
+              let kind = if is_enum then `Enum else `Adt in
+              Ty.t_adt ~kind uid tyvl
           in
           Cache.store_ty ty_c ty;
           (ty, Some adt) :: acc

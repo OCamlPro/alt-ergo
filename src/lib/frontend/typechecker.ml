@@ -69,11 +69,11 @@ module Types = struct
     match ty with
     | Ty.Text (lty', s)
     | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty',false) ->
+    | Ty.Tadt (s,lty',`Adt) ->
       if List.length lty <> List.length lty' then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
-    | Ty.Tadt (s,lty',true) ->
+    | Ty.Tadt (s,lty',`Enum) ->
       if List.length lty <> 0 || List.length lty' <> 0 then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       []
@@ -149,7 +149,7 @@ module Types = struct
       if not (Lists.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
       let body = List.map (fun constr -> Uid.of_string constr, []) l in
-      let ty = Ty.t_adt ~enum:true ~body:(Some body) (Uid.of_string id) [] in
+      let ty = Ty.t_adt ~kind:`Enum ~body:(Some body) (Uid.of_string id) [] in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
@@ -275,7 +275,7 @@ module Env = struct
   let add_fpa_enum map =
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
-    | Ty.Tadt (name, [], true) ->
+    | Ty.Tadt (name, [], `Enum) ->
       let Adt cases = Ty.type_body name [] in
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
@@ -301,7 +301,7 @@ module Env = struct
 
   let find_builtin_cstr ty n =
     match ty with
-    | Ty.Tadt (name, [], true) ->
+    | Ty.Tadt (name, [], `Enum) ->
       let Adt cases = Ty.type_body name [] in
       let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.find (Uid.equal n) cstrs

@@ -34,7 +34,7 @@ type t =
   | Tbitv of int
   | Text of t list * Uid.t
   | Tfarray of t * t
-  | Tadt of Uid.t * t list * bool
+  | Tadt of Uid.t * t list * [`Adt | `Enum]
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
@@ -529,8 +529,8 @@ let fresh_empty_text =
     in
     text [] (Uid.of_dolmen id)
 
-let t_adt ?(enum=false) ?(body=None) s ty_vars =
-  let ty = Tadt (s, ty_vars, enum) in
+let t_adt ?(kind=`Adt) ?(body=None) s ty_vars =
+  let ty = Tadt (s, ty_vars, kind) in
   begin match body with
     | None -> ()
     | Some [] -> assert false
