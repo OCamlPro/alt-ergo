@@ -538,7 +538,7 @@ let remove_redundancies la =
        end
     ) la
 
-(* Update the counter of case-split size in [env]. *)
+(* Update the counter of case split size in [env]. *)
 let count_splits env la =
   List.fold_left
     (fun nb (_, _, _, i) ->
@@ -608,7 +608,7 @@ let can_split env n =
 
 let (let*) = Option.bind
 
-(* Do a cases-plit by choosing a semantic value [r] and constructor [c]
+(* Do a case split by choosing a semantic value [r] and constructor [c]
    for which there are delayed destructor applications and propagate the
    literal [(not (_ is c) r)]. *)
 let split_delayed_destructor env =
@@ -630,27 +630,10 @@ let split_delayed_destructor env =
 (* Pick a constructor in a tracked domain with minimal cardinal.
    Returns [None] if there is no such constructor. *)
 let pick_best ds =
-  let* _, r, c =
-    Domains.fold
-      (fun r d best ->
-         let cd = Domain.cardinal d in
-         match Th.embed r, best with
-         | Constr _, _ -> best
-         | _, Some (n, _, _) when n <= cd -> best
-         | _ ->
-           let c = Domain.choose d in
-           Some (cd, r, c)
-      ) ds None
-  in
-  Some (r, c)
-
-let pick_enum ds uf =
-  Domains.fold_enums
-    (fun r best ->
-       let rr, _ = Uf.find_r uf r in
-       let d = Domains.get r ds in
+  Domains.fold
+    (fun r d best ->
        let cd = Domain.cardinal d in
-       match Th.embed rr, best with
+       match Th.embed r, best with
        | Constr _, _ -> best
        | _, Some (n, _, _) when n <= cd -> best
        | _ ->
@@ -658,28 +641,31 @@ let pick_enum ds uf =
          Some (cd, r, c)
     ) ds None
 
-let split_enum env uf =
-  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-  let* n, r, c = pick_enum ds uf in
-  let n = Numbers.Q.from_int n in
-  if can_split env n then
-    let _, cons = Option.get @@ build_constr_eq r c in
-    let nr, ctx = X.make cons in
-    (* In the current implementation of `X.make`, we produce
-       a nonempty context only for interpreted semantic values
-       of the `Arith` and `Records` theories. The semantic
-       values `cons` never involves such values. *)
-    assert (Lists.is_empty ctx);
-    Some (LR.mkv_eq r nr)
-  else
-    None
+(* Pick a constructor in a tracked domain whose the domain is of minimal
+   cardinal among tracked domains of enum types. Returns [None] if there is no
+   such constructor. *)
+let pick_enum ds =
+  Domains.fold_enums
+    (fun r best ->
+       let d = Domains.get r ds in
+       let cd = Domain.cardinal d in
+       match Th.embed r, best with
+       | Constr _, _ -> best
+       | _, Some (n, _, _) when n <= cd -> best
+       | _ ->
+         let c = Domain.choose d in
+         Some (cd, r, c)
+    ) ds None
 
-let split_best_domain ~for_model uf =
-  if not for_model then
-    None
-  else
-    let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
-    let* r, c = pick_best ds in
+let pick_domain ~for_model uf =
+  let ds = Uf.(GlobalDomains.find (module Domains) @@ domains uf) in
+  match pick_enum ds with
+  | None when for_model -> pick_best ds
+  | r -> r
+
+let split_domain ~for_model env uf =
+  let* cd, r, c = pick_domain ~for_model uf in
+  if for_model || can_split env (Numbers.Q.from_int cd) then
     let _, cons = Option.get @@ build_constr_eq r c in
     let nr, ctx = X.make cons in
     (* In the current implementation of `X.make`, we produce
@@ -688,14 +674,13 @@ let split_best_domain ~for_model uf =
        values `cons` never involves such values. *)
     assert (Lists.is_empty ctx);
     Some (LR.mkv_eq r nr)
+  else
+    None
 
 let next_case_split ~for_model env uf =
   match split_delayed_destructor env with
-  | Some _ as r -> r
-  | None ->
-    match split_enum env uf with
-    | Some _ as r -> r
-    | None -> split_best_domain ~for_model uf
+  | None -> split_domain ~for_model env uf
+  | r -> r
 
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then
