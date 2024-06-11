@@ -102,7 +102,7 @@ module Interval(OT : OrderedType) = struct
     if lb = ub then OT.value_opt lb else None
 end
 
-module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
+module Make(Ex : Explanations) : Core with type explanation = Ex.t = struct
   (* This module implements the core functionality of the union-of-intervals
      representation.
 
@@ -124,16 +124,29 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
      precise bounds and explanations justifying that the (nonempty) gaps between
      each consecutive allowed interval is forbidden.
 
-     This induces a loss of
-     precision: for instance, if [0, 4] and [10, 20] are allowed and [6, 7] is
-     forbidden with justification [ex], this will "widen" the forbidden interval
-     to [4+eps, 10-eps] instead; if we find that the associated value must be
-     equal to [5], we will include [ex] in the conflict even though it is not
-     strictly necessary. On the other hand, there are diminishing returns: we
-     don't want to keep track too precisely of the forbidden intervals if they
-     are not going to occur in a conflict.
+     See the definition of the [basic] type below for a discussion on what is
+     meant by "allowed" and "forbidden" intervals.
 
-     Note that this is always correct, because it is equivalent to adding
+     Note that we do not enforce strict alternance of [Empty] and [NonEmpty]
+     intervals; in particular, we allow two consecutive [NonEmpty] intervals if
+     the gap between them is always forbidden (i.e. forbidden with explanation
+     [Ex.empty]). This allows the module to be (almost) as efficient as an
+     implementation without explanations if no explanation is used.
+
+     Moreover, the first and last elements in the list can be either [Empty] or
+     [NonEmpty], depending on whether the lower bound (resp. upper) is true
+     everywhere (e.g. it is an infinite) or due to an explanation.
+
+     This induces a loss of precision: for instance, if [0, 4] and [10, 20] are
+     allowed and [6, 7] is forbidden with justification [ex], this will "widen"
+     the forbidden interval to [4+eps, 10-eps] instead; if we find that the
+     associated value must be equal to [5], we will include [ex] in the conflict
+     even though it is not strictly necessary. On the other hand, there are
+     diminishing returns: we don't want to keep track too precisely of the
+     forbidden intervals if they are not going to occur in a conflict, because
+     they are only used if they are part of a conflict.
+
+     Note that this is always sound, because it is equivalent to adding
      explanations to forbidden intervals (if {m I} is impossible in any model
      where {m e} holds, it is also impossible in any model where {b both} {m e}
      and {m e'} hold). It also does not change the evaluation in the current
@@ -141,7 +154,24 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
      We also store global lower and upper bounds for the union that are always
      valid. This is useful for the [trisection_map_to_set] function to
-     communicate information about the range of values to its arguments. *)
+     communicate information about the range of values to its arguments.
+
+     A note on implementation: many functions in this module that operate on
+     unions are written in a somewhat convoluted style where we accumulate an
+     [ex] argument representing a forbidden interval. The idea is that we are
+     accumulating all the [Empty] forbidden intervals until the next [NonEmpty]
+     allowed interval (or the end of the union), at which point we deal with
+     both the [NonEmpty] allowed interval and its (virtual) [Empty] allowed
+     prefix. This allows to minimize the number of cases to take into
+     consideration (union starting/ending with [Empty] or [NonEmpty], union that
+     contains exactly one [Empty] and one [NonEmpty], elided [Empty] between two
+     consecutive [NonEmpty], etc.).
+
+     In practice, I (the original author of this module) tried many different
+     styles (such as encoding invariants in GADTs or polymorphic variants,
+     strengthening the invariants, iterating over consecutive pairs of elements)
+     and found that this style, while a bit awkward initially, was the one that
+     was the most robust to accidental soundness bugs. *)
 
   module Union(OT : OrderedType) = struct
     module Interval = Interval(OT)
@@ -156,10 +186,10 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
     let pp ppf (glb, u, gub) =
       let rec loop ex = function
+        | Empty ex' :: u' -> loop (Ex.union ex ex') u'
         | [] ->
           if Ex.is_empty ex then ()
           else Fmt.pf ppf "!%a (<= %a)" Ex.pp ex OT.pp gub
-        | Empty ex' :: u' -> loop (Ex.union ex ex') u'
         | NonEmpty i :: u' ->
           if not (Ex.is_empty ex) then Fmt.pf ppf "!%a U@ " Ex.pp ex;
           Interval.pp ppf i;
@@ -236,8 +266,8 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
     let value_opt (_, u, _) =
       let rec loop ex v = function
-        | [] -> Option.map (fun v -> (v, ex)) v
         | Empty ex' :: u -> loop (Ex.union ex ex') v u
+        | [] -> Option.map (fun v -> (v, ex)) v
         | NonEmpty i :: u ->
           match v with
           | None when i.lb = i.ub -> loop ex (OT.value_opt i.lb) u
@@ -272,7 +302,9 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
     let rec subset_seq ~strict i1 s1 i2 s2 =
       if i2.ub < i1.lb then
-        (* i1 is entirely after i2; skip i2 *)
+        (* i1 is entirely after i2; skip i2
+           NB: we never need (i1 U s1) to be a strict subset of s2 because i2 is
+           in (i2 U s2) but not in (i1 U s1), making the inclusion strict. *)
         match Stdcompat.Seq.uncons s2 with
         | None -> false
         | Some (i2', s2') -> subset_seq ~strict:false i1 s1 i2' s2'
@@ -303,8 +335,8 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
     let checked ((glb, u', gub) as u) =
       let rec loop ex = function
-        | [] -> Empty ex
         | Empty ex' :: u' -> loop (Ex.union ex ex') u'
+        | [] -> Empty ex
         | NonEmpty _ :: _ -> NonEmpty u
       in
       if gub < glb then Empty Ex.empty else loop Ex.empty u'
@@ -317,19 +349,21 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
       | None -> Empty Ex.empty
       | Some u -> checked u
 
-    let add_explanation ~ex ((_, u, _) as u') =
-      if Ex.is_empty ex then u' else
-        let[@tail_mod_cons] rec loop ex' = function
-          | [] -> [ Empty ex' ]
-          | [ NonEmpty i ] as u when i.ub = OT.pinfty -> Empty ex' :: u
-          | NonEmpty i :: u -> Empty ex' :: NonEmpty i :: loop ex u
-          | Empty ex'' :: u -> loop (Ex.union ex' ex'') u
+    let add_explanation ~ex:global_ex ((_, u, _) as u') =
+      if Ex.is_empty global_ex then u'
+      else
+        let[@tail_mod_cons] rec loop ex = function
+          | Empty ex' :: u -> loop (Ex.union ex ex') u
+          | [] -> [ Empty ex ]
+          | [ NonEmpty i ] as u when i.ub = OT.pinfty -> Empty ex :: u
+          | NonEmpty i :: u -> Empty ex :: NonEmpty i :: loop global_ex u
         in
         let u =
           match u with
           | NonEmpty i :: u when i.lb = OT.minfty ->
-            if i.ub = OT.pinfty then [ NonEmpty i ] else NonEmpty i :: loop ex u
-          | _ -> loop ex u
+            if i.ub = OT.pinfty then [ NonEmpty i ]
+            else NonEmpty i :: loop global_ex u
+          | _ -> loop global_ex u
         in
         (OT.minfty, u, OT.pinfty)
 
@@ -455,11 +489,67 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
 
     (** {2 Image by arbitrary functions} *)
 
-    type 'a basic =
+    type basic =
       | Allow of OT.t interval
       | Forbid of OT.t interval * Ex.t
+      (* An allowed interval, represented by the [Allow] constructor, is an
+         interval that is possible in all contexts (i.e. we do not have any
+         proof that the values in this interval are impossible).
 
-    (* The ['a set] type represents a loose union of [basic] intervals. There
+         A forbidden interval, represented by the [Forbid] constructor, is an
+         interval that is possible in contexts where the associated explanation
+         is *false*; moreover, the associated explanation must be *true* in the
+         *current context.
+
+         A forbidden interval says *nothing* about the corresponding values in
+         contexts where the associated explanation is true, such as the current
+         context. This means that:
+
+         - In an union, any value that is allowed is possible in all contexts,
+           and any value that is not allowed is possible in contexts where
+           *either* of the explanations that forbid it is false. This means that
+           we must take the union of all explanations that apply to a given
+           forbidden value: say that [v] is forbidden by [e1] or (union) by
+           [e2].  If we were only keeping the information that it is forbidden
+           by [e1], discarding [e2], then we would think it is not possible in
+           contexts where [e1] is [true] but [e2] is [false].
+
+           Mathematically:
+
+           {math
+             (M(e_1) \Rightarrow M(x) \neq v)
+             \vee
+             (M(e_2) \Rightarrow M(x) \neq v)
+             \Longleftrightarrow
+             (M(e_1) \wedge M(e_2) \Rightarrow M(x) \neq v)
+           }
+
+           We cannot weaken here, because neither {m M(e_1)} nor {m M(e_2)}
+           implies {m M(e_1) \wedge M(e_2)}.
+
+         - In an intersection, a value that is allowed in *all* members of the
+           intersection is possible in all contexts. On the other hand, it is
+           enough to keep any of the forbidding explanations: say that [v] is
+           forbidden by [e1] and (intersection) [e2]. It is enough to keep the
+           information that it is forbidden by [e1], discarding [e2]: there are
+           no contexts where [e1] is [true] but [v] is possible.
+
+           Mathematically:
+
+           {math
+             (M(e_1) \Rightarrow M(x) \neq v)
+               \wedge
+             (M(e_2) \Rightarrow M(x) \neq v)
+
+             \Longleftrightarrow
+
+             (M(e_1) \vee M(e_2) \Rightarrow M(x) \neq v)
+           }
+
+           We can weaken to either [e1] or [e2] here, because both {m M(e_1)}
+           and {m M(e_2)} imply {m M(e_1) \vee M(e_2)}. *)
+
+    (* The [set] type represents a loose union of [basic] intervals. There
        are no restrictions on the underlying [basic] intervals (although they
        should be valid, as per the {!Intervals} signature).
 
@@ -469,7 +559,7 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
        [set] with an empty list as argument, and we will loosely identify the
        [set] and its representation as a list. *)
 
-    type set = OT.t basic list -> OT.t basic list
+    type set = basic list -> basic list
 
     let empty_set = fun acc -> acc
 
@@ -525,22 +615,64 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
          greater than or equal to [ub], but there may be allowed intervals that
          end inside [lb; ub] (or at [pred lb]).
 
+         Recall that a value is allowed as soon as it is part of an allowed
+         interval, but to be forbidden it must be part of no allowed interval
+         and is forbidden by the union of all explanations associated with
+         forbidden intervals that contains it.
+
          The list [fs] collects a set of forbidden half-intervals that must be
          added before [lb; ub] (unless they get subsumed by merging). *)
       let rec loop gub lb ub u fs = function
         | [] ->
           prepend_forbid gub lb (NonEmpty { lb ; ub } :: u) fs
         | Forbid (i, _) :: s when lb <= i.lb ->
-          (* [i] is subsumed by [lb; ub] *)
+          (* [i] is subsumed by [lb; ub], which is allowed.
+
+                    lb ___________________ ub
+                    /                     \
+             -oo -----|AAAAAA|AAAAAAAA|AAAAA|--------> +oo
+                            \________/
+                                i
+          *)
           loop gub lb ub u fs s
         | Forbid (i, ex) :: s ->
-          (* [i] starts before [lb]; need to keep it *)
+          (* [i] starts before [lb]; need to keep it
+
+                          lb _____________ ub
+                            /              \
+             -oo -----|??????|AAAAAAAAAAAAAA|--------> +oo
+                     \___...
+                       i
+
+             NB: [i.ub] might also be before [lb], in which case we weaken. *)
           loop gub lb ub u ((i.lb, ex) :: fs) s
         | Allow i :: s when lb <= i.ub || OT.succ i.ub = lb ->
-          (* No gap: merge intervals ([i.ub] is smaller by sorting)*)
+          (* No gap: merge intervals ([i.ub] is smaller by sorting)
+
+                          lb _____________ ub
+                            /              \
+             -oo -----|AAAAAA|AAAAAAAAAAAAAA|--------> +oo
+                     \____________/
+                            i
+
+                   lb _____________________ ub
+                     /                     \
+             -oo -----|AAAAAAAAAAAAAAAAAAAAA|--------> +oo
+                         \________/
+                             i
+          *)
           loop gub (min i.lb lb) ub u fs s
         | Allow i :: s ->
-          (* Gap with another allowed interval *)
+          (* Gap with another allowed interval
+
+                                lb _______ ub
+                                  /        \
+             -oo -----|AAAAAA|FFFF|AAAAAAAAA|--------> +oo
+                     \______/
+                        i
+
+             NB: Look into the forbidden half-intervals in [fs] to determine the
+             explanation for the gap. *)
           assert (OT.succ i.ub < lb);
           (* Need to filter the [flb] again because the forbidden intervals
              might have been added before the merging that subsumed it. *)
@@ -602,6 +734,13 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
     let forbid_set ~ex s acc =
       if Ex.is_empty ex then acc
       else
+        (* NB: We can ignore the existing explanation from forbidden intervals
+           because the interval is forbidden by both explanations.
+
+           This might seem confusing, but recall that an interval is possible if
+           the associated explanation is *false*: if both explanations are
+           false, then in particular [ex] is false, and we can weaken and make
+           the interval possible in any context where only [ex] is false. *)
         List.rev_append
           (List.rev_map
              (function Allow i | Forbid (i, _) -> Forbid (i, ex)) (s []))
@@ -611,8 +750,8 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
        larger interval that includes the allowed parts. *)
     let map_to_set f (glb, u, gub) acc =
       let rec loop acc lb ex = function
-        | [] -> forbid_set ~ex (f { lb ; ub = gub }) acc
         | Empty ex' :: u -> loop acc lb (Ex.union ex ex') u
+        | [] -> forbid_set ~ex (f { lb ; ub = gub }) acc
         | NonEmpty i :: u ->
           let acc =
             if Ex.is_empty ex then acc
@@ -624,7 +763,10 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
     let union_hull i1 i2 =
       { lb = min i1.lb i2.lb ; ub = max i1.ub i2.ub }
 
-    let hull_set = function
+    (* Compute the convex hull of a set as an interval.
+       This is a *global* convex hull: any value in the set *in any context* is
+       in the returned interval. *)
+    let convex_hull_of_set = function
       | [] -> None
       | (Allow i | Forbid (i, _)) :: s ->
         Some (
@@ -635,7 +777,7 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
         )
 
     (* Similar to [map_to_set] except that we are keeping track of the
-       global hull of each call to [f i] where [i] is allowed.
+       global convex hull of each call to [f i] where [i] is allowed.
 
        Then we know that if [x] is between two consecutive intervals
        [i] and [i'] (with [i.ub < i'.lb]), [f x] is included in the
@@ -647,11 +789,11 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
        hulls when converting back to an union. *)
     let map_mon_to_set f (glb, u, gub) acc =
       let rec loop acc prev_hull lb ex = function
-        | [] -> forbid_set ~ex (f { lb ; ub = gub }) acc
         | Empty ex' :: u -> loop acc prev_hull lb (Ex.union ex ex') u
+        | [] -> forbid_set ~ex (f { lb ; ub = gub }) acc
         | NonEmpty i :: u ->
           let f_i = f i [] in
-          match hull_set f_i with
+          match convex_hull_of_set f_i with
           | None -> loop acc prev_hull lb ex u
           | Some hull_f ->
             let acc =
@@ -666,7 +808,7 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
         | Empty ex' :: u -> init (Ex.union ex ex') u
         | NonEmpty i :: u ->
           let f_i = f i [] in
-          match hull_set f_i with
+          match convex_hull_of_set f_i with
           | None -> init ex u
           | Some hull_f ->
             let acc =
@@ -720,8 +862,8 @@ module Make(Ex : Explanations) (*: Core with type explanation = Ex.t *)= struct
         corresponding explanation if [i] is forbidden. *)
     let uncons (glb, u, gub) =
       let rec loop ex = function
-        | [] -> { lb = glb ; ub = gub }, Some ex, None
         | Empty ex' :: u' -> loop (Ex.union ex ex') u'
+        | [] -> { lb = glb ; ub = gub }, Some ex, None
         | NonEmpty i :: u' as u ->
           if Ex.is_empty ex then
             match u' with

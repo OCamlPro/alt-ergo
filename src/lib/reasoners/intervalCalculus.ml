@@ -1855,6 +1855,8 @@ let int_constraints_from_map_intervals =
     in
     MX.fold (fun x (i,_) acc -> aux (poly_of x) x i uf acc) env.monomes acc
 
+let bnd_to_simplex_bnd (bnd, ex) =
+  Sim.Core.{ bvalue = R2.of_r (Q.from_z bnd) ; explanation = ex }
 
 let fm_simplex_unbounded_integers_encoding env uf =
   let simplex = Sim.Core.empty ~is_int:true ~check_invs:true in
@@ -1863,20 +1865,8 @@ let fm_simplex_unbounded_integers_encoding env uf =
     (fun simplex (p, (lb, ub)) ->
        let l, c = P.to_list p in
        assert (Q.is_zero c);
-       let min =
-         match lb with
-         | Some (lb, ex_lb) ->
-           let lb = Q.from_z lb in
-           Some Sim.Core.{ bvalue = R2.of_r lb ; explanation = ex_lb }
-         | None -> None
-       in
-       let max =
-         match ub with
-         | Some (ub, ex_ub) ->
-           let ub = Q.from_z ub in
-           Some Sim.Core.{ bvalue = R2.of_r ub ; explanation = ex_ub }
-         | None -> None
-       in
+       let min = Option.map bnd_to_simplex_bnd lb in
+       let max = Option.map bnd_to_simplex_bnd ub in
        match l with
        | [] -> assert false
        | [c, x] ->

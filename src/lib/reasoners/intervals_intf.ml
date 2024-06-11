@@ -257,8 +257,8 @@ module type Union = sig
 
   (** Given an explanation {m e} (see {!Intervals_intf.Explanations}), we say
       that an interval {m I} is forbidden for a variable {m x} by {m e} if
-      {m M(x)} is never in {m I} when {m e} is [true], i.e. if the following
-      implication holds:
+      {m M(x)} is never in {m I} when {m M} is a model such that {m M(e)} is
+      [true], i.e. if the following implication holds:
 
       {math \forall M, M(e) \Rightarrow M(x) \not\in I}
 
@@ -266,6 +266,14 @@ module type Union = sig
       variable {m x}, we say that an interval {m I} is {e forbidden} if it is
       forbidden by an union of explanations in {m C}, and that it is {e allowed}
       otherwise.
+
+      It is always sound to weaken a forbidden interval interval: if {m M(e_1)
+      \Rightarrow M(e_2)} and {m I} is forbidden by [e_2], it is also forbidden
+      by [e_1].
+
+      (Note that in terms of explanations, this means adding more terms in the
+      explanation, since [Explanation.empty] is true in all contexts and since
+      [Explanation.union e1 e2] evaluates to {m M(e_1) \wedge M(e_2)}.)
 
       The [union] type below internally keeps track of both allowed and
       forbidden intervals, where each forbidden interval is annotated by a
@@ -503,11 +511,17 @@ module type Union = sig
   val map_to_set : ('a interval -> set) -> 'a union -> set
   (** [map_to_set f u] computes the image of [u] by [f].
 
-      There are no restrictions on [f] (except that it be isotone, i.e. it must
-      be compatible with inclusion), which means that [map_to_set] needs
-      to call [f] on currently allowed intervals, but also on some intervals
-      that are currently impossible but would be possible in other contexts
-      (depending on explanations).
+      Conceptually, this computes the union of [f x] for each [x] in [u],
+      although this is not possible to compute when [u] might not be finite.
+      Instead, we represent [f] by a function from intervals to sets that must
+      be isotone (i.e. monotone with respect to inclusion):
+
+      {math I_1 \subseteq I_2 \Rightarrow f(I_1) \subseteq f(I_2)}
+
+      There are no restrictions on [f] (except that it be isotone), which means
+      that [map_to_set] needs to call [f] on currently allowed intervals, but
+      also on some intervals that are currently impossible but would be possible
+      in other contexts (depending on explanations).
 
       When possible, prefer using a more specialized variant of
       [map_to_set] that use properties of the function [f] to avoid
