@@ -99,7 +99,9 @@ module Legacy : sig
       Supposing input bounds (b1, b2), this will return
       (const + coef * b1, const + coef * b2).
       This function is useful to avoid the incorrect roundings that
-      can take place when scaling down an integer range. *)
+      can take place when scaling down an integer range.
+
+      @raise Invalid_argument if [coef] is zero. *)
 
   val pretty_print : t Fmt.t
 
