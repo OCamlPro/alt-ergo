@@ -72,13 +72,7 @@ type adt_constr =
   { constr : Uid.t ;
     destrs : (Uid.t * t) list }
 
-type adt_kind = Enum | Adt
-
-type type_body = {
-  cases : adt_constr list;
-  kind : adt_kind
-}
-
+type type_body = adt_constr list
 
 let assoc_destrs hs cases =
   let res = ref None in
@@ -145,7 +139,7 @@ let print_generic body_of =
         begin match body_of with
           | None -> ()
           | Some type_body ->
-            let { cases; _ } = type_body n lv in
+            let cases = type_body n lv in
             fprintf fmt " = {";
             let first = ref true in
             List.iter
@@ -434,9 +428,8 @@ module Decls = struct
   let (decls : decls ref) = ref MH.empty
 
 
-  let fresh_type params body =
+  let fresh_type params cases =
     let params, subst = fresh_list params esubst in
-    let { cases; kind } = body in
     let _subst, cases =
       List.fold_left
         (fun (subst, cases) {constr; destrs} ->
@@ -450,7 +443,7 @@ module Decls = struct
            subst, {constr; destrs} :: cases
         )(subst, []) (List.rev cases)
     in
-    params, { cases; kind }
+    params, cases
 
 
   let add name params body =
@@ -471,7 +464,7 @@ module Decls = struct
         else MTY.find args instances
       (* should I instantiate if not found ?? *)
       with Not_found ->
-        let params, body = fresh_type params body in
+        let params, cases = fresh_type params body in
         (*if true || get_debug_adt () then*)
         let sbt =
           try
@@ -489,21 +482,17 @@ module Decls = struct
               )M.empty params args
           with Invalid_argument _ -> assert false
         in
-        let body =
-          let { cases; kind } = body in
-          let cases =
-            List.map
-              (fun {constr; destrs} ->
-                 {constr;
-                  destrs =
-                    List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
-              ) cases
-          in
-          { cases; kind }
+        let cases =
+          List.map
+            (fun {constr; destrs} ->
+               {constr;
+                destrs =
+                  List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
+            ) cases
         in
         let params = List.map (fun ty -> apply_subst sbt ty) params in
-        add name params body;
-        body
+        add name params cases;
+        cases
     with Not_found ->
       Printer.print_err "%a not found" Uid.pp name;
       assert false
@@ -543,20 +532,12 @@ let t_adt ?(body=None) s ty_vars =
       let cases =
         List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      let is_enum =
-        List.for_all (fun { destrs; _ } -> Lists.is_empty destrs) cases
-      in
-      let kind = if is_enum then Enum else Adt in
-      Decls.add s ty_vars { cases; kind }
+      Decls.add s ty_vars cases
     | Some cases ->
       let cases =
         List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      let is_enum =
-        List.for_all (fun { destrs; _ } -> Lists.is_empty destrs) cases
-      in
-      let kind = if is_enum then Enum else Adt in
-      Decls.add s ty_vars { cases; kind }
+      Decls.add s ty_vars cases
   end;
   ty
 

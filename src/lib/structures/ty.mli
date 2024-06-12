@@ -99,21 +99,10 @@ type adt_constr =
         their respective types *)
   }
 
-type adt_kind =
-  | Enum (* ADT whose all the constructors have no payload. *)
-  | Adt
-
 (** Bodies of types definitions. Currently, bodies are inlined in the
     type [t] for records and enumerations. But, this is not possible
     for recursive ADTs *)
-type type_body = {
-  cases : adt_constr list;
-  (** body of an algebraic datatype *)
-
-  kind : adt_kind
-  (** This flag is used by the case splitting mechanism of the ADT theory.
-      We perform eager splitting on ADT of kind [enum]. *)
-}
+type type_body = adt_constr list
 
 module Svty : Set.S with type elt = int
 (** Sets of type variables, indexed by their identifier. *)

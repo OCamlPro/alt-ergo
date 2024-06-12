@@ -85,7 +85,7 @@ module Domain = struct
     match ty with
     | Ty.Tadt (name, params) ->
       (* Return the list of all the constructors of the type of [r]. *)
-      let Ty.{ cases; _ } = Ty.type_body name params in
+      let cases = Ty.type_body name params in
       let constrs =
         List.fold_left
           (fun acc Ty.{ constr; _ } ->
@@ -116,6 +116,8 @@ module Domain = struct
     let constrs = TSet.remove c d.constrs in
     let ex = Ex.union ex d.ex in
     domain ~constrs ex
+
+  let for_all f { constrs; _ } = TSet.for_all f constrs
 end
 
 let is_adt_ty = function
@@ -134,7 +136,10 @@ module Domains = struct
         We don't store domains for constructors and selectors. *)
 
     enums: SX.t;
-    (** Set of tracked representatives of enum type. *)
+    (** Set of tracked representatives whose the domain only contains
+        enum constructors, that is constructors without payload.
+
+        This field is used by the case split mechanism, see [pick_enum]. *)
 
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
@@ -154,19 +159,24 @@ module Domains = struct
 
   let filter_ty = is_adt_ty
 
-  let is_enum r =
+  (* TODO: This test is slow because we have to retrieve the list of
+     destructors of the constructor [c] by searching in the list [cases].
+
+     A better predicate will be easy to implement after getting rid of
+     the legacy frontend and switching from [Uid.t] to
+     [Dolmen.Std.Expr.term_cst] to store the constructors. Indeed, [term_cst]
+     contains the type of constructor and in particular its arity. *)
+  let is_enum_cstr r c =
     match X.type_info r with
-    | Ty.Tadt (name, params) ->
-      let Ty.{ kind; _ } = Ty.type_body name params in
-      begin match kind with
-        | Enum -> true
-        | Adt -> false
-      end
-    | _ -> false
+    | Tadt (name, args) ->
+      let cases = Ty.type_body name args in
+      Lists.is_empty @@ Ty.assoc_destrs c cases
+    | _ -> assert false
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
-    let enums = if is_enum r then SX.add r t.enums else t.enums in
+    let is_enum_domain = Domain.for_all (is_enum_cstr r) nd in
+    let enums = if is_enum_domain then SX.add r t.enums else t.enums in
     let changed = SX.add r t.changed in
     { domains; enums; changed }
 
@@ -483,7 +493,7 @@ let build_constr_eq r c =
   | Alien r ->
     begin match X.type_info r with
       | Ty.Tadt (name, params) as ty ->
-        let Ty.{ cases; _ } = Ty.type_body name params in
+        let cases = Ty.type_body name params in
         let ds =
           try Ty.assoc_destrs c cases with Not_found -> assert false
         in
@@ -585,7 +595,7 @@ let constr_of_destr ty d =
   match ty with
   | Ty.Tadt (name, params) ->
     begin
-      let Ty.{ cases; _ } = Ty.type_body name params in
+      let cases = Ty.type_body name params in
       try
         let r =
           List.find
