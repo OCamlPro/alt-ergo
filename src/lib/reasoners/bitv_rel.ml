@@ -733,7 +733,7 @@ let constrain_bitlist_from_interval bv int =
    https://cea.hal.science/cea-01795779/document
 
    This function is a wrapper calling [Bitlist.increase_lower_bound] and
-   [Bitlist.decrease_upper_bound] on all the constituent interavals of an union;
+   [Bitlist.decrease_upper_bound] on all the constituent intervals of an union;
    see the documentation of these functions for details. *)
 let constrain_interval_from_bitlist int bv =
   let open Interval_domains.Ephemeral in
