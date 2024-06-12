@@ -22,9 +22,6 @@ under the terms of [Apache Software License version 2.0](licenses/Apache-License
 Note that plugins or preludes may have different licenses. Please referer to
 their directory.
 
-Until 2013, some parts of this code were released under the terms of the
-[Apache Software License version 2.0](licenses/Apache-License-2.0.txt).
-
 In case of doubt, please refer to the header of each file to know under which
 license it is distributed.
 
