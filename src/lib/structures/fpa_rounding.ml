@@ -75,7 +75,7 @@ let string_of_rounding_mode = to_smt_string
 
 let hstring_smt_reprs =
   List.map
-    (fun c -> Hs.make (to_smt_string c))
+    (fun c -> to_smt_string c, [])
     cstrs
 
 let hstring_ae_reprs =
@@ -92,18 +92,21 @@ let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
   let cstrs =
     List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) cstrs
   in
-  let _, cstrs = DE.Term.define_adt ty_cst [] cstrs in
-  DE.Ty.apply ty_cst [], cstrs,
-  Ty.Tsum (Uid.of_dolmen ty_cst, List.map (fun (c, _) -> Uid.of_dolmen c) cstrs)
+  let _, d_cstrs = DE.Term.define_adt ty_cst [] cstrs in
+  let body =
+    List.map (fun (c, _) -> Uid.of_dolmen c, []) d_cstrs
+  in
+  let ty = Ty.t_adt ~body:(Some body) (Uid.of_dolmen ty_cst) [] in
+  DE.Ty.apply ty_cst [], d_cstrs, ty
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in
   List.iter2 (
-    fun key bnd ->
+    fun (key, _) bnd ->
       Hashtbl.add table key bnd
   ) hstring_smt_reprs cstrs;
   fun key ->
-    try Hashtbl.find table key with
+    try Hashtbl.find table (Hstring.view key) with
     | Not_found ->
       Fmt.failwith
         "Error while searching for SMT2 FPA value %a."

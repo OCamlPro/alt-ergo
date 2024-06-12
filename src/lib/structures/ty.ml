@@ -34,7 +34,6 @@ type t =
   | Tbitv of int
   | Text of t list * Uid.t
   | Tfarray of t * t
-  | Tsum of Uid.t * Uid.t list
   | Tadt of Uid.t * t list
   | Trecord of trecord
 
@@ -55,7 +54,7 @@ module Smtlib = struct
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
-    | Text ([], name) | Tsum (name, _)
+    | Text ([], name)
     | Trecord { args = []; name; _ } | Tadt (name, []) -> Uid.pp ppf name
     | Text (args, name)
     | Trecord { args; name; _ } | Tadt (name, args) ->
@@ -73,8 +72,12 @@ type adt_constr =
   { constr : Uid.t ;
     destrs : (Uid.t * t) list }
 
-type type_body =
-  | Adt of adt_constr list
+type adt_kind = Enum | Adt
+
+type type_body = {
+  cases : adt_constr list;
+  kind : adt_kind
+}
 
 
 let assoc_destrs hs cases =
@@ -122,8 +125,6 @@ let print_generic body_of =
         fprintf fmt "%a <ext>%a" print_list l Uid.pp s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
-      | Tsum(s, _) ->
-        fprintf fmt "<sum>%a" Uid.pp s
       | Trecord { args = lv; name = n; lbs = lbls; _ } ->
         begin
           fprintf fmt "%a <record>%a" print_list lv Uid.pp n;
@@ -144,9 +145,7 @@ let print_generic body_of =
         begin match body_of with
           | None -> ()
           | Some type_body ->
-            let cases = match type_body n lv with
-              | Adt cases -> cases
-            in
+            let { cases; _ } = type_body n lv in
             fprintf fmt " = {";
             let first = ref true in
             List.iter
@@ -228,7 +227,7 @@ let rec shorten ty =
     (* should not rebuild the type if no changes are made *)
     Tadt (n, args')
 
-  | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
+  | Tint | Treal | Tbool | Tunit | Tbitv _ -> ty
 
 and shorten_body _ _ =
   ()
@@ -248,9 +247,6 @@ let rec compare t1 t2 =
     if c<>0 then c
     else compare ta2 tb2
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
-  | Tsum(s1, _), Tsum(s2, _) ->
-    Uid.compare s1 s2
-  | Tsum _, _ -> -1 | _ , Tsum _ -> 1
   | Trecord { args = a1; name = s1; lbs = l1; _ },
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
     let c = Uid.compare s1 s2 in
@@ -300,7 +296,6 @@ let rec equal t1 t2 =
      with Invalid_argument _ -> false)
   | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     equal ta1 tb1 && equal ta2 tb2
-  | Tsum (s1, _), Tsum (s2, _) -> Uid.equal s1 s2
   | Trecord { args = a1; name = s1; lbs = l1; _ },
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
     begin
@@ -343,7 +338,6 @@ let rec matching s pat t =
     let s = List.fold_left2 matching s r1.args r2.args in
     List.fold_left2
       (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
-  | Tsum (s1, _), Tsum (s2, _) when Uid.equal s1 s2 -> s
   | Tint , Tint | Tbool , Tbool | Treal , Treal | Tunit, Tunit -> s
   | Tbitv n , Tbitv m when n=m -> s
   | Tadt(n1, args1), Tadt(n2, args2) when Uid.equal n1 n2 ->
@@ -381,7 +375,7 @@ let apply_subst =
       ->
       Tadt (name, List.map (apply_subst s) params)
 
-    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) -> ty
+    | Tint | Treal | Tbool | Tunit | Tbitv _ -> ty
   in
   fun s ty -> if M.is_empty s then ty else apply_subst s ty
 
@@ -410,9 +404,9 @@ let rec fresh ty subst =
            (x, ty)::lbs, subst) lbs ([], subst)
     in
     Trecord {r with  args = args; name = n; lbs = lbs}, subst
-  | Tadt(s,args) ->
+  | Tadt(s, args) ->
     let args, subst = fresh_list args subst in
-    Tadt (s,args), subst
+    Tadt (s, args), subst
   | t -> t, subst
 
 and fresh_list lty subst =
@@ -442,22 +436,21 @@ module Decls = struct
 
   let fresh_type params body =
     let params, subst = fresh_list params esubst in
-    match body with
-    | Adt cases ->
-      let _subst, cases =
-        List.fold_left
-          (fun (subst, cases) {constr; destrs} ->
-             let subst, destrs =
-               List.fold_left
-                 (fun (subst, destrs) (d, ty) ->
-                    let ty, subst = fresh ty subst in
-                    subst, (d, ty) :: destrs
-                 )(subst, []) (List.rev destrs)
-             in
-             subst, {constr; destrs} :: cases
-          )(subst, []) (List.rev cases)
-      in
-      params, Adt cases
+    let { cases; kind } = body in
+    let _subst, cases =
+      List.fold_left
+        (fun (subst, cases) {constr; destrs} ->
+           let subst, destrs =
+             List.fold_left
+               (fun (subst, destrs) (d, ty) ->
+                  let ty, subst = fresh ty subst in
+                  subst, (d, ty) :: destrs
+               )(subst, []) (List.rev destrs)
+           in
+           subst, {constr; destrs} :: cases
+        )(subst, []) (List.rev cases)
+    in
+    params, { cases; kind }
 
 
   let add name params body =
@@ -496,16 +489,17 @@ module Decls = struct
               )M.empty params args
           with Invalid_argument _ -> assert false
         in
-        let body = match body with
-          | Adt cases ->
-            Adt(
-              List.map
-                (fun {constr; destrs} ->
-                   {constr;
-                    destrs =
-                      List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
-                ) cases
-            )
+        let body =
+          let { cases; kind } = body in
+          let cases =
+            List.map
+              (fun {constr; destrs} ->
+                 {constr;
+                  destrs =
+                    List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
+              ) cases
+          in
+          { cases; kind }
         in
         let params = List.map (fun ty -> apply_subst sbt ty) params in
         add name params body;
@@ -537,8 +531,6 @@ let fresh_empty_text =
     in
     text [] (Uid.of_dolmen id)
 
-let tsum s lc = Tsum (s, lc)
-
 let t_adt ?(body=None) s ty_vars =
   let ty = Tadt (s, ty_vars) in
   begin match body with
@@ -551,12 +543,20 @@ let t_adt ?(body=None) s ty_vars =
       let cases =
         List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      Decls.add s ty_vars (Adt cases)
+      let is_enum =
+        List.for_all (fun { destrs; _ } -> Lists.is_empty destrs) cases
+      in
+      let kind = if is_enum then Enum else Adt in
+      Decls.add s ty_vars { cases; kind }
     | Some cases ->
       let cases =
         List.map (fun (constr, destrs) -> {constr; destrs}) cases
       in
-      Decls.add s ty_vars (Adt cases)
+      let is_enum =
+        List.for_all (fun { destrs; _ } -> Lists.is_empty destrs) cases
+      in
+      let kind = if is_enum then Enum else Adt in
+      Decls.add s ty_vars { cases; kind }
   end;
   ty
 
@@ -585,9 +585,9 @@ let rec hash t =
         (abs h) lbs
     in
     abs h
-  | Tsum (s, _) -> abs (Uid.hash s) (*we do not hash constructors*)
 
   | Tadt (s, args) ->
+    (* We do not hash constructors. *)
     let h =
       List.fold_left (fun h ty -> 31 * h + hash ty) (Uid.hash s) args
     in
@@ -601,7 +601,7 @@ let occurs { v = n; _ } t =
     | Text(l,_) -> List.exists occursrec l
     | Tfarray (t1,t2) -> occursrec t1 || occursrec t2
     | Trecord { args ; _ } | Tadt (_, args) -> List.exists occursrec args
-    | Tsum _ | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
+    | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
   in occursrec t
 
 (*** destructive unification ***)
@@ -622,7 +622,6 @@ let rec unify t1 t2 =
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) -> unify ta1 tb1;unify ta2 tb2
   | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
     List.iter2 unify r1.args r2.args
-  | Tsum(s1, _) , Tsum(s2, _) when Uid.equal s1 s2 -> ()
   | Tint, Tint | Tbool, Tbool | Treal, Treal | Tunit, Tunit -> ()
   | Tbitv n , Tbitv m when m=n -> ()
 
@@ -673,7 +672,7 @@ let vty_of t =
       List.fold_left vty_of_rec acc args
 
     | Tvar { value = Some _ ; _ }
-    | Tint | Treal | Tbool | Tunit | Tbitv _ | Tsum (_, _) ->
+    | Tint | Treal | Tbool | Tunit | Tbitv _ ->
       acc
   in
   vty_of_rec Svty.empty t
@@ -682,7 +681,7 @@ let vty_of t =
   [@ocaml.ppwarning "TODO: detect when there are no changes "]
 let rec monomorphize ty =
   match ty with
-  | Tint | Treal | Tbool | Tunit   | Tbitv _  | Tsum _ -> ty
+  | Tint | Treal | Tbool | Tunit   | Tbitv _  -> ty
   | Text (tyl,hs) -> Text (List.map monomorphize tyl, hs)
   | Trecord ({ args = tylv; name = n; lbs = tylb; _ } as r) ->
     let m_tylv = List.map monomorphize tylv in

@@ -73,10 +73,6 @@ module Types = struct
       if List.length lty <> List.length lty' then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
-    | Ty.Tsum (s, _) ->
-      if List.length lty <> 0 then
-        Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
-      []
     | _ -> assert false
 
   let equal_pp_vars lpp lvars =
@@ -145,12 +141,11 @@ module Types = struct
     | Abstract ->
       let ty = Ty.text ty_vars (Uid.of_string id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
-    | Enum lc ->
+    | Enum l ->
       if not (Lists.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
-      let ty =
-        Ty.tsum (Uid.of_string id) (List.map Uid.of_string lc)
-      in
+      let body = List.map (fun constr -> Uid.of_string constr, []) l in
+      let ty = Ty.t_adt ~body:(Some body) (Uid.of_string id) [] in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
       let lbs =
@@ -276,7 +271,10 @@ module Env = struct
   let add_fpa_enum map =
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
-    | Ty.Tsum (_, cstrs) ->
+    | Ty.Tadt (name, []) ->
+      let Ty.{ cases; kind } = Ty.type_body name [] in
+      assert (Stdlib.(kind = Ty.Enum));
+      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
         (fun m c ->
            match Fpa_rounding.translate_smt_rounding_mode
@@ -300,9 +298,13 @@ module Env = struct
 
   let find_builtin_cstr ty n =
     match ty with
-    | Ty.Tsum (_, cstrs) ->
+    | Ty.Tadt (name, []) ->
+      let Ty.{ cases; kind } = Ty.type_body name [] in
+      assert (Stdlib.(kind = Ty.Enum));
+      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.find (Uid.equal n) cstrs
-    | _ -> assert false
+    | _ ->
+      assert false
 
   let add_fpa_builtins env =
     let (->.) args result = { args; result } in
@@ -1002,13 +1004,10 @@ let rec type_term ?(call_from_type_form=false) env f =
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
         | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
-            | Ty.Adt cases -> cases
-          end
+          let Ty.{ cases; _ } = Ty.type_body name params in
+          cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr; destrs = lbs}]
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e; destrs = []}) l
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -1413,14 +1412,11 @@ and type_form ?(in_theory=false) env f =
       let ty = e.c.tt_ty in
       let ty_body = match ty with
         | Ty.Tadt (name, params) ->
-          begin match Ty.type_body name params with
-            | Ty.Adt cases -> cases
-          end
+          let Ty.{ cases; _ } = Ty.type_body name params in
+          cases
         | Ty.Trecord { Ty.record_constr; lbs; _ } ->
           [{Ty.constr = record_constr ; destrs = lbs}]
 
-        | Ty.Tsum (_,l) ->
-          List.map (fun e -> {Ty.constr = e ; destrs = []}) l
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in

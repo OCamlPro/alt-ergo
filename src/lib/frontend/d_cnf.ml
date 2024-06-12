@@ -578,7 +578,6 @@ and handle_ty_app ?(update = false) ty_c l =
     in
     apply_ty_substs tysubsts ty
 
-  | Tsum _ as ty -> ty
   | Text (_, s) -> Text (tyl, s)
   | _ -> assert false
 
@@ -611,48 +610,29 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let ty = Ty.trecord ~record_constr tyvl (Uid.of_dolmen ty_c) lbs in
     Cache.store_ty ty_c ty
 
-  | Some ((Adt { cases; _ } as adt)) ->
+  | Some (Adt { cases; _ } as adt) ->
     Nest.add_nest [adt];
     let uid = Uid.of_dolmen ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-    let rev_cs, is_enum =
+    Cache.store_ty ty_c (Ty.t_adt uid tyvl);
+    let rev_cs =
       Array.fold_left (
-        fun (accl, is_enum) DE.{ cstr; dstrs; _ } ->
-          let is_enum =
-            if is_enum
-            then
-              if Array.length dstrs = 0
-              then true
-              else (
-                let ty = Ty.t_adt uid tyvl in
-                Cache.store_ty ty_c ty;
-                false
-              )
-            else false
-          in
+        fun accl DE.{ cstr; dstrs; _ } ->
           let rev_fields =
             Array.fold_left (
               fun acc tc_o ->
                 match tc_o with
-                | Some (DE.{ id_ty; _ } as id) ->
-                  (Uid.of_dolmen id, dty_to_ty id_ty) :: acc
+                | Some (DE.{ id_ty; _ } as field) ->
+                  (Uid.of_dolmen field, dty_to_ty id_ty) :: acc
                 | None -> assert false
             ) [] dstrs
           in
-          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl, is_enum
-      ) ([], true) cases
+          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl
+      ) [] cases
     in
-    if is_enum
-    then
-      let cstrs =
-        List.map (fun s -> fst s) (List.rev rev_cs)
-      in
-      let ty = Ty.tsum uid cstrs in
-      Cache.store_ty ty_c ty
-    else
-      let body = Some (List.rev rev_cs) in
-      let ty = Ty.t_adt ~body uid tyvl in
-      Cache.store_ty ty_c ty
+    let body = Some (List.rev rev_cs) in
+    let ty = Ty.t_adt ~body uid tyvl in
+    Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
     let ty_params = []
@@ -728,8 +708,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         ) [] cases
       in
       let body = Some (List.rev rev_cs) in
-      let args = tyl in
-      let ty = Ty.t_adt ~body hs args in
+      let ty = Ty.t_adt ~body hs tyl in
       Cache.store_ty ty_c ty
 
     | _ -> assert false
@@ -757,32 +736,17 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         match tdef with
         | DE.Adt { cases; record; ty = ty_c; } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-
-          let cns, is_enum =
-            Array.fold_right (
-              fun DE.{ dstrs; cstr; _ } (nacc, is_enum) ->
-                Uid.of_dolmen cstr :: nacc,
-                Array.length dstrs = 0 && is_enum
-            ) cases ([], true)
-          in
           let uid = Uid.of_dolmen ty_c in
-          if is_enum
-          then (
-            let ty = Ty.tsum uid cns in
-            Cache.store_ty ty_c ty;
-            (* If it's an enum we don't need the second iteration. *)
-            acc
-          )
-          else (
-            let ty =
-              if (record || Array.length cases = 1) && not contains_adts
-              then
-                Ty.trecord ~record_constr:uid tyvl uid []
-              else Ty.t_adt uid tyvl
-            in
-            Cache.store_ty ty_c ty;
-            (ty, Some adt) :: acc
-          )
+          let ty =
+            if (record || Array.length cases = 1) && not contains_adts
+            then
+              Ty.trecord ~record_constr:uid tyvl uid []
+            else
+              Ty.t_adt uid tyvl
+          in
+          Cache.store_ty ty_c ty;
+          (ty, Some adt) :: acc
+
         | Abstract ->
           assert false (* unreachable in the second iteration *)
     ) [] (List.rev rev_tdefs)
@@ -1082,9 +1046,7 @@ let rec mk_expr
               match Cache.find_ty ty_c with
               | Ty.Tadt _ ->
                 E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
-              | Ty.Tsum _ as ty ->
-                let cstr = E.mk_constr (Uid.of_dolmen cstr) [] ty in
-                E.mk_eq ~iff:false (aux_mk_expr x) cstr
+
               | Ty.Trecord _ ->
                 (* The typechecker allows only testers whose the
                    two arguments have the same type. Thus, we can always
@@ -1375,7 +1337,7 @@ let rec mk_expr
           | B.Constructor _, _ ->
             let ty = dty_to_ty term_ty in
             begin match ty with
-              | Ty.Tadt (_, _) ->
+              | Ty.Tadt _ ->
                 let sy = Sy.constr @@ Uid.of_dolmen tcst in
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_term sy l ty

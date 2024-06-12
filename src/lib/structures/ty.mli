@@ -48,11 +48,10 @@ type t =
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
+
   | Tfarray of t * t
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
-  | Tsum of Uid.t * Uid.t list
-  (** Enumeration, with its name, and the list of its constructors. *)
 
   | Tadt of Uid.t * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
@@ -60,8 +59,8 @@ type t =
       [params].
 
       For instance the type of integer lists can be represented by the
-      value [Tadt (Hstring.make "list", [Tint])] where the identifier "list"
-      denotes a polymorphic ADT defined by the user with [t_adt]. *)
+      value [Tadt (Hstring.make "list", [Tint]] where the identifier
+      {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
   | Trecord of trecord
   (** Record type. *)
@@ -100,12 +99,21 @@ type adt_constr =
         their respective types *)
   }
 
-(** bodies of types definitions. Currently, bodies are inlined in the
+type adt_kind =
+  | Enum (* ADT whose all the constructors have no payload. *)
+  | Adt
+
+(** Bodies of types definitions. Currently, bodies are inlined in the
     type [t] for records and enumerations. But, this is not possible
     for recursive ADTs *)
-type type_body =
-  | Adt of adt_constr list
+type type_body = {
+  cases : adt_constr list;
   (** body of an algebraic datatype *)
+
+  kind : adt_kind
+  (** This flag is used by the case splitting mechanism of the ADT theory.
+      We perform eager splitting on ADT of kind [enum]. *)
+}
 
 module Svty : Set.S with type elt = int
 (** Sets of type variables, indexed by their identifier. *)
@@ -169,12 +177,8 @@ val text : t list -> Uid.t -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
-val tsum : Uid.t -> Uid.t list -> t
-(** Create an enumeration type. [tsum name enums] creates an enumeration
-    named [name], with constructors [enums]. *)
-
 val t_adt :
-  ?body: ((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
+  ?body:((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,

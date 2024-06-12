@@ -159,15 +159,12 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
 
-           | Text (_, hs) | Tsum (hs, _) | Trecord { name = hs; _ } when
+           | Text (_, hs) | Trecord { name = hs; _ } when
                Uid.Map.mem hs mp -> mp
 
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
              Uid.Map.add hs (Text(l, hs)) mp
-
-           | Tsum (hs, _) ->
-             Uid.Map.add hs ty mp
 
            | Trecord { name; _ } ->
              (* cannot do better for records ? *)
@@ -187,19 +184,6 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
            | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
-           | Tsum (_, l) ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
-             begin match l with
-               | [] -> assert false
-               | e::l ->
-                 let print fmt e =
-                   Format.fprintf fmt " | %a" Uid.pp e
-                 in
-                 print_dbg ~flushed:false ~header:false "%a@ %a@ "
-                   Uid.pp e
-                   (pp_list_no_space print) l;
-             end
-
            | Trecord { Ty.lbs; _ } ->
              print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
              begin match lbs with
