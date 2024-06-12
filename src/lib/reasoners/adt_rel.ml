@@ -139,7 +139,7 @@ module Domains = struct
     (** Set of tracked representatives whose the domain only contains
         enum constructors, that is constructors without payload.
 
-        We can split on these values after asserting new formulas. *)
+        This field is used by the case split mechanism, see [pick_enum]. *)
 
     changed : SX.t;
     (** Representatives whose domain has changed since the last flush
