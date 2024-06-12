@@ -162,7 +162,7 @@ end
 
 module Interval_domains = Rel_utils.Domains_make(Interval_domain)
 
-module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
+module Bitlist_domain : Rel_utils.Domain with type t = Bitlist.t = struct
   (* Note: these functions are not in [Bitlist] proper in order to avoid a
      (direct) dependency from [Bitlist] to the [Shostak] module. *)
 
@@ -218,7 +218,7 @@ module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
       invalid_arg "unknown"
 end
 
-module Domains = Rel_utils.Domains_make(Domain)
+module Domains = Rel_utils.Domains_make(Bitlist_domain)
 
 module Constraint : sig
   include Rel_utils.Constraint
@@ -240,7 +240,7 @@ module Constraint : sig
 
   val bvugt : X.r -> X.r -> t
 
-  val propagate : ex:Ex.t -> t -> Domains.Ephemeral.t -> unit
+  val propagate_bitlist : ex:Ex.t -> t -> Domains.Ephemeral.t -> unit
   (** [propagate ~ex t dom] propagates the constraint [t] in domain [dom].
 
       The explanation [ex] justifies that the constraint [t] applies, and must
@@ -510,7 +510,7 @@ end = struct
   let subst rr nrr c =
     hcons @@ subst_repr rr nrr c.repr
 
-  let propagate ~ex c dom =
+  let propagate_bitlist ~ex c dom =
     propagate_repr ~ex dom c.repr
 
   let propagate_interval ~ex c dom =
@@ -798,7 +798,7 @@ let propagate_bitlist queue touched bcs dom =
       Domains.Ephemeral.iter_changed touch dom;
       Domains.Ephemeral.clear_changed dom;
       Any_constraint.propagate
-        Constraint.propagate
+        Constraint.propagate_bitlist
         Domains.Ephemeral.structural_propagation
         (QC.pop queue) dom
     done
