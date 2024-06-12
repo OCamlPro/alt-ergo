@@ -159,6 +159,7 @@ module Debug = struct
     | Fpa
     | Gc
     | Interpretation
+    | Intervals
     | Matching
     | Sat
     | Split
@@ -176,7 +177,7 @@ module Debug = struct
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
     Cc; Combine; Constr; Explanation; Fm; Fpa; Gc;
-    Interpretation; Matching; Sat; Split; Triggers;
+    Interpretation; Intervals; Matching; Sat; Split; Triggers;
     Types; Typing; Uf; Unsat_core; Use; Warnings;
     Commands; Optimize
   ]
@@ -198,6 +199,7 @@ module Debug = struct
     | Fpa -> "fpa"
     | Gc -> "gc"
     | Interpretation -> "interpretation"
+    | Intervals -> "intervals"
     | Matching -> "matching"
     | Sat -> "sat"
     | Split -> "split"
@@ -230,6 +232,7 @@ module Debug = struct
         | Fpa -> Options.set_debug_fpa verbosity
         | Gc -> Options.set_debug_gc true
         | Interpretation -> Options.set_debug_interpretation true
+        | Intervals -> Options.set_debug_intervals true
         | Matching -> Options.set_debug_matching verbosity
         | Sat -> Options.set_debug_sat true
         | Split -> Options.set_debug_split true
