@@ -652,7 +652,9 @@ module type Ring = sig
 
   val scale : value -> t -> t
   (** [scale v u] evaluates to {m \{ v \times x \mid x \in S \}} when [u]
-      evaluates to {m S}. *)
+      evaluates to {m S}.
+
+      @raise Invalid_argument if [v] is zero. *)
 
   val mul : t -> t -> t
   (** [mul u1 u2] evaluates to {m \{ x \times y \mid x \in S_1, y \in S_2 \}}
