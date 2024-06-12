@@ -43,8 +43,8 @@ module type SHOSTAK = sig
 
   val timer : Timers.ty_module
 
-  (** return true if the symbol and the type are owned by the theory*)
-  val is_mine_symb : Symbols.t -> Ty.t -> bool
+  val is_mine_symb : Symbols.t -> bool
+  (** Return [true] if the symbol is owned by the theory. *)
 
   (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
@@ -186,7 +186,7 @@ module type X = sig
 
   val color : (r ac) -> r
 
-  val fully_interpreted : Symbols.t -> Ty.t -> bool
+  val fully_interpreted : Symbols.t -> bool
 
   val is_a_leaf : r -> bool
 
@@ -194,7 +194,7 @@ module type X = sig
 
   val abstract_selectors : r -> (r * r) list -> r * (r * r) list
 
-  val is_solvable_theory_symbol : Symbols.t -> Ty.t -> bool
+  val is_solvable_theory_symbol : Symbols.t -> bool
 
   (* the returned bool is true when the returned term in a constant of the
      theory. Otherwise, the term contains aliens that should be assigned

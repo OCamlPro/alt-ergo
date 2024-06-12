@@ -80,11 +80,11 @@ module Shostak (X : ALIEN) = struct
 
   [@@ocaml.ppwarning "XXX: IsConstr not interpreted currently. Maybe \
                       it's OK"]
-  let is_mine_symb sy ty =
+  let is_mine_symb sy =
     not (Options.get_disable_adts ()) &&
-    match sy, ty with
-    | Sy.Op (Sy.Constr _), Ty.Tadt _ -> true
-    | Sy.Op Sy.Destruct _, Ty.Tadt _ ->
+    match sy with
+    | Sy.Op Sy.Constr _ -> true
+    | Sy.Op Sy.Destruct _ ->
       (* A destructor is partially interpreted by the ADT theory.
          If we assume the tester of the constructor associated with
          this destructor, we propagate the non-guarded version of the

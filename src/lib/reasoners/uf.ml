@@ -1187,7 +1187,7 @@ let compute_concrete_model_of_val cache =
        pending destructors as solvable theory symbols of the ADT theory.
        We should check if these symbols can be defined as solvable to
        remove this particular case here. *)
-    if X.is_solvable_theory_symbol f ty || is_destructor f
+    if X.is_solvable_theory_symbol f || is_destructor f
        || Sy.is_internal f || E.is_internal_name t || E.is_internal_skolem t
        || E.equal t E.vrai || E.equal t E.faux
     then

@@ -280,7 +280,7 @@ module Main : S = struct
   let congruents env (facts: r Sig_rel.facts) t1 s =
     match E.term_view t1 with
     | { E.xs = []; _ } -> ()
-    | { E.f; ty; _ } when X.fully_interpreted f ty -> ()
+    | { E.f; _ } when X.fully_interpreted f -> ()
     |  _ -> SE.iter (equal_only_by_congruence env facts t1) s
 
   let fold_find_with_explanation find ex l =
