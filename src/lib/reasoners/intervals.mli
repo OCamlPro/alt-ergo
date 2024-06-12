@@ -28,6 +28,8 @@
 open Intervals_intf
 
 val map_bound : ('a -> 'b) -> 'a bound -> 'b bound
+(** [map_bound f b] applies [f] to a finite (open or closed) bound [b] and
+    does not change an unbounded bound. *)
 
 (** This module provides implementations of union-of-intervals over reals and
     integers. *)
