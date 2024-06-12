@@ -268,7 +268,7 @@ module type Domain = sig
       @raise Inconsistent if [r] cannot possibly be in the domain of [t]. *)
 
   val map_leaves : (X.r -> t) -> X.r -> t
-  (** [map_leaves f r acc] is the "inverse" of [fold_leaves] in the sense that
+  (** [map_leaves f r] is the "inverse" of [fold_leaves] in the sense that
       it rebuilds a domain for [r] by using [f] to access the domain for each
       of [r]'s leaves. *)
 end
