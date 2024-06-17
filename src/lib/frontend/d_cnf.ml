@@ -975,8 +975,10 @@ let rec mk_expr
                 E.mk_record [] ty
               | Tadt _ as ty ->
                 E.mk_constr (Uid.of_dolmen tcst) [] ty
-              | _ ->
-                assert false
+              | Tunit ->
+                E.void
+              | ty ->
+                Fmt.failwith "unexpected type %a@." Ty.print ty
             end
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
