@@ -335,7 +335,7 @@ struct
         let Expr.{ f; xs; _ } = Expr.term_view t in
         (* Constant terms that have no theories. *)
         match f, xs with
-        | Symbols.(True | False | Void), [] -> true
+        | Symbols.(True | False), [] -> true
         | _ -> false
       end
     | Ac _ -> false

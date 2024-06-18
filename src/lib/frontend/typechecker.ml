@@ -88,7 +88,7 @@ module Types = struct
   let rec ty_of_pp loc env rectype = function
     | PPTint -> Ty.Tint
     | PPTbool -> Ty.Tbool
-    | PPTunit -> Ty.Tunit
+    | PPTunit -> Ty.tunit
     | PPTreal -> Ty.Treal
     | PPTbitv n ->
       if n <= 0 then Errors.typing_error (NonPositiveBitvType n) loc;
@@ -667,8 +667,8 @@ let rec type_term ?(call_from_type_form=false) env f =
       Options.tool_req 1 (append_type "TR-Typing-Const type" Ty.Tbool);
       TTconst Tfalse, Ty.Tbool
     | PPconst ConstVoid ->
-      Options.tool_req 1 (append_type "TR-Typing-Const type" Ty.Tunit);
-      TTconst Tvoid, Ty.Tunit
+      Options.tool_req 1 (append_type "TR-Typing-Const type" Ty.tunit);
+      TTconst Tvoid, Ty.tunit
     | PPconst (ConstInt n) ->
       Options.tool_req 1 (append_type "TR-Typing-Const type" Ty.Tint);
       TTconst(Tint n), Ty.Tint

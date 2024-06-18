@@ -156,7 +156,7 @@ module Main_Default : S = struct
       Ty.Set.fold
         (fun ty mp ->
            match ty with
-           | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> mp
+           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
 
            | Text (_, hs) | Trecord { name = hs; _ } when
@@ -181,7 +181,7 @@ module Main_Default : S = struct
       Uid.Map.iter
         (fun _ ty ->
            match ty with
-           | Tint | Treal | Tbool | Tunit | Tbitv _ | Tfarray _ -> ()
+           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
            | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
            | Trecord { Ty.lbs; _ } ->

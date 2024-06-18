@@ -128,7 +128,6 @@ type bound = private
 type t =
   | True
   | False
-  | Void
   | Name of
       { hs : Id.t
       (** Note: [hs] is prefixed according to [ns]. *)

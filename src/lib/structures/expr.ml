@@ -473,11 +473,7 @@ module SmtPrinter = struct
          it requires to write a SMT-LIB compliant printer for bounds. *)
       Fmt.pf ppf "ae.in"
 
-    | Sy.Void, [] ->
-      (* The void type doesn't exist in SMT-LIB standard. *)
-      Fmt.pf ppf "ae.void"
-
-    | Sy.(True | False | Let | Void | Var _ | Int _ | Real _ | Bitv _
+    | Sy.(True | False | Let | Var _ | Int _ | Real _ | Bitv _
          | MapsTo _ | In _), _ ->
       (* All the cases have been excluded by the parser. *)
       assert false
@@ -941,7 +937,6 @@ let vrai =
   res
 
 let faux = neg (vrai)
-let void = mk_term (Sy.Void) [] Ty.Tunit
 
 let fresh_name ty =
   mk_term (Sy.name ~ns:Fresh @@ Id.Namespace.Internal.fresh ()) [] ty
@@ -1075,7 +1070,7 @@ let rec is_model_term e =
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
-  | (True | False | Void | Name _ | Int _ | Real _ | Bitv _), [] -> true
+  | (True | False | Name _ | Int _ | Real _ | Bitv _), [] -> true
   | _ -> false
 
 let[@inline always] is_value_term e =
@@ -1084,7 +1079,7 @@ let[@inline always] is_value_term e =
      some regression). *)
   match e.f with
   | Sy.Form _ | Sy.Lit _ | Sy.Let -> false
-  | True | False | Void | Name _ | Int _ | Real _ | Bitv _ | Op _
+  | True | False | Name _ | Int _ | Real _ | Bitv _ | Op _
   | Var _ | In _ | MapsTo _ ->
     let res = (e.xs == []) in
     assert (res == (depth e <= 1));
@@ -1169,7 +1164,7 @@ let mk_positive_lit s neg_s l =
     match s with
     | Lit (L_eq | L_built _) -> true
     | Lit (L_neg_eq | L_neg_pred | L_neg_built _) | Form _
-    | True | False | Void | Name _ | Int _ | Real _ | Bitv _
+    | True | False | Name _ | Int _ | Real _ | Bitv _
     | Op _ | Var _ | In _ | MapsTo _ | Let -> false
   );
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 1 l in
@@ -1265,6 +1260,10 @@ let mk_tester cons t =
   mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
 
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
+
+let void =
+  let cstr = Uid.of_dolmen Dolmen.Std.Expr.Term.Cstr.void in
+  mk_constr cstr [] Ty.tunit
 
 (** Substitutions *)
 
@@ -1893,7 +1892,7 @@ module Triggers = struct
   let rec score_term (t : expr) =
     let open Sy in
     match t with
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
+    | { f = (True | False | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
 
     | { f; _ } when is_infix f || is_prefix f ->
       0 (* arithmetic triggers are not suitable *)
@@ -1922,12 +1921,12 @@ module Triggers = struct
     let compare_expr = compare in
     let open Sy in
     match t1, t2 with
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _); _ },
-      { f = (True | False | Void | Int _ | Real _ | Bitv _); _ } ->
+    | { f = (True | False | Int _ | Real _ | Bitv _); _ },
+      { f = (True | False | Int _ | Real _ | Bitv _); _ } ->
       compare_expr t1 t2
 
-    | { f = (True | False | Void | Int _ | Real _ | Bitv _); _ }, _ -> -1
-    | _, { f = (True | False | Void | Int _ | Real _ | Bitv _); _ } ->  1
+    | { f = (True | False | Int _ | Real _ | Bitv _); _ }, _ -> -1
+    | _, { f = (True | False | Int _ | Real _ | Bitv _); _ } ->  1
 
     | { f = (Var _) as v1; _ }, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
     | { f = Var _; _ }, _ -> -1
@@ -2391,7 +2390,7 @@ module Triggers = struct
       | { f = Name _; _ } ->
         if eq exclude e then acc else e :: acc
 
-      | { f = ( True | False | Void | Int _ | Real _
+      | { f = ( True | False | Int _ | Real _
               | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
       | { f = Var _; _ } -> raise Exit
       | { f = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.xs
@@ -2773,7 +2772,7 @@ module Purification = struct
           | _ -> failwith "unexpected expression in purify_form"
         end
 
-      | Sy.Void | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
+      | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"
 
       | Sy.Lit _ -> purify_literal e

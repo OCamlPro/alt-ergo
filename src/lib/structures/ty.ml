@@ -29,7 +29,6 @@ type t =
   | Tint
   | Treal
   | Tbool
-  | Tunit
   | Tvar of tvar
   | Tbitv of int
   | Text of t list * Uid.t
@@ -50,7 +49,6 @@ module Smtlib = struct
     | Tint -> Fmt.pf ppf "Int"
     | Treal -> Fmt.pf ppf "Real"
     | Tbool -> Fmt.pf ppf "Bool"
-    | Tunit -> Fmt.pf ppf "unit"
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
@@ -100,7 +98,6 @@ let print_generic body_of =
       | Tint -> fprintf fmt "int"
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
-      | Tunit -> fprintf fmt "unit"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
       | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
       | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
@@ -221,7 +218,7 @@ let rec shorten ty =
     (* should not rebuild the type if no changes are made *)
     Tadt (n, args')
 
-  | Tint | Treal | Tbool | Tunit | Tbitv _ -> ty
+  | Tint | Treal | Tbool | Tbitv _ -> ty
 
 and shorten_body _ _ =
   ()
@@ -268,9 +265,6 @@ let rec compare t1 t2 =
   | Tbool, Tbool -> 0
   | Tbool, _ -> -1 | _, Tbool -> 1
 
-  | Tunit, Tunit -> 0
-  | Tunit, _ -> -1 | _, Tunit -> 1
-
   | Tbitv sz1, Tbitv sz2 -> Int.compare sz1 sz2
 
 and compare_list l1 l2 = match l1, l2 with
@@ -300,7 +294,7 @@ let rec equal t1 t2 =
              Uid.equal l1 l2 && equal ty1 ty2) l1 l2
       with Invalid_argument _ -> false
     end
-  | Tint, Tint | Treal, Treal | Tbool, Tbool | Tunit, Tunit -> true
+  | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
@@ -332,7 +326,7 @@ let rec matching s pat t =
     let s = List.fold_left2 matching s r1.args r2.args in
     List.fold_left2
       (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
-  | Tint , Tint | Tbool , Tbool | Treal , Treal | Tunit, Tunit -> s
+  | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
   | Tadt(n1, args1), Tadt(n2, args2) when Uid.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
@@ -369,7 +363,7 @@ let apply_subst =
       ->
       Tadt (name, List.map (apply_subst s) params)
 
-    | Tint | Treal | Tbool | Tunit | Tbitv _ -> ty
+    | Tint | Treal | Tbool | Tbitv _ -> ty
   in
   fun s ty -> if M.is_empty s then ty else apply_subst s ty
 
@@ -505,8 +499,6 @@ let type_body name args = Decls.body name args
 
 
 (* smart constructors *)
-let tunit = Text ([], Uid.of_dolmen Dolmen.Std.Expr.Ty.Const.unit)
-
 let text l s = Text (l, s)
 
 let fresh_empty_text =
@@ -539,6 +531,20 @@ let t_adt ?(body=None) s ty_vars =
       in
       Decls.add s ty_vars cases
   end;
+  ty
+
+module DE = Dolmen.Std.Expr
+
+let tunit =
+  let name = Uid.of_dolmen DE.Ty.Const.unit in
+  let void = Uid.of_dolmen DE.Term.Cstr.void in
+  let body = Some [void, []] in
+  let ty = t_adt ~body name [] in
+  let () =
+    match DE.Ty.definition DE.Ty.Const.unit with
+    | Some def -> Nest.add_nest [def]
+    | _ -> assert false
+  in
   ty
 
 let trecord ?(sort_fields = false) ~record_constr lv name lbs =
@@ -582,7 +588,7 @@ let occurs { v = n; _ } t =
     | Text(l,_) -> List.exists occursrec l
     | Tfarray (t1,t2) -> occursrec t1 || occursrec t2
     | Trecord { args ; _ } | Tadt (_, args) -> List.exists occursrec args
-    | Tint | Treal | Tbool | Tunit | Tbitv _ -> false
+    | Tint | Treal | Tbool | Tbitv _ -> false
   in occursrec t
 
 (*** destructive unification ***)
@@ -603,7 +609,7 @@ let rec unify t1 t2 =
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) -> unify ta1 tb1;unify ta2 tb2
   | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
     List.iter2 unify r1.args r2.args
-  | Tint, Tint | Tbool, Tbool | Treal, Treal | Tunit, Tunit -> ()
+  | Tint, Tint | Tbool, Tbool | Treal, Treal -> ()
   | Tbitv n , Tbitv m when m=n -> ()
 
   | Tadt(n1, p1), Tadt (n2, p2) when Uid.equal n1 n2 ->
@@ -653,7 +659,7 @@ let vty_of t =
       List.fold_left vty_of_rec acc args
 
     | Tvar { value = Some _ ; _ }
-    | Tint | Treal | Tbool | Tunit | Tbitv _ ->
+    | Tint | Treal | Tbool | Tbitv _ ->
       acc
   in
   vty_of_rec Svty.empty t
@@ -662,7 +668,7 @@ let vty_of t =
   [@ocaml.ppwarning "TODO: detect when there are no changes "]
 let rec monomorphize ty =
   match ty with
-  | Tint | Treal | Tbool | Tunit   | Tbitv _  -> ty
+  | Tint | Treal | Tbool | Tbitv _  -> ty
   | Text (tyl,hs) -> Text (List.map monomorphize tyl, hs)
   | Trecord ({ args = tylv; name = n; lbs = tylb; _ } as r) ->
     let m_tylv = List.map monomorphize tylv in

@@ -513,7 +513,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
 
-  | `App (`Builtin B.Unit, []) -> Ty.Tunit
+  | `App (`Builtin B.Unit, []) -> Ty.tunit
   | `App (`Builtin _, [ty]) -> aux ty
   | `App (`Generic c, l) -> handle_ty_app ~update c l
 
@@ -975,8 +975,6 @@ let rec mk_expr
                 E.mk_record [] ty
               | Tadt _ as ty ->
                 E.mk_constr (Uid.of_dolmen tcst) [] ty
-              | Tunit ->
-                E.void
               | ty ->
                 Fmt.failwith "unexpected type %a@." Ty.print ty
             end
