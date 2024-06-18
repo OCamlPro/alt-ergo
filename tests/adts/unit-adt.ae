@@ -1,0 +1,3 @@
+logic f : unit -> unit
+
+goal g : (void = f(void))
