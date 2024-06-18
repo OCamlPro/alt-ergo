@@ -193,8 +193,11 @@ module Shostak (X : ALIEN) = struct
          if equal sel (embed sel_x) then X.term_embed t, ctx
          else sel_x, ctx (* canonization OK *)
     *)
-    | _ ->
-      assert false
+
+    | Sy.Op Sy.Constr _, _, Ty.Trecord _ ->
+      Fmt.failwith "unexpected record constructor %a@." E.print t
+
+    | _ -> assert false
 
   let hash x =
     abs @@ match x with

@@ -1264,6 +1264,8 @@ let mk_constr cons xs ty = mk_term (Sy.Op (Constr cons)) xs ty
 let mk_tester cons t =
   mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
 
+let mk_record xs ty = mk_term (Sy.Op Record) xs ty
+
 (** Substitutions *)
 
 let is_skolem_cst v =

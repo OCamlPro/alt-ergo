@@ -282,6 +282,7 @@ val mk_ite : t -> t -> t -> t
 
 val mk_constr : Uid.t -> t list -> Ty.t -> t
 val mk_tester : Uid.t -> t -> t
+val mk_record : t list -> Ty.t -> t
 
 (** Substitutions *)
 

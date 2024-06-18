@@ -970,8 +970,16 @@ let rec mk_expr
             E.mk_term sy [] ty
 
           | B.Constructor _ ->
-            let ty = dty_to_ty term_ty in
-            E.mk_constr (Uid.of_dolmen tcst) [] ty
+            begin match dty_to_ty term_ty with
+              | Trecord _ as ty ->
+                E.mk_record [] ty
+              | Tadt _ as ty ->
+                E.mk_constr (Uid.of_dolmen tcst) [] ty
+              | Tunit ->
+                E.void
+              | ty ->
+                Fmt.failwith "unexpected type %a@." Ty.print ty
+            end
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1343,7 +1351,7 @@ let rec mk_expr
                 E.mk_term sy l ty
               | Ty.Trecord _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_term (Sy.Op Sy.Record) l ty
+                E.mk_record l ty
               | _ ->
                 Fmt.failwith
                   "Constructor error: %a does not belong to a record nor an\

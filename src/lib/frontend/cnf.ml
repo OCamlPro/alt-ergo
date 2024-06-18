@@ -115,7 +115,7 @@ let rec make_term quant_basename t =
 
     | TTrecord lbs ->
       let lbs = List.map (fun (_, t) -> mk_term t) lbs in
-      E.mk_term (Sy.Op Sy.Record) lbs ty
+      E.mk_record lbs ty
 
     | TTlet (binders, t2) ->
       let binders =
