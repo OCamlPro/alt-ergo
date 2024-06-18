@@ -27,9 +27,9 @@ depends: [
   "conf-zlib" {= "1"}
   "cppo" {= "1.6.9"}
   "csexp" {= "1.5.2"}
-  "dolmen" {= "dev"}
-  "dolmen_loop" {= "dev"}
-  "dolmen_type" {= "dev"}
+  "dolmen" {= "0.10"}
+  "dolmen_loop" {= "0.10"}
+  "dolmen_type" {= "0.10"}
   "dune" {= "3.11.1"}
   "dune-build-info" {= "3.11.1"}
   "dune-configurator" {= "3.11.1"}
@@ -86,18 +86,6 @@ conflicts: [
   "result" {< "1.5"}
 ]
 pin-depends: [
-  [
-    "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
-  ]
-  [
-    "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
-  ]
-  [
-    "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#5e22e653ec376336bbbed50aca4946db8edbc90f"
-  ]
   [
     "js_of_ocaml.5.4.0"
     "https://github.com/ocsigen/js_of_ocaml/releases/download/5.4.0/js_of_ocaml-5.4.0.tbz"
