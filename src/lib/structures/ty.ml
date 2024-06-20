@@ -536,15 +536,17 @@ let t_adt ?(body=None) s ty_vars =
 module DE = Dolmen.Std.Expr
 
 let tunit =
-  let name = Uid.of_dolmen DE.Ty.Const.unit in
-  let void = Uid.of_dolmen DE.Term.Cstr.void in
+  let name =
+    match Dolmen.Std.Expr.Ty.definition DE.Ty.Const.unit with
+    | Some def ->
+      let name, hash = Nest.generate [def] |> List.hd in
+      Uid.set_hash name hash;
+      name
+    | None -> assert false
+  in
+  let void = Uid.of_term_cst DE.Term.Cstr.void in
   let body = Some [void, []] in
   let ty = t_adt ~body name [] in
-  let () =
-    match DE.Ty.definition DE.Ty.Const.unit with
-    | Some def -> Nest.add_nest [def]
-    | _ -> assert false
-  in
   ty
 
 let trecord ?(sort_fields = false) ~record_constr lv name lbs =

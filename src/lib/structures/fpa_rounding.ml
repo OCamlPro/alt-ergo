@@ -93,8 +93,16 @@ let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
     List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) cstrs
   in
   let _, d_cstrs = DE.Term.define_adt ty_cst [] cstrs in
+  let () =
+    match DStd.Expr.Ty.definition ty_cst with
+    | Some def ->
+      let name, hash = Nest.generate [def] |> List.hd in
+      Uid.set_hash name hash
+
+    | None -> assert false
+  in
   let body =
-    List.map (fun (c, _) -> Uid.of_dolmen c, []) d_cstrs
+    List.map (fun (c, _) -> Uid.of_term_cst c, []) d_cstrs
   in
   let ty = Ty.t_adt ~body:(Some body) (Uid.of_dolmen ty_cst) [] in
   DE.Ty.apply ty_cst [], d_cstrs, ty

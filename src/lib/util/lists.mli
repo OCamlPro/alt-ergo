@@ -67,3 +67,9 @@ val try_map : ('a -> 'b option) -> 'a list -> 'b list option
 val is_sorted : ('a -> 'a -> int) -> 'a list -> bool
 (** [is_sorted cmp l] checks that [l] is sorted for the comparison function
     [cmp]. *)
+
+val find_index : ('a -> bool) -> 'a list -> int option
+(** [find_index f l] returns [Some i], where [i] is the index of the first
+    element of the list [l] that satisfies [f x], if there is such an element.
+
+    It returns [None] if there is no such element. *)

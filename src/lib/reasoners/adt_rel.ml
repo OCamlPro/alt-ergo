@@ -36,16 +36,34 @@ module LR = Uf.LX
 module Th = Shostak.Adt
 module SLR = Set.Make(LR)
 
-module TSet = Set.Make
-    (struct
-      type t = Uid.t
-
-      (* We use a dedicated total order on the constructors to ensure
-         the termination of the model generation. *)
-      let compare = Nest.compare
-    end)
+module DE = Dolmen.Std.Expr
+module DT = Dolmen.Std.Expr.Ty
+module B = Dolmen.Std.Builtin
+module TSet = Set.Make (Int)
 
 let timer = Timers.M_Adt
+
+(* HACK: this wrapper around [Uid.get_hash] is a temporary hack
+   used by the legacy frontend only. For the legacy frontend, we generate a
+   trivial perfect hash for the type [ty], that is a hash whose the associated
+   order does not ensure the termination of the model generation. *)
+let get_hash ty =
+  match ty with
+  | Ty.Tadt (name, params) ->
+    let cases = Ty.type_body name params in
+    begin match name with
+      | Ty_cst _ ->
+        Uid.get_hash name
+
+      | Hstring _ ->
+        let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
+        let of_int = List.nth cstrs in
+        let to_int id = Option.get @@ Lists.find_index (Uid.equal id) cstrs in
+        Uid.{ to_int; of_int }
+
+      | _ -> assert false
+    end
+  | _ -> assert false
 
 module Domain = struct
   (* Set of possible constructors. The explanation justifies that any value
@@ -53,6 +71,7 @@ module Domain = struct
      domain. *)
   type t = {
     constrs : TSet.t;
+    hash : Uid.hash;
     ex : Ex.t;
   }
 
@@ -60,24 +79,25 @@ module Domain = struct
 
   let[@inline always] cardinal { constrs; _ } = TSet.cardinal constrs
 
-  let[@inline always] choose { constrs; _ } =
+  let[@inline always] choose { constrs; hash; _ } =
     (* We choose the minimal element to ensure the termination of
        model generation. *)
-    TSet.min_elt constrs
+    TSet.min_elt constrs |> hash.of_int
 
-  let[@inline always] as_singleton { constrs; ex } =
+  let[@inline always] as_singleton { constrs; hash; ex; _ } =
     if TSet.cardinal constrs = 1 then
-      Some (TSet.choose constrs, ex)
+      Some (TSet.choose constrs |> hash.of_int, ex)
     else
       None
 
-  let domain ~constrs ex =
+  let domain ~constrs hash ex =
     if TSet.is_empty constrs then
       raise @@ Inconsistent ex
     else
-      { constrs; ex }
+      { constrs; hash; ex }
 
-  let[@inline always] singleton ~ex c = { constrs = TSet.singleton c; ex }
+  let[@inline always] singleton ~ex hash c =
+    { constrs = TSet.singleton (hash.Uid.to_int c); hash; ex }
 
   let[@inline always] subset d1 d2 = TSet.subset d1.constrs d2.constrs
 
@@ -86,14 +106,15 @@ module Domain = struct
     | Ty.Tadt (name, params) ->
       (* Return the list of all the constructors of the type of [r]. *)
       let cases = Ty.type_body name params in
+      let hash = get_hash ty in
       let constrs =
         List.fold_left
           (fun acc Ty.{ constr; _ } ->
-             TSet.add constr acc
+             TSet.add (hash.to_int constr) acc
           ) TSet.empty cases
       in
       assert (not @@ TSet.is_empty constrs);
-      { constrs; ex = Ex.empty }
+      { constrs; hash; ex = Ex.empty }
     | _ ->
       (* Only ADT values can have a domain. This case shouldn't happen since
          we check the type of semantic values in both [add] and [assume]. *)
@@ -101,23 +122,27 @@ module Domain = struct
 
   let equal d1 d2 = TSet.equal d1.constrs d2.constrs
 
+  let pp_cstr of_int ppf i =
+    Uid.pp ppf @@ of_int i
+
   let pp ppf d =
     Fmt.(braces @@
-         iter ~sep:comma TSet.iter Uid.pp) ppf d.constrs;
+         iter ~sep:comma TSet.iter (pp_cstr d.hash.Uid.of_int)) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
   let intersect ~ex d1 d2 =
     let constrs = TSet.inter d1.constrs d2.constrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
-    domain ~constrs ex
+    domain ~constrs d1.hash ex
 
-  let remove ~ex c d =
-    let constrs = TSet.remove c d.constrs in
-    let ex = Ex.union ex d.ex in
-    domain ~constrs ex
+  let remove ~ex c { constrs; hash; ex = ex' } =
+    let constrs = TSet.remove (hash.to_int c) constrs in
+    let ex = Ex.union ex' ex in
+    domain ~constrs hash ex
 
-  let for_all f { constrs; _ } = TSet.for_all f constrs
+  let for_all f { constrs; hash; _ } =
+    TSet.for_all (fun c -> f @@ hash.of_int c) constrs
 end
 
 let is_adt_ty = function
@@ -182,10 +207,11 @@ module Domains = struct
 
   let get r t =
     match Th.embed r with
-    | Constr { c_name; _ } ->
+    | Constr { c_name; c_ty; _ } ->
       (* For sake of efficiency, we don't look in the map if the
          semantic value is a constructor. *)
-      Domain.singleton ~ex:Explanation.empty c_name
+      let hash = get_hash c_ty in
+      Domain.singleton ~ex:Explanation.empty hash c_name
     | _ ->
       try MX.find r t.domains
       with Not_found ->
@@ -410,7 +436,7 @@ let assume_distinct =
           cannot be an application of the constructor [c]. *)
 let assume_is_constr ~ex r c domains =
   let d1 = Domains.get r domains in
-  let d2 = Domain.singleton ~ex:Explanation.empty c in
+  let d2 = Domain.singleton ~ex:Explanation.empty d1.hash c in
   let nd = Domain.intersect ~ex d1 d2 in
   Domains.tighten r nd domains
 

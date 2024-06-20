@@ -82,3 +82,10 @@ let rec is_sorted cmp l =
   match l with
   | x :: y :: xs -> cmp x y <= 0 && is_sorted cmp (y :: xs)
   | [_] | [] -> true
+
+(* Copied from the Stdlib of OCaml 5.2. *)
+let find_index p =
+  let rec aux i = function
+      [] -> None
+    | a::l -> if p a then Some i else aux (i+1) l in
+  aux 0
