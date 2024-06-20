@@ -218,7 +218,7 @@ module Bitlist_domain : Rel_utils.Domain with type t = Bitlist.t = struct
       invalid_arg "unknown"
 end
 
-module Domains = Rel_utils.Domains_make(Bitlist_domain)
+module Bitlist_domains = Rel_utils.Domains_make(Bitlist_domain)
 
 module Constraint : sig
   include Rel_utils.Constraint
@@ -240,7 +240,7 @@ module Constraint : sig
 
   val bvugt : X.r -> X.r -> t
 
-  val propagate_bitlist : ex:Ex.t -> t -> Domains.Ephemeral.t -> unit
+  val propagate_bitlist : ex:Ex.t -> t -> Bitlist_domains.Ephemeral.t -> unit
   (** [propagate ~ex t dom] propagates the constraint [t] in domain [dom].
 
       The explanation [ex] justifies that the constraint [t] applies, and must
@@ -269,7 +269,7 @@ end = struct
     | Band | Bor | Bxor -> true
 
   let propagate_binop ~ex dx op dy dz =
-    let open Domains.Ephemeral in
+    let open Bitlist_domains.Ephemeral in
     match op with
     | Band ->
       update ~ex dx (Bitlist.logand !!dy !!dz);
@@ -329,7 +329,7 @@ end = struct
     | Fbinop (op, x, y) -> Fbinop (op, X.subst rr nrr x, X.subst rr nrr y)
 
   let propagate_fun_t ~ex dom r f =
-    let open Domains.Ephemeral in
+    let open Bitlist_domains.Ephemeral in
     let get r = handle dom r in
     match f with
     | Fbinop (op, x, y) ->
@@ -404,7 +404,7 @@ end = struct
     | Rbinrel (op, x, y) -> Rbinrel (op, X.subst rr nrr x, X.subst rr nrr y)
 
   let propagate_rel_t ~ex dom r =
-    let open Domains.Ephemeral in
+    let open Bitlist_domains.Ephemeral in
     let get r = handle dom r in
     match r with
     | Rbinrel (op, x, y) ->
@@ -631,7 +631,7 @@ module Any_constraint = struct
     | Constraint of Constraint.t Rel_utils.explained
     | Structural of X.r
     (** Structural constraint associated with [X.r]. See
-        {!Rel_utils.Domains.structural_propagation}. *)
+        {!Rel_utils.Bitlist_domains.structural_propagation}. *)
 
   let equal a b =
     match a, b with
@@ -706,7 +706,7 @@ let finite_upper_bound ~size:sz = function
    five most-significant bits, denoted [00110???]. Therefore, a bit-vector bl =
    [0??1???0] can be refined into [00110??0]. *)
 let constrain_bitlist_from_interval bv int =
-  let open Domains.Ephemeral in
+  let open Bitlist_domains.Ephemeral in
   let sz = Bitlist.width !!bv in
 
   let inf, inf_ex = Intervals.Int.lower_bound int in
@@ -795,11 +795,11 @@ let propagate_bitlist queue touched bcs dom =
   in
   try
     while true do
-      Domains.Ephemeral.iter_changed touch dom;
-      Domains.Ephemeral.clear_changed dom;
+      Bitlist_domains.Ephemeral.iter_changed touch dom;
+      Bitlist_domains.Ephemeral.clear_changed dom;
       Any_constraint.propagate
         Constraint.propagate_bitlist
-        Domains.Ephemeral.structural_propagation
+        Bitlist_domains.Ephemeral.structural_propagation
         (QC.pop queue) dom
     done
   with QC.Empty -> ()
@@ -828,7 +828,7 @@ let propagate_all eqs bcs bdom idom =
   let eqs, bcs = Constraints.simplify_pending eqs bcs in
   (* Optimization to avoid unnecessary allocations *)
   let do_all = Constraints.has_pending bcs in
-  let do_bitlist = do_all || Domains.has_changed bdom in
+  let do_bitlist = do_all || Bitlist_domains.has_changed bdom in
   let do_intervals = do_all || Interval_domains.has_changed idom in
   let do_any = do_bitlist || do_intervals in
   if do_any then
@@ -838,7 +838,7 @@ let propagate_all eqs bcs bdom idom =
     in
     let bitlist_changed = HX.create 17 in
     let touched = HX.create 17 in
-    let bdom = Domains.edit bdom in
+    let bdom = Bitlist_domains.edit bdom in
     let idom = Interval_domains.edit idom in
 
     (* First, we propagate the pending constraints to both domains. Changes in
@@ -852,7 +852,7 @@ let propagate_all eqs bcs bdom idom =
         HX.replace bitlist_changed r ();
         constrain_interval_from_bitlist
           Interval_domains.Ephemeral.(handle idom r)
-          Domains.Ephemeral.(!!(handle bdom r))
+          Bitlist_domains.Ephemeral.(!!(handle bdom r))
       ) touched;
     HX.clear touched;
     propagate_intervals queue touched bcs idom;
@@ -865,7 +865,7 @@ let propagate_all eqs bcs bdom idom =
     while HX.length touched > 0 do
       HX.iter (fun r () ->
           constrain_bitlist_from_interval
-            Domains.Ephemeral.(handle bdom r)
+            Bitlist_domains.Ephemeral.(handle bdom r)
             Interval_domains.Ephemeral.(!!(handle idom r))
         ) touched;
       HX.clear touched;
@@ -876,7 +876,7 @@ let propagate_all eqs bcs bdom idom =
           HX.replace bitlist_changed r ();
           constrain_interval_from_bitlist
             Interval_domains.Ephemeral.(handle idom r)
-            Domains.Ephemeral.(!!(handle bdom r))
+            Bitlist_domains.Ephemeral.(!!(handle bdom r))
         ) touched;
       HX.clear touched;
       propagate_intervals queue touched bcs idom;
@@ -885,12 +885,12 @@ let propagate_all eqs bcs bdom idom =
 
     let eqs =
       HX.fold (fun r () acc ->
-          let d = Domains.Ephemeral.(!!(handle bdom r)) in
+          let d = Bitlist_domains.Ephemeral.(!!(handle bdom r)) in
           add_eqs acc (Shostak.Bitv.embed r) d
         ) bitlist_changed eqs
     in
 
-    eqs, bcs, Domains.snapshot bdom, Interval_domains.snapshot idom
+    eqs, bcs, Bitlist_domains.snapshot bdom, Interval_domains.snapshot idom
   else
     eqs, bcs, bdom, idom
 
@@ -903,13 +903,13 @@ let empty uf =
   { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
   ; constraints = Constraints.empty
   ; size_splits = Q.one },
-  Uf.GlobalDomains.add (module Domains) Domains.empty @@
+  Uf.GlobalDomains.add (module Bitlist_domains) Bitlist_domains.empty @@
   Uf.GlobalDomains.add (module Interval_domains) Interval_domains.empty @@
   Uf.domains uf
 
 let assume env uf la =
   let ds = Uf.domains uf in
-  let domain = Uf.GlobalDomains.find (module Domains) ds in
+  let domain = Uf.GlobalDomains.find (module Bitlist_domains) ds in
   let int_domain =
     Uf.GlobalDomains.find (module Interval_domains) ds
   in
@@ -965,7 +965,7 @@ let assume env uf la =
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
-          "bitlist domain: @[%a@]" Domains.pp domain;
+          "bitlist domain: @[%a@]" Bitlist_domains.pp domain;
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
           "interval domain: @[%a@]" Interval_domains.pp int_domain;
@@ -984,7 +984,7 @@ let assume env uf la =
     { result with assume = List.rev_append assume result.assume }
   in
   { delayed ; constraints ; size_splits },
-  Uf.GlobalDomains.add (module Domains) domain @@
+  Uf.GlobalDomains.add (module Bitlist_domains) domain @@
   Uf.GlobalDomains.add (module Interval_domains) int_domain ds,
   result
 
@@ -994,7 +994,9 @@ let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
     []
   else
-    let domain = Uf.GlobalDomains.find (module Domains) (Uf.domains uf) in
+    let domain =
+      Uf.GlobalDomains.find (module Bitlist_domains) (Uf.domains uf)
+    in
     (* Look for representatives with minimal, non-fully known, domain size.
 
        We first look among the constrained variables, then if there are no
@@ -1018,7 +1020,7 @@ let case_split env uf ~for_model =
           match bv with
           | Bitv.Cte _ -> acc
           | Other r | Ext (r, _, _, _) ->
-            let bl = Domains.get r.value domain in
+            let bl = Bitlist_domains.get r.value domain in
             f_acc r.value bl acc
         ) acc (Shostak.Bitv.embed r)
     in
@@ -1026,14 +1028,14 @@ let case_split env uf ~for_model =
       match Constraints.fold_args f_acc' env.constraints None with
       | Some (nunk, xs) -> nunk, xs
       | _ ->
-        match Domains.fold_leaves f_acc domain None with
+        match Bitlist_domains.fold_leaves f_acc domain None with
         | Some (nunk, xs) -> nunk, xs
         | None -> 0, SX.empty
     in
     (* For now, just pick a value for the most significant bit. *)
     match SX.choose candidates with
     | r ->
-      let bl = Domains.get r domain in
+      let bl = Bitlist_domains.get r domain in
       let w = Bitlist.width bl in
       let unknown = Z.extract (Z.lognot @@ Bitlist.bits_known bl) 0 w in
       let bitidx = Z.numbits unknown  - 1 in
