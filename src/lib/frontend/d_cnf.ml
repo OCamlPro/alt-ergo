@@ -585,11 +585,11 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt
+      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ }
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
-    Nest.add_nest [adt];
+    let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret id_ty in
     let rev_lbs =
       Array.fold_left (
@@ -607,12 +607,12 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     in
     let lbs = List.rev rev_lbs in
     let record_constr = Uid.of_dolmen cstr in
-    let ty = Ty.trecord ~record_constr tyvl (Uid.of_dolmen ty_c) lbs in
+    let ty = Ty.trecord ~record_constr tyvl uid lbs in
     Cache.store_ty ty_c ty
 
   | Some (Adt { cases; _ } as adt) ->
-    Nest.add_nest [adt];
-    let uid = Uid.of_dolmen ty_c in
+    let uid = Uid.of_ty_cst ty_c in
+    List.iter (fun (i, h) -> Uid.set_hash i h) @@ Nest.generate [adt];
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     Cache.store_ty ty_c (Ty.t_adt uid tyvl);
     let rev_cs =
@@ -627,7 +627,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
                 | None -> assert false
             ) [] dstrs
           in
-          (Uid.of_dolmen cstr, List.rev rev_fields) :: accl
+          (Uid.of_term_cst cstr, List.rev rev_fields) :: accl
       ) [] cases
     in
     let body = Some (List.rev rev_cs) in
@@ -704,7 +704,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
                   | None -> assert false
               ) [] dstrs
             in
-            (Uid.of_dolmen cstr, List.rev rev_fields) :: accl
+            (Uid.of_term_cst cstr, List.rev rev_fields) :: accl
         ) [] cases
       in
       let body = Some (List.rev rev_cs) in
@@ -729,14 +729,14 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
           assert false
     ) ([], false) tdl
   in
-  Nest.add_nest rev_tdefs;
+  List.iter (fun (i, h) -> Uid.set_hash i h) @@ Nest.generate rev_tdefs;
   let rev_l =
     List.fold_left (
       fun acc tdef ->
         match tdef with
         | DE.Adt { cases; record; ty = ty_c; } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-          let uid = Uid.of_dolmen ty_c in
+          let uid = Uid.of_ty_cst ty_c in
           let ty =
             if (record || Array.length cases = 1) && not contains_adts
             then
@@ -811,10 +811,10 @@ let mk_pattern DE.{ term_descr; _ } =
       ) [] (List.rev rev_vnames) pargs
     in
     let args = List.rev rev_args in
-    Typed.Constr {name = Uid.of_dolmen cst; args}
+    Typed.Constr {name = Uid.of_term_cst cst; args}
 
   | Cst ({ builtin = B.Constructor _; _ } as cst) ->
-    Typed.Constr {name = Uid.of_dolmen cst; args = []}
+    Typed.Constr {name = Uid.of_term_cst cst; args = []}
 
   | Var ({ builtin = B.Base; path; _ } as t_v) ->
     (* Should the type be passed as an argument
@@ -974,7 +974,7 @@ let rec mk_expr
               | Trecord _ as ty ->
                 E.mk_record [] ty
               | Tadt _ as ty ->
-                E.mk_constr (Uid.of_dolmen tcst) [] ty
+                E.mk_constr (Uid.of_term_cst tcst) [] ty
               | ty ->
                 Fmt.failwith "unexpected type %a@." Ty.print ty
             end
@@ -1041,7 +1041,7 @@ let rec mk_expr
               cstr = { builtin = B.Constructor { adt; _ }; _ } as cstr; _
             }, [x] ->
             begin
-              let builtin = Sy.IsConstr (Uid.of_dolmen cstr) in
+              let builtin = Sy.IsConstr (Uid.of_term_cst cstr) in
               let ty_c =
                 match DT.definition adt with
                 | Some (
@@ -1344,9 +1344,8 @@ let rec mk_expr
             let ty = dty_to_ty term_ty in
             begin match ty with
               | Ty.Tadt _ ->
-                let sy = Sy.constr @@ Uid.of_dolmen tcst in
                 let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_term sy l ty
+                E.mk_constr (Uid.of_term_cst tcst) l ty
               | Ty.Trecord _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_record l ty

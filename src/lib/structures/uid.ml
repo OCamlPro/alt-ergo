@@ -26,23 +26,48 @@
 (**************************************************************************)
 
 module DStd = Dolmen.Std
-module DE = DStd.Expr
+module DE = Dolmen.Std.Expr
 
 type t =
   | Hstring : Hstring.t -> t
   | Dolmen : 'a DE.id -> t
+  | Term_cst : DE.term_cst -> t
+  | Ty_cst : DE.ty_cst -> t
+
+type hash = {
+  to_int : t -> int;
+  (** Return a perfect hash for the constructor. This hash is between [0]
+      and [n] where [n] is the number of constructors of the ADT. *)
+
+  of_int : int -> t;
+  (** Return the associated constructor to the integer.
+
+      @raises Invalid_argument if the integer does not correspond to
+       a constructor of this ADT. *)
+}
 
 let[@inline always] of_dolmen id = Dolmen id
+let[@inline always] of_term_cst id = Term_cst id
+let[@inline always] of_ty_cst id = Ty_cst id
 let[@inline always] of_hstring hs = Hstring hs
 let[@inline always] of_string s = of_hstring @@ Hstring.make s
+
+let[@inline always] to_term_cst id =
+  match id with
+  | Term_cst t -> t
+  | _ -> invalid_arg "to_term_cst"
 
 let hash = function
   | Hstring hs -> Hstring.hash hs
   | Dolmen id -> DE.Id.hash id
+  | Term_cst id -> DE.Id.hash id
+  | Ty_cst id -> DE.Id.hash id
 
 let pp ppf = function
   | Hstring hs -> Hstring.print ppf hs
   | Dolmen id -> DE.Id.print ppf id
+  | Term_cst id -> DE.Id.print ppf id
+  | Ty_cst id -> DE.Id.print ppf id
 
 let show = Fmt.to_to_string pp
 
@@ -50,13 +75,31 @@ let equal u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
   | Dolmen id1, Dolmen id2 -> DE.Id.equal id1 id2
+  | Term_cst id1, Term_cst id2 -> DE.Id.equal id1 id2
+  | Ty_cst id1, Ty_cst id2 -> DE.Id.equal id1 id2
   | _ -> String.equal (show u1) (show u2)
 
 let compare u1 u2 =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
   | Dolmen id1, Dolmen id2 -> DE.Id.compare id1 id2
+  | Term_cst id1, Term_cst id2 -> DE.Id.compare id1 id2
+  | Ty_cst id1, Ty_cst id2 -> DE.Id.compare id1 id2
   | _ -> String.compare (show u1) (show u2)
+
+let hash_tag : hash DStd.Tag.t = DStd.Tag.create ()
+
+let set_hash id hash =
+  match id with
+  | Ty_cst ty_c ->
+    DE.Ty.Const.set_tag ty_c hash_tag hash
+  | _ -> Fmt.invalid_arg "set_hash %a" pp id
+
+let get_hash id =
+  match id with
+  | Ty_cst ty_c ->
+    Option.get @@ DE.Ty.Const.get_tag ty_c hash_tag
+  | _ -> Fmt.invalid_arg "get_hash %a" pp id
 
 module Set = Set.Make
     (struct
