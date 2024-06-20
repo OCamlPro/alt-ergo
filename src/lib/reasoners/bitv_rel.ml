@@ -367,8 +367,9 @@ end = struct
       update ~ex dy @@ norm @@ Bitlist.logxor !!dx !!dz;
       update ~ex dz @@ norm @@ Bitlist.logxor !!dx !!dy
     | Badd ->
-      (* TODO: full adder propagation *)
-      ()
+      update ~ex dx @@ norm @@ Bitlist.add !!dy !!dz;
+      update ~ex dz @@ norm @@ Bitlist.sub !!dx !!dy;
+      update ~ex dy @@ norm @@ Bitlist.sub !!dx !!dz
 
     | Bshl -> (* Only forward propagation for now *)
       update ~ex dx (Bitlist.bvshl ~size:sz !!dy !!dz)

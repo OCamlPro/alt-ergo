@@ -397,3 +397,70 @@ let bvlshr ~size:sz a b =
       extract unknown 0 sz
   | _ | exception Z.Overflow ->
     constant Z.zero (explanation b)
+
+let add a b =
+  (* A binary addition [x + y] has a carry at bit position [i] iff the addition
+     of the lower bits of [x] and [y] overflows, i.e. if:
+
+       {math x \bmod 2^i + y \bmod 2^i > 2^i}.
+
+     Consider two integers [x] and [k] with no common bits set ([x & k = 0]),
+     then there are no carries in [x + k = x | k = x ^ k]: we can compute the
+     addition bitwise, and for any bit position [i]:
+
+       {math (x + k) \bmod 2^i = x \bmod 2^i + k \bmod 2^i}
+
+
+     In particular, for an arbitrary integer [y] and bit position [i], we have:
+
+       {math (x + k) \bmod 2^i + y \bmod 2^i \geq x \bmod 2^i + y \bmod 2^i}
+
+     This implies that any carry position in [x + y] is also a carry position
+     in [(x | k) + y]; in other words, switching bits from [0] to [1] can only
+     introduce new carry positions -- never remove existing ones.
+
+     Now, let us prove that this addition function is correct. For any integers
+     [x] and [y] in the sets represented by bitlists [a] and [b], let us
+     consider a bit position [i] where [x + y] and [a.bits_set + b.bits_set]
+     disagree (i.e. have different values for that bit). Let us furthermore
+     assume that [i] is known in both [a] and [b] (i.e. it is set in both
+     [a.bits_unk] and [b.bits_unk]).
+
+     Since bit [i] is known in both [a] and [b], it has the same value in [x]
+     and [a.bits_set] (resp. [y] and [b.bits_set]): there must be a carry in
+     exactly one of the two additions. Since [x] is obtained by flipping some
+     (unknown in [a]) bits of [a.bits_set] from [0] to [1], and [y] is obtained
+     by flipping some (unknown in [b]) bits of [b.bits_set] from [0] to [1], it
+     must be [x + y] that has a carry at position [i]. If we set all remaining
+     unknown bits in [x] (resp. [y]) to [1], we get [a.bits_set + a.bits_unk]
+     (resp. [b.bits_set + b.bits_unk]) while preserving the carry at position
+     [i].
+
+     Hence, unknown bits in [a + b] are the bits that are either unknown in
+     [a], unknown in [b], or differ in [a.bits_set + b.bits_set] and in
+     [a.bits_set + a.bits_unk + b.bits_set + b.bits_unk]. *)
+  let x = Z.add a.bits_set b.bits_set in
+  let bits_unk =
+    Z.(a.bits_unk lor b.bits_unk lor (x lxor (x + a.bits_unk + b.bits_unk)))
+  in
+  let bits_set = Z.(x land ~!bits_unk) in
+  { bits_unk ; bits_set ; ex = Ex.union a.ex b.ex }
+
+let sub a b =
+  (* Recall that [x - y] is [x + ~y + 1] and remark that:
+
+       {math x + y + 1 = ((2x + 1) + (2y + 1)) / 2}
+
+     From this last remark, we can apply the same reasoning for [a + b + 1] as
+     for [a + b], and get that the unknown bits in [a + b + 1] are either
+     unknown in [a], unknown in [b], or differ in [a.bits_set + b.bits_set + 1]
+     and in [a.bits_set + a.bits_unk + b.bits_set + b.bits_unk + 1].
+
+     Recalling [(~b).bits_set = ~(b.bits_set | b.bits_unk)], we get the formula
+     below. *)
+  let x = Z.sub a.bits_set b.bits_set in
+  let bits_unk =
+    Z.(a.bits_unk lor b.bits_unk lor ((x + a.bits_unk) lxor (x - b.bits_unk)))
+  in
+  let bits_set = Z.(x land ~!bits_unk) in
+  { bits_unk ; bits_set ; ex = Ex.union a.ex b.ex }

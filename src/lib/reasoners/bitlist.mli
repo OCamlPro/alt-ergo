@@ -112,6 +112,12 @@ val logor : t -> t -> t
 val logxor : t -> t -> t
 (** Bit-wise xor. *)
 
+val add : t -> t -> t
+(** Addition. *)
+
+val sub : t -> t -> t
+(** Subtraction. *)
+
 val mul : t -> t -> t
 (** Integer multiplication. *)
 
