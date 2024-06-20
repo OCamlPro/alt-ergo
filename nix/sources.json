@@ -1,14 +1,27 @@
 {
     "dolmen": {
-        "branch": "5e22e653ec376336bbbed50aca4946db8edbc90f",
+        "branch": "v0.10",
         "description": "Dolmen provides a library and a binary to parse, typecheck, and evaluate languages used in automated deduction",
         "homepage": "",
         "owner": "Gbury",
         "repo": "dolmen",
-        "rev": "5e22e653ec376336bbbed50aca4946db8edbc90f",
-        "sha256": "1wmmq3x8zcp2zh3xpchjvhyj85qbydrpd2cf9awn4nxxaqi06yjn",
+        "rev": "c33632daab31fb3bb719031169baa6c984bb860f",
+        "sha256": "1vvlg72sbwmpnh0kvwkbvnxxgwrdqcy5adqp26n3hpq3mix4sp7d",
         "type": "tarball",
-        "url": "https://github.com/Gbury/dolmen/archive/5e22e653ec376336bbbed50aca4946db8edbc90f.tar.gz",
+        "url": "https://github.com/Gbury/dolmen/archive/c33632daab31fb3bb719031169baa6c984bb860f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "0.10"
+    },
+    "landmarks": {
+        "branch": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
+        "description": "A Simple Profiling Library for OCaml",
+        "homepage": "https://github.com/LexiFi/landmarks",
+        "owner": "LexiFi",
+        "repo": "landmarks",
+        "rev": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
+        "sha256": "02lr5grxcczikkdvz75vhrpgpfnq7z9svzgxxvimll0ijplgp6js",
+        "type": "tarball",
+        "url": "https://github.com/LexiFi/landmarks/archive/b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "dev"
     },
@@ -49,18 +62,5 @@
         "url": "https://github.com/Armael/pp_loc/archive/d8162fd289849ea2f4125054ab88540416bdaa25.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "2.1.0"
-    },
-    "landmarks": {
-      "branch": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
-      "description": "A Simple Profiling Library for OCaml",
-      "homepage": "https://github.com/LexiFi/landmarks",
-      "owner": "LexiFi",
-      "repo": "landmarks",
-      "rev": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
-      "sha256": "02lr5grxcczikkdvz75vhrpgpfnq7z9svzgxxvimll0ijplgp6js",
-      "type": "tarball",
-      "url": "https://github.com/LexiFi/landmarks/archive/b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7.tar.gz",
-      "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-      "version": "dev"
     }
 }
