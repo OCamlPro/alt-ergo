@@ -38,8 +38,6 @@ type t =
   (** Real numbers *)
   | Tbool
   (** Booleans *)
-  | Tunit
-  (** The unit type *)
   | Tvar of tvar
   (** Type variables *)
   | Tbitv of int

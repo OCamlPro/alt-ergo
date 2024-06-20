@@ -101,7 +101,6 @@ type bound = (* private *)
 type t =
   | True
   | False
-  | Void
   | Name of
       { hs : Id.t
       ; kind : name_kind
@@ -261,7 +260,7 @@ let compare s1 s2 =
         let c = compare_bounds b1 b1' in
         if c <> 0 then c else compare_bounds b2 b2'
       | _ ,
-        (True | False | Void | Name _ | Int _ | Real _ | Bitv _
+        (True | False | Name _ | Int _ | Real _ | Bitv _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
         assert false
     )
@@ -271,7 +270,6 @@ let equal s1 s2 = compare s1 s2 = 0
 let hash x =
   abs @@
   match x with
-  | Void -> 0
   | True -> 1
   | False -> 2
   | Let -> 3
@@ -397,7 +395,6 @@ module AEPrinter = struct
     (* Core theory *)
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
-    | Void -> Fmt.pf ppf "void"
     | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
