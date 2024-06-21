@@ -39,7 +39,42 @@ module SLR = Set.Make(LR)
 module DE = Dolmen.Std.Expr
 module DT = Dolmen.Std.Expr.Ty
 module B = Dolmen.Std.Builtin
-module TSet = Set.Make (Int)
+
+module Bitfield = struct
+  exception Empty
+
+  type t = Z.t
+
+  let ones sz = Z.(~$2 ** sz - ~$1)
+
+  let singleton i = Z.(~$1 lsl i)
+
+  let cardinal = Z.popcount
+
+  let[@inline always] inter z1 z2 = Z.(z1 land z2)
+
+  let[@inline always] remove z i = Z.(z land lognot (~$1 lsl i))
+
+  let[@inline always] subset z1 z2 =
+    Z.equal Z.(z1 land (lognot z2)) Z.zero
+
+  let mem = Z.testbit
+
+  let[@inline always] choose z =
+    try
+      Z.trailing_zeros z
+    with Z.Overflow -> raise_notrace Empty
+
+  let[@inline always] is_empty z = Z.equal z Z.zero
+
+  let equal = Z.equal
+
+  (* TODO: implement a more efficient algorithm. *)
+  let iter f z =
+    for i = 0 to (cardinal z)-1 do
+      if mem z i then f i
+    done
+end
 
 let timer = Timers.M_Adt
 
@@ -70,36 +105,36 @@ module Domain = struct
      assigned to the semantic value has to use a constructor lying in the
      domain. *)
   type t = {
-    constrs : TSet.t;
+    cstrs : Bitfield.t;
     hash : Uid.hash;
     ex : Ex.t;
   }
 
   exception Inconsistent of Ex.t
 
-  let[@inline always] cardinal { constrs; _ } = TSet.cardinal constrs
+  let[@inline always] cardinal { cstrs; _ } = Bitfield.cardinal cstrs
 
-  let[@inline always] choose { constrs; hash; _ } =
-    (* We choose the minimal element to ensure the termination of
-       model generation. *)
-    TSet.min_elt constrs |> hash.of_int
+  let[@inline always] choose { cstrs; hash; _ } =
+    hash.Uid.of_int @@ Bitfield.choose cstrs
 
-  let[@inline always] as_singleton { constrs; hash; ex; _ } =
-    if TSet.cardinal constrs = 1 then
-      Some (TSet.choose constrs |> hash.of_int, ex)
+  let[@inline always] as_singleton d =
+    if cardinal d = 1 then
+      Some (choose d, d.ex)
     else
       None
 
-  let domain ~constrs hash ex =
-    if TSet.is_empty constrs then
+  let domain ~cstrs hash ex =
+    if Bitfield.is_empty cstrs then
       raise @@ Inconsistent ex
     else
-      { constrs; hash; ex }
+      { cstrs; hash; ex }
 
   let[@inline always] singleton ~ex hash c =
-    { constrs = TSet.singleton (hash.Uid.to_int c); hash; ex }
+    let o = hash.Uid.to_int c in
+    { cstrs = Bitfield.singleton o; hash; ex }
 
-  let[@inline always] subset d1 d2 = TSet.subset d1.constrs d2.constrs
+  let[@inline always] subset d1 d2 =
+    Bitfield.subset d1.cstrs d2.cstrs
 
   let unknown ty =
     match ty with
@@ -107,40 +142,43 @@ module Domain = struct
       (* Return the list of all the constructors of the type of [r]. *)
       let cases = Ty.type_body name params in
       let hash = get_hash ty in
-      let constrs =
-        List.fold_left
-          (fun acc Ty.{ constr; _ } ->
-             TSet.add (hash.to_int constr) acc
-          ) TSet.empty cases
-      in
-      assert (not @@ TSet.is_empty constrs);
-      { constrs; hash; ex = Ex.empty }
+      let cstrs = Bitfield.ones (List.length cases) in
+      assert (not @@ Bitfield.is_empty cstrs);
+      { cstrs; hash; ex = Ex.empty }
     | _ ->
       (* Only ADT values can have a domain. This case shouldn't happen since
          we check the type of semantic values in both [add] and [assume]. *)
       assert false
 
-  let equal d1 d2 = TSet.equal d1.constrs d2.constrs
+  let equal d1 d2 = Bitfield.equal d1.cstrs d2.cstrs
 
-  let pp ppf d =
-    (* TODO: fix! *)
-    Fmt.(braces @@
-         iter ~sep:comma TSet.iter int) ppf d.constrs;
-    if Options.(get_verbose () || get_unsat_core ()) then
-      Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
+  let pp ppf d = ()
+  (* (* TODO: fix! *)
+     Fmt.(braces @@
+       iter ~sep:comma TSet.iter int) ppf d.constrs;
+     if Options.(get_verbose () || get_unsat_core ()) then
+     Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex *)
 
   let intersect ~ex d1 d2 =
-    let constrs = TSet.inter d1.constrs d2.constrs in
+    let cstrs = Bitfield.inter d1.cstrs d2.cstrs in
     let ex = ex |> Ex.union d1.ex |> Ex.union d2.ex in
-    domain ~constrs d1.hash ex
+    domain ~cstrs d1.hash ex
 
-  let remove ~ex c { constrs; hash; ex = ex' } =
-    let constrs = TSet.remove (hash.to_int c) constrs in
-    let ex = Ex.union ex' ex in
-    domain ~constrs hash ex
+  let remove ~ex c { cstrs; hash; ex = ex' } =
+    let o = hash.Uid.to_int c in
+    let cstrs = Bitfield.remove cstrs o in
+    let ex = Ex.union ex ex' in
+    domain ~cstrs hash ex
 
-  let for_all f { constrs; hash; _ } =
-    TSet.for_all (fun c -> f @@ hash.of_int c) constrs
+  let for_all f { cstrs; hash; _ } =
+    try
+      Bitfield.iter
+        (fun i ->
+           let c = hash.Uid.of_int i in
+           if not @@ f c then raise_notrace Exit
+        ) cstrs;
+      true
+    with Exit -> false
 end
 
 let is_adt_ty = function
@@ -324,7 +362,7 @@ type t = {
 
   new_terms : SE.t;
   (* Set of all the constructor applications built by the theory.
-     See the function [deduce_is_constr]. *)
+     See the function [deduce_is_cstr]. *)
 }
 
 let empty uf = {
