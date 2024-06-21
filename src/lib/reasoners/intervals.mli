@@ -27,6 +27,10 @@
 
 open Intervals_intf
 
+val map_bound : ('a -> 'b) -> 'a bound -> 'b bound
+(** [map_bound f b] applies [f] to a finite (open or closed) bound [b] and
+    does not change an unbounded bound. *)
+
 (** This module provides implementations of union-of-intervals over reals and
     integers. *)
 
@@ -40,11 +44,36 @@ module Real : AlgebraicField
    and type 'a union = 'a union
 (** Union-of-intervals over real numbers. *)
 
-module Int : EuclideanRing
-  with type explanation := Explanation.t
-   and type value := Z.t
-   and type 'a union = 'a union
 (** Union-of-intervals over integers. *)
+module Int : sig
+  include EuclideanRing
+    with type explanation := Explanation.t
+     and type value := Z.t
+     and type 'a union = 'a union
+
+  (** {2 Bit-vector helpers}
+
+      These functions are intended for the BV theory. They can only be used
+      with integer intervals. Some of these functions return intervals "of
+      width [n]", where [n] is computed from the parameters of the
+      function. This means that the returned interval is contained in the
+      range [[0, n)] ([0] inclusive, [n] exclusive). *)
+
+  val lognot : t -> t
+  (** Bitwise logical negation. [lognot u] always returns [-u - 1]. *)
+
+  val extract : t -> ofs:int -> len:int -> t
+  (** [extract s i j] returns the bits of [s] from position [i] to [j],
+      inclusive.
+
+      Represents the function [fun x -> floor(x / 2^i) % 2^(j - i + 1)].
+
+      Requires [0 <= i <= j] and returns an interval of width [j - i + 1].
+
+      {b Note}: The interval [s] must be an integer interval, but is
+      allowed to be unbounded (in which case [extract s i j] returns the
+      full interval [[0, 2^(j - i + 1) - 1]]). *)
+end
 
 module Legacy : sig
   (** The [Legacy] module reimplements (most of) the old legacy [Intervals]

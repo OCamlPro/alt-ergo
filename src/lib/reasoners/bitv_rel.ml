@@ -75,7 +75,94 @@ let is_bv_ty = function
 
 let is_bv_r r = is_bv_ty @@ X.type_info r
 
-module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
+module Interval_domain : Rel_utils.Domain with type t = Intervals.Int.t = struct
+  type t = Intervals.Int.t
+
+  let equal = Intervals.Int.equal
+
+  let pp = Intervals.Int.pp
+
+  exception Inconsistent of Explanation.t
+
+  let add_explanation = Intervals.Int.add_explanation
+
+  let unknown = function
+    | Ty.Tbitv n ->
+      Intervals.Int.of_bounds
+        (Closed Z.zero) (Open Z.(~$1 lsl n))
+    | ty ->
+      Fmt.invalid_arg "unknown: only bit-vector types are supported; got %a"
+        Ty.print ty
+
+  let filter_ty = is_bv_ty
+
+  let intersect x y =
+    match Intervals.Int.intersect x y with
+    | Empty ex ->
+      raise @@ Inconsistent ex
+    | NonEmpty u -> u
+
+  let lognot sz int =
+    Intervals.Int.extract ~ofs:0 ~len:sz @@ Intervals.Int.lognot int
+
+  let fold_signed f { Bitv.value; negated } sz int acc =
+    f value (if negated then lognot sz int else int) acc
+
+  let point ?ex n =
+    Intervals.Int.of_bounds ?ex (Closed n) (Closed n)
+
+  let fold_leaves f r int acc =
+    let width =
+      match X.type_info r with
+      | Tbitv n -> n
+      | _ -> assert false
+    in
+    let j, acc =
+      List.fold_left (fun (j, acc) { Bitv.bv; sz } ->
+          (* sz = j - i + 1 => i = j - sz + 1 *)
+          let int = Intervals.Int.extract int ~ofs:(j - sz + 1) ~len:sz in
+
+          let acc = match bv with
+            | Bitv.Cte z ->
+              (* Nothing to update, but still check for consistency *)
+              ignore @@ intersect int (point z);
+              acc
+            | Other s -> fold_signed f s sz int acc
+            | Ext (r, r_size, i, j) ->
+              (* r<i, j> = bl -> r = ?^(r_size - j - 1) @ bl @ ?^i *)
+              assert (i + r_size - j - 1 + sz = r_size);
+              let lo = unknown (Tbitv i) in
+              let int = Intervals.Int.scale Z.(~$1 lsl i) int in
+              let hi = unknown (Tbitv (r_size - j - 1)) in
+              let hi =
+                Intervals.Int.scale Z.(~$1 lsl Stdlib.(i + sz)) hi
+              in
+              fold_signed f r r_size Intervals.Int.(add hi (add int lo)) acc
+          in
+          (j - sz), acc
+        ) (width - 1, acc) (Shostak.Bitv.embed r)
+    in
+    assert (j = -1);
+    acc
+
+  let map_signed f { Bitv.value; negated } sz =
+    if negated then lognot sz (f value) else f value
+
+  let map_leaves f r =
+    List.fold_left (fun ival { Bitv.bv; sz } ->
+        let ival = Intervals.Int.scale Z.(~$1 lsl sz) ival in
+        Intervals.Int.add ival @@
+        match bv with
+        | Bitv.Cte z -> point z
+        | Other s -> map_signed f s sz
+        | Ext (s, sz', i, j) ->
+          Intervals.Int.extract (map_signed f s sz') ~ofs:i ~len:(j - i + 1)
+      ) (point Z.zero) (Shostak.Bitv.embed r)
+end
+
+module Interval_domains = Rel_utils.Domains_make(Interval_domain)
+
+module Bitlist_domain : Rel_utils.Domain with type t = Bitlist.t = struct
   (* Note: these functions are not in [Bitlist] proper in order to avoid a
      (direct) dependency from [Bitlist] to the [Shostak] module. *)
 
@@ -111,17 +198,17 @@ module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
           fold_signed f r (hi @ bl @ lo) acc, bl_tail
       ) (acc, bl) (Shostak.Bitv.embed r)
 
-  let map_signed f { Bitv.value; negated } t =
-    let bl = f value t in
+  let map_signed f { Bitv.value; negated } =
+    let bl = f value in
     if negated then lognot bl else bl
 
-  let map_leaves f r acc =
+  let map_leaves f r =
     List.fold_left (fun bl { Bitv.bv; sz } ->
         concat bl @@
         match bv with
         | Bitv.Cte z -> exact sz z Ex.empty
-        | Other r -> map_signed f r acc
-        | Ext (r, _r_size, i, j) -> extract (map_signed f r acc) i j
+        | Other r -> map_signed f r
+        | Ext (r, _r_size, i, j) -> extract (map_signed f r) i j
       ) empty (Shostak.Bitv.embed r)
 
   let unknown = function
@@ -131,7 +218,7 @@ module Domain : Rel_utils.Domain with type t = Bitlist.t = struct
       invalid_arg "unknown"
 end
 
-module Domains = Rel_utils.Domains_make(Domain)
+module Bitlist_domains = Rel_utils.Domains_make(Bitlist_domain)
 
 module Constraint : sig
   include Rel_utils.Constraint
@@ -149,11 +236,17 @@ module Constraint : sig
   val bvxor : X.r -> X.r -> X.r -> t
   (** [bvxor x y z] is the constraint [x ^ y ^ z = 0] *)
 
-  val propagate : ex:Ex.t -> t -> Domains.Ephemeral.t -> unit
+  val bvule : X.r -> X.r -> t
+
+  val bvugt : X.r -> X.r -> t
+
+  val propagate_bitlist : ex:Ex.t -> t -> Bitlist_domains.Ephemeral.t -> unit
   (** [propagate ~ex t dom] propagates the constraint [t] in domain [dom].
 
       The explanation [ex] justifies that the constraint [t] applies, and must
       be added to any domain that gets updated during propagation. *)
+
+  val propagate_interval : ex:Ex.t -> t -> Interval_domains.Ephemeral.t -> unit
 end = struct
   type binop =
     (* Bitwise operations *)
@@ -176,7 +269,7 @@ end = struct
     | Band | Bor | Bxor -> true
 
   let propagate_binop ~ex dx op dy dz =
-    let open Domains.Ephemeral in
+    let open Bitlist_domains.Ephemeral in
     match op with
     | Band ->
       update ~ex dx (Bitlist.logand !!dy !!dz);
@@ -203,6 +296,10 @@ end = struct
       (* x = y ^ z <-> y = x ^ z *)
       update ~ex dy (Bitlist.logxor !!dx !!dz);
       update ~ex dz (Bitlist.logxor !!dx !!dy)
+
+  let propagate_interval_binop ~ex:_ _r _op _y _z =
+    (* No interval propagation for binops yet *)
+    ()
 
   type fun_t =
     | Fbinop of binop * X.r * X.r
@@ -232,39 +329,136 @@ end = struct
     | Fbinop (op, x, y) -> Fbinop (op, X.subst rr nrr x, X.subst rr nrr y)
 
   let propagate_fun_t ~ex dom r f =
-    let open Domains.Ephemeral in
+    let open Bitlist_domains.Ephemeral in
     let get r = handle dom r in
     match f with
     | Fbinop (op, x, y) ->
       propagate_binop ~ex (get r) op (get x) (get y)
 
+  let propagate_interval_fun_t ~ex dom r f =
+    let get r = Interval_domains.Ephemeral.handle dom r in
+    match f with
+    | Fbinop (op, x, y) ->
+      propagate_interval_binop ~ex (get r) op (get x) (get y)
+
+  type binrel = Rule | Rugt
+
+  let pp_binrel ppf = function
+    | Rule -> Fmt.pf ppf "bvule"
+    | Rugt -> Fmt.pf ppf "bvugt"
+
+  let equal_binrel : binrel -> binrel -> bool = Stdlib.(=)
+
+  let hash_binrel : binrel -> int = Hashtbl.hash
+
+  let propagate_binrel ~ex:_ _op _dx _dy =
+    (* No bitlist propagation for relations yet *)
+    ()
+
+  let less_than_sup ~strict iv =
+    let sup, ex = Intervals.Int.upper_bound iv in
+    let sup = if strict then Intervals.map_bound Z.pred sup else sup in
+    Intervals.Int.of_bounds ~ex Unbounded sup
+
+  let greater_than_inf ~strict iv =
+    let inf, ex = Intervals.Int.lower_bound iv in
+    let inf = if strict then Intervals.map_bound Z.succ inf else inf in
+    Intervals.Int.of_bounds ~ex inf  Unbounded
+
+  let propagate_less_than ~ex ~strict dx dy =
+    let open Interval_domains.Ephemeral in
+    update ~ex dx (less_than_sup ~strict !!dy);
+    update ~ex dy (greater_than_inf ~strict !!dx)
+
+  let propagate_interval_binrel ~ex op dx dy =
+    match op with
+    | Rule ->
+      propagate_less_than ~ex ~strict:false dx dy
+    | Rugt ->
+      propagate_less_than ~ex ~strict:true dy dx
+
+  type rel_t =
+    | Rbinrel of binrel * X.r * X.r
+
+  let pp_rel_t ppf = function
+    | Rbinrel (op, x, y) ->
+      Fmt.pf ppf "%a@[(%a,@ %a)@]" pp_binrel op X.print x X.print y
+
+  let equal_rel_t f1 f2 =
+    match f1, f2 with
+    | Rbinrel (op1, x1, y1), Rbinrel (op2, x2, y2) ->
+      equal_binrel op1 op2 && X.equal x1 x2 && X.equal y1 y2
+
+  let hash_rel_t = function
+    | Rbinrel (op, x, y) -> Hashtbl.hash (hash_binrel op, X.hash x, X.hash y)
+
+  let normalize_rel_t = function
+    (* No normalization for relations yet *)
+    | r -> r
+
+  let fold_args_rel_t f r acc =
+    match r with
+    | Rbinrel (_op, x, y) -> f y (f x acc)
+
+  let subst_rel_t rr nrr = function
+    | Rbinrel (op, x, y) -> Rbinrel (op, X.subst rr nrr x, X.subst rr nrr y)
+
+  let propagate_rel_t ~ex dom r =
+    let open Bitlist_domains.Ephemeral in
+    let get r = handle dom r in
+    match r with
+    | Rbinrel (op, x, y) ->
+      propagate_binrel ~ex op (get x) (get y)
+
+  let propagate_interval_rel_t ~ex dom r =
+    let get r = Interval_domains.Ephemeral.handle dom r in
+    match r with
+    | Rbinrel (op, x, y) ->
+      propagate_interval_binrel ~ex op (get x) (get y)
+
   type repr =
     | Cfun of X.r * fun_t
+    | Crel of rel_t
 
   let pp_repr ppf = function
     | Cfun (r, fn) ->
       Fmt.(pf ppf "%a =@ %a" (box X.print) r (box pp_fun_t) fn)
+    | Crel rel ->
+      pp_rel_t ppf rel
 
   let equal_repr c1 c2 =
     match c1, c2 with
     | Cfun (r1, f1), Cfun (r2, f2) ->
       X.equal r1 r2 && equal_fun_t f1 f2
+    | Cfun _, _ | _, Cfun _ -> false
+
+    | Crel r1, Crel r2 ->
+      equal_rel_t r1 r2
 
   let hash_repr = function
-    | Cfun (r, f) -> Hashtbl.hash (X.hash r, hash_fun_t f)
+    | Cfun (r, f) -> Hashtbl.hash (0, X.hash r, hash_fun_t f)
+    | Crel r -> Hashtbl.hash (1, hash_rel_t r)
 
   let normalize_repr = function
     | Cfun (r, f) -> Cfun (r, normalize_fun_t f)
+    | Crel r -> Crel (normalize_rel_t r)
 
   let fold_args_repr f c acc =
     match c with
     | Cfun (r, fn) -> fold_args_fun_t f fn (f r acc)
+    | Crel r -> fold_args_rel_t f r acc
 
   let subst_repr rr nrr = function
     | Cfun (r, f) -> Cfun (X.subst rr nrr r, subst_fun_t rr nrr f)
+    | Crel r -> Crel (subst_rel_t rr nrr r)
 
   let propagate_repr ~ex dom = function
     | Cfun (r, f) -> propagate_fun_t ~ex dom r f
+    | Crel r -> propagate_rel_t ~ex dom r
+
+  let propagate_interval_repr ~ex dom = function
+    | Cfun (r, f) -> propagate_interval_fun_t ~ex dom r f
+    | Crel r -> propagate_interval_rel_t ~ex dom r
 
   type t = { repr : repr ; mutable tag : int }
 
@@ -298,6 +492,13 @@ end = struct
   let bvor = cbinop Bor
   let bvxor = cbinop Bxor
 
+  let crel r = hcons @@ Crel r
+
+  let cbinrel op x y = crel (Rbinrel (op, x, y))
+
+  let bvule = cbinrel Rule
+  let bvugt = cbinrel Rugt
+
   let equal c1 c2 = c1.tag = c2.tag
 
   let hash c = Hashtbl.hash c.tag
@@ -309,8 +510,11 @@ end = struct
   let subst rr nrr c =
     hcons @@ subst_repr rr nrr c.repr
 
-  let propagate ~ex c dom =
+  let propagate_bitlist ~ex c dom =
     propagate_repr ~ex dom c.repr
+
+  let propagate_interval ~ex c dom =
+    propagate_interval_repr ~ex dom c.repr
 
   let simplify_binop acts op r x y =
     let acts_add_zero r =
@@ -335,8 +539,19 @@ end = struct
   let simplify_fun_t acts r = function
     | Fbinop (op, x, y) -> simplify_binop acts op r x y
 
+  let simplify_binrel acts op x y =
+    match op with
+    | Rugt when X.equal x y ->
+      acts.Rel_utils.acts_add_eq X.top X.bot;
+      true
+    | Rule | Rugt -> false
+
+  let simplify_rel_t acts = function
+    | Rbinrel (op, x, y) -> simplify_binrel acts op x y
+
   let simplify_repr acts = function
     | Cfun (r, f) -> simplify_fun_t acts r f
+    | Crel r -> simplify_rel_t acts r
 
   let simplify c acts =
     simplify_repr acts c.repr
@@ -416,7 +631,7 @@ module Any_constraint = struct
     | Constraint of Constraint.t Rel_utils.explained
     | Structural of X.r
     (** Structural constraint associated with [X.r]. See
-        {!Rel_utils.Domains.structural_propagation}. *)
+        {!Rel_utils.Bitlist_domains.structural_propagation}. *)
 
   let equal a b =
     match a, b with
@@ -428,55 +643,256 @@ module Any_constraint = struct
     | Constraint c -> 2 * Constraint.hash c.value
     | Structural r -> 2 * X.hash r + 1
 
-  let propagate c d =
+  let propagate constraint_propagate structural_propagation c d =
     match c with
     | Constraint { value; explanation = ex } ->
-      Constraint.propagate ~ex value d
+      constraint_propagate ~ex value d
     | Structural r ->
-      Domains.Ephemeral.structural_propagation d r
+      structural_propagation d r
 end
 
 module QC = Uqueue.Make(Any_constraint)
 
-(* Propagate:
+(* Compute the number of most significant bits shared by [inf] and [sup].
 
-   - The constraints that were never propagated since they were added
-   - The constraints involving variables whose domain changed since the last
-      propagation
+   Requires: [inf <= sup]
+   Ensures:
+    result is the greatest integer <= sz such that
+    inf<sz - result .. sz> = sup<sz - result .. sz>
 
-   Iterate until fixpoint is reached. *)
-let propagate eqs bcs dom =
+    In particular, [result = sz] iff [inf = sup] and [result = 0] iff the most
+    significant bits of [inf] and [sup] differ. *)
+let rec shared_msb sz inf sup =
+  let numbits_inf = Z.numbits inf in
+  let numbits_sup = Z.numbits sup in
+  assert (numbits_inf <= numbits_sup);
+  if numbits_inf = numbits_sup then
+    (* Top [sz - numbits_inf] bits are 0 in both; look at 1s *)
+    if numbits_inf = 0 then
+      sz
+    else
+      sz - numbits_inf +
+      shared_msb numbits_inf
+        (Z.extract (Z.lognot sup) 0 numbits_inf)
+        (Z.extract (Z.lognot inf) 0 numbits_inf)
+  else
+    (* Top [sz - numbits_sup] are 0 in both, the next significant bit differs *)
+    sz - numbits_sup
+
+let finite_lower_bound = function
+  | Intervals_intf.Unbounded -> Z.zero
+  | Closed n -> n
+  | Open n -> Z.succ n
+
+let finite_upper_bound ~size:sz = function
+  | Intervals_intf.Unbounded -> Z.extract Z.minus_one 0 sz
+  | Closed n -> n
+  | Open n -> Z.pred n
+
+(* If m and M are the minimal and maximal values of an union of intervals, the
+   longest sequence of most significant bits shared between m and M can be fixed
+   in the bit-vector domain; see "Is to BVs" in section 4.1 of
+
+   Sharpening Constraint Programming approaches for Bit-Vector Theory.
+   Zakaria Chihani, Bruno Marre, François Bobot, Sébastien Bardin.
+   CPAIOR 2017. International Conference on AI and OR Techniques in
+   Constraint Programming for Combinatorial Optimization Problems, Jun
+   2017, Padova, Italy.
+   https://cea.hal.science/cea-01795779/document
+
+   Relevant excerpt:
+
+   For example, m = 48 and M = 52 (00110000 and 00110100 in binary) share their
+   five most-significant bits, denoted [00110???]. Therefore, a bit-vector bl =
+   [0??1???0] can be refined into [00110??0]. *)
+let constrain_bitlist_from_interval bv int =
+  let open Bitlist_domains.Ephemeral in
+  let sz = Bitlist.width !!bv in
+
+  let inf, inf_ex = Intervals.Int.lower_bound int in
+  let inf = finite_lower_bound inf in
+  let sup, sup_ex = Intervals.Int.upper_bound int in
+  let sup = finite_upper_bound ~size:sz sup in
+
+  let nshared = shared_msb sz inf sup in
+  if nshared > 0 then
+    let ex = Ex.union inf_ex sup_ex in
+    let shared_bl =
+      Bitlist.exact nshared (Z.extract inf (sz - nshared) nshared) ex
+    in
+    update ~ex bv @@
+    Bitlist.concat shared_bl (Bitlist.unknown (sz - nshared) Ex.empty)
+
+(* Algorithm 1 from
+
+   Sharpening Constraint Programming approaches for Bit-Vector Theory.
+   Zakaria Chihani, Bruno Marre, François Bobot, Sébastien Bardin.
+   CPAIOR 2017. International Conference on AI and OR Techniques in
+   Constraint Programming for Combinatorial Optimization Problems, Jun
+   2017, Padova, Italy.
+   https://cea.hal.science/cea-01795779/document
+
+   This function is a wrapper calling [Bitlist.increase_lower_bound] and
+   [Bitlist.decrease_upper_bound] on all the constituent intervals of an union;
+   see the documentation of these functions for details. *)
+let constrain_interval_from_bitlist int bv =
+  let open Interval_domains.Ephemeral in
+  let ex = Bitlist.explanation bv in
+  (* Handy wrapper around [of_complement] *)
+  let remove ~ex i2 i1 =
+    match Intervals.Int.of_complement ~ex i1 with
+    | Empty _ -> invalid_arg "remove"
+    | NonEmpty i1 ->
+      match Intervals.Int.intersect i2 i1 with
+      | NonEmpty i -> i
+      | Empty ex ->
+        raise @@ Interval_domains.Inconsistent ex
+  in
+  update ~ex int @@
+  Intervals.Int.fold (fun acc i ->
+      let { Intervals_intf.lb ; ub } = Intervals.Int.Interval.view i in
+      let lb = finite_lower_bound lb in
+      let ub = finite_upper_bound ~size:(Bitlist.width bv) ub in
+      let acc =
+        match Bitlist.increase_lower_bound bv lb with
+        | new_lb when Z.compare new_lb lb > 0 ->
+          (* lower bound increased; remove [lb, new_lb[ *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Closed lb) (Open new_lb)
+        | new_lb ->
+          (* no change *)
+          assert (Z.equal new_lb lb);
+          acc
+        | exception Not_found ->
+          (* No value larger than lb matches the bit-pattern *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Closed lb) Unbounded
+      in
+      let acc =
+        match Bitlist.decrease_upper_bound bv ub with
+        | new_ub when Z.compare new_ub ub < 0 ->
+          (* upper bound decreased; remove ]new_ub, ub] *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds (Open new_ub) (Closed ub)
+        | new_ub ->
+          (* no change *)
+          assert (Z.equal new_ub ub);
+          acc
+        | exception Not_found ->
+          (* No value smaller than ub matches the bit-pattern *)
+          remove ~ex acc
+          @@ Intervals.Int.Interval.of_bounds Unbounded (Closed ub)
+      in
+      acc
+    ) !!int !!int
+
+let propagate_bitlist queue touched bcs dom =
+  let touch_c c = QC.push queue (Constraint c) in
+  let touch r =
+    HX.replace touched r ();
+    QC.push queue (Structural r);
+    Constraints.iter_parents touch_c r bcs
+  in
+  try
+    while true do
+      Bitlist_domains.Ephemeral.iter_changed touch dom;
+      Bitlist_domains.Ephemeral.clear_changed dom;
+      Any_constraint.propagate
+        Constraint.propagate_bitlist
+        Bitlist_domains.Ephemeral.structural_propagation
+        (QC.pop queue) dom
+    done
+  with QC.Empty -> ()
+
+let propagate_intervals queue touched bcs dom =
+  let touch_c c = QC.push queue (Constraint c) in
+  let touch r =
+    HX.replace touched r ();
+    QC.push queue (Structural r);
+    Constraints.iter_parents touch_c r bcs
+  in
+  try
+    while true do
+      Interval_domains.Ephemeral.iter_changed touch dom;
+      Interval_domains.Ephemeral.clear_changed dom;
+      Any_constraint.propagate
+        Constraint.propagate_interval
+        Interval_domains.Ephemeral.structural_propagation
+        (QC.pop queue) dom
+    done
+  with QC.Empty -> ()
+
+let propagate_all eqs bcs bdom idom =
   (* Call [simplify_pending] first because it can remove constraints from the
      pending set. *)
   let eqs, bcs = Constraints.simplify_pending eqs bcs in
   (* Optimization to avoid unnecessary allocations *)
-  if Constraints.has_pending bcs || Domains.has_changed dom then
+  let do_all = Constraints.has_pending bcs in
+  let do_bitlist = do_all || Bitlist_domains.has_changed bdom in
+  let do_intervals = do_all || Interval_domains.has_changed idom in
+  let do_any = do_bitlist || do_intervals in
+  if do_any then
     let queue = QC.create 17 in
-    let touch_c c = QC.push queue (Constraint c) in
-    Constraints.iter_pending touch_c bcs;
-    let bcs = Constraints.clear_pending bcs in
-    let changed = HX.create 17 in
-    let touch r =
-      HX.replace changed r ();
-      QC.push queue (Structural r);
-      Constraints.iter_parents touch_c r bcs
+    let touch_pending queue =
+      Constraints.iter_pending (fun c -> QC.push queue (Constraint c)) bcs
     in
-    let dom = Domains.edit dom in
-    (
-      try
-        while true do
-          Domains.Ephemeral.iter_changed touch dom;
-          Domains.Ephemeral.clear_changed dom;
-          Any_constraint.propagate (QC.pop queue) dom
-        done
-      with QC.Empty -> ()
-    );
-    HX.fold (fun r () acc ->
-        let d = Domains.Ephemeral.(!!(handle dom r)) in
-        add_eqs acc (Shostak.Bitv.embed r) d
-      ) changed eqs, bcs, Domains.snapshot dom
+    let bitlist_changed = HX.create 17 in
+    let touched = HX.create 17 in
+    let bdom = Bitlist_domains.edit bdom in
+    let idom = Interval_domains.edit idom in
+
+    (* First, we propagate the pending constraints to both domains. Changes in
+       the bitlist domain are used to shrink the interval domains. *)
+    touch_pending queue;
+    propagate_bitlist queue touched bcs bdom;
+    assert (QC.is_empty queue);
+
+    touch_pending queue;
+    HX.iter (fun r () ->
+        HX.replace bitlist_changed r ();
+        constrain_interval_from_bitlist
+          Interval_domains.Ephemeral.(handle idom r)
+          Bitlist_domains.Ephemeral.(!!(handle bdom r))
+      ) touched;
+    HX.clear touched;
+    propagate_intervals queue touched bcs idom;
+    assert (QC.is_empty queue);
+
+    (* Now the interval domain is stable, but the new intervals may have an
+       impact on the bitlist domains, so we must shrink them again when
+       applicable. We repeat until a fixpoint is reached. *)
+    let bcs = Constraints.clear_pending bcs in
+    while HX.length touched > 0 do
+      HX.iter (fun r () ->
+          constrain_bitlist_from_interval
+            Bitlist_domains.Ephemeral.(handle bdom r)
+            Interval_domains.Ephemeral.(!!(handle idom r))
+        ) touched;
+      HX.clear touched;
+      propagate_bitlist queue touched bcs bdom;
+      assert (QC.is_empty queue);
+
+      HX.iter (fun r () ->
+          HX.replace bitlist_changed r ();
+          constrain_interval_from_bitlist
+            Interval_domains.Ephemeral.(handle idom r)
+            Bitlist_domains.Ephemeral.(!!(handle bdom r))
+        ) touched;
+      HX.clear touched;
+      propagate_intervals queue touched bcs idom;
+      assert (QC.is_empty queue);
+    done;
+
+    let eqs =
+      HX.fold (fun r () acc ->
+          let d = Bitlist_domains.Ephemeral.(!!(handle bdom r)) in
+          add_eqs acc (Shostak.Bitv.embed r) d
+        ) bitlist_changed eqs
+    in
+
+    eqs, bcs, Bitlist_domains.snapshot bdom, Interval_domains.snapshot idom
   else
-    eqs, bcs, dom
+    eqs, bcs, bdom, idom
 
 type t =
   { delayed : Rel_utils.Delayed.t
@@ -487,13 +903,18 @@ let empty uf =
   { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
   ; constraints = Constraints.empty
   ; size_splits = Q.one },
-  Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf)
+  Uf.GlobalDomains.add (module Bitlist_domains) Bitlist_domains.empty @@
+  Uf.GlobalDomains.add (module Interval_domains) Interval_domains.empty @@
+  Uf.domains uf
 
 let assume env uf la =
   let ds = Uf.domains uf in
-  let domain = Uf.GlobalDomains.find (module Domains) ds in
+  let domain = Uf.GlobalDomains.find (module Bitlist_domains) ds in
+  let int_domain =
+    Uf.GlobalDomains.find (module Interval_domains) ds
+  in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
-  let (domain, constraints, eqs, size_splits) =
+  let (domain, int_domain, constraints, eqs, size_splits) =
     try
       let (constraints, eqs, size_splits) =
         List.fold_left (fun (bcs, eqs, ss) (a, _root, ex, orig) ->
@@ -511,6 +932,18 @@ let assume env uf la =
             | L.Eq (rr, nrr), Subst when is_bv_r rr ->
               let bcs = Constraints.subst ~ex rr nrr bcs in
               (bcs, eqs, ss)
+            | Builtin (is_true, BVULE, [x; y]), _ ->
+              let x, exx = Uf.find_r uf x in
+              let y, exy = Uf.find_r uf y in
+              let ex = Ex.union ex @@ Ex.union exx exy in
+              let c =
+                if is_true then
+                  Constraint.bvule x y
+                else
+                  Constraint.bvugt x y
+              in
+              let bcs = Constraints.add ~ex c bcs in
+              (bcs, eqs, ss)
             | L.Distinct (false, [rr; nrr]), _ when is_1bit rr ->
               (* We don't (yet) support [distinct] in general, but we must
                  support it for case splits to avoid looping.
@@ -526,17 +959,22 @@ let assume env uf la =
           (env.constraints, [], env.size_splits)
           la
       in
-      let eqs, constraints, domain = propagate eqs constraints domain in
+      let eqs, constraints, domain, int_domain =
+        propagate_all eqs constraints domain int_domain
+      in
       if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
-          "bitlist domain: @[%a@]" Domains.pp domain;
+          "bitlist domain: @[%a@]" Bitlist_domains.pp domain;
+        Printer.print_dbg
+          ~module_name:"Bitv_rel" ~function_name:"assume"
+          "interval domain: @[%a@]" Interval_domains.pp int_domain;
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
           "bitlist constraints: @[%a@]" Constraints.pp constraints;
       );
-      (domain, constraints, eqs, size_splits)
-    with Bitlist.Inconsistent ex ->
+      (domain, int_domain, constraints, eqs, size_splits)
+    with Bitlist.Inconsistent ex | Interval_domain.Inconsistent ex ->
       raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
   in
   let assume =
@@ -546,7 +984,8 @@ let assume env uf la =
     { result with assume = List.rev_append assume result.assume }
   in
   { delayed ; constraints ; size_splits },
-  Uf.GlobalDomains.add (module Domains) domain ds,
+  Uf.GlobalDomains.add (module Bitlist_domains) domain @@
+  Uf.GlobalDomains.add (module Interval_domains) int_domain ds,
   result
 
 let query _ _ _ = None
@@ -555,7 +994,9 @@ let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
     []
   else
-    let domain = Uf.GlobalDomains.find (module Domains) (Uf.domains uf) in
+    let domain =
+      Uf.GlobalDomains.find (module Bitlist_domains) (Uf.domains uf)
+    in
     (* Look for representatives with minimal, non-fully known, domain size.
 
        We first look among the constrained variables, then if there are no
@@ -579,7 +1020,7 @@ let case_split env uf ~for_model =
           match bv with
           | Bitv.Cte _ -> acc
           | Other r | Ext (r, _, _, _) ->
-            let bl = Domains.get r.value domain in
+            let bl = Bitlist_domains.get r.value domain in
             f_acc r.value bl acc
         ) acc (Shostak.Bitv.embed r)
     in
@@ -587,14 +1028,14 @@ let case_split env uf ~for_model =
       match Constraints.fold_args f_acc' env.constraints None with
       | Some (nunk, xs) -> nunk, xs
       | _ ->
-        match Domains.fold_leaves f_acc domain None with
+        match Bitlist_domains.fold_leaves f_acc domain None with
         | Some (nunk, xs) -> nunk, xs
         | None -> 0, SX.empty
     in
     (* For now, just pick a value for the most significant bit. *)
     match SX.choose candidates with
     | r ->
-      let bl = Domains.get r domain in
+      let bl = Bitlist_domains.get r domain in
       let w = Bitlist.width bl in
       let unknown = Z.extract (Z.lognot @@ Bitlist.bits_known bl) 0 w in
       let bitidx = Z.numbits unknown  - 1 in
@@ -615,11 +1056,8 @@ let add env uf r t =
   let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
   let env, eqs =
     if is_bv_r r then
-      try
-        let constraints = extract_constraints env.constraints uf r t in
-        { env with constraints }, eqs
-      with Domains.Inconsistent ex ->
-        raise @@ Ex.Inconsistent (ex, Uf.cl_extract uf)
+      let constraints = extract_constraints env.constraints uf r t in
+      { env with constraints }, eqs
     else
       env, eqs
   in
@@ -636,3 +1074,7 @@ let assume_th_elt t th_elt _ =
   | Util.Bitv ->
     failwith "This Theory does not support theories extension"
   | _ -> t
+
+module Test = struct
+  let shared_msb = shared_msb
+end

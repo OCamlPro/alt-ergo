@@ -105,6 +105,18 @@ module Pp_smtlib_term = struct
         | Sy.L_neg_pred, [a] ->
           fprintf fmt "(not %a)" print a
 
+        | Sy.L_built Sy.BVULE, [a;b] ->
+          if Options.get_output_smtlib () then
+            fprintf fmt "(bvule %a %a)" print a print b
+          else
+            fprintf fmt "(%a <= %a)" print a print b
+
+        | Sy.L_neg_built Sy.BVULE, [a;b] ->
+          if Options.get_output_smtlib () then
+            fprintf fmt "(bvugt %a %a)" print a print b
+          else
+            fprintf fmt "(%a > %a)" print a print b
+
         | Sy.L_built (Sy.IsConstr hs), [e] ->
           if Options.get_output_smtlib () then
             fprintf fmt "((_ is %a) %a)" Uid.pp hs print e
@@ -117,7 +129,8 @@ module Pp_smtlib_term = struct
           else
             fprintf fmt "not (%a ? %a)" print e Uid.pp hs
 
-        | (Sy.L_built (Sy.LT | Sy.LE) | Sy.L_neg_built (Sy.LT | Sy.LE)
+        | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
+          | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
           | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
           | Sy.L_built (Sy.IsConstr _)
           | Sy.L_neg_built (Sy.IsConstr _)) , _ ->

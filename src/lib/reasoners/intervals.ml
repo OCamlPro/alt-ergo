@@ -47,6 +47,11 @@ module Log = struct
         )
 end
 
+let map_bound f = function
+  | Unbounded -> Unbounded
+  | Open x -> Open (f x)
+  | Closed x -> Closed (f x)
+
 module Ring(C : Core)(RT : RingType) = struct
   include C.Union(RT)
 
@@ -81,6 +86,16 @@ module Ring(C : Core)(RT : RingType) = struct
   let add u1 u2 =
     trace2 "add" u1 u2 @@ of_set_nonempty @@
     map2_mon_to_set RT.add Inc u1 Inc u2
+
+  let scale alpha u =
+    let alpha = RT.finite alpha in
+    let c = RT.compare alpha RT.zero in
+    if c < 0 then
+      map_strict_dec (RT.mul alpha) u
+    else if c > 0 then
+      map_strict_inc (RT.mul alpha) u
+    else
+      invalid_arg "scale: cannot scale by zero"
 
   let mul u1 u2 =
     trace2 "mul" u1 u2 @@ of_set_nonempty @@
@@ -289,6 +304,11 @@ module ZEuclideanType = struct
 
     | Finite x, Neg_infinite ->
       if Z.sign x < 0 then Finite Z.one else Finite Z.zero
+
+  let lognot = function
+    | Neg_infinite -> Pos_infinite
+    | Pos_infinite -> Neg_infinite
+    | Finite n -> Finite (Z.lognot n)
 end
 
 (* AlgebraicType interface for reals
@@ -571,7 +591,44 @@ type 'a union = 'a Core.union
 
 module Real = AlgebraicField(Core)(QAlgebraicType)
 
-module Int = EuclideanRing(Core)(ZEuclideanType)
+module Int = struct
+  include EuclideanRing(Core)(ZEuclideanType)
+
+  let extract u ~ofs ~len =
+    if ofs < 0 || len <= 0 then invalid_arg "extract";
+    trace1 (Fmt.str "extract ~ofs:%d ~len:%d" ofs len) u @@
+    let max_val = Z.extract Z.minus_one 0 len in
+    let full = Interval.of_bounds (Closed Z.zero) (Closed max_val) in
+    of_set_nonempty @@
+    map_to_set (fun i ->
+        match i.lb, i.ub with
+        | ZEuclideanType.Neg_infinite, _ | _, Pos_infinite ->
+          interval_set full
+        | _, Neg_infinite | Pos_infinite, _ ->
+          assert false
+        | Finite lb, Finite ub ->
+          let lb = Z.shift_right lb ofs in
+          let ub = Z.shift_right ub ofs in
+          if Z.(numbits (ub - lb)) <= len then
+            (* The image spans an interval of length at most [len] *)
+            let lb_mod = Z.extract lb 0 len in
+            let ub_mod = Z.extract ub 0 len in
+            if Z.(compare lb_mod ub_mod) <= 0 then
+              interval_set @@ Interval.of_bounds (Closed lb_mod) (Closed ub_mod)
+            else
+              union_set
+                (interval_set @@ Interval.of_bounds
+                   (Closed Z.zero) (Closed ub_mod))
+                (interval_set @@ Interval.of_bounds
+                   (Closed lb_mod) (Closed max_val))
+          else
+            (* The image is too large; all values are possible. *)
+            interval_set full
+      ) u
+
+  let lognot u =
+    trace1 "lognot" u @@ map_strict_dec ZEuclideanType.lognot u
+end
 
 module Legacy = struct
   type t = Real of Real.t | Int of Int.t
@@ -774,11 +831,6 @@ module Legacy = struct
         | _ -> None
       in
       (lb, ub)
-
-  let map_bound f = function
-    | Unbounded -> Unbounded
-    | Open x -> Open (f x)
-    | Closed x -> Closed (f x)
 
   let lower_bound = function
     | Real u -> Real.lower_bound u

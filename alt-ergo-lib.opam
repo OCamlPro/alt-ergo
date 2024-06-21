@@ -31,6 +31,7 @@ depends: [
   "odoc" {with-doc}
   "ppx_deriving"
   "stdcompat"
+  "qcheck" {with-test}
 ]
 conflicts: [
   "ppxlib" {< "0.30.0"}
