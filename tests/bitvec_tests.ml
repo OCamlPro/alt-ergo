@@ -10,6 +10,8 @@ module IntSet : sig
 
   val map : (Z.t -> Z.t) -> t -> t
 
+  val map2 : (Z.t -> Z.t -> Z.t) -> t -> t -> t
+
   val mem : Z.t -> t -> bool
 end = struct
   type t = Z.t
@@ -51,6 +53,13 @@ end = struct
 
   let map f t =
     fold (fun n -> add (f n)) t empty
+
+  let map2 f s t =
+    fold (fun n ->
+        fold (fun m ->
+            add (f n m)
+          ) t
+      ) s empty
 end
 
 let finite_bound = function
@@ -229,3 +238,28 @@ let test_decrease_upper_bound sz =
 
 let () =
   Test.check_exn (test_decrease_upper_bound 3)
+
+let test_bitlist_binop ~count sz zop bop =
+  Test.make ~count
+    ~print:Print.(
+        pair
+          (Fmt.to_to_string Bitlist.pp)
+          (Fmt.to_to_string Bitlist.pp))
+    Gen.(pair (bitlist sz) (bitlist sz))
+    (fun (s, t) ->
+       let u = bop s t in
+       Bitlist.width u = Bitlist.width s &&
+       Bitlist.width u = Bitlist.width t &&
+       IntSet.subset
+         (IntSet.map2 zop (of_bitlist s) (of_bitlist t))
+         (of_bitlist u))
+
+let zmul sz a b =
+  Z.extract (Z.mul a b) 0 sz
+
+let test_bitlist_mul sz =
+  test_bitlist_binop ~count:1_000
+    sz (zmul sz) Bitlist.mul
+
+let () =
+  Test.check_exn (test_bitlist_mul 3)

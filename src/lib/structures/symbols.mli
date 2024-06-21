@@ -43,7 +43,9 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
-  | BVnot | BVand | BVor | BVxor | Int2BV of int | BV2Nat
+  | BVnot | BVand | BVor | BVxor
+  | BVadd | BVsub | BVmul
+  | Int2BV of int | BV2Nat
   (* FP *)
   | Float
   | Integer_round
