@@ -265,7 +265,10 @@ let fold_domain f b acc =
   in
   fold_domain_aux 0 b acc
 
-(* simple propagator: only compute known low bits *)
+(* simple propagator: only compute known low bits
+
+   Example: ???100 * ???000 = ?00000 (trailing zeroes accumulate)
+            ???111 * ????11 = ????01 (min of low bits known) *)
 let mul a b =
   let sz = width a in
   assert (width b = sz);
@@ -278,6 +281,7 @@ let mul a b =
   if zeroes_a + zeroes_b >= sz then
     exact sz Z.zero ex
   else
+    (* Factor out the low zeroes *)
     let low_bits =
       if zeroes_a + zeroes_b = 0 then empty
       else exact (zeroes_a + zeroes_b) Z.zero ex
@@ -286,7 +290,10 @@ let mul a b =
     assert (width a + width low_bits = sz);
     let b = extract b zeroes_b (zeroes_b + sz - width low_bits - 1) in
     assert (width b + width low_bits = sz);
-    (* ((ah * 2^n) + al) * ((bh * 2^m) + bl) =
+    (* a = ah * 2^n + al (0 <= al < 2^n)
+       b = bh * 2^m + bl (0 <= bl < 2^m)
+
+       ((ah * 2^n) + al) * ((bh * 2^m) + bl) =
         al * bl  (mod 2^(min n m)) *)
     let low_a_known = Z.trailing_zeros @@ Z.lognot @@ bits_known a in
     let low_b_known = Z.trailing_zeros @@ Z.lognot @@ bits_known b in

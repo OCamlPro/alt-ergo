@@ -119,7 +119,7 @@ val logxor : t -> t -> t
 (** Bitwise xor. *)
 
 val mul : t -> t -> t
-(** Multiplication. *)
+(** Integer multiplication. *)
 
 val concat : t -> t -> t
 (** Bit-vector concatenation. *)

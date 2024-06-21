@@ -409,8 +409,8 @@ end = struct
 
   let propagate_less_than ~ex ~strict dx dy =
     let open Interval_domains.Ephemeral in
-    (* Do not use [update] to make sure that the justification is only stored on
-       the upper/lower bound. *)
+    (* Add justification prior to calling [update] to ensure that it is only
+       stored on the appropriate bound. *)
     update ~ex:Ex.empty dx (less_than_sup ~ex ~strict !!dy);
     update ~ex:Ex.empty dy (greater_than_inf ~ex ~strict !!dx)
 
