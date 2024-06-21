@@ -654,16 +654,19 @@ module Int = struct
                 (* x < y : bvurem is the identity *)
                 interval_set i1
               else if (
-                ZEuclideanType.equal i2.lb ZEuclideanType.zero ||
-                ZEuclideanType.compare i1.ub i2.ub < 0
+                ZEuclideanType.equal i2.lb ZEuclideanType.zero
               ) then
                 (* The range [0, i1.ub] is always valid; it is also the best we
-                   can do if [y] can be either [0] or bigger than [x]. *)
-                interval_set @@ { i1 with lb = ZEuclideanType.zero }
+                   can do if [y] can be [0]. *)
+                interval_set { i1 with lb = ZEuclideanType.zero }
               else
-                (* y is non-zero and smaller than x; use [0, i2.ub[ *)
-                interval_set @@
-                { lb = ZEuclideanType.zero ; ub = ZEuclideanType.pred i2.ub }
+                (* y is non-zero; we have both [x % y < y] and [x % y <= x] so
+                   take the min of these upper bounds. *)
+                let ub =
+                  if ZEuclideanType.compare i1.ub i2.ub < 0 then i1.ub
+                  else ZEuclideanType.pred i2.ub
+                in
+                interval_set { lb = ZEuclideanType.zero ; ub }
             ) u1
       ) u2
 end
