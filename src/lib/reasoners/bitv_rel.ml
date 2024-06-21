@@ -245,6 +245,17 @@ module Constraint : sig
   val bvmul : X.r -> X.r -> X.r -> t
   (** [bvmul r x y] is the constraint [r = x * y] *)
 
+  val bvudiv : X.r -> X.r -> X.r -> t
+  (** [bvudir r x y] is the constraint [r = x / y]
+
+      This uses the convention that [x / 0] is [-1]. *)
+
+  val bvurem : X.r -> X.r -> X.r -> t
+  (** [bvurem r x y] is the constraint [r = x % y], where [x % y] is the
+      remainder of euclidean division.
+
+      This uses the convention that [x % 0] is [x]. *)
+
   val bvule : X.r -> X.r -> t
 
   val bvugt : X.r -> X.r -> t
@@ -261,7 +272,7 @@ end = struct
     (* Bitwise operations *)
     | Band | Bor | Bxor
     (* Arithmetic operations *)
-    | Badd | Bmul
+    | Badd | Bmul | Budiv | Burem
 
   let pp_binop ppf = function
     | Band -> Fmt.pf ppf "bvand"
@@ -269,6 +280,8 @@ end = struct
     | Bxor -> Fmt.pf ppf "bvxor"
     | Badd -> Fmt.pf ppf "bvadd"
     | Bmul -> Fmt.pf ppf "bvmul"
+    | Budiv -> Fmt.pf ppf "bvudiv"
+    | Burem -> Fmt.pf ppf "bvurem"
 
   let equal_binop op1 op2 =
     match op1, op2 with
@@ -285,11 +298,18 @@ end = struct
     | Badd, _ | _, Badd -> false
 
     | Bmul, Bmul -> true
+    | Bmul, _ | _, Bmul -> false
+
+    | Budiv, Budiv -> true
+    | Budiv, _ | _, Budiv -> false
+
+    | Burem, Burem -> true
 
   let hash_binop : binop -> int = Hashtbl.hash
 
   let is_commutative = function
     | Band | Bor | Bxor | Badd | Bmul -> true
+    | Budiv | Burem -> false
 
   let propagate_binop ~ex dx op dy dz =
     let open Bitlist_domains.Ephemeral in
@@ -326,6 +346,12 @@ end = struct
     | Bmul -> (* Only forward propagation for now *)
       update ~ex dx (Bitlist.mul !!dy !!dz)
 
+    | Budiv -> (* No bitlist propagation for now *)
+      ()
+
+    | Burem -> (* No bitlist propagation for now *)
+      ()
+
   let propagate_interval_binop ~ex sz dr op dx dy =
     let open Interval_domains.Ephemeral in
     let norm i = Intervals.Int.extract i ~ofs:0 ~len:sz in
@@ -337,6 +363,12 @@ end = struct
 
     | Bmul -> (* Only forward propagation for now *)
       update ~ex dr @@ norm @@ Intervals.Int.mul !!dx !!dy
+
+    | Budiv -> (* Only forward propagation for now *)
+      update ~ex dr @@ Intervals.Int.bvudiv ~size:sz !!dx !!dy
+
+    | Burem -> (* Only forward propagation for now *)
+      update ~ex dr @@ Intervals.Int.bvurem !!dx !!dy
 
     | Band | Bor | Bxor ->
       (* No interval propagation for bitwise operators yet *)
@@ -540,6 +572,8 @@ end = struct
     (* r = x - y <-> x = r + y *)
     bvadd x r y
   let bvmul = cbinop Bmul
+  let bvudiv = cbinop Budiv
+  let bvurem = cbinop Burem
 
   let crel r = hcons @@ Crel r
 
@@ -703,6 +737,16 @@ end = struct
     | Bxor -> cast ty @@ Z.logxor x y
     | Badd -> cast ty @@ Z.add x y
     | Bmul -> cast ty @@ Z.mul x y
+    | Budiv ->
+      if Z.equal y Z.zero then
+        cast ty Z.minus_one
+      else
+        cast ty @@ Z.div x y
+    | Burem ->
+      if Z.equal y Z.zero then
+        cast ty x
+      else
+        cast ty @@ Z.rem x y
 
   (* Constant simplification rules for binary operators.
 
@@ -746,6 +790,8 @@ end = struct
     | Bmul when X.is_constant y ->
       add_mul_const acts r x (value y)
     | Bmul -> false
+
+    | Budiv | Burem -> false
 
   (* Algebraic rewrite rules for binary operators.
 
@@ -816,6 +862,8 @@ let extract_binop =
     | BVadd -> Some bvadd
     | BVsub -> Some bvsub
     | BVmul -> Some bvmul
+    | BVudiv -> Some bvudiv
+    | BVurem -> Some bvurem
     | _ -> None
 
 let extract_constraints bcs uf r t =

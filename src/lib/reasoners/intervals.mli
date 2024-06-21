@@ -73,6 +73,20 @@ module Int : sig
       {b Note}: The interval [s] must be an integer interval, but is
       allowed to be unbounded (in which case [extract s i j] returns the
       full interval [[0, 2^(j - i + 1) - 1]]). *)
+
+  val bvudiv : size:int -> t -> t -> t
+  (** [bvudiv sz s t] computes an overapproximation of integer division for
+      bit-vectors of width [sz] as defined in the FixedSizeBitVectors SMT-LIB
+      theory, i.e. where [bvudiv n 0] is [2^sz - 1].
+
+      [s] and [t] must be within the [0, 2^sz - 1] range. *)
+
+  val bvurem : t -> t -> t
+  (** [bvurem sz s t] computes an overapproximation of integer remainder for
+      bit-vectors of width [sz] as defined in the FixedSizeBitVectors SMT-LIB
+      theory, i.e. where [bvurem n 0] is [n].
+
+      [s] and [t] must be within the [0, 2^sz - 1] range. *)
 end
 
 module Legacy : sig

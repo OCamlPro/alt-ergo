@@ -630,6 +630,45 @@ module Int = struct
 
   let lognot u =
     trace1 "lognot" u @@ map_strict_dec ZEuclideanType.lognot u
+
+  let bvudiv ~size:sz u1 u2 =
+    (* [bvudiv] is euclidean division where division by zero is -1 (as an
+       integer of width [sz], so 2^sz - 1) *)
+    let mone = Z.extract Z.minus_one 0 sz in
+    ediv ~div0:(Interval.of_bounds (Closed mone) (Closed mone)) u1 u2
+
+  let bvurem u1 u2 =
+    (* In the following, [x] is the implicit variable associated with [u1] and
+       [y] the implicit variable associated with [u2]. *)
+    of_set_nonempty @@
+    map_to_set (fun i2 ->
+        if ZEuclideanType.equal i2.ub ZEuclideanType.zero then
+          (* [y] is always zero -> identity *)
+          map_to_set interval_set u1
+        else if ZEuclideanType.compare i2.ub ZEuclideanType.zero < 0 then
+          (* Safety check -- bvurem only makes sense if [u2] is nonnegative. *)
+          invalid_arg "bvurem"
+        else
+          map_to_set (fun i1 ->
+              if ZEuclideanType.compare i1.ub i2.lb < 0 then
+                (* x < y : bvurem is the identity *)
+                interval_set i1
+              else if (
+                ZEuclideanType.equal i2.lb ZEuclideanType.zero
+              ) then
+                (* The range [0, i1.ub] is always valid; it is also the best we
+                   can do if [y] can be [0]. *)
+                interval_set { i1 with lb = ZEuclideanType.zero }
+              else
+                (* y is non-zero; we have both [x % y < y] and [x % y <= x] so
+                   take the min of these upper bounds. *)
+                let ub =
+                  if ZEuclideanType.compare i1.ub i2.ub < 0 then i1.ub
+                  else ZEuclideanType.pred i2.ub
+                in
+                interval_set { lb = ZEuclideanType.zero ; ub }
+            ) u1
+      ) u2
 end
 
 module Legacy = struct

@@ -3143,16 +3143,8 @@ module BV = struct
   let bvsub s t = mk_term (Op BVsub) [s; t] (type_info s)
   let bvneg s = bvsub (of_bigint_like s Z.zero) s
   let bvmul s t = mk_term (Op BVmul) [s; t] (type_info s)
-  let bvudiv s t =
-    let m = size2 s t in
-    ite (eq (bv2nat t) Ints.(~$0))
-      (bvones m)
-      (int2bv m Ints.(bv2nat s / bv2nat t))
-  let bvurem s t =
-    let m = size2 s t in
-    ite (eq (bv2nat t) Ints.(~$0))
-      s
-      (int2bv m Ints.(bv2nat s mod bv2nat t))
+  let bvudiv s t = mk_term (Op BVudiv) [s; t] (type_info s)
+  let bvurem s t = mk_term (Op BVurem) [s; t] (type_info s)
   let bvsdiv s t =
     let m = size2 s t in
     let msb_s = extract (m - 1) (m - 1) s in
