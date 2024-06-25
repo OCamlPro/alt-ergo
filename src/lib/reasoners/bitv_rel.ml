@@ -27,50 +27,557 @@ module L = Xliteral
 
 let timer = Timers.M_Bitv
 
-(* Currently we only compute, but in the future we may want to perform the same
-   simplifications as in [Bitv.make]. We currently don't, because we don't
-   really have a way to share code that uses polynome between the theory and the
-   relations without touching the Shostak [module rec].
-
-   Note that if we *do* want to compute here, the check for [X.is_constant] in
-   [Rel_utils.update] needs to be removed, which may have (small) performance
-   implications. *)
-let bv2nat _op bv =
-  match Bitv.to_Z_opt bv with
-  | Some n -> Some (Shostak.Polynome.create [] (Q.of_bigint n) Tint)
-  | None -> None
-
-(* [int2bv] is in the bitvector theory rather than the arithmetic theory because
-   we treat the arithmetic as more "primitive" than bit-vectors. *)
-let int2bv op p =
-  match op, Shostak.Polynome.is_const p with
-  | Symbols.Int2BV n, Some q ->
-    assert (Z.equal (Q.den q) Z.one);
-    let m = Q.to_bigint q in
-    Some (Bitv.int2bv_const n m)
-  | Int2BV _, None -> None
-  | _ -> assert false
-
-let delay1 = Rel_utils.delay1
-
-let dispatch = function
-  | Symbols.BV2Nat ->
-    Some (delay1 Shostak.Bitv.embed Shostak.Arith.is_mine bv2nat)
-  | Int2BV _ ->
-    Some (delay1 Shostak.Arith.embed Shostak.Bitv.is_mine int2bv)
-  | _ -> None
-
 let is_bv_ty = function
   | Ty.Tbitv _ -> true
   | _ -> false
 
-let is_bv_r r = is_bv_ty @@ X.type_info r
-
 let bitwidth r =
   match X.type_info r with Tbitv n -> n | _ -> assert false
 
+
 let const sz n =
   Shostak.Bitv.is_mine [ { bv = Cte (Z.extract n 0 sz); sz } ]
+
+module BitvNormalForm = struct
+  (** Normal form for bit-vector values.
+
+      We decompose non-constant bit-vector compositions as a variable part,
+      where all constant bits are set to [0] and all high constant bits are
+      chopped off, and an offset with all the constant bits. We consider the
+      variable part atomic if it is a single non-negated variable.
+
+      Assuming [x] and [y] are bit-vectors of width 2, the normal form of:
+      - [101 @ x] is [x + 10100] ;
+      - [10 @ x @ 01] is [(x @ 00) + 100001] ;
+      - [10 @ y<0, 0> @ y<1, 1>] is [(y<0, 0> @ y<1, 1>) + 1000] ;
+      - [10 @ x @ 11 @ y] is [(x @ 00 @ y) + 10001100]
+
+      ([x<i, j>] denotes the extraction from bit [i] to [j]) *)
+
+  type constant = Z.t
+
+  module Atom = Rel_utils.XComparable
+
+  let type_info = X.type_info
+
+  module Composite = Rel_utils.XComparable
+
+  let fold_composite f r acc =
+    List.fold_left (fun acc { Bitv.bv ; _ } ->
+        match bv with
+        | Bitv.Cte _ -> acc
+        | Other { value ; _ } -> f value acc
+        | Ext ({ value ; _ }, _, _, _) -> f value acc
+      ) acc (Shostak.Bitv.embed r)
+
+  type t =
+    | Constant of constant
+    | Atom of Atom.t * constant
+    | Composite of Composite.t * constant
+
+  let normal_form r =
+    let rec loop cte rev_acc = function
+      | [] -> (
+          match rev_acc with
+          | [] ->
+            Constant cte
+          | [ { Bitv.bv = Bitv.Other { value ; negated = false }; _ } ] ->
+            Atom (value, cte)
+          | _ ->
+            Composite (Shostak.Bitv.is_mine (List.rev rev_acc), cte)
+        )
+      | { Bitv.bv = Bitv.Cte n ; sz } :: bv' ->
+        let cte = Z.(cte lsl sz lor n) in
+        let acc =
+          match rev_acc with
+          | [] -> []
+          | _ -> { Bitv.bv = Bitv.Cte Z.zero ; sz } :: rev_acc
+        in
+        loop cte acc bv'
+      | x :: bv' ->
+        let cte = Z.(cte lsl x.sz) in
+        loop cte (x :: rev_acc) bv'
+    in loop Z.zero [] (Shostak.Bitv.embed r)
+end
+
+module BV2Nat = struct
+  (* Domain for bv2nat and int2bv conversions
+
+     We only keep track of bit-vector variables and their extractions, and the
+     associated integer polynomial (i.e. for a variable [x] of length [4], we
+     will keep track of a polynomial for [x] and all of the extractions of [x]
+     that are encountered in the problem). We also maintain a reverse map from
+     the polynomials to the bit-vectors so that whenever the representative on
+     either side (bit-vector or integers) changes, we propagate the
+     corresponding equality to the other side.
+
+     In order to minimize the number of polynomial variables, we compute the
+     integer version of an extraction of [x] from bit [i] to [j] (inclusive) as
+     [0 <= bv2nat(x asr i) - bv2nat(x asr j) * 2^(j-i+1) < 2^(j-i+1)].
+
+     Note: We currently have no way of defining the bv2nat and int2bv of an
+     arbitrary semantic value structurally, so we resort to dynamically creating
+     variables to represent them. *)
+  module P = Shostak.Polynome
+
+  type extraction = { ofs : int ; len : int }
+
+  module Extraction = struct
+    type t = extraction
+
+    let compare e1 e2 =
+      let c = Int.compare e1.ofs e2.ofs in
+      if c <> 0 then c else Int.compare e1.len e2.len
+
+    let shift_right ~size:sz ofs = { ofs ; len = sz - ofs }
+
+    let full = shift_right 0
+
+    let of_ae i j =
+      assert (0 <= i && i <= j);
+      { ofs = i ; len = j - i + 1 }
+
+    module Map = Map.Make(struct
+        type nonrec t = t
+
+        let compare = compare
+      end)
+  end
+
+  (* Helpers for readability *)
+  module T = struct
+    module Ints = struct
+      module Set = Set.Make(P)
+
+      module Map = Map.Make(P)
+
+      let of_repr r = Shostak.Arith.embed r
+
+      let to_repr p = Shostak.Arith.is_mine p
+
+      let of_bigint n = P.create [] (Q.of_bigint n) Tint
+
+      let (~$$) = of_bigint
+
+      let zero = ~$$Z.zero
+
+      let (~-) = P.mult_const Q.minus_one
+
+      let ( + ) = P.add
+
+      let ( - ) = P.sub
+
+      let ( +$$ ) p n = P.add_const (Q.of_bigint n) p
+
+      let ( *$$ ) p n = P.mult_const (Q.of_bigint n) p
+
+      let mkv_eq p p' = Uf.LX.mkv_eq (to_repr p) (to_repr p')
+
+      let mkv_le p p' = Uf.LX.mkv_builtin true LE [to_repr p; to_repr p']
+    end
+
+    module BV = struct
+      let extract bv { ofs ; len } =
+        assert (0 <= ofs + len - 1 && ofs + len - 1 < bitwidth bv);
+        Shostak.Bitv.is_mine @@
+        Bitv.extract (bitwidth bv) ofs (ofs + len - 1) @@
+        Shostak.Bitv.embed bv
+
+      let zero_extend sz r =
+        let r_sz = bitwidth r in
+        if sz < r_sz then invalid_arg "zero_extend";
+        if sz = r_sz then r
+        else
+          Shostak.Bitv.is_mine @@
+          { Bitv.bv = Bitv.Cte Z.zero ; sz = sz - r_sz } ::
+          Shostak.Bitv.embed r
+
+      let mkv_eq (r, ext) (r', ext') =
+        let sz = max ext.len ext'.len in
+        let r = extract r ext and r' = extract r' ext' in
+        Uf.LX.mkv_eq (zero_extend sz r) (zero_extend sz r')
+    end
+  end
+
+
+  (* Adds to [eqs] the inequalities [0 <= p < 2^sz]. *)
+  let add_width_ineqs ~ex sz p eqs =
+    T.Ints.(mkv_le zero p, ex) ::
+    T.Ints.(mkv_le p (of_bigint @@ Z.extract Z.minus_one 0 sz), ex) ::
+    eqs
+
+  type t =
+    { bv2nat : (P.t * Ex.t) Extraction.Map.t MX.t
+    (** Map from bit-vector extractions to their integer representation.
+
+        If [(bv, ext)] is associated with [(p, ex)] in this map, it means
+        that [p = bv2nat(bv<ext>)] is justified by [ex].
+
+        We maintain the invariant that if [(bv, ext)] is associated with
+        [(p, ex)] in this map, then [(bv, ext, ex)] is associated with [p]
+        in [nat2bv]. *)
+    ; nat2bv : (X.r * Extraction.t * Ex.t) T.Ints.Map.t
+    (** Map from integer polynomials to their bit-vector representation.
+
+        If [p] is associated with [(bv, ext, ex)] in this map, it means that
+        [p = bv2nat(bv<ext>)] is justified by [ex].
+
+        Note that this is the inverse of the [bv2nat] mapping, not an
+        implementation of the [int2bv] function (although both coincide for
+        entries in the map). *)
+    ; use : T.Ints.Set.t MX.t
+    (** Map from integer variables to the polynomials that use them.
+
+        This is used for integer substitutions because of our encoding of
+        extractions in [bv2nat]: we encode [bv2nat(bv<i, j>)] in
+        terms of [bv2nat(bv<0, i>)] and [bv2nat(bv<0, j>)] which we create
+        dynamically. The polynomials associated with these expressions are
+        thus not tracked by the UnionFind module, and are not given to
+        [subst]. *)
+    ; eqs : (X.r Xliteral.view * Ex.t) list
+    }
+
+  let pp_bv2nat_ext ppf ((x, ext), (p, _ex)) =
+    Fmt.pf ppf "@[<2>bv2nat(%a<%d, %d>) =@ %a@]"
+      X.print x ext.ofs ext.len P.print p
+
+  let iter_ext f t =
+    MX.iter
+      (fun x m -> Extraction.Map.iter (fun ext -> f (x, ext)) m)
+      t.bv2nat
+
+  let pp ppf t =
+    Fmt.pf ppf "@;<2>@[<v>%a@]"
+      (Fmt.iter_bindings iter_ext pp_bv2nat_ext) t
+
+  let empty =
+    { bv2nat = MX.empty
+    ; nat2bv = T.Ints.Map.empty
+    ; use = MX.empty
+    ; eqs = [] }
+
+  let fold_ext x f t acc =
+    assert (X.is_a_leaf x);
+    match MX.find x t.bv2nat with
+    | exception Not_found -> acc
+    | m -> Extraction.Map.fold (f x) m acc
+
+  let fold_use_p x f t acc =
+    assert (X.is_a_leaf x);
+    match MX.find x t.use with
+    | exception Not_found -> acc
+    | nps ->
+      T.Ints.Set.fold (fun p acc ->
+          let v =
+            try T.Ints.Map.find p t.nat2bv with Not_found -> assert false
+          in
+          f p v acc
+        ) nps acc
+
+  let add_use_p p use =
+    List.fold_left (fun use r ->
+        MX.update r (function
+            | None -> Some (T.Ints.Set.singleton p)
+            | Some sp -> Some (T.Ints.Set.add p sp)
+          ) use
+      ) use (P.leaves p)
+
+  let remove_use_p p use =
+    List.fold_left (fun use r ->
+        MX.update r (function
+            | None -> assert false
+            | Some ps ->
+              let ps = T.Ints.Set.remove p ps in
+              if T.Ints.Set.is_empty ps then None else Some ps
+          ) use
+      ) use (P.leaves p)
+
+  let find_ext bv ext bv2nat =
+    Extraction.Map.find ext @@ MX.find bv @@ bv2nat
+
+  let add_ext ~ex bv ext p bv2nat =
+    MX.update bv (function
+        | None -> Some (Extraction.Map.singleton ext (p, ex))
+        | Some m -> Some (Extraction.Map.add ext (p, ex) m)
+      ) bv2nat
+
+  let remove_aux bv ext p t =
+    let use = remove_use_p p t.use in
+    let nat2bv = T.Ints.Map.remove p t.nat2bv in
+    let bv2nat =
+      MX.update bv (function
+          | None -> None
+          | Some m ->
+            let m = Extraction.Map.remove ext m in
+            if Extraction.Map.is_empty m then None else Some m
+        ) t.bv2nat
+    in
+    { use ; nat2bv ; bv2nat ; eqs = t.eqs }
+
+  (* Returns the polynomial associated with [bv2nat(bv) asr ofs], or raises
+     [Not_found] if there is none. *)
+  let find_asr bv ofs t =
+    find_ext bv (Extraction.shift_right ~size:(bitwidth bv) ofs) t.bv2nat
+
+  (* Returns the polynomial associated with [bv2nat(bv) asr ofs], creating a
+     fresh variable for it if it does not exist. *)
+  let find_or_create_asr bv ofs t =
+    let ext = Extraction.shift_right ~size:(bitwidth bv) ofs in
+    try find_ext bv ext t.bv2nat, t
+    with Not_found ->
+      if ofs >= bitwidth bv then
+        (T.Ints.zero, Ex.empty), t
+      else
+        let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
+        let use = add_use_p k t.use in
+        let bv2nat = add_ext ~ex:Ex.empty bv ext k t.bv2nat in
+        let nat2bv = T.Ints.Map.add k (bv, ext, Ex.empty) t.nat2bv in
+        (k, Ex.empty), { use ; bv2nat ; nat2bv ; eqs = t.eqs }
+
+  (* Add the definining equation for [bv2nat(bv) asr ofs] to [eqs].
+
+     The defining equation for [bv2nat(bv) asr ofs] is:
+
+        0 <= bv2nat(bv) - (bv2nat(bv) asr ofs) < 2^ofs
+  *)
+  let init_asr bv ofs t =
+    let (p, ex), t = find_or_create_asr bv 0 t in
+    if ofs = 0 then (p, ex), t
+    else
+      let (p_asr, ex_asr), t = find_or_create_asr bv ofs t in
+      let delta = T.Ints.(p - p_asr *$$ Z.(one lsl ofs)) in
+      let eqs = add_width_ineqs ~ex:(Ex.union ex ex_asr) ofs delta t.eqs in
+      (p_asr, ex_asr), { t with eqs }
+
+  (* Returns the polynomial associated with [bv2nat(bv) asr ofs].
+
+     If no such polynomial exists, create a fresh variable for it and adds its
+     defining equation to [t]. *)
+  let find_or_init_asr bv ofs t =
+    try find_asr bv ofs t, t with Not_found -> init_asr bv ofs t
+
+  (* Add the defining equation for [bv2nat(bv<ext>)] to [t].
+
+     We define [bv2nat(bv<ext>)] in terms of the shifts [bv asr ext.ofs] and
+     [bv asr ext.len]. *)
+  let init_ext bv ext t =
+    let (lo, ex_lo), t = find_or_init_asr bv ext.ofs t in
+    let (hi, ex_hi), t = find_or_init_asr bv (ext.ofs + ext.len) t in
+    let delta_p = T.Ints.(lo - hi *$$ Z.(one lsl ext.len)) in
+    let ex = Ex.union ex_lo ex_hi in
+    let eqs = add_width_ineqs ~ex ext.len delta_p t.eqs in
+    (delta_p, ex), { t with eqs }
+
+  let find_or_init_ext bv ext t =
+    try find_ext bv ext t.bv2nat, t with Not_found -> init_ext bv ext t
+
+  let find_p p t =
+    T.Ints.Map.find p t.nat2bv
+
+  (* Add the mapping [bv2nat(bv<ext>) -> p]. If there is already a polynomial
+     associated with [bv<ext>] or a bit-vector associated with [p], the
+     appropriate equalities are added to [eqs] beforehand.
+
+     Note that we still insert the new mapping in this situation so that we can
+     reuse this function for substitutions. *)
+  let add ~ex bv ext p t =
+    let t =
+      match T.Ints.Map.find p t.nat2bv with
+      | exception Not_found -> t
+      | (bv', ext', ex') ->
+        let lit = T.BV.mkv_eq (bv, ext) (bv', ext') in
+        let eqs = (lit, Ex.union ex ex') :: t.eqs in
+        remove_aux bv' ext' p { t with eqs }
+    in
+    let is_new, t =
+      match find_ext bv ext t.bv2nat with
+      | exception Not_found ->
+        true, t
+      | (p', ex') ->
+        let eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs in
+        false, remove_aux bv ext p' { t with eqs }
+    in
+    match P.is_const p with
+    | Some cte ->
+      assert (Z.equal Z.one @@ Q.den cte);
+      let cte = Q.num cte in
+      let lit =
+        Uf.LX.mkv_eq
+          (T.BV.extract bv ext)
+          (Shostak.Bitv.is_mine [
+              { bv = Cte (Z.extract cte 0 ext.len) ; sz = ext.len }
+            ])
+      in
+      { t with eqs = (lit, ex) :: t.eqs }
+    | None ->
+      let use = add_use_p p t.use in
+      let bv2nat = add_ext ~ex bv ext p t.bv2nat in
+      let nat2bv = T.Ints.Map.add p (bv, ext, ex) t.nat2bv in
+      let t = { use ; bv2nat ; nat2bv ; eqs = t.eqs } in
+      if is_new then
+        let (p', ex'), t = init_ext bv ext t in
+        { t with eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs }
+      else
+        t
+
+  let lognot_p ~size p =
+    (* ~x = 2^size - 1 - x *)
+    T.Ints.(-p +$$ Z.extract Z.minus_one 0 size)
+
+  (* Compute [bv2nat(x)] where [x] is an arbitrary bit-vector composition.
+
+     This may require introducing new variables to represent unknown
+     extractions. *)
+  let composite bv t =
+    let rec loop p ex t = function
+      | [] -> (p, ex), t
+      | { Bitv.bv = Bitv.Cte n ; sz } :: bv' ->
+        let p = T.Ints.(p *$$ Z.(one lsl sz) +$$ n) in
+        loop p ex t bv'
+      | { bv = Other s ; sz } :: bv' ->
+        let p = T.Ints. (p *$$ Z.(one lsl sz)) in
+        let (p_value, ex_value), t =
+          find_or_init_ext
+            s.value (Extraction.full ~size:sz) t
+        in
+        let p_value =
+          if s.negated then lognot_p ~size:sz p_value
+          else p_value
+        in
+        loop T.Ints.(p + p_value) (Ex.union ex ex_value) t bv'
+      | { bv = Ext (s, _s_sz, i, j) ; sz } :: bv' ->
+        let p = T.Ints.(p *$$ Z.(one lsl sz)) in
+        let (p_value, ex_value), t =
+          find_or_init_ext
+            s.value (Extraction.of_ae i j) t
+        in
+        let p_value =
+          if s.negated then lognot_p ~size:sz p_value
+          else p_value
+        in
+        loop T.Ints.(p + p_value) (Ex.union ex ex_value) t bv'
+    in
+    loop T.Ints.zero Ex.empty t (Shostak.Bitv.embed bv)
+
+  (* Add the equality [nat_r = bv2nat(bv_r)]. *)
+  let add_bv2nat ~ex nat_r bv_r t =
+    match BitvNormalForm.normal_form bv_r with
+    | Constant cte ->
+      (* nat_r = bv2nat(cte) = cte *)
+      let lit = T.Ints.(mkv_eq (of_repr nat_r) ~$$cte) in
+      { t with eqs = (lit, ex) :: t.eqs }
+    | Atom (x, ofs) -> (
+        let p = Shostak.Arith.embed nat_r in
+        let p = T.Ints.(p +$$ Z.neg ofs) in
+        let eqs = add_width_ineqs ~ex (bitwidth x) p t.eqs in
+        add ~ex
+          x (Extraction.full ~size:(bitwidth x)) p { t with eqs }
+      )
+    | Composite (x, ofs) ->
+      let p = T.Ints.of_repr nat_r in
+      let p = T.Ints.(p +$$ Z.neg ofs) in
+      match Shostak.Bitv.embed x with
+      | [ { bv = Other s ; sz } ] ->
+        assert (s.negated); (* Otherwise we would be an atom *)
+        let p = lognot_p ~size:sz p in
+        add ~ex
+          s.value (Extraction.full ~size:sz) p t
+      | [ { bv = Ext (s, _s_sz, i, j) ; sz } ] ->
+        let p = if s.negated then lognot_p ~size:sz p else p in
+        add ~ex s.value (Extraction.of_ae i j) p t
+      | _ ->
+        let (p', ex'), t = composite x t in
+        { t with eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs }
+
+  (* Add the equality [bv_r = int2bv(int_r)].
+
+     We do not have a table mapping polynomials to their (truncated) bit-vector
+     representation; instead, we simply add the equation
+
+        bv2nat(int2bv(int_r)) = int_r + 2^|bv_r| * k
+
+     for a fresh variable [k].
+
+     If we know that [int_r] is an exact bit-vector representation (i.e. [int_r]
+     is equal to [bv2nat(bv)] for some bit-vector [bv]) we introduce the
+     appropriate equalities between [bv] and [bv_r] instead. This is required
+     for completeness. *)
+  let add_int2bv ~ex bv_r int_r t =
+    assert (X.is_a_leaf bv_r);
+    let sz = bitwidth bv_r in
+    match find_p (T.Ints.of_repr int_r) t with
+    | (bv', ext', ex') ->
+      (* int_r is bv2nat(bv'[ext']) -> convert int2bv to extraction *)
+      let lit =
+        if sz <= ext'.len then
+          (* bv_r is extraction of bv' *)
+          Uf.LX.mkv_eq bv_r (T.BV.extract bv' { ext' with len = sz })
+        else
+          (* bv_r is extension of bv' *)
+          Uf.LX.mkv_eq
+            bv_r
+            (T.BV.zero_extend sz @@ T.BV.extract bv' ext')
+      in
+      { t with eqs = (lit, Ex.union ex ex') :: t.eqs }
+    | exception Not_found ->
+      (* int_r is not known to be a bv2nat
+          bv_r = int2bv(int_r) iff
+          exists k, int_r = bv2nat(bv_r) + 2^|bv_r| * k
+      *)
+      let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
+      let p_k_2exp = T.Ints.(k *$$ Z.(one lsl sz)) in
+      add ~ex
+        bv_r (Extraction.full ~size:sz)
+        T.Ints.(of_repr int_r + p_k_2exp) t
+
+  let subst_int ~ex rr nrr t =
+    (* We need to compute our own substitutions because we are tracking
+       polynomials that are not necessarily associated with representatives in
+       the union-find, and thus for which [subst] would not get called. *)
+    if not (X.is_a_leaf rr) then t
+    else
+      let nrr_p = Shostak.Arith.embed nrr in
+      fold_use_p rr (fun p (bv, ext, ex_bv) t ->
+          let t = remove_aux bv ext p t in
+          let p' = P.subst rr nrr_p p in
+          add ~ex:(Ex.union ex ex_bv) bv ext p' t
+        ) t t
+
+  let subst_bitv ~ex rr nrr t =
+    match BitvNormalForm.normal_form rr with
+    | Constant _ -> invalid_arg "subst: cannot substitute constant"
+    | Composite _ -> t
+    | Atom (x, ofs) ->
+      fold_ext x (fun x ext (p, ex_p) t ->
+          let t = remove_aux x ext p t in
+          let ofs =
+            if ext.len < 0 then Z.shift_right ofs ext.ofs
+            else Z.extract ofs ext.ofs ext.len
+          in
+          let p = T.Ints.(p +$$ ofs) in
+          let nrr = T.BV.extract nrr ext in
+          add_bv2nat ~ex:(Ex.union ex ex_p) (T.Ints.to_repr p) nrr t
+        ) t t
+
+  type _ Uf.id += Id : t Uf.id
+
+  let filter_ty = function
+    | Ty.Tint | Tbitv _ -> true
+    | _ -> false
+
+  let init _ t = t
+
+  exception Inconsistent of Ex.t
+
+  let subst ~ex rr nrr t =
+    match X.type_info rr with
+    | Tint -> subst_int ~ex rr nrr t
+    | Tbitv _ -> subst_bitv ~ex rr nrr t
+    | _ -> t
+
+  let flush t =
+    t.eqs, { t with eqs = [] }
+end
 
 module Interval_domain = struct
   type t = Intervals.Int.t
@@ -155,68 +662,6 @@ struct
 
       let compare = compare
     end)
-end
-
-module BitvNormalForm = struct
-  (** Normal form for bit-vector values.
-
-      We decompose non-constant bit-vector compositions as a variable part,
-      where all constant bits are set to [0] and all high constant bits are
-      chopped off, and an offset with all the constant bits. We consider the
-      variable part atomic if it is a single non-negated variable.
-
-      Assuming [x] and [y] are bit-vectors of width 2, the normal form of:
-      - [101 @ x] is [x + 10100] ;
-      - [10 @ x @ 01] is [(x @ 00) + 100001] ;
-      - [10 @ y<0, 0> @ y<1, 1>] is [(y<0, 0> @ y<1, 1>) + 1000] ;
-      - [10 @ x @ 11 @ y] is [(x @ 00 @ y) + 10001100]
-
-      ([x<i, j>] denotes the extraction from bit [i] to [j]) *)
-
-  type constant = Z.t
-
-  module Atom = Rel_utils.XComparable
-
-  let type_info = X.type_info
-
-  module Composite = Rel_utils.XComparable
-
-  let fold_composite f r acc =
-    List.fold_left (fun acc { Bitv.bv ; _ } ->
-        match bv with
-        | Bitv.Cte _ -> acc
-        | Other { value ; _ } -> f value acc
-        | Ext ({ value ; _ }, _, _, _) -> f value acc
-      ) acc (Shostak.Bitv.embed r)
-
-  type t =
-    | Constant of constant
-    | Atom of Atom.t * constant
-    | Composite of Composite.t * constant
-
-  let normal_form r =
-    let rec loop cte rev_acc = function
-      | [] -> (
-          match rev_acc with
-          | [] ->
-            Constant cte
-          | [ { Bitv.bv = Bitv.Other { value ; negated = false }; _ } ] ->
-            Atom (value, cte)
-          | _ ->
-            Composite (Shostak.Bitv.is_mine (List.rev rev_acc), cte)
-        )
-      | { Bitv.bv = Bitv.Cte n ; sz } :: bv' ->
-        let cte = Z.(cte lsl sz lor n) in
-        let acc =
-          match rev_acc with
-          | [] -> []
-          | _ -> { Bitv.bv = Bitv.Cte Z.zero ; sz } :: rev_acc
-        in
-        loop cte acc bv'
-      | x :: bv' ->
-        let cte = Z.(cte lsl x.sz) in
-        loop cte (x :: rev_acc) bv'
-    in loop Z.zero [] (Shostak.Bitv.embed r)
 end
 
 module Constraint : sig
@@ -1528,25 +1973,24 @@ let rec propagate_all uf eqs bdom idom =
     eqs, bdom, idom
 
 type t =
-  { delayed : Rel_utils.Delayed.t
-  ; terms : SX.t
+  { terms : SX.t
   ; size_splits : Q.t }
 
 let empty uf =
-  { delayed = Rel_utils.Delayed.create ~is_ready:X.is_constant dispatch
-  ; terms = SX.empty
+  { terms = SX.empty
   ; size_splits = Q.one },
+  Uf.GlobalDomains.add (module BV2Nat) BV2Nat.empty @@
   Uf.GlobalDomains.add (module Bitlist_domains) Bitlist_domains.empty @@
   Uf.GlobalDomains.add (module Interval_domains) Interval_domains.empty @@
   Uf.domains uf
 
 let assume env uf la =
   let ds = Uf.domains uf in
+  let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
   let domain = Uf.GlobalDomains.find (module Bitlist_domains) ds in
   let int_domain =
     Uf.GlobalDomains.find (module Interval_domains) ds
   in
-  let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let (domain, int_domain, eqs, size_splits) =
     try
       let (domain, int_domain, eqs, size_splits) =
@@ -1612,10 +2056,16 @@ let assume env uf la =
   let assume =
     List.rev_map (fun (lit, ex) -> Literal.LSem lit, ex, Th_util.Other) eqs
   in
-  let result =
-    { result with assume = List.rev_append assume result.assume }
+  let bv_eqs, bvconv = BV2Nat.flush bvconv in
+  let bvconv_assume =
+    List.rev_map (fun (lit, ex) -> Literal.LSem lit, ex, Th_util.Other) bv_eqs
   in
-  { delayed ; size_splits ; terms = env.terms },
+  let result =
+    { Sig_rel.assume = List.rev_append bvconv_assume assume
+    ; remove = [] }
+  in
+  { size_splits ; terms = env.terms },
+  Uf.GlobalDomains.add (module BV2Nat) bvconv @@
   Uf.GlobalDomains.add (module Bitlist_domains) domain @@
   Uf.GlobalDomains.add (module Interval_domains) int_domain ds,
   result
@@ -1681,21 +2131,43 @@ let case_split env uf ~for_model =
 
 let add env uf r t =
   let ds = Uf.domains uf in
-  let delayed, eqs = Rel_utils.Delayed.add env.delayed uf r t in
-  let env, ds, eqs =
-    if is_bv_r r then
-      let dom = Uf.GlobalDomains.find (module Bitlist_domains) ds in
-      let idom = Uf.GlobalDomains.find (module Interval_domains) ds in
-      let terms, dom, idom = extract_constraints env.terms dom idom uf r t in
-      { env with terms },
-      Uf.GlobalDomains.add (module Bitlist_domains) dom @@
-      Uf.GlobalDomains.add (module Interval_domains) idom @@
-      ds,
-      eqs
-    else
-      env, ds, eqs
-  in
-  { env with delayed }, ds, eqs
+  match X.type_info r with
+  | Tint -> (
+      match E.term_view t with
+      | { f = Op BV2Nat ; xs = [ x ] ; _ } ->
+        let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
+        let rx, ex = Uf.find uf x in
+        let bvconv = BV2Nat.add_bv2nat ~ex r rx bvconv in
+        let eqs, bvconv = BV2Nat.flush bvconv in
+        env,
+        Uf.GlobalDomains.add (module BV2Nat) bvconv ds,
+        eqs
+      | _ -> env, ds, []
+    )
+  | Tbitv _ -> (
+      match E.term_view t with
+      | { f = Op (Int2BV _) ; xs = [ x ]; _ } ->
+        let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
+        let rx, ex = Uf.find uf x in
+        let bvconv = BV2Nat.add_int2bv ~ex r rx bvconv in
+        let eqs, bvconv = BV2Nat.flush bvconv in
+        env,
+        Uf.GlobalDomains.add (module BV2Nat) bvconv ds,
+        eqs
+      | _ ->
+        let dom = Uf.GlobalDomains.find (module Bitlist_domains) ds in
+        let idom = Uf.GlobalDomains.find (module Interval_domains) ds in
+        let terms, dom, idom =
+          extract_constraints env.terms dom idom uf r t
+        in
+        { env with terms },
+        Uf.GlobalDomains.add (module Bitlist_domains) dom @@
+        Uf.GlobalDomains.add (module Interval_domains) idom @@
+        ds,
+        []
+    )
+  | _ ->
+    env, ds, []
 
 let optimizing_objective _env uf Objective.Function.{ e; is_max; _ } =
   let ty = E.type_info e in

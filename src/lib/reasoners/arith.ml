@@ -365,56 +365,11 @@ module Shostak
       | _ -> P.add p (P.create [coef, a] Q.zero ty), ctx
 
   let make t =
-    let { E.f; xs; _ } = E.term_view t in
-    match f, xs with
-    | Op Int2BV n, [x] ->
-      (* When we have an Int2BV expression, we try our best to convert it to
-         something that is usable by the bitv theory.
-
-         More precisely:
-
-         - If we have (int2bv c) where [c] is a constant, we convert the
-             constant to a bitvector constant of the appropriate size and
-             create the corresponding [Bitv] term. The call to [X.make] will be
-             dispatched to the bitvector theory.
-
-         - If we have (int2bv [1 * (bv2nat e) + 0]) -- that is, int2bv of a
-             single alien that is equal to a [bv2nat] expression -- we convert
-             [e] to the appropriate bitvector size using [extract] or
-             [zero_extend]. This is done by a roundtrip through E.BV.int2bv.
-
-         - There are some other expressions where we could convert, for
-             instance, disjoint sums of bv2nat terms multiplied by powers of
-             two, but we only handle the simple cases for now.
-
-         - In all other cases, Int2BV becomes uninterpreted. *)
-      let p, ctx = mke Q.one (empty_polynome Tint) x [] in
-      begin match P.to_list p with
-        | [], c ->
-          let c = Q.to_z c in
-          let c = ZA.(erem c @@ ~$1 lsl n) in
-          let r, ctx' = E.mk_term (Sy.Bitv (n, c)) [] (Tbitv n) |> X.make in
-          r, List.rev_append ctx' ctx
-        | [ coef, x ], const when Q.is_zero const && Q.is_one coef ->
-          begin match X.term_extract x with
-            | Some tx, _ ->
-              begin match (E.term_view tx).f with
-                | Op BV2Nat ->
-                  (* int2bv will simplify BV2Nat: we must [X.make] again *)
-                  let r, ctx' = E.BV.int2bv n tx |> X.make in
-                  r, List.rev_append ctx' ctx
-                | _ ->
-                  (* Otherwise we must become uninterpreted *)
-                  E.BV.int2bv n tx |> X.term_embed, ctx
-              end
-            | None, _ ->
-              X.term_embed t, []
-          end
-        | _ ->
-          X.term_embed t, []
-      end
+    Options.tool_req 4 "TR-Arith-Make";
+    match E.term_view t with
+    | { f = Op (Int2BV _); _ } ->
+      X.term_embed t, []
     | _ ->
-      Options.tool_req 4 "TR-Arith-Make";
       let ty = E.type_info t in
       let p, ctx = mke Q.one (empty_polynome ty) t [] in
       is_mine p, ctx
