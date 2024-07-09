@@ -612,7 +612,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
 
   | Some (Adt { cases; _ } as adt) ->
     let uid = Uid.of_ty_cst ty_c in
-    List.iter (fun (i, h) -> Uid.set_hash i h) @@ Nest.generate [adt];
+    Nest.attach_orders [adt];
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     Cache.store_ty ty_c (Ty.t_adt uid tyvl);
     let rev_cs =
@@ -729,7 +729,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
           assert false
     ) ([], false) tdl
   in
-  List.iter (fun (i, h) -> Uid.set_hash i h) @@ Nest.generate rev_tdefs;
+  Nest.attach_orders rev_tdefs;
   let rev_l =
     List.fold_left (
       fun acc tdef ->

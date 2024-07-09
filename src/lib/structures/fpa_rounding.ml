@@ -95,10 +95,7 @@ let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
   let _, d_cstrs = DE.Term.define_adt ty_cst [] cstrs in
   let () =
     match DStd.Expr.Ty.definition ty_cst with
-    | Some def ->
-      let name, hash = Nest.generate [def] |> List.hd in
-      Uid.set_hash name hash
-
+    | Some def -> Nest.attach_orders [def]
     | None -> assert false
   in
   let body =

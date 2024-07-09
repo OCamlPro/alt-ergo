@@ -28,8 +28,9 @@ module DE = Dolmen.Std.Expr
     number of constructors. The total order on ADT constructors is given by
     the hash function. *)
 
-val generate : DE.ty_def list -> (Uid.t * Uid.hash) list
-(** [generate defs] generate minimal perfect hashes for each ADT of [defs].
+val attach_orders : DE.ty_def list -> unit
+(** [attach_orders defs] generate and attach orders on the constructors for
+    each ADT of [defs].
 
     {b Note:} assume that [defs] is a list of definitions of a complete nest
     (in any order). By nest, we mean the set of all the constructors in a

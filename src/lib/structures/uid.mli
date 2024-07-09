@@ -33,19 +33,6 @@ type t = private
   | Term_cst : DE.term_cst -> t
   | Ty_cst : DE.ty_cst -> t
 
-type hash = {
-  to_int : t -> int;
-  (** Return a hash for the constructor. This hash is between [0] and [n]
-      exclusive where [n] is the number of constructors of the ADT. *)
-
-  of_int : int -> t;
-  (** Return the associated constructor to the integer.
-
-      @raises Invalid_argument if the integer does not correspond to
-       a constructor of this ADT. *)
-}
-(** Minimal perfect hash function for the constructors of an ADT. *)
-
 val of_dolmen : 'a DE.Id.t -> t
 val of_term_cst : DE.term_cst -> t
 val of_ty_cst : DE.ty_cst -> t
@@ -54,15 +41,16 @@ val of_hstring : Hstring.t -> t
 
 val to_term_cst : t -> DE.term_cst
 
+val order_tag : int Dolmen.Std.Tag.t
+(** Tag used to attach the order of constructor. Used to
+    retrieve efficiency the order of the constructor in [to_int]. *)
+
+val perfect_hash : t -> int
 val hash : t -> int
 val pp : t Fmt.t
 val show : t -> string
 val equal : t -> t -> bool
 val compare : t -> t -> int
-
-val hash_tag : hash DE.Tags.t
-val set_hash : t -> hash -> unit
-val get_hash : t -> hash
 
 module Set : Set.S with type elt = t
 module Map : Map.S with type key = t

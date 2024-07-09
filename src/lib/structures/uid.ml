@@ -34,18 +34,6 @@ type t =
   | Term_cst : DE.term_cst -> t
   | Ty_cst : DE.ty_cst -> t
 
-type hash = {
-  to_int : t -> int;
-  (** Return a perfect hash for the constructor. This hash is between [0]
-      and [n] where [n] is the number of constructors of the ADT. *)
-
-  of_int : int -> t;
-  (** Return the associated constructor to the integer.
-
-      @raises Invalid_argument if the integer does not correspond to
-       a constructor of this ADT. *)
-}
-
 let[@inline always] of_dolmen id = Dolmen id
 let[@inline always] of_term_cst id = Term_cst id
 let[@inline always] of_ty_cst id = Ty_cst id
@@ -87,19 +75,15 @@ let compare u1 u2 =
   | Ty_cst id1, Ty_cst id2 -> DE.Id.compare id1 id2
   | _ -> String.compare (show u1) (show u2)
 
-let hash_tag : hash DStd.Tag.t = DStd.Tag.create ()
+let order_tag : int DStd.Tag.t = DStd.Tag.create ()
 
-let set_hash id hash =
+let perfect_hash id =
   match id with
-  | Ty_cst ty_c ->
-    DE.Ty.Const.set_tag ty_c hash_tag hash
-  | _ -> Fmt.invalid_arg "set_hash %a" pp id
-
-let get_hash id =
-  match id with
-  | Ty_cst ty_c ->
-    Option.get @@ DE.Ty.Const.get_tag ty_c hash_tag
-  | _ -> Fmt.invalid_arg "get_hash %a" pp id
+  | Term_cst id ->
+    Option.get @@ DE.Term.Const.get_tag id order_tag
+  | Hstring hs ->
+    Hstring.hash hs
+  | _ -> assert false
 
 module Set = Set.Make
     (struct
