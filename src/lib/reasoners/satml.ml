@@ -416,7 +416,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable next_decisions : Atom.atom list;
       (** Literals that must be decided on before the solver can answer [Sat].
 
-          These are added by the theory through calls to [acts_add_decision]. *)
+          These are added by the theory through calls to
+          [acts_add_decision_lit]. *)
 
       mutable next_split : Atom.atom option;
       (** Literal that should be decided on before the solver answers [Sat].

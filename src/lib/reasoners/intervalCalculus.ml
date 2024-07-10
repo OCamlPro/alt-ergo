@@ -2083,7 +2083,7 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
           if is_le then
             r2
           else
-            (* As some bounds are strict, the value [r2] doesn't satisfy the
+            (* As some bounds are strict, the value [r2] does not satisfy the
                constraints of the problem. In this case, we pick a value
                in the domain of the polynomial [p]. But we propagate the new
                value [value] for this objective. Indeed, we want to be able
