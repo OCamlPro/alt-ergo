@@ -42,7 +42,8 @@ and trecord = {
   mutable args : t list;
   name : Uid.ty_cst;
   mutable lbs :  (Uid.term_cst * t) list;
-  record_constr : Uid.term_cst; (* for ADTs that become records. default is "{" *)
+  record_constr : Uid.term_cst;
+  (* for ADTs that become records. default is "{" *)
 }
 
 module Smtlib = struct

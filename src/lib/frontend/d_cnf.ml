@@ -586,7 +586,8 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      (Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt)
+      (Adt
+         { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt)
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
