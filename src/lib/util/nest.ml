@@ -153,6 +153,10 @@ let ty_cst_of_cstr DE.{ builtin; _ } =
   | B.Constructor { adt; _ } -> adt
   | _ -> Fmt.failwith "expect an ADT constructor"
 
+(** Tag used to attach the order of constructor. Used to
+    retrieve efficiency the order of the constructor in [to_int]. *)
+let order_tag : int DStd.Tag.t = DStd.Tag.create ()
+
 let attach_orders defs =
   let hp = build_graph defs in
   let r : (int * DE.term_cst list) H.t = H.create 17 in
@@ -162,7 +166,7 @@ let attach_orders defs =
     let { id; outgoing; in_degree;  _ } = Hp.pop_min hp in
     let ty = ty_cst_of_cstr id in
     let o = H.add_cstr r ty id in
-    DE.Term.Const.set_tag id Uid.order_tag o;
+    DE.Term.Const.set_tag id order_tag o;
     assert (in_degree = 0);
     List.iter
       (fun node ->
@@ -173,3 +177,11 @@ let attach_orders defs =
       ) !outgoing;
     outgoing := [];
   done
+
+let perfect_hash id =
+  match (id : _ Uid.t) with
+  | Term_cst id ->
+    Option.get @@ DE.Term.Const.get_tag id order_tag
+  | Hstring hs ->
+    Hstring.hash hs
+  | _ -> .

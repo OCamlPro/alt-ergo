@@ -48,7 +48,7 @@ module TSet =
       (* We use a dedicated total order on the constructors to ensure
          the termination of model generation. *)
       let compare id1 id2 =
-        Uid.perfect_hash id1 - Uid.perfect_hash id2
+        Nest.perfect_hash id1 - Nest.perfect_hash id2
     end)
 
 let timer = Timers.M_Adt

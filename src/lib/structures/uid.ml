@@ -81,16 +81,6 @@ let compare (type a b) (u1 : a t) (u2 : b t) =
   | Ty_var id1, Ty_var id2 -> DE.Id.compare id1 id2
   | _ -> String.compare (show u1) (show u2)
 
-let order_tag : int DStd.Tag.t = DStd.Tag.create ()
-
-let perfect_hash id =
-  match id with
-  | Term_cst id ->
-    Option.get @@ DE.Term.Const.get_tag id order_tag
-  | Hstring hs ->
-    Hstring.hash hs
-  | _ -> .
-
 module Term_set = Set.Make
     (struct
       type nonrec t = term_cst

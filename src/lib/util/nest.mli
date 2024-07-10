@@ -35,3 +35,5 @@ val attach_orders : DE.ty_def list -> unit
     {b Note:} assume that [defs] is a list of definitions of a complete nest
     (in any order). By nest, we mean the set of all the constructors in a
     mutually recursive definition of ADTs. *)
+
+val perfect_hash : Uid.term_cst -> int

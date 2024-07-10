@@ -45,11 +45,6 @@ val of_hstring : Hstring.t -> 'a t
 
 val to_term_cst : term_cst -> DE.term_cst
 
-val order_tag : int Dolmen.Std.Tag.t
-(** Tag used to attach the order of constructor. Used to
-    retrieve efficiency the order of the constructor in [to_int]. *)
-
-val perfect_hash : term_cst -> int
 val hash : 'a t -> int
 val pp : 'a t Fmt.t
 val show : 'a t -> string
