@@ -43,13 +43,14 @@ val of_ty_var : DE.ty_var -> ty_var
 val of_string : string -> 'a t
 val of_hstring : Hstring.t -> 'a t
 
-val to_term_cst : term_cst -> DE.term_cst
-
 val hash : 'a t -> int
 val pp : 'a t Fmt.t
 val show : 'a t -> string
 val equal : 'a t -> 'a t -> bool
 val compare : 'a t -> 'a t -> int
+
+val order_tag : int Dolmen.Std.Tag.t
+(** Tag used to attach the order of constructor. *)
 
 module Term_set : Set.S with type elt = term_cst
 module Ty_map : Map.S with type key = ty_cst

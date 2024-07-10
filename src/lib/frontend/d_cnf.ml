@@ -101,22 +101,20 @@ module Cache = struct
   let find_ty id =
     HT.find ae_ty_ht (Id id)
 
-  let fresh_ty ?(is_var = true) ?id () =
+  let fresh_ty ?(is_var = true) ?(name = None) () =
     if is_var
     then Ty.fresh_tvar ()
     else
-      match id with
-      | Some id -> Ty.text [] (Uid.of_string id)
+      match name with
+      | Some n -> Ty.text [] (Uid.of_string n)
       | None -> Ty.fresh_empty_text ()
 
-  let show (type a) (id : a DE.id) = Fmt.to_to_string DE.Id.print id
-
-  let update_ty_store ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id:(show id) () in
+  let update_ty_store ?(is_var = true) ?name id =
+    let ty = fresh_ty ~is_var ~name () in
     store_ty id ty
 
-  let update_ty_store_ret ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id:(show id) () in
+  let update_ty_store_ret ?(is_var = true) ?name id =
+    let ty = fresh_ty ~is_var ~name () in
     store_ty id ty;
     ty
 
@@ -127,7 +125,8 @@ module Cache = struct
       update_ty_store_ret ~is_var id
 
   let store_tyv ?(is_var = true) t_v =
-    update_ty_store ~is_var t_v
+    let name = get_basename t_v.DE.path in
+    update_ty_store ~is_var ~name t_v
 
   let store_tyvl ?(is_var = true) (tyvl: DE.ty_var list) =
     List.iter (store_tyv ~is_var) tyvl
@@ -587,10 +586,11 @@ and handle_ty_app ?(update = false) ty_c l =
 let mk_ty_decl (ty_c: DE.ty_cst) =
   match DT.definition ty_c with
   | Some (
-      Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ }
+      (Adt { cases = [| { cstr = { id_ty; _ } as cstr; dstrs; _ } |]; _ } as adt)
     ) ->
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
+    Nest.attach_orders [adt];
     let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret id_ty in
     let rev_lbs =
@@ -613,8 +613,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     Cache.store_ty ty_c ty
 
   | Some (Adt { cases; _ } as adt) ->
-    let uid = Uid.of_ty_cst ty_c in
     Nest.attach_orders [adt];
+    let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     Cache.store_ty ty_c (Ty.t_adt uid tyvl);
     let rev_cs =

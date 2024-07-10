@@ -37,3 +37,8 @@ val attach_orders : DE.ty_def list -> unit
     mutually recursive definition of ADTs. *)
 
 val perfect_hash : Uid.term_cst -> int
+(** [perfect_hash u] returns an integer between [0] and [n] exclusive where
+    [u] is a constructor and [n] is the number of constructors of the ADT of
+    [u].
+
+    @raise Invalid_arg if [u] is not a constructor. *)

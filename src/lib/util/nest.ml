@@ -153,10 +153,6 @@ let ty_cst_of_cstr DE.{ builtin; _ } =
   | B.Constructor { adt; _ } -> adt
   | _ -> Fmt.failwith "expect an ADT constructor"
 
-(** Tag used to attach the order of constructor. Used to
-    retrieve efficiency the order of the constructor in [to_int]. *)
-let order_tag : int DStd.Tag.t = DStd.Tag.create ()
-
 let attach_orders defs =
   let hp = build_graph defs in
   let r : (int * DE.term_cst list) H.t = H.create 17 in
@@ -166,7 +162,7 @@ let attach_orders defs =
     let { id; outgoing; in_degree;  _ } = Hp.pop_min hp in
     let ty = ty_cst_of_cstr id in
     let o = H.add_cstr r ty id in
-    DE.Term.Const.set_tag id order_tag o;
+    DE.Term.Const.set_tag id Uid.order_tag o;
     assert (in_degree = 0);
     List.iter
       (fun node ->
@@ -180,8 +176,15 @@ let attach_orders defs =
 
 let perfect_hash id =
   match (id : _ Uid.t) with
-  | Term_cst id ->
-    Option.get @@ DE.Term.Const.get_tag id order_tag
+  | Term_cst ({ builtin = B.Constructor _; _ } as id) ->
+    begin match DE.Term.Const.get_tag id Uid.order_tag with
+      | Some h -> h
+      | None ->
+        (* Cannot occur as we eliminate this case in the smart constructor
+           [Uid.of_term_cst]. *)
+        assert false
+    end
+  | Term_cst _ -> invalid_arg "Nest.perfect_hash"
   | Hstring hs ->
     Hstring.hash hs
   | _ -> .
