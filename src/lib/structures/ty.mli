@@ -42,7 +42,7 @@ type t =
   (** Type variables *)
   | Tbitv of int
   (** Bitvectors of a given length *)
-  | Text of t list * Uid.t
+  | Text of t list * Uid.ty_cst
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
@@ -51,7 +51,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Uid.t * t list
+  | Tadt of Uid.ty_cst * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -77,22 +77,22 @@ and tvar = {
 and trecord = {
   mutable args : t list;
   (** Arguments passed to the record constructor *)
-  name : Uid.t;
+  name : Uid.ty_cst;
   (** Name of the record type *)
-  mutable lbs :  (Uid.t * t) list;
+  mutable lbs :  (Uid.term_cst * t) list;
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
-  record_constr : Uid.t;
+  record_constr : Uid.term_cst;
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 
 type adt_constr =
-  { constr : Uid.t ;
+  { constr : Uid.term_cst ;
     (** constructor of an ADT type *)
 
-    destrs : (Uid.t * t) list
+    destrs : (Uid.term_cst * t) list
     (** the list of destructors associated with the constructor and
         their respective types *)
   }
@@ -109,12 +109,12 @@ module Set : Set.S with type elt = t
 (** Sets of types *)
 
 
-val assoc_destrs : Uid.t -> adt_constr list -> (Uid.t * t) list
+val assoc_destrs : Uid.term_cst -> adt_constr list -> (Uid.term_cst * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
     @raises Not_found if the constructor is not in the given list. *)
 
-val type_body : Uid.t -> t list -> type_body
+val type_body : Uid.ty_cst -> t list -> type_body
 
 (** {2 Type inspection} *)
 
@@ -160,12 +160,13 @@ val fresh_tvar : unit -> t
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
-val text : t list -> Uid.t -> t
+val text : t list -> Uid.ty_cst -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
 val t_adt :
-  ?body:((Uid.t * (Uid.t * t) list) list) option -> Uid.t -> t list -> t
+  ?body:((Uid.term_cst * (Uid.term_cst * t) list) list) option ->
+  Uid.ty_cst -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
@@ -175,7 +176,8 @@ val t_adt :
 
 val trecord :
   ?sort_fields:bool ->
-  record_constr:Uid.t -> t list -> Uid.t -> (Uid.t * t) list -> t
+  record_constr:Uid.term_cst ->
+  t list -> Uid.ty_cst -> (Uid.term_cst * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs].
 

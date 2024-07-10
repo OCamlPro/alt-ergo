@@ -101,7 +101,7 @@ let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
   let body =
     List.map (fun (c, _) -> Uid.of_term_cst c, []) d_cstrs
   in
-  let ty = Ty.t_adt ~body:(Some body) (Uid.of_dolmen ty_cst) [] in
+  let ty = Ty.t_adt ~body:(Some body) (Uid.of_ty_cst ty_cst) [] in
   DE.Ty.apply ty_cst [], d_cstrs, ty
 
 let rounding_mode_of_smt_hs =

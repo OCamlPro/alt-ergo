@@ -31,17 +31,18 @@ type t =
   | Tbool
   | Tvar of tvar
   | Tbitv of int
-  | Text of t list * Uid.t
+  | Text of t list * Uid.ty_cst
   | Tfarray of t * t
-  | Tadt of Uid.t * t list
+  | Tadt of Uid.ty_cst * t list
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
+
 and trecord = {
   mutable args : t list;
-  name : Uid.t;
-  mutable lbs :  (Uid.t * t) list;
-  record_constr : Uid.t; (* for ADTs that become records. default is "{" *)
+  name : Uid.ty_cst;
+  mutable lbs :  (Uid.term_cst * t) list;
+  record_constr : Uid.term_cst; (* for ADTs that become records. default is "{" *)
 }
 
 module Smtlib = struct
@@ -67,8 +68,8 @@ exception TypeClash of t*t
 exception Shorten of t
 
 type adt_constr =
-  { constr : Uid.t ;
-    destrs : (Uid.t * t) list }
+  { constr : Uid.term_cst ;
+    destrs : (Uid.term_cst * t) list }
 
 type type_body = adt_constr list
 
@@ -405,7 +406,7 @@ and fresh_list lty subst =
 
 module Decls = struct
 
-  module MH = Uid.Map
+  module MH = Uid.Ty_map
 
   module MTY = Map.Make(struct
       type ty = t
@@ -510,7 +511,7 @@ let fresh_empty_text =
       let path = DStd.Path.global @@ Fmt.str "'_c%d" !cpt in
       DStd.Expr.Ty.Const.mk path 0
     in
-    text [] (Uid.of_dolmen id)
+    text [] (Uid.of_ty_cst id)
 
 let t_adt ?(body=None) s ty_vars =
   let ty = Tadt (s, ty_vars) in

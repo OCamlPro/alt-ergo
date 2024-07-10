@@ -27,7 +27,7 @@
 
 type builtin =
     LE | LT (* arithmetic *)
-  | IsConstr of Uid.t (* ADT tester *)
+  | IsConstr of Uid.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type operator =
@@ -35,9 +35,9 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Uid.t | Record
-  | Constr of Uid.t (* enums, adts *)
-  | Destruct of Uid.t
+  | Access of Uid.term_cst | Record
+  | Constr of Uid.term_cst (* enums, adts *)
+  | Destruct of Uid.term_cst
   (* Arrays *)
   | Get | Set
   (* BV *)

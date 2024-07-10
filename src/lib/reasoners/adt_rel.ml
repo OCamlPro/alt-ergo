@@ -43,7 +43,7 @@ module B = Dolmen.Std.Builtin
 module TSet =
   Set.Make
     (struct
-      type t = Uid.t
+      type t = Uid.term_cst
 
       (* We use a dedicated total order on the constructors to ensure
          the termination of model generation. *)
@@ -616,7 +616,7 @@ let constr_of_destr ty d =
 
   | _ -> assert false
 
-exception Found of X.r * Uid.t
+exception Found of X.r * Uid.term_cst
 
 let can_split env n =
   let m = Options.get_max_split () in

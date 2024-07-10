@@ -106,15 +106,17 @@ module Cache = struct
     then Ty.fresh_tvar ()
     else
       match id with
-      | Some id -> Ty.text [] (Uid.of_dolmen id)
+      | Some id -> Ty.text [] (Uid.of_string id)
       | None -> Ty.fresh_empty_text ()
 
+  let show (type a) (id : a DE.id) = Fmt.to_to_string DE.Id.print id
+
   let update_ty_store ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id () in
+    let ty = fresh_ty ~is_var ~id:(show id) () in
     store_ty id ty
 
   let update_ty_store_ret ?(is_var = true) id =
-    let ty = fresh_ty ~is_var ~id () in
+    let ty = fresh_ty ~is_var ~id:(show id) () in
     store_ty id ty;
     ty
 
@@ -597,7 +599,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
           match c with
           | Some (DE.{ id_ty; _ } as id) ->
             let pty = dty_to_ty id_ty in
-            (Uid.of_dolmen id, pty) :: acc
+            (Uid.of_term_cst id, pty) :: acc
           | _ ->
             Fmt.failwith
               "Unexpected null label for some field of the record type %a"
@@ -606,7 +608,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
       ) [] dstrs
     in
     let lbs = List.rev rev_lbs in
-    let record_constr = Uid.of_dolmen cstr in
+    let record_constr = Uid.of_term_cst cstr in
     let ty = Ty.trecord ~record_constr tyvl uid lbs in
     Cache.store_ty ty_c ty
 
@@ -623,7 +625,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
               fun acc tc_o ->
                 match tc_o with
                 | Some (DE.{ id_ty; _ } as field) ->
-                  (Uid.of_dolmen field, dty_to_ty id_ty) :: acc
+                  (Uid.of_term_cst field, dty_to_ty id_ty) :: acc
                 | None -> assert false
             ) [] dstrs
           in
@@ -638,7 +640,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let ty_params = []
     (* List.init ty_c.id_ty.arity (fun _ -> Ty.fresh_tvar ()) *)
     in
-    let ty = Ty.text ty_params (Uid.of_dolmen ty_c) in
+    let ty = Ty.text ty_params (Uid.of_ty_cst ty_c) in
     Cache.store_ty ty_c ty
 
 (** Handles term declaration by storing the eventual present type variables
@@ -678,7 +680,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             match c with
             | Some (DE.{ id_ty; _ } as id) ->
               let pty = dty_to_ty id_ty in
-              (Uid.of_dolmen id, pty) :: acc
+              (Uid.of_term_cst id, pty) :: acc
             | _ ->
               Fmt.failwith
                 "Unexpected null label for some field of the record type %a"
@@ -700,7 +702,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
                 fun acc tc_o ->
                   match tc_o with
                   | Some (DE.{ id_ty; _ } as id) ->
-                    (Uid.of_dolmen id, dty_to_ty id_ty) :: acc
+                    (Uid.of_term_cst id, dty_to_ty id_ty) :: acc
                   | None -> assert false
               ) [] dstrs
             in
@@ -737,10 +739,11 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         | DE.Adt { cases; record; ty = ty_c; } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
           let uid = Uid.of_ty_cst ty_c in
+          let record_constr = Uid.of_term_cst cases.(0).cstr in
           let ty =
             if (record || Array.length cases = 1) && not contains_adts
             then
-              Ty.trecord ~record_constr:uid tyvl uid []
+              Ty.trecord ~record_constr tyvl uid []
             else
               Ty.t_adt uid tyvl
           in
@@ -793,7 +796,7 @@ let mk_pattern DE.{ term_descr; _ } =
           Array.fold_left (
             fun acc v ->
               match v with
-              | Some dstr -> Uid.of_dolmen dstr :: acc
+              | Some dstr -> Uid.of_term_cst dstr :: acc
               | _ -> assert false
           ) [] dstrs
         | _ ->
@@ -1019,9 +1022,9 @@ let rec mk_expr
                     let sy =
                       match Cache.find_ty adt with
                       | Trecord _ ->
-                        Sy.Op (Sy.Access (Uid.of_dolmen destr))
+                        Sy.Op (Sy.Access (Uid.of_term_cst destr))
                       | Tadt _ ->
-                        Sy.destruct (Uid.of_dolmen destr)
+                        Sy.destruct (Uid.of_term_cst destr)
                       | _ -> assert false
                     in
                     E.mk_term sy [e] ty

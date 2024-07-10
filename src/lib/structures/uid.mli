@@ -27,30 +27,34 @@
 
 module DE = Dolmen.Std.Expr
 
-type t = private
-  | Hstring : Hstring.t -> t
-  | Dolmen : 'a DE.id -> t
-  | Term_cst : DE.term_cst -> t
-  | Ty_cst : DE.ty_cst -> t
+type _ t = private
+  | Hstring : Hstring.t -> 'a t
+  | Term_cst : DE.term_cst -> DE.term_cst t
+  | Ty_cst : DE.ty_cst -> DE.ty_cst t
+  | Ty_var : DE.ty_var -> DE.ty_var t
 
-val of_dolmen : 'a DE.Id.t -> t
-val of_term_cst : DE.term_cst -> t
-val of_ty_cst : DE.ty_cst -> t
-val of_string : string -> t
-val of_hstring : Hstring.t -> t
+type term_cst = DE.term_cst t
+type ty_cst = DE.ty_cst t
+type ty_var = DE.ty_var t
 
-val to_term_cst : t -> DE.term_cst
+val of_term_cst : DE.term_cst -> term_cst
+val of_ty_cst : DE.ty_cst -> ty_cst
+val of_ty_var : DE.ty_var -> ty_var
+val of_string : string -> 'a t
+val of_hstring : Hstring.t -> 'a t
+
+val to_term_cst : term_cst -> DE.term_cst
 
 val order_tag : int Dolmen.Std.Tag.t
 (** Tag used to attach the order of constructor. Used to
     retrieve efficiency the order of the constructor in [to_int]. *)
 
-val perfect_hash : t -> int
-val hash : t -> int
-val pp : t Fmt.t
-val show : t -> string
-val equal : t -> t -> bool
-val compare : t -> t -> int
+val perfect_hash : term_cst -> int
+val hash : 'a t -> int
+val pp : 'a t Fmt.t
+val show : 'a t -> string
+val equal : 'a t -> 'a t -> bool
+val compare : 'a t -> 'a t -> int
 
-module Set : Set.S with type elt = t
-module Map : Map.S with type key = t
+module Term_set : Set.S with type elt = term_cst
+module Ty_map : Map.S with type key = ty_cst

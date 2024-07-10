@@ -52,7 +52,7 @@ type oplogic =
 
 (** type of pattern in match construct of ADTs *)
 type pattern =
-  | Constr of { name : Uid.t ; args : (Var.t * Uid.t * Ty.t) list}
+  | Constr of { name : Uid.term_cst ; args : (Var.t * Uid.term_cst * Ty.t) list}
   (** A pattern case which is a constructor. [name] is the name of
       constructor. [args] contains the variables bound by this pattern
       with their correponsing destructors and types *)

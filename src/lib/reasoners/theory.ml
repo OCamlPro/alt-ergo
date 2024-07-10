@@ -160,25 +160,25 @@ module Main_Default : S = struct
            | Tvar _ -> assert false
 
            | Text (_, hs) | Trecord { name = hs; _ } when
-               Uid.Map.mem hs mp -> mp
+               Uid.Ty_map.mem hs mp -> mp
 
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
-             Uid.Map.add hs (Text(l, hs)) mp
+             Uid.Ty_map.add hs (Text(l, hs)) mp
 
            | Trecord { name; _ } ->
              (* cannot do better for records ? *)
-             Uid.Map.add name ty mp
+             Uid.Ty_map.add name ty mp
 
            | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
-             Uid.Map.add hs ty mp
-        )sty Uid.Map.empty
+             Uid.Ty_map.add hs ty mp
+        )sty Uid.Ty_map.empty
 
     let print_types_decls ?(header=true) types =
       let open Ty in
       print_dbg ~flushed:false ~header "@[<v 2>(* types decls: *)@ ";
-      Uid.Map.iter
+      Uid.Ty_map.iter
         (fun _ ty ->
            match ty with
            | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> ()
