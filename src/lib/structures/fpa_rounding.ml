@@ -41,7 +41,7 @@ type rounding_mode =
   | NearestTiesToAway
 [@@deriving ord]
 
-let cstrs =
+let constrs =
   [
     NearestTiesToEven;
     ToZero;
@@ -76,36 +76,36 @@ let string_of_rounding_mode = to_smt_string
 let hstring_smt_reprs =
   List.map
     (fun c -> to_smt_string c, [])
-    cstrs
+    constrs
 
 let hstring_ae_reprs =
   List.map
     (fun c -> Hs.make (to_ae_string c))
-    cstrs
+    constrs
 
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
-let fpa_rounding_mode_dty, d_cstrs, fpa_rounding_mode =
+let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode =
   let module DStd = Dolmen.Std in
   (* We may use the builtin type `DStd.Expr.Ty.roundingMode` here. *)
   let ty_cst = DE.Ty.Const.mk (DStd.Path.global "RoundingMode") 0 in
-  let cstrs =
-    List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) cstrs
+  let constrs =
+    List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) constrs
   in
-  let def, d_cstrs = DE.Term.define_adt ty_cst [] cstrs in
+  let def, d_constrs = DE.Term.define_adt ty_cst [] constrs in
   Nest.attach_orders [def];
   let body =
-    List.map (fun (c, _) -> Uid.of_term_cst c, []) d_cstrs
+    List.map (fun (c, _) -> Uid.of_term_cst c, []) d_constrs
   in
   let ty = Ty.t_adt ~body:(Some body) (Uid.of_ty_cst ty_cst) [] in
-  DE.Ty.apply ty_cst [], d_cstrs, ty
+  DE.Ty.apply ty_cst [], d_constrs, ty
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in
   List.iter2 (
     fun (key, _) bnd ->
       Hashtbl.add table key bnd
-  ) hstring_smt_reprs cstrs;
+  ) hstring_smt_reprs constrs;
   fun key ->
     try Hashtbl.find table (Hstring.view key) with
     | Not_found ->
@@ -119,7 +119,7 @@ let rounding_mode_of_ae_hs =
   List.iter2 (
     fun key bnd ->
       Hashtbl.add table key bnd
-  ) hstring_ae_reprs cstrs;
+  ) hstring_ae_reprs constrs;
   fun key ->
     try Hashtbl.find table key with
     | Not_found ->

@@ -51,7 +51,8 @@ val fpa_rounding_mode_ae_type_name : string
 val fpa_rounding_mode_dty : Dolmen.Std.Expr.Ty.t
 
 (** The Dolmen constructors of [rounding_mode]. *)
-val d_cstrs : (Uid.DE.term_cst * (Uid.DE.ty * Uid.DE.term_cst option) list) list
+val d_constrs :
+  (Uid.DE.term_cst * (Uid.DE.ty * Uid.DE.term_cst option) list) list
 
 (** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t

@@ -173,7 +173,7 @@ module Domains = struct
      the legacy frontend and switching from [Uid.t] to
      [Dolmen.Std.Expr.term_cst] to store the constructors. Indeed, [term_cst]
      contains the type of constructor and in particular its arity. *)
-  let is_enum_cstr r c =
+  let is_enum_constr r c =
     match X.type_info r with
     | Tadt (name, args) ->
       let cases = Ty.type_body name args in
@@ -182,7 +182,7 @@ module Domains = struct
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
-    let is_enum_domain = Domain.for_all (is_enum_cstr r) nd in
+    let is_enum_domain = Domain.for_all (is_enum_constr r) nd in
     let enums = if is_enum_domain then SX.add r t.enums else t.enums in
     let changed = SX.add r t.changed in
     { domains; enums; changed }

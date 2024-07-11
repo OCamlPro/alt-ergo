@@ -140,15 +140,15 @@ let build_graph (defs : DE.ty_def list) : Hp.t =
 module H = struct
   include Hashtbl.Make (DE.Ty.Const)
 
-  let add_cstr t (ty : DE.ty_cst) (cstr : DE.term_cst) =
+  let add_constr t (ty : DE.ty_cst) (constr : DE.term_cst) =
     match find t ty with
-    | len, cstrs ->
-      add t ty (len + 1, cstr :: cstrs); len
+    | len, constrs ->
+      add t ty (len + 1, constr :: constrs); len
     | exception Not_found ->
-      add t ty (1, [cstr]); 0
+      add t ty (1, [constr]); 0
 end
 
-let ty_cst_of_cstr DE.{ builtin; _ } =
+let ty_cst_of_constr DE.{ builtin; _ } =
   match builtin with
   | B.Constructor { adt; _ } -> adt
   | _ -> Fmt.failwith "expect an ADT constructor"
@@ -160,8 +160,8 @@ let attach_orders defs =
     (* Loop invariant: the set of nodes in heap [hp] is exactly
        the set of the nodes of the graph without ingoing hyperedge. *)
     let { id; outgoing; in_degree;  _ } = Hp.pop_min hp in
-    let ty = ty_cst_of_cstr id in
-    let o = H.add_cstr r ty id in
+    let ty = ty_cst_of_constr id in
+    let o = H.add_constr r ty id in
     DE.Term.Const.set_tag id Uid.order_tag o;
     assert (in_degree = 0);
     List.iter

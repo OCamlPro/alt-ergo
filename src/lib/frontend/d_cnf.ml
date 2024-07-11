@@ -193,8 +193,8 @@ let ty (ty_cst : DE.ty_cst) ty =
 let fpa_rounding_mode, rounding_modes, add_rounding_modes =
   match DT.view Fpa_rounding.fpa_rounding_mode_dty with
   | `App ((`Generic ty_cst), []) ->
-    let cstrs = Fpa_rounding.d_cstrs in
-    let add_cstrs map =
+    let constrs = Fpa_rounding.d_constrs in
+    let add_constrs map =
       List.fold_left (fun map ((c : DE.term_cst), _) ->
           let name = get_basename c.path in
           DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term }
@@ -202,15 +202,15 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
                builtin_term @@
                Dolmen_type.Base.term_app_cst
                  (module Dl.Typer.T) env c) map)
-        map cstrs
+        map constrs
     in
     Cache.store_ty ty_cst Fpa_rounding.fpa_rounding_mode;
     Fpa_rounding.fpa_rounding_mode_dty,
-    cstrs,
+    constrs,
     fun map ->
       map
       |> ty ty_cst Fpa_rounding.fpa_rounding_mode_dty
-      |> add_cstrs
+      |> add_constrs
   | _ -> assert false
 
 module Const = struct
