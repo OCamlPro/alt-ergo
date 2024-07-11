@@ -40,7 +40,7 @@ type ty_var = DE.ty_var t
 
 let order_tag : int DStd.Tag.t = DStd.Tag.create ()
 
-let has_order id =
+let has_order_if_cstr id =
   let is_cstr DE.{ builtin; _ } =
     match builtin with
     | DStd.Builtin.Constructor _ -> true
@@ -55,7 +55,8 @@ let[@inline always] of_term_cst id =
   (* This assertion ensures that the API of the [Nest] module have been
      correctly used, that is [Nest.attach_orders] have been called on
      the nest of [id] if [id] is a constructor of ADT. *)
-  if not @@ has_order id then Fmt.failwith "not order on %a" DE.Id.print id;
+  if not @@ has_order_if_cstr id then
+    Fmt.invalid_arg "not order on %a" DE.Id.print id;
   Term_cst id
 
 let[@inline always] of_ty_cst id = Ty_cst id

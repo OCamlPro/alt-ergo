@@ -101,20 +101,13 @@ module Cache = struct
   let find_ty id =
     HT.find ae_ty_ht (Id id)
 
-  let fresh_ty ?(is_var = true) ?(name = None) () =
+  let fresh_ty ?(is_var = true) () =
     if is_var
     then Ty.fresh_tvar ()
-    else
-      match name with
-      | Some n -> Ty.text [] (Uid.of_string n)
-      | None -> Ty.fresh_empty_text ()
+    else Ty.fresh_empty_text ()
 
-  let update_ty_store ?(is_var = true) ?name id =
-    let ty = fresh_ty ~is_var ~name () in
-    store_ty id ty
-
-  let update_ty_store_ret ?(is_var = true) ?name id =
-    let ty = fresh_ty ~is_var ~name () in
+  let update_ty_store_ret ?(is_var = true) id =
+    let ty = fresh_ty ~is_var () in
     store_ty id ty;
     ty
 
@@ -125,8 +118,8 @@ module Cache = struct
       update_ty_store_ret ~is_var id
 
   let store_tyv ?(is_var = true) t_v =
-    let name = get_basename t_v.DE.path in
-    update_ty_store ~is_var ~name t_v
+    let ty = fresh_ty ~is_var () in
+    store_ty t_v ty
 
   let store_tyvl ?(is_var = true) (tyvl: DE.ty_var list) =
     List.iter (store_tyv ~is_var) tyvl
