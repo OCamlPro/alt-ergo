@@ -190,12 +190,12 @@ module Types = struct
     let rec check_duplicates s = function
       | [] -> ()
       | (lb, _) :: l ->
-        if Uid.Set.mem lb s then
+        if Uid.Term_set.mem lb s then
           Errors.typing_error
             (DuplicateLabel (Hstring.make @@ Uid.show lb)) loc;
-        check_duplicates (Uid.Set.add lb s) l
+        check_duplicates (Uid.Term_set.add lb s) l
     in
-    check_duplicates Uid.Set.empty lbs;
+    check_duplicates Uid.Term_set.empty lbs;
     match ty with
     | Ty.Trecord { Ty.lbs = l; _ } ->
       if List.length lbs <> List.length l then
@@ -586,32 +586,34 @@ let check_no_duplicates =
 let filter_patterns pats ty_body _loc =
   let cases =
     List.fold_left
-      (fun s {Ty.constr=c; _} -> Uid.Set.add c s) Uid.Set.empty ty_body
+      (fun s {Ty.constr=c; _} -> Uid.Term_set.add c s)
+      Uid.Term_set.empty ty_body
   in
   let missing, filtered_pats, dead =
     List.fold_left
       (fun (miss, filtered_pats, dead) ((p, _) as u) ->
          match p with
          | Constr { name; _ } ->
-           assert (Uid.Set.mem name cases); (* pattern is well typed *)
-           if Uid.Set.mem name miss then (* not encountered yet *)
-             Uid.Set.remove name miss, u :: filtered_pats, dead
+           assert (Uid.Term_set.mem name cases); (* pattern is well typed *)
+           if Uid.Term_set.mem name miss then (* not encountered yet *)
+             Uid.Term_set.remove name miss, u :: filtered_pats, dead
            else (* case already seen --> dead pattern *)
              miss, pats, p :: dead
          | Var _ ->
-           if Uid.Set.is_empty miss then
+           if Uid.Term_set.is_empty miss then
              (* match already exhaussive -> dead case *)
              miss, filtered_pats, p :: dead
            else (* covers all remaining cases, miss becomes empty *)
-             Uid.Set.empty, u :: filtered_pats, dead
+             Uid.Term_set.empty, u :: filtered_pats, dead
       )(cases, [], []) pats
   in
   missing, List.rev filtered_pats, dead
 
 let check_pattern_matching missing dead loc =
-  if not (Uid.Set.is_empty missing) then begin
+  if not (Uid.Term_set.is_empty missing) then begin
     let missing =
-      List.map (fun m -> Hstring.make @@ Uid.show m) (Uid.Set.elements missing)
+      List.map (fun m -> Hstring.make @@ Uid.show m)
+        (Uid.Term_set.elements missing)
     in
     Errors.typing_error (MatchNotExhaustive missing) loc end;
   if dead != [] then

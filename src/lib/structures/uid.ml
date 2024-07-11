@@ -26,46 +26,84 @@
 (**************************************************************************)
 
 module DStd = Dolmen.Std
-module DE = DStd.Expr
+module DE = Dolmen.Std.Expr
 
-type t =
-  | Hstring : Hstring.t -> t
-  | Dolmen : 'a DE.id -> t
+type _ t =
+  | Hstring : Hstring.t -> 'a t
+  | Term_cst : DE.term_cst -> DE.term_cst t
+  | Ty_cst : DE.ty_cst -> DE.ty_cst t
+  | Ty_var : DE.ty_var -> DE.ty_var t
 
-let[@inline always] of_dolmen id = Dolmen id
+type term_cst = DE.term_cst t
+type ty_cst = DE.ty_cst t
+type ty_var = DE.ty_var t
+
+let order_tag : int DStd.Tag.t = DStd.Tag.create ()
+
+let has_order_if_cstr id =
+  let is_cstr DE.{ builtin; _ } =
+    match builtin with
+    | DStd.Builtin.Constructor _ -> true
+    | _ -> false
+  in
+  let has_attached_order id =
+    DE.Term.Const.get_tag id order_tag |> Option.is_some
+  in
+  (not (is_cstr id)) || has_attached_order id
+
+let[@inline always] of_term_cst id =
+  (* This assertion ensures that the API of the [Nest] module have been
+     correctly used, that is [Nest.attach_orders] have been called on
+     the nest of [id] if [id] is a constructor of ADT. *)
+  if not @@ has_order_if_cstr id then
+    Fmt.invalid_arg "not order on %a" DE.Id.print id;
+  Term_cst id
+
+let[@inline always] of_ty_cst id = Ty_cst id
+let[@inline always] of_ty_var id = Ty_var id
 let[@inline always] of_hstring hs = Hstring hs
 let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
-let hash = function
+let hash (type a) (u : a t) =
+  match u with
   | Hstring hs -> Hstring.hash hs
-  | Dolmen id -> DE.Id.hash id
+  | Term_cst id -> DE.Id.hash id
+  | Ty_cst id -> DE.Id.hash id
+  | Ty_var id -> DE.Id.hash id
 
-let pp ppf = function
+let pp (type a) ppf (u : a t) =
+  match u with
   | Hstring hs -> Hstring.print ppf hs
-  | Dolmen id -> DE.Id.print ppf id
+  | Term_cst id -> DE.Id.print ppf id
+  | Ty_cst id -> DE.Id.print ppf id
+  | Ty_var id -> DE.Id.print ppf id
 
-let show = Fmt.to_to_string pp
+let show (type a) (u : a t) = Fmt.to_to_string pp u
 
-let equal u1 u2 =
+let equal (type a b) (u1 : a t) (u2 : b t) =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
-  | Dolmen id1, Dolmen id2 -> DE.Id.equal id1 id2
+  | Term_cst id1, Term_cst id2 -> DE.Id.equal id1 id2
+  | Ty_cst id1, Ty_cst id2 -> DE.Id.equal id1 id2
+  | Ty_var id1, Ty_var id2 -> DE.Id.equal id1 id2
   | _ -> String.equal (show u1) (show u2)
 
-let compare u1 u2 =
+let compare (type a b) (u1 : a t) (u2 : b t) =
   match u1, u2 with
   | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
-  | Dolmen id1, Dolmen id2 -> DE.Id.compare id1 id2
+  | Term_cst id1, Term_cst id2 -> DE.Id.compare id1 id2
+  | Ty_cst id1, Ty_cst id2 -> DE.Id.compare id1 id2
+  | Ty_var id1, Ty_var id2 -> DE.Id.compare id1 id2
   | _ -> String.compare (show u1) (show u2)
 
-module Set = Set.Make
+module Term_set = Set.Make
     (struct
-      type nonrec t = t
+      type nonrec t = term_cst
       let compare = compare
     end)
 
-module Map = Map.Make
+module Ty_map = Map.Make
     (struct
-      type nonrec t = t
+      type nonrec t = ty_cst
       let compare = compare
     end)

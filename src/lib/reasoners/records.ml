@@ -29,8 +29,8 @@ module E = Expr
 module Sy = Symbols
 
 type 'a abstract =
-  | Record of (Uid.t * 'a abstract) list * Ty.t
-  | Access of Uid.t * 'a abstract * Ty.t
+  | Record of (Uid.term_cst * 'a abstract) list * Ty.t
+  | Access of Uid.term_cst * 'a abstract * Ty.t
   | Other of 'a * Ty.t
 
 module type ALIEN = sig

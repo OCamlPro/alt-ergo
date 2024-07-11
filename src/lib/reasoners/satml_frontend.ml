@@ -1393,8 +1393,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Expr.reinit_cache ();
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();
-    Uf.reinit_cache ();
-    Nest.reinit ()
+    Uf.reinit_cache ()
 
   let () =
     Steps.save_steps ();

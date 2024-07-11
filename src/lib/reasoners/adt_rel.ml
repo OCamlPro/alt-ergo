@@ -36,13 +36,19 @@ module LR = Uf.LX
 module Th = Shostak.Adt
 module SLR = Set.Make(LR)
 
-module TSet = Set.Make
+module DE = Dolmen.Std.Expr
+module DT = Dolmen.Std.Expr.Ty
+module B = Dolmen.Std.Builtin
+
+module TSet =
+  Set.Make
     (struct
-      type t = Uid.t
+      type t = Uid.term_cst
 
       (* We use a dedicated total order on the constructors to ensure
-         the termination of the model generation. *)
-      let compare = Nest.compare
+         the termination of model generation. *)
+      let compare id1 id2 =
+        Nest.perfect_hash id1 - Nest.perfect_hash id2
     end)
 
 let timer = Timers.M_Adt
@@ -77,7 +83,8 @@ module Domain = struct
     else
       { constrs; ex }
 
-  let[@inline always] singleton ~ex c = { constrs = TSet.singleton c; ex }
+  let[@inline always] singleton ~ex c =
+    { constrs = TSet.singleton c; ex }
 
   let[@inline always] subset d1 d2 = TSet.subset d1.constrs d2.constrs
 
@@ -609,7 +616,7 @@ let constr_of_destr ty d =
 
   | _ -> assert false
 
-exception Found of X.r * Uid.t
+exception Found of X.r * Uid.term_cst
 
 let can_split env n =
   let m = Options.get_max_split () in

@@ -72,7 +72,7 @@ type oplogic =
 (** Logic operators. *)
 
 type pattern =
-  | Constr of { name : Uid.t ; args : (Var.t * Uid.t * Ty.t) list}
+  | Constr of { name : Uid.term_cst ; args : (Var.t * Uid.term_cst * Ty.t) list}
   | Var of Var.t
 
 

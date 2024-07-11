@@ -28,12 +28,17 @@
 module Sy = Symbols
 module E  = Expr
 
+
 type 'a abstract =
-  | Constr of { c_name : Uid.t ; c_ty : Ty.t ; c_args : (Uid.t * 'a) list }
+  | Constr of {
+      c_name : Uid.term_cst;
+      c_ty : Ty.t;
+      c_args : (Uid.term_cst * 'a) list
+    }
   (* [Cons { c_name; c_ty; c_args }] reprensents the application of the
      constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
 
-  | Select of { d_name : Uid.t ; d_ty : Ty.t ; d_arg : 'a }
+  | Select of { d_name : Uid.term_cst ; d_ty : Ty.t ; d_arg : 'a }
   (* [Select { d_name; d_ty; d_arg }] represents the destructor [d_name] of
      the ADT [d_ty] on the ADT value [d_arg]. *)
 

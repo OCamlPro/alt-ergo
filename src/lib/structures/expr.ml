@@ -1276,7 +1276,7 @@ let mk_tester cons t =
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
 let void =
-  let cstr = Uid.of_dolmen Dolmen.Std.Expr.Term.Cstr.void in
+  let cstr = Uid.of_term_cst Dolmen.Std.Expr.Term.Cstr.void in
   mk_constr cstr [] Ty.tunit
 
 (** Substitutions *)

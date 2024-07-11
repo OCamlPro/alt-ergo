@@ -19,9 +19,7 @@
 module DStd = Dolmen.Std
 module DE = DStd.Expr
 module DT = DE.Ty
-module B = Dolmen.Std.Builtin
-
-type t = Dolmen.Std.Expr.ty_def list
+module B = DStd.Builtin
 
 (* A nest is the set of all the constructors of a mutually recursive definition
    of ADTs.
@@ -139,34 +137,32 @@ let build_graph (defs : DE.ty_def list) : Hp.t =
     ) defs;
   hp
 
-module H = Hashtbl.Make (Uid)
+module H = struct
+  include Hashtbl.Make (DE.Ty.Const)
 
-(* Internal state used to store the current order. *)
-let add_cstr, find_weight, reinit =
-  let ctr = ref 0 in
-  let order : int H.t = H.create 100 in
-  let add_cstr cstr =
-    H.add order cstr !ctr;
-    incr ctr
-  and find_weight cstr =
-    try
-      H.find order cstr
-    with Not_found ->
-      Fmt.failwith "cannot find uid %a" Uid.pp cstr
-  and reinit () =
-    ctr := 0;
-    H.clear order
-  in add_cstr, find_weight, reinit
+  let add_cstr t (ty : DE.ty_cst) (cstr : DE.term_cst) =
+    match find t ty with
+    | len, cstrs ->
+      add t ty (len + 1, cstr :: cstrs); len
+    | exception Not_found ->
+      add t ty (1, [cstr]); 0
+end
 
-(* Sort the constructors of the nest using a sorting based on
-   Kahn's algorithm. *)
-let add_nest n =
-  let hp = build_graph n in
+let ty_cst_of_cstr DE.{ builtin; _ } =
+  match builtin with
+  | B.Constructor { adt; _ } -> adt
+  | _ -> Fmt.failwith "expect an ADT constructor"
+
+let attach_orders defs =
+  let hp = build_graph defs in
+  let r : (int * DE.term_cst list) H.t = H.create 17 in
   while not @@ Hp.is_empty hp do
     (* Loop invariant: the set of nodes in heap [hp] is exactly
        the set of the nodes of the graph without ingoing hyperedge. *)
-    let { id; outgoing; in_degree; _ } = Hp.pop_min hp in
-    add_cstr @@ Uid.of_dolmen id;
+    let { id; outgoing; in_degree;  _ } = Hp.pop_min hp in
+    let ty = ty_cst_of_cstr id in
+    let o = H.add_cstr r ty id in
+    DE.Term.Const.set_tag id Uid.order_tag o;
     assert (in_degree = 0);
     List.iter
       (fun node ->
@@ -178,9 +174,17 @@ let add_nest n =
     outgoing := [];
   done
 
-let compare (id1 : Uid.t) (id2 : Uid.t) =
-  match id1, id2 with
-  | Dolmen _, Dolmen _ ->
-    find_weight id1 - find_weight id2
-  | _ ->
-    Uid.compare id1 id2
+let perfect_hash id =
+  match (id : _ Uid.t) with
+  | Term_cst ({ builtin = B.Constructor _; _ } as id) ->
+    begin match DE.Term.Const.get_tag id Uid.order_tag with
+      | Some h -> h
+      | None ->
+        (* Cannot occur as we eliminate this case in the smart constructor
+           [Uid.of_term_cst]. *)
+        assert false
+    end
+  | Term_cst _ -> invalid_arg "Nest.perfect_hash"
+  | Hstring hs ->
+    Hstring.hash hs
+  | _ -> .
