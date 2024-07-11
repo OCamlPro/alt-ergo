@@ -331,8 +331,8 @@ let mk_cut loc expr =
 let mk_match loc expr cases =
   mk_localized loc (PPmatch (expr, cases))
 
-let mk_algebraic_test loc expr cstr =
-  mk_localized loc (PPisConstr (expr, cstr))
+let mk_algebraic_test loc expr constr =
+  mk_localized loc (PPisConstr (expr, constr))
 
-let mk_algebraic_project loc expr cstr =
-  mk_localized loc (PPproject (expr, cstr))
+let mk_algebraic_project loc expr constr =
+  mk_localized loc (PPproject (expr, constr))

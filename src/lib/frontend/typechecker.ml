@@ -273,7 +273,7 @@ module Env = struct
     match ty with
     | Ty.Tadt (name, []) ->
       let cases = Ty.type_body name [] in
-      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
+      let constrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
         (fun m c ->
            match Fpa_rounding.translate_smt_rounding_mode
@@ -291,16 +291,16 @@ module Env = struct
                m
         )
         map
-        cstrs
+        constrs
     | _ -> (* Fpa_rounding.fpa_rounding_mode is a sum type. *)
       assert false
 
-  let find_builtin_cstr ty n =
+  let find_builtin_constr ty n =
     match ty with
     | Ty.Tadt (name, []) ->
       let cases = Ty.type_body name [] in
-      let cstrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
-      List.find (Uid.equal n) cstrs
+      let constrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
+      List.find (Uid.equal n) constrs
     | _ ->
       assert false
 
@@ -312,7 +312,7 @@ module Env = struct
     } in
     let rm = Fpa_rounding.fpa_rounding_mode in
     let mode m =
-      let h = find_builtin_cstr rm m in
+      let h = find_builtin_constr rm m in
       {
         c = {
           tt_desc = TTapp (Symbols.(Op (Constr h)), []);
@@ -2383,13 +2383,13 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
 
   | Algebraic lc ->
     List.fold_left
-      (fun (acc, env) (cstr, lbl_args_ty) ->
+      (fun (acc, env) (constr, lbl_args_ty) ->
          let args_ty = List.map snd lbl_args_ty in
          let tty, env =
-           Env.add_constr ~record:false env cstr args_ty pur_ty loc
+           Env.add_constr ~record:false env constr args_ty pur_ty loc
          in
          let acc =
-           ({c = TLogic(loc, [cstr], tty); annot=new_id ()}, env) :: acc
+           ({c = TLogic(loc, [constr], tty); annot=new_id ()}, env) :: acc
          in
          List.fold_left (* register destructors *)
            (fun (acc, env) (lbl, ty_lbl) ->
