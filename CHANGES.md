@@ -1,14 +1,134 @@
 ## unreleased
 
-### Deprecated
-* make Dolmen the default and deprecate the legacy frontend (PR #857)
-* printing underscore instead of fresh value in model (PR #805)
+### Command-line interface
+
+ - Remove deprecated output channels (#782)
+ - Deprecate the --use-underscore since it produces models that are not SMT-LIB
+   compliant (#805)
+ - Add --dump-models-on to dump models on a specific output channel (#838)
+ - Use consistent return codes (#842)
+ - Add --continue-on-error flag to set the SMT-LIB error behavior (#853)
+ - Make dolmen the default value for the --frontend option (#857)
+ - Restore functionality to broken `--profiling` option (#947)
+ - Add bare-bones support for interactive input in SMT-LIB format (#949)
+ - Less confusing behavior on timeout (#982, #984)
+ - Add `--strict` option for SMT-LIB compliant mode (#916, #1133)
+
+### SMT-LIB support
+
+ - Add support for the many new SMT-LIB commands (#837, #848, #852, #863, #911,
+   #942, #945, #961, #975, #1069)
+ - Expose the FPA rounding builtin in the SMT-LIB format (#876, #1135)
+ - Allow changing the SAT solver using (set-option) (#880)
+ - Add support for the `:named` attribute (#957)
+ - Add support for quoted identifiers (#909, #972)
+ - Add support for naming lemmas in SMT-LIB syntax (#1141, #1143)
+
+### Model generation
+
+ - Use post-solve SAT environment in model generation, fixing issues where
+   incorrect models were generated (#789)
+ - Restore support for records in models (#793)
+ - Use abstract values instead of dummy values in models where the
+   actual value does not matter (#804, #835)
+ - Use fresh names for all abstract values to prevent accidental captures (#811)
+ - Add support for model generation with the default CDCL solver (#829)
+ - Support model generation for the BV theory (#841, #968)
+ - Add support for optimization (MaxSMT / OptiSMT) with
+   lexicographic Int and Real objectives (#861, #921)
+ - Add a SMT-LIB printer for expressions (#952, #981, #1082, #931, #932)
+ - Ensure models have a value for all constants in the problem (#1019)
+ - Fix a rare soundness issue with integer constraints when model generation is
+   enabled (#1025)
+ - Support model generation for the ADT theory (#1093, #1153)
+
+### Theory reasoning
+
+ - Add word-level propagators for the BV theory (#944, #1004, #1007, #1010,
+   #1011, #1012, #1040, #1044, #1054, #1055, #1056, #1057, #1065, #1073, #1144)
+ - Add interval domains and arithmetic propagators for the BV theory (#1058,
+   #1083, #1084, #1085)
+ - Fix incompleteness issues in the BV solver (#978, #979)
+ - Abstract more arguments of AC symbols to avoid infinite loops when
+   they contain other AC symbols (#990)
+ - Do not make irrelevant decisions in CDCL solver, improving
+   performance slightly (#1041)
+ - Rewrite the ADT theory to use domains and integrate the enum theory into the
+   ADT theory (#1078, #1086, #1087, #1091, #1094, #1138)
+ - Rewrite the Intervals module entirely (#1108)
+
+### Internal/library changes
+
+ - Rewrite the Vec module (#607)
+ - Move printer definitions closer to type definitions (#808)
+ - Mark proxy names as reserved (#836)
+ - Use a Zarith-based representation for numbers and bit-vectors (#850, #943)
+ - Add native support for (bvnot) in the BV solver (#856)
+ - Add constant propagators for partially interpreted functions (#869)
+ - Remove `Util.failwith` in favor of `Fmt.failwith` (#872)
+ - Add more `Expr` smart constructors (#877, #878)
+ - Do not use existential variables for integer division (#881)
+ - Preserve `Subst` literals to prevent accidental incompleteness (#886)
+ - Properly start timers (#924)
+ - Compute a concrete representation of a model instead of performing (#925)
+ - Allow direct access to the SAT API in the Alt-Ergo library computations
+   during printing (#927)
+ - Better handling for step limit (#936)
+ - Add a generic option manager to deal with the dolmen state (#951)
+ - Expose an imperative SAT API in the Alt-Ergo library (#962)
+ - Keep track of the SMT-LIB mode (#971)
+ - Add ability to decide on semantic literals (#1027, #1118)
+ - Preserve trigger order when parsing quantifiers with multiple trigger
+   (#1046).
+ - Store domains inside the union-find module (#1119)
+
+### Build and integration
+
+ - Drop support for OCaml <4.08.1 (#803)
+ - Use dune-site for the inequalities plugins. External pluginsm ust now be
+   registered through the dune-site plugin mechanism in the
+   `(alt-ergo plugins)` site to be picked up by Alt-Ergo (#1049).
+ - Add a release workflow (#827)
+ - Mark the dune.inc file as linguist-generated to avoid huge diffs (#830)
+ - Use stdcompat to support older OCaml versions (#866)
+ - Use GitHub Actions badges in the README (#882)
+ - Use `dune build @check` to build the project (#887)
+ - Enable warnings as errors on the CI (#888)
+ - Uniformization of internal identifiers generation (#905, #918)
+ - Use an efficient `String.starts_with` implementation (#912)
+ - Fix the Makefile (#914)
+
+### Testing
+
+ - Use --enable-assertions in tests (#809)
+ - Add a test for push/pop (#843)
+ - Use the CDCL solver when testing model generation (#938)
+ - Do not test .smt2 files with the legacy frontend (#939)
+ - Restore automatic creation of .expected files (#941)
+
+### Documentation
+
+ - Add a new example for model generation (#826)
+ - Add a Pygments lexer for the Alt-Ergo native language (#862)
+ - Update the current authors (#865)
+ - Documentation of the `Enum` theory (#871)
+ - Document `Th_util.lit_origin` (#915)
+ - Document the CDCL-Tableaux solver (#995)
+
+## v2.5.4
+
+### Bug fixes
+
+* Fix a long-standing soundness issue in the FPA module (#1122, originally
+  reported in #1111)
+* Dolmen frontend incorrectly allowed semantic triggers outside of theory
+  extensions (#1122)
+
+## v2.5.3
 
 ### Build
-* use OCaml 4.08.1 as the minimal supported version (PR #803)
-* Use dune-site plugin mechanism for inequalities plugin (PR #1049)
-  External plugins must now be registered through the dune-site plugin
-  mechanism in the `(alt-ergo plugins)` site to be picked up by Alt-Ergo.
+* Require dolmen 0.9 #1050
+* Test compatibility for OCaml 5.2 #1059
 
 ## v2.5.2
 
