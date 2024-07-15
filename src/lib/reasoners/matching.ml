@@ -109,7 +109,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if Options.get_debug_matching() >= 3 then
         let print fmt Matching_types.{ sbs; sty; _ } =
           Format.fprintf fmt ">>> sbs= %a | sty= %a@ "
-            (SubstE.print E.print) sbs Ty.print_subst sty
+            (SubstE.pp E.print) sbs Ty.print_subst sty
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
@@ -121,7 +121,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a"
-          E.print pat0 (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat0 (SubstE.pp E.print) sbs Ty.print_subst sty
 
 
     let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
@@ -132,7 +132,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
            with subst:  sbs= %a | sty= %a@]"
           E.print pat0
           E.print t
-          (SubstE.print E.print) sbs
+          (SubstE.pp E.print) sbs
           Ty.print_subst sty
 
     let match_term Matching_types.{ sbs; sty; _ } t pat =
@@ -140,7 +140,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a"
-          E.print pat E.print t (SubstE.print E.print) sbs Ty.print_subst sty
+          E.print pat E.print t (SubstE.pp E.print) sbs Ty.print_subst sty
 
     let match_list Matching_types.{ sbs; sty; _ } pats xs =
       if Options.get_debug_matching() >= 3 then
@@ -149,7 +149,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           "I match %a against %a with subst: sbs=%a | sty= %a"
           E.print_list pats
           E.print_list xs
-          (SubstE.print E.print) sbs
+          (SubstE.pp E.print) sbs
           Ty.print_subst sty
 
     let match_class_of t cl =
@@ -174,7 +174,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (fun gsbt ->
              print_dbg ~header:false
                ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty
+               (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
           )res
 
   end

@@ -97,11 +97,12 @@ let to_string = Fmt.to_to_string print
 
 module Set = Set.Make(struct type nonrec t = t let compare = compare end)
 
-module Map : sig
-  include Map.S with type key = t
-  val print : 'a Fmt.t -> 'a t Fmt.t
-end = struct
+module Map = struct
   include Map.Make (struct type nonrec t = t let compare = compare end)
-  let print pr_elt fmt sbt =
-    iter (fun k v -> Format.fprintf fmt "%a -> %a  " print k pr_elt v) sbt
+
+  let pp pp_elt =
+    let sep ppf () = Fmt.pf ppf " -> " in
+    Fmt.box @@ Fmt.braces
+    @@ Fmt.iter_bindings ~sep:Fmt.comma iter
+    @@ Fmt.pair ~sep print pp_elt
 end

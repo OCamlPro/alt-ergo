@@ -60,7 +60,7 @@ module Smtlib = struct
     | Trecord { args; name; _ } | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" Uid.pp name (list ~sep:sp pp) args)
     | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
-    | Tvar { value = Some t; _ } -> pp ppf t
+    | Tvar { value = Some t; _ } -> Fmt.pf ppf "[%a]" pp t
 end
 
 let pp_smtlib = Smtlib.pp
@@ -370,7 +370,12 @@ let apply_subst =
   fun s ty -> if M.is_empty s then ty else apply_subst s ty
 
 let rec fresh ty subst =
-  match ty with
+  match shorten ty with
+  | Tvar { value = Some _; _ } ->
+    (* This case is eliminated by the normalization performed
+       in [shorten]. *)
+    assert false
+
   | Tvar { v= x; _ } ->
     begin
       try M.find x subst, subst
@@ -684,9 +689,10 @@ let rec monomorphize ty =
   | Tadt(name, params) ->
     Tadt(name, List.map monomorphize params)
 
-let print_subst fmt sbt =
-  M.iter (fun n ty -> Format.fprintf fmt "%d -> %a" n print ty) sbt;
-  Format.fprintf fmt "@?"
+let print_subst =
+  let sep ppf () = Fmt.pf ppf " -> " in
+  Fmt.(box @@ braces
+       @@ iter_bindings ~sep:comma M.iter (pair ~sep int pp_smtlib))
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
