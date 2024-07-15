@@ -324,9 +324,40 @@ module SmtPrinter = struct
   let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
 
-  let pp_binders = Fmt.(iter_bindings ~sep:sp Var.Map.iter pp_binder)
+  let pp_binders = Fmt.(box @@ iter_bindings ~sep:sp Var.Map.iter pp_binder)
 
-  let rec pp_formula ppf form xs bind =
+  let pp_bind ppf b =
+    match b with
+    | `Forall -> Fmt.pf ppf "forall"
+    | `Exists -> Fmt.pf ppf "exists"
+
+  (* This printer follows the convention used to print
+     type variables in the module [Ty]. *)
+  let pp_tyvar ppf v = Fmt.pf ppf "A%d" v
+
+  let rec pp_main bind ppf { user_trs; main; binders; _ } =
+    if not @@ Var.Map.is_empty binders then
+      Fmt.pf ppf "@[<2>(%a (%a)@, %a@, %a)@]"
+        pp_bind bind
+        pp_binders binders
+        pp_boxed main
+        pp_triggers user_trs
+    else
+      pp_boxed ppf main
+
+  and pp_quantified bind ppf q =
+    if q.toplevel && not @@ Ty.Svty.is_empty q.main.vty then
+      Fmt.pf ppf "@[<2>(par (%a)@, %a)@]"
+        Fmt.(box @@ iter ~sep:sp Ty.Svty.iter pp_tyvar) q.main.vty
+        (pp_main bind) q
+    else
+      pp_main bind ppf q
+
+  and pp_lemma ppf = pp_quantified `Forall ppf
+
+  and pp_skolem ppf = pp_quantified `Exists ppf
+
+  and pp_formula ppf form xs bind =
     match form, xs, bind with
     | Sy.F_Unit _, [f1; f2], _ ->
       Fmt.pf ppf "@[<2>(and %a %a@])" pp_boxed f1 pp_boxed f2
@@ -340,19 +371,17 @@ module SmtPrinter = struct
     | Sy.F_Clause _, [f1; f2], _ ->
       Fmt.pf ppf "@[<2>(or %a %a@])" pp_boxed f1 pp_boxed f2
 
-    | Sy.F_Lemma, [], B_lemma { user_trs; main; name; binders; _ } ->
+    | Sy.F_Lemma, [], B_lemma q ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! @[<2>(forall@ (%a)@ %a@ %a@])@ :named %s@])"
-          pp_binders binders pp_boxed main pp_triggers user_trs name
+        Fmt.pf ppf "@[<2>(! %a :named %s@])" pp_lemma q q.name
       else
-        Fmt.string ppf name
+        Fmt.string ppf q.name
 
-    | Sy.F_Skolem, [], B_skolem { user_trs; main; name; binders; _ } ->
+    | Sy.F_Skolem, [], B_skolem q ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! @[<2>(exists (%a) %a %a@])@ :named %s@])"
-          pp_binders binders pp_boxed main pp_triggers user_trs name
+        Fmt.pf ppf "@[<2>(! %a :named %s@])" pp_skolem q q.name
       else
-        Fmt.string ppf name
+        Fmt.string ppf q.name
 
     | _ -> assert false
 
@@ -489,7 +518,7 @@ module SmtPrinter = struct
     Fmt.pf ppf ":pattern @[<2>(%a@])" Fmt.(list ~sep:sp pp) content
 
   and pp_triggers ppf trs =
-    Fmt.pf ppf "@[%a@]" Fmt.(list ~sep:sp pp_trigger) trs
+    Fmt.(box @@ list ~sep:sp pp_trigger) ppf trs
 
   and pp_boxed ppf = Fmt.box pp_silent ppf
 
