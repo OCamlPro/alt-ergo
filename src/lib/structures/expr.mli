@@ -522,6 +522,8 @@ end
     https://smtlib.cs.uiowa.edu/theories-FixedSizeBitVectors.shtml
     https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV *)
 module BV : sig
+  val of_Z : size:int -> Z.t -> t
+
   (* Conversion from and to integers *)
   val int2bv : int -> t -> t
   val bv2nat : t -> t

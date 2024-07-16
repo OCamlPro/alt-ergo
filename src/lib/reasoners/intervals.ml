@@ -771,7 +771,7 @@ module Legacy = struct
       of_real @@ Real.of_interval ~ex @@ Real.Interval.singleton v
     | Tint when Z.equal (Q.den v) Z.one ->
       of_int @@ Int.of_interval ~ex @@ Int.Interval.singleton @@ Q.num v
-    | _ -> Fmt.invalid_arg "point: %a" Q.pp_print v
+    | _ -> Fmt.invalid_arg "point: %a (as %a)" Q.pp_print v Ty.print ty
 
   let doesnt_contain_0 u =
     Option.map (fun ex -> (ex, [])) @@

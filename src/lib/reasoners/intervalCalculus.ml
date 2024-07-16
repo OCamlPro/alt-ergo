@@ -1990,11 +1990,10 @@ let middle_value env ~is_max ty p bound =
   let q = I.pick ~is_max interval in
   alien_of (P.create [] q ty)
 
-let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
+let optimizing_objective_for_ty ~is_max ty env uf e =
   (* soundness: if there are expressions to optmize, this should be
      done without waiting for ~for_model flag to be true *)
   let repr, _ = Uf.find uf e in
-  let ty = E.type_info e in
   let r1 = Uf.make uf e in (* instead of repr, which may be a constant *)
   let p = poly_of repr in
   match P.is_const p with
@@ -2011,7 +2010,7 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
     let case_split =
       LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
     in
-    Some Th_util.{ value; case_split }
+    Th_util.{ value; case_split }
 
   | None ->
     begin
@@ -2054,7 +2053,7 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
           true,
           Th_util.CS (Th_util.Th_arith, Q.one)
         in
-        Some Th_util.{ value; case_split }
+        Th_util.{ value; case_split }
 
       | Sim.Core.Max (lazy Sim.Core.{ max_v; is_le }, _sol) ->
         let max_p = Q.add max_v.bvalue.v c in
@@ -2099,8 +2098,14 @@ let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
         let case_split =
           LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
         in
-        Some { value; case_split }
+        { value; case_split }
     end
+
+let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
+  match E.type_info e with
+  | Tint | Treal as ty ->
+    Some (optimizing_objective_for_ty ~is_max ty env uf e)
+  | _ -> None
 
 (*** part dedicated to FPA reasoning ************************************)
 

@@ -1,0 +1,8 @@
+
+unknown
+(
+  (define-fun x () (_ BitVec 32) #xffffffff)
+)
+(objectives 
+  (x #xffffffff)
+)

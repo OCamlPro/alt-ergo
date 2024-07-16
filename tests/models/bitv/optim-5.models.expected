@@ -1,0 +1,10 @@
+
+unknown
+(
+  (define-fun x () (_ BitVec 32) #x00000001)
+  (define-fun y () (_ BitVec 32) #x0000000a)
+)
+(objectives 
+  (x #x00000001)
+  (y #x0000000a)
+)
