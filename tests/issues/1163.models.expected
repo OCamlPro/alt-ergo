@@ -1,0 +1,8 @@
+
+unknown
+(
+  (define-fun x () Int (- 9999))
+)
+(objectives 
+  ((myabs x) 9999)
+)
