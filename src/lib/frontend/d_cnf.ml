@@ -587,9 +587,9 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     Nest.attach_orders [adt];
     let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret id_ty in
-    let rev_lbs =
-      Array.fold_left (
-        fun acc c ->
+    let lbs =
+      Array.fold_right (
+        fun c acc ->
           match c with
           | Some (DE.{ id_ty; _ } as id) ->
             let pty = dty_to_ty id_ty in
@@ -599,9 +599,8 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
               "Unexpected null label for some field of the record type %a"
               DE.Ty.Const.print ty_c
 
-      ) [] dstrs
+      ) dstrs []
     in
-    let lbs = List.rev rev_lbs in
     let record_constr = Uid.of_term_cst cstr in
     let ty = Ty.trecord ~record_constr tyvl uid lbs in
     Cache.store_ty ty_c ty
@@ -611,23 +610,22 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
     Cache.store_ty ty_c (Ty.t_adt uid tyvl);
-    let rev_cs =
-      Array.fold_left (
-        fun accl DE.{ cstr; dstrs; _ } ->
-          let rev_fields =
-            Array.fold_left (
-              fun acc tc_o ->
+    let cs =
+      Array.fold_right (
+        fun DE.{ cstr; dstrs; _ } accl ->
+          let fields =
+            Array.fold_right (
+              fun tc_o acc ->
                 match tc_o with
                 | Some (DE.{ id_ty; _ } as field) ->
                   (Uid.of_term_cst field, dty_to_ty id_ty) :: acc
                 | None -> assert false
-            ) [] dstrs
+            ) dstrs []
           in
-          (Uid.of_term_cst cstr, List.rev rev_fields) :: accl
-      ) [] cases
+          (Uid.of_term_cst cstr, fields) :: accl
+      ) cases []
     in
-    let body = Some (List.rev rev_cs) in
-    let ty = Ty.t_adt ~body uid tyvl in
+    let ty = Ty.t_adt ~body:(Some cs) uid tyvl in
     Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
@@ -668,9 +666,9 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
       Some (
         Adt { cases = [| { dstrs; _ } |]; ty = ty_c; _ }
       ) ->
-      let rev_lbs =
-        Array.fold_left (
-          fun acc c ->
+      let lbs =
+        Array.fold_right (
+          fun c acc ->
             match c with
             | Some (DE.{ id_ty; _ } as id) ->
               let pty = dty_to_ty id_ty in
@@ -679,32 +677,30 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
               Fmt.failwith
                 "Unexpected null label for some field of the record type %a"
                 DE.Ty.Const.print ty_c
-        ) [] dstrs
+        ) dstrs []
       in
-      let lbs = List.rev rev_lbs in
       let ty =
         Ty.trecord ~record_constr args name lbs
       in
       Cache.store_ty ty_c ty
 
     | Tadt (hs, tyl), Some (Adt { cases; ty = ty_c; _ }) ->
-      let rev_cs =
-        Array.fold_left (
-          fun accl DE.{ cstr; dstrs; _ } ->
-            let rev_fields =
-              Array.fold_left (
-                fun acc tc_o ->
+      let cs =
+        Array.fold_right (
+          fun DE.{ cstr; dstrs; _ } accl ->
+            let fields =
+              Array.fold_right (
+                fun tc_o acc ->
                   match tc_o with
                   | Some (DE.{ id_ty; _ } as id) ->
                     (Uid.of_term_cst id, dty_to_ty id_ty) :: acc
                   | None -> assert false
-              ) [] dstrs
+              ) dstrs []
             in
-            (Uid.of_term_cst cstr, List.rev rev_fields) :: accl
-        ) [] cases
+            (Uid.of_term_cst cstr, fields) :: accl
+        ) cases []
       in
-      let body = Some (List.rev rev_cs) in
-      let ty = Ty.t_adt ~body hs tyl in
+      let ty = Ty.t_adt ~body:(Some cs) hs tyl in
       Cache.store_ty ty_c ty
 
     | _ -> assert false
@@ -783,16 +779,16 @@ let mk_pattern DE.{ term_descr; _ } =
           Cst ({ builtin = B.Constructor { adt; case; }; _ } as cst); _
       }, _, pargs
     ) ->
-    let rev_vnames =
+    let vnames =
       begin match DT.definition adt with
         | Some (Adt { cases; _ }) ->
           let { DE.dstrs; _ } = cases.(case) in
-          Array.fold_left (
-            fun acc v ->
+          Array.fold_right (
+            fun v acc ->
               match v with
               | Some dstr -> Uid.of_term_cst dstr :: acc
               | _ -> assert false
-          ) [] dstrs
+          ) dstrs []
         | _ ->
           Fmt.failwith
             "Expected a constructor for an algebraic data type but got\
@@ -805,7 +801,7 @@ let mk_pattern DE.{ term_descr; _ } =
         fun acc rn arg ->
           let v, n, ty = handle_patt_var rn arg in
           (v, n, ty) :: acc
-      ) [] (List.rev rev_vnames) pargs
+      ) [] vnames pargs
     in
     let args = List.rev rev_args in
     Typed.Constr {name = Uid.of_term_cst cst; args}
