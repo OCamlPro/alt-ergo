@@ -60,7 +60,7 @@ module Smtlib = struct
     | Trecord { args; name; _ } | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" Uid.pp name (list ~sep:sp pp) args)
     | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
-    | Tvar { value = Some t; _ } -> Fmt.pf ppf "[%a]" pp t
+    | Tvar { value = Some t; _ } -> pp ppf t
 end
 
 let pp_smtlib = Smtlib.pp
@@ -369,8 +369,9 @@ let apply_subst =
   in
   fun s ty -> if M.is_empty s then ty else apply_subst s ty
 
+(* Assume that [shorten] have been applied on [ty]. *)
 let rec fresh ty subst =
-  match shorten ty with
+  match ty with
   | Tvar { value = Some _; _ } ->
     (* This case is eliminated by the normalization performed
        in [shorten]. *)
@@ -404,11 +405,16 @@ let rec fresh ty subst =
     Tadt (s, args), subst
   | t -> t, subst
 
+(* Assume that [shorten] have been applied on [lty]. *)
 and fresh_list lty subst =
   List.fold_right
     (fun ty (lty, subst) ->
        let ty, subst = fresh ty subst in
        ty::lty, subst) lty ([], subst)
+
+let fresh ty subst = fresh (shorten ty) subst
+
+let fresh_list lty subst = fresh_list (List.map shorten lty) subst
 
 module Decls = struct
 
@@ -692,7 +698,7 @@ let rec monomorphize ty =
 let print_subst =
   let sep ppf () = Fmt.pf ppf " -> " in
   Fmt.(box @@ braces
-       @@ iter_bindings ~sep:comma M.iter (pair ~sep int pp_smtlib))
+       @@ iter_bindings ~sep:comma M.iter (pair ~sep int print))
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)
