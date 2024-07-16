@@ -74,5 +74,5 @@ module Set : Set.S with type elt = t
 
 module Map : sig
   include Map.S with type key = t
-  val print : 'a Fmt.t -> 'a t Fmt.t
+  val pp : 'a Fmt.t -> 'a t Fmt.t
 end

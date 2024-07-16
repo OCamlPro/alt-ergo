@@ -2328,7 +2328,7 @@ let new_facts_for_axiom
               ~module_name:"IntervalCalculus"
               ~function_name:"new_facts_for_axiom"
               "try to extend synt sbt %a of ax %a@ "
-              (Var.Map.print E.print) sbs E.print orig;
+              (Var.Map.pp E.print) sbs E.print orig;
           if tr.E.semantic == [] && not do_syntactic_matching then
             (* pure syntactic insts already generated *)
             env, acc
@@ -2353,7 +2353,7 @@ let new_facts_for_axiom
                 Printer.print_dbg
                   ~header:false
                   "semantic matching succeeded:@ %a"
-                  (Var.Map.print E.print) (fst sbs);
+                  (Var.Map.pp E.print) (fst sbs);
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for
                  theories *)

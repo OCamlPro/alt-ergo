@@ -1612,7 +1612,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
 
 (** Preprocesses the body of a goal by:
     - removing the top-level universal quantifiers and considering their
-      quantified variables as uninsterpreted symbols.
+      quantified variables as uninterpreted symbols.
     - transforming a given formula: [a[1] -> a[2] -> ... -> a[n]] in which
       the [a[i]]s are subformulas and [->] is a logical implication, to a set of
       hypotheses [{a[1]; ...; a[n-1]}], and a goal [a[n]] whose validity is

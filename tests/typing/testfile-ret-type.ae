@@ -1,0 +1,10 @@
+type 'b sy = { V : 'b }
+
+function rename(u: 'b sy, s: ('b,'c) farray) : 'c sy = { V = s[u.V] }
+
+goal g:
+  forall t:int.
+  forall s1:(int,int) farray.
+  forall s2:(int,int) farray.
+  s1[t] = s2[t] ->
+  rename(({ V = t } : int sy), s1) = rename(({ V = t } : int sy), s2)
