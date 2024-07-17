@@ -33,7 +33,7 @@ jobs:
       - name: Build the distribution archive
         run: opam exec -- dune-release distrib
 
-      - name: Upload the artefact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: alt-ergo-${{github.sha}}.tbz

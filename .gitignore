@@ -46,3 +46,6 @@ __pycache__
 
 # Generated nix files
 /result*
+
+# Virtual environment to build sphinx docs
+sphinx-venv

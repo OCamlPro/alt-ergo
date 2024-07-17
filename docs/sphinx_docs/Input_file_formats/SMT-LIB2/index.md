@@ -30,7 +30,7 @@ available all functions symbols with declarations of the form below, where
 `prec` and `exp` are numerals greater than 1 and `RoundingMode` is defined in
 the FloatingPoint SMT-LIB theory.
 
-```smt-lib
+```lisp
 ((_ ae.round prec exp) RoundingMode Real Real)
 ```
 

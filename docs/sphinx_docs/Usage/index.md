@@ -2,7 +2,7 @@
 
 ## Library
 
-Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the [API documentation] for more information.
+Since version 2.2.0, Alt-Ergo's library is also compiled and installed.
 
 ## Run
 
