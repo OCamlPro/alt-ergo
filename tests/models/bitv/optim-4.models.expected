@@ -2,7 +2,6 @@
 unknown
 (
   (define-fun x () (_ BitVec 32) #xffffffff)
-  (define-fun P ((_arg_0 (_ BitVec 33))) Bool true)
 )
 (objectives 
   ((bvabs32 x) #b011111111111111111111111111111111)

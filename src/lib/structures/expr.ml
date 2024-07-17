@@ -3060,7 +3060,7 @@ module BV = struct
   open Core
 
   let of_Z ~size:sz n =
-    assert (sz > 0);
+    if sz <= 0 then invalid_arg "BV.of_Z: nonpositive size";
     mk_term (Sy.Bitv (sz, Z.extract n 0 sz)) [] (Tbitv sz)
 
   let of_bigint_like s n =
