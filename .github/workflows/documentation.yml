@@ -43,7 +43,6 @@ jobs:
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
         uses: ocaml/setup-ocaml@v2
         with:
-          allow-prerelease-opam: true
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 

@@ -31,7 +31,6 @@ jobs:
 
       - uses: ocaml/setup-ocaml@v2
         with:
-          allow-prerelease-opam: true
           ocaml-compiler: 4.14.1
           dune-cache: true
 
