@@ -78,6 +78,9 @@ let is_bv_r r = is_bv_ty @@ X.type_info r
 let bitwidth r =
   match X.type_info r with Tbitv n -> n | _ -> assert false
 
+let const sz n =
+  Shostak.Bitv.is_mine [ { bv = Cte (Z.extract n 0 sz); sz } ]
+
 module Interval_domain = struct
   type t = Intervals.Int.t
 
@@ -637,9 +640,6 @@ end = struct
 
   let propagate_interval ~ex c dom =
     propagate_interval_repr ~ex dom c.repr
-
-  let const sz n =
-    Shostak.Bitv.is_mine [ { bv = Cte (Z.extract n 0 sz); sz } ]
 
   let cast ty n =
     match ty with
@@ -1425,7 +1425,41 @@ let add env uf r t =
   in
   { env with delayed }, Uf.domains uf, eqs
 
-let optimizing_objective _env _uf _o = None
+let optimizing_objective _env uf Objective.Function.{ e; is_max; _ } =
+  let ty = E.type_info e in
+  if not (is_bv_ty ty) then None
+  else
+    let r = Uf.make uf e in
+    let rr, _ = Uf.find_r uf r in
+    match Shostak.Bitv.embed rr with
+    | [ { bv = Cte n ; sz }] ->
+      if Options.get_debug_optimize () then
+        Printer.print_dbg "%a has the value %a@."
+          E.print e
+          Z.pp_print n;
+
+      let value = Objective.Value.Value (E.BV.of_Z ~size:sz n) in
+      let case_split =
+        Uf.LX.mkv_eq r rr, true, Th_util.CS (Th_util.Th_bitv, Q.one)
+      in
+      Some Th_util.{ value ; case_split }
+    | _ ->
+      let ds = Uf.domains uf in
+      let int_domains = Uf.GlobalDomains.find (module Interval_domains) ds in
+      let int = Interval_domains.get rr int_domains in
+      let sz = bitwidth rr in
+      let value_z =
+        if is_max then
+          finite_upper_bound ~size:sz @@
+          fst (Intervals.Int.upper_bound int)
+        else
+          finite_lower_bound @@
+          fst (Intervals.Int.lower_bound int)
+      in
+      let value = Objective.Value.Value (E.BV.of_Z ~size:sz value_z) in
+      let lit = Uf.LX.mkv_eq r (const sz value_z) in
+      let case_split = lit, true, Th_util.CS (Th_util.Th_bitv, Q.one) in
+      Some { value ; case_split }
 
 let new_terms _ = Expr.Set.empty
 

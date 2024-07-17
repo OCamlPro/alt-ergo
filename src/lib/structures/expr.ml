@@ -3059,18 +3059,18 @@ end
 module BV = struct
   open Core
 
-  let of_bigint sz n =
-    assert (sz > 0);
+  let of_Z ~size:sz n =
+    if sz <= 0 then invalid_arg "BV.of_Z: nonpositive size";
     mk_term (Sy.Bitv (sz, Z.extract n 0 sz)) [] (Tbitv sz)
 
   let of_bigint_like s n =
     match type_info s with
-    | Tbitv sz -> of_bigint sz n
+    | Tbitv sz -> of_Z ~size:sz n
     | _ -> invalid_arg "of_bigint_like"
 
   (* Constant symbols for all zeros and all ones *)
-  let bvzero m = of_bigint m Z.zero
-  let bvones m = of_bigint m Z.minus_one
+  let bvzero m = of_Z ~size:m Z.zero
+  let bvones m = of_Z ~size:m Z.minus_one
 
   (* Helpers *)
   let b = function

@@ -1060,14 +1060,39 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
      If this run produces the answer [unsat], we know that [2] was the best
      model value for [x]. Otherwise, we got a better value for [x]. *)
 
-  let op is_max is_le =
+  type ty_op =
+    { lt : E.t -> E.t -> E.t
+    ; le : E.t -> E.t -> E.t }
+
+  let real_op = { lt = Expr.Reals.(<) ; le = Expr.Reals.(<=) }
+
+  let int_op = { lt = Expr.Ints.(<) ; le = Expr.Reals.(<=) }
+
+  let bitv_unsigned_op = { lt = Expr.BV.bvult ; le = Expr.BV.bvule }
+
+  let mk_le { le ; _ } = le
+
+  let mk_lt { lt ; _ } = lt
+
+  let mk_ge { le ; _ } x y = le y x
+
+  let mk_gt { lt ; _ } x y = lt y x
+
+  let op ty is_max is_le =
+    let ty_op =
+      match ty with
+      | Ty.Treal -> real_op
+      | Tint -> int_op
+      | Tbitv _ -> bitv_unsigned_op
+      | _ -> Fmt.invalid_arg "cannot optimize for type: %a" Ty.print ty
+    in
     if is_max then begin
-      if is_le then Expr.Reals.(<=)
-      else Expr.Reals.(<)
+      if is_le then mk_le ty_op
+      else mk_lt ty_op
     end
     else begin
-      if is_le then Expr.Reals.(>=)
-      else Expr.Reals.(>)
+      if is_le then mk_ge ty_op
+      else mk_gt ty_op
     end
 
   (* This function is called after receiving an `I_dont_know` exception from
@@ -1105,8 +1130,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             (fun acc (e, tv, is_max, is_le) ->
                let eq = E.mk_eq e tv ~iff: false in
                let acc = E.Core.and_ acc eq in
-               E.Core.(or_ acc (not ((op is_max is_le) e tv)))
-            ) (E.Core.not ((op is_max is_le) e tv)) l
+               E.Core.(or_ acc (not ((op (E.type_info e) is_max is_le) e tv)))
+            ) (E.Core.not ((op (E.type_info e) is_max is_le) e tv)) l
         in
         if Options.get_debug_optimize () then
           Printer.print_dbg
