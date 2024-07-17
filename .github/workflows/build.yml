@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true
@@ -68,7 +68,7 @@ jobs:
           persist-credentials: false
 
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true

@@ -19,7 +19,7 @@ jobs:
           fetch-tags: true
 
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true

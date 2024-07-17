@@ -41,7 +41,7 @@ jobs:
       # Get an OCaml environment with opam installed and the proper ocaml version
       # opam will used opam cache environment if retrieved
       - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
