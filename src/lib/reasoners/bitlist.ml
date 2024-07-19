@@ -321,20 +321,19 @@ let mul a b =
     let low_a_known = Z.trailing_zeros @@ a.bits_unk in
     let low_b_known = Z.trailing_zeros @@ b.bits_unk in
     let low_known = min low_a_known low_b_known in
-    let mid_bits = exact Z.(value a * value b) ex in
+    let mid_bits = Z.(value a * value b) in
     let mid_bits =
       if low_known = max_int then mid_bits
-      else extract mid_bits 0 low_known
+      else if low_known = 0 then Z.zero
+      else Z.extract mid_bits 0 low_known
     in
     if low_known = max_int then
-      mid_bits lsl zeroes
+      exact Z.(mid_bits lsl zeroes) ex
     else
-      let high_bits =
-        { bits_set = Z.zero
-        ; bits_unk = Z.minus_one
-        ; ex = Ex.empty }
-      in
-      ((high_bits lsl low_known) lor mid_bits) lsl zeroes
+      (* High bits are unknown *)
+      { bits_set = Z.(mid_bits lsl zeroes)
+      ; bits_unk = Z.(minus_one lsl Stdlib.(low_known + zeroes))
+      ; ex }
 
 let bvshl ~size:sz a b =
   (* If the minimum value for [b] is larger than the bitwidth, the result is
