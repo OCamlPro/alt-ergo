@@ -1116,14 +1116,17 @@ let extract_constraints terms domain int_domain uf r t =
         and ry, exy = Uf.find uf y in
         let c = mk r rx ry in
         let ex = Ex.union exx exy in
+        let ex_c = explained ~ex c in
         let domain =
-          Bitlist_domains.watch (explained ~ex c) rx @@
-          Bitlist_domains.watch (explained ~ex c) ry @@
+          Bitlist_domains.watch ex_c rx @@
+          Bitlist_domains.watch ex_c ry @@
+          Bitlist_domains.watch ex_c r @@
           domain
         in
         let int_domain =
-          Interval_domains.watch (explained ~ex c) rx @@
-          Interval_domains.watch (explained ~ex c) ry @@
+          Interval_domains.watch ex_c rx @@
+          Interval_domains.watch ex_c ry @@
+          Interval_domains.watch ex_c r @@
           int_domain
         in
         terms, domain, int_domain
