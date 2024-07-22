@@ -397,3 +397,86 @@ let bvlshr ~size:sz a b =
       extract unknown 0 sz
   | _ | exception Z.Overflow ->
     constant Z.zero (explanation b)
+
+let add a b =
+  (* The implementation below is a bit magical, so let us draft a proof
+     of correctness.
+
+     Remark 1: A binary addition [x + y] has a carry at bit position [i] iff
+       the addition of the lower bits of [x] and [y] overflows. In other words,
+       addition [x + y] has a carry at bit position [i] iff:
+
+         {math x \bmod 2^i + y \bmod 2^i > 2^i}
+
+     Remark 2: Flipping bits from [0] to [1] in the operands of a binary
+       addition can only introduce new carry positions but never remove them.
+       This follows from Remark 1 since flipping bit [j] from [0] to [1] adds
+       [2^j] to the value, and hence either increases or does not change the
+       value of [x \bmod 2^i] in the inequality above, depending on whether
+       [j < i] or [j >= i] holds.
+
+     For a bitlist [b], let us write {m m_b} the value [a.bits_set] and {m M_b}
+     the value [a.bits_set + a.bits_unk].
+
+     Definition: We say that a bit position [i] is {e known} in a set {m S}
+       (not necessarily a bitlist) if has the same value for all the integers
+       in {m S}.
+
+     Theorem: If [a] and [b] are bitlists, let us denote by [a + b] the set
+       {m \{ x + y \mid x \in a, y \in b \}}. Then, a bit position [i] is known
+       in [a + b] iff it is known in both [a] and [b], and the values
+       {m m_a + m_b} and {M_a + M_b} agree on bit [i].
+
+     Proof (implication): Consider a bit position [i] that is known in [a + b].
+       It must be known in both [a] and [b], otherwise we could flip bit [i] and
+       still obtain a value in [a + b]. Moreover, since {m m_a + m_b} and
+       {m M_a + M_b} is in [a + b], they must agree on bit position [i].
+
+     Proof (reverse implication): Consider a bit position [i] that is known in
+       [a] and in [b], and where {m m_a + m_b} and {m M_a + M_b} agree.
+       Assume that we have {m x \in a} and {m y \in b} such that {m x + y}
+       disagree with {m M_a + M_b} on bit position [i].
+
+       Since bit [i] is known in both [a] and [b], the only difference at bit
+       position [i] between {m m_a + m_b} and {m x + y} can come from one
+       having a carry and not the other.
+
+       Since [a] and [b] are bitlists, we can obtain {m x \bmod 2^i} (resp.
+       {m y \bmod 2^i}) by flipping bits from [0] to [1] in {m m_a} (resp.
+       {m m_a}), and we can obtain {m M_a} (resp. {m M_B})by flipping bits from
+       [0] to [1] in {m x \bmod 2^i} (resp. {m y \bmod 2^i}).
+
+       Hence, by remark 2, if {m m_a + m_b} has a carry at position [i], then
+       so do {m x + y} and {m M_a + M_b}; conversely, if {m M_a + M_b} has no
+       carry at position [i], then neither do {m x + y} and {m m_a + m_b}. *)
+  let min_add = Z.(a.bits_set + b.bits_set) in
+  let max_add = Z.(min_add + a.bits_unk + b.bits_unk) in
+  let bits_unk =
+    Z.(a.bits_unk lor b.bits_unk lor (min_add lxor max_add))
+  in
+  let bits_set = Z.(min_add land ~!bits_unk) in
+  { bits_unk ; bits_set ; ex = Ex.union a.ex b.ex }
+
+let sub a b =
+  (* We can prove the correctness of subtraction by re-using the proof of
+     correctness for addition.
+
+     Recall that [x - y] is [x + ~y + 1] and remark that:
+
+       {math x + y + 1 = ((2x + 1) + (2y + 1)) / 2}
+
+     From this last remark, we can apply the same reasoning for [a + b + 1] as
+     for [a + b], and get that the unknown bits in [a + b + 1] are either
+     unknown in [a], unknown in [b], or differ in [a.bits_set + b.bits_set + 1]
+     and in [a.bits_set + a.bits_unk + b.bits_set + b.bits_unk + 1].
+
+     Recalling [(~b).bits_set = ~(b.bits_set | b.bits_unk)], we get the formula
+     below. *)
+  let set_sub = Z.(a.bits_set - b.bits_set)in
+  let min_sub = Z.(set_sub + a.bits_unk) in
+  let max_sub = Z.(set_sub - b.bits_unk) in
+  let bits_unk =
+    Z.(a.bits_unk lor b.bits_unk lor (min_sub lxor max_sub))
+  in
+  let bits_set = Z.(set_sub land ~!bits_unk) in
+  { bits_unk ; bits_set ; ex = Ex.union a.ex b.ex }
