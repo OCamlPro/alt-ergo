@@ -455,7 +455,7 @@ module Shostak
     List.exists
       (fun x ->
          match X.term_extract x with
-         | Some t, _ -> E.is_internal_name t
+         | Some t, _ -> E.is_fresh_ac_name t
          | _ -> false
       ) (X.leaves xp)
 
@@ -540,7 +540,7 @@ module Shostak
     List.fold_left
       (fun (l, sb) (b, y) ->
          if X.ac_extract y != None && X.str_cmp y x > 0 then
-           let k = X.term_embed (E.fresh_name Ty.Tint) in
+           let k = X.term_embed (E.fresh_ac_name Ty.Tint) in
            (b, k) :: l, (y, embed k)::sb
          else (b, y) :: l, sb)
       ([], []) l

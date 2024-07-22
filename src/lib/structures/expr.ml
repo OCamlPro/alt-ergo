@@ -987,12 +987,13 @@ let fresh_name ty =
 let mk_abstract ty =
   mk_term (Sy.name ~ns:Abstract @@ Id.Namespace.Abstract.fresh ()) [] ty
 
-let is_internal_name t =
-  match t with
-  | { f = Name { ns = Fresh; _ }; xs = []; _ } -> true
-  | _ -> false
+let fresh_ac_name ty =
+  mk_term (Sy.name ~ns:Fresh_ac @@ Id.Namespace.Internal.fresh ()) [] ty
 
-let is_internal_skolem t = Sy.is_fresh_skolem t.f
+let is_fresh_ac_name t =
+  match t with
+  | { f = Name { ns = Fresh_ac; _ }; xs = []; _ } -> true
+  | _ -> false
 
 let positive_int i = mk_term (Sy.int i) [] Ty.Tint
 
