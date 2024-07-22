@@ -75,7 +75,7 @@ type form =
 
 type name_kind = Ac | Other
 
-type name_space = User | Internal | Fresh | Skolem | Abstract
+type name_space = User | Internal | Fresh | Fresh_ac | Skolem | Abstract
 
 let compare_name_space ns1 ns2 =
   match ns1, ns2 with
@@ -90,6 +90,10 @@ let compare_name_space ns1 ns2 =
   | Fresh, Fresh -> 0
   | Fresh, _ -> -1
   | _, Fresh -> 1
+
+  | Fresh_ac, Fresh_ac -> 0
+  | Fresh_ac, _ -> -1
+  | _, Fresh_ac -> 1
 
   | Skolem, Skolem -> 0
   | Skolem, _ -> -1
@@ -128,6 +132,7 @@ let mangle ns s =
   | User -> s
   | Internal -> ".!" ^ s
   | Fresh -> ".k" ^ s
+  | Fresh_ac -> ".K" ^ s
   | Skolem -> ".?__" ^ s
   | Abstract -> "@a" ^ s
 
@@ -513,10 +518,6 @@ let to_string sy =
 let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
 let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
 let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
-
-let is_fresh_skolem = function
-  | Name { ns = Skolem; _ } -> true
-  | _ -> false
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)

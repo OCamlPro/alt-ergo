@@ -228,8 +228,6 @@ val size : t -> int
 val depth : t -> int
 val is_positive : t -> bool
 val neg : t -> t
-val is_internal_name : t -> bool
-val is_internal_skolem : t -> bool
 val is_int : t -> bool
 val is_real : t -> bool
 val type_info : t -> Ty.t
@@ -255,6 +253,12 @@ val int : string -> t
 val real : string -> t
 val bitv : string -> Ty.t -> t
 val fresh_name : Ty.t -> t
+
+(** Special names used for AC(X) abstraction.
+    These corresponds to the K sort in the AC(X) paper. *)
+
+val fresh_ac_name : Ty.t -> t
+val is_fresh_ac_name : t -> bool
 
 val mk_abstract : Ty.t -> t
 (** [mk_abstract ty] creates an abstract model term of type [ty].

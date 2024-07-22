@@ -214,7 +214,7 @@ module Make (X : Sig.X) = struct
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
       | _, { ty; _ } ->
-        let k = Expr.fresh_name ty in
+        let k = Expr.fresh_ac_name ty in
         let eq = Expr.mk_eq ~iff:false k t in
         X.term_embed k, eq::acc
 
