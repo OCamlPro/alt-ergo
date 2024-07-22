@@ -16,12 +16,7 @@ Alt-Ergo's website: [https://alt-ergo.ocamlpro.com].
 
 ## Documentation
 
-See our [general documentation] wich contains
-
-* [installing informations]
-* the [usage section] for information on how to use Alt-Ergo.
-* A section about [input file format] supported by Alt-Ergo.
-* [API] and [developers documentation].
+See our [general documentation], the [API documentation] and the [developers documentation].
 
 ## Download
 
@@ -37,7 +32,7 @@ See the section [LICENSE].
 
 ## Build
 
-See [installing informations] section.
+See [installation instructions] section.
 
 ## Contributing
 
@@ -51,12 +46,11 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [alt-ergo@ocamlpro.com]: mailto:alt-ergo@ocamlpro.com
 [Alt-Ergo @ OCamlPro]: https://alt-ergo.ocamlpro.com/#services
 [Alt-Ergo Users' Club]: https://alt-ergo.ocamlpro.com/#club
-[API]: https://ocamlpro.github.io/alt-ergo/API/index.html
+[API documentation]: https://ocamlpro.github.io/alt-ergo/API/index.html
 [contributing guidelines]: https://ocamlpro.github.io/alt-ergo/Dev/contributing.html
 [developers documentation]: https://ocamlpro.github.io/alt-ergo/Dev/index.html
 [general documentation]: https://ocamlpro.github.io/alt-ergo/
-[input file format]: https://ocamlpro.github.io/alt-ergo/Input_file_formats/index.html
-[installing informations]: https://ocamlpro.github.io/alt-ergo/Install/index.html
+[installation instructions]: https://ocamlpro.github.io/alt-ergo/Install/index.html
 [https://alt-ergo.ocamlpro.com]: https://alt-ergo.ocamlpro.com
 [latest]: https://alt-ergo.ocamlpro.com/http/alt-ergo-2.3.2/alt-ergo-2.3.2.tar.gz
 [LRI]: https://www.lri.fr
@@ -66,5 +60,4 @@ See [Alt-Ergo @ OCamlPro] or contact us at [alt-ergo@ocamlpro.com] for more deta
 [releases' page]: https://github.com/OCamlPro/alt-ergo/releases/
 [Satisfiability Modulo Theories]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
 [try Alt-Ergo]: https://alt-ergo.ocamlpro.com/try.html
-[usage section]: https://ocamlpro.github.io/alt-ergo/Usage/index.html
 [Why3]: http://why3.lri.fr/

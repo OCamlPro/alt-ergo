@@ -1,18 +1,37 @@
+# SMT-LIB language
 
-# SMT-LIB Version 2
+Since version 2.5.0, Alt-Ergo supports the
+[SMT-LIB](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf)
+language from the SMT community. This support is enabled by the
+[Dolmen](http://gbury.github.io/dolmen/) library.
 
-Alt-Ergo has partial support for the [SMT-LIB
-standard](http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2017-07-18.pdf)
-language from the SMT community.
+```{note}
+In version 2.5.x, the `--frontend dolmen` option is required to get full
+SMT-LIB support. Starting from version 2.6.0, this option became the default
+and is no longer necessary.
+```
 
-*Note*: As of version 2.5.0, enhanced support for the SMT-LIB language is
-provided by the new [Dolmen](http://gbury.github.io/dolmen/) frontend.
+Alt-Ergo supports the following SMT-LIB [theories](https://smt-lib.org/theories.shtml):
+
+ - The [Core](https://smt-lib.org/theories-Core.shtml) theory of booleans.
+ - The [ArraysEx](https://smt-lib.org/theories-ArraysEx.shtml) theory of
+   functional arrays with extensionality.
+ - The
+   [FixedSizeBitVectors](https://smt-lib.org/theories-FixedSizeBitVectors.shtml)
+   theory of bit-vectors (since version 2.5.0).
+ - The [Ints](https://smt-lib.org/theories-Ints.shtml) theory of integers[^1].
+ - The [Reals](https://smt-lib.org/theories-Reals.shtml) theory of real numbers.
+ - The [Reals_Ints](https://smt-lib.org/theories-Reals_Ints.shtml) theory of
+   real and integer numbers[^2].
+
+[^1]: The `abs` primitive is incomplete without the flag `--enable-theories ria`.
+[^2]: The `to_real`, `to_int`, `is_int` and `abs` primitives are incomplete without
+    the flag `--enable-theories ria`.
 
 ## Bit-vectors
 
-Since version 2.5.0, Alt-Ergo has partial support for the `FixedSizeBitVectors`
-theory and the `QF_BV` and `BV` logics. All the symbols from these logics are
-available, although reasoning using them is limited and incomplete for now.
+Alt-Ergo supports the `FixedSizeBitVectors` theory, as well as the additional
+symbols from the `QF_BV` and `BV` logics.
 
 The non-standard symbols `bv2nat` and `(_ int2bv n)` (where `n >
 0` is a natural number representing the target bit-vector size) for conversion

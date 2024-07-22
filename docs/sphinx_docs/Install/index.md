@@ -9,6 +9,13 @@ opam install alt-ergo
 
 This two command will install the Alt-ergo library `alt-ergo-lib` and the parsers `alt-ergo-parsers`, as well as other librairies detailled in [dependencies](#dependencies).
 
+## From GitHub releases (Linux and macOS)
+
+For convenience, binary releases for Linux and macOS (amd64 and arm64) of
+Alt-Ergo are provided on the GitHub release page. These binary releases are
+statically linked and very portable. They are distributed under the same
+licensing restrictions as the source code.
+
 ### On Debian
 
 Alt-ergo is also available in the debian package manager [here]. You can install it with the following command :
