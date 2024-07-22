@@ -160,7 +160,7 @@ uninstall: packages
 doc:
 	$(SPHINXBUILD) -W "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)"
 	$(DUNE) build $(DUNE_FLAGS) @doc
-	cp -rf $(DEFAULT_DIR)/_doc/_html/* $(SPHINX_BUILD_DIR)/API
+	cp -Rf $(DEFAULT_DIR)/_doc/_html/. $(SPHINX_BUILD_DIR)/API
 
 html: doc
 	xdg-open $(SPHINX_BUILD_DIR)/index.html
