@@ -35,15 +35,6 @@ jobs:
       - name: Build documentation
         run: opam exec -- make doc
 
-      - name: Debug
-        run: ls -l _build/doc
-
-      - name: Debug 2
-        run: ls -l _build/doc/API
-
-      - name: Debug 3
-        run: cp -rf _build/default/_doc/_html _build/doc/API
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
