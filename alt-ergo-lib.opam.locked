@@ -42,7 +42,6 @@ depends: [
   "menhir" {= "20230608"}
   "menhirLib" {= "20230608"}
   "menhirSdk" {= "20230608"}
-  "num" {= "1.4"}
   "ocaml-compiler-libs" {= "v0.12.4"}
   "ocamlbuild" {= "0.14.2"}
   "ocamlfind" {= "1.9.6"}
