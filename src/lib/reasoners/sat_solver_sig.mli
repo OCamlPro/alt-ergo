@@ -92,12 +92,8 @@ module type S = sig
   val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
   (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 
-  val optimize : t -> is_max:bool -> Expr.t -> unit
-  (** [optimize env ~is_max o] registers the expression [o] as an objective
-      function.
-
-      The solver will try to maximize [o] if [is_max] is [true]. Otherwise,
-      it will try to minimize it.
+  val optimize : t -> Objective.Function.t -> unit
+  (** [optimize env fn] registers the objective function [fn].
 
       After optimization, the value of this objective is returned by
       [get_objectives]. *)

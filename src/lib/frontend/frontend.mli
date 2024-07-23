@@ -79,7 +79,7 @@ module type S = sig
 
   val th_assume : Expr.th_elt process
 
-  val optimize : (Expr.t * bool) process
+  val optimize : Objective.Function.t process
 
   val process_decl:
     ?hook_on_status:(sat_env status -> int -> unit) ->

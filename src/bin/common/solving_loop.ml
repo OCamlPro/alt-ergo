@@ -351,8 +351,8 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let incremental_depth : int State.key =
-    State.create_key ~pipe:"" "is_incremental"
+  let index_optimize_stmt : int State.key =
+    State.create_key ~pipe:"" "index_optimize_stmt"
   in
 
   let set_steps_bound i st =
@@ -506,7 +506,7 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set incremental_depth 0
+    |> State.set index_optimize_stmt 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -666,7 +666,9 @@ let main () =
       recoverable_error "the selected solver does not support optimization";
       st
     ) else
-      let contents = `Optimize (term, is_max) in
+      let index = State.get index_optimize_stmt st in
+      let st = State.set index_optimize_stmt (index + 1) st in
+      let contents = `Optimize (term, is_max, index) in
       let stmt =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
       in
@@ -674,12 +676,6 @@ let main () =
         D_cnf.make (State.get State.logic_file st).loc
           (State.get solver_ctx_key st).ctx stmt
       in
-      (* Using both optimization and incremental mode may be wrong if
-         some optimization constraints aren't at the toplevel.
-         See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
-      if State.get incremental_depth st > 0 then
-        warning "Optimization constraints in presence of push \
-                 and pop statements are not correctly processed.";
       State.set solver_ctx_key (
         let solver_ctx = State.get solver_ctx_key st in
         { solver_ctx with ctx = cnf }
@@ -983,14 +979,7 @@ let main () =
       | td ->
         let st =
           match td.contents with
-          | `Pop n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st - n)
-            |> set_mode Assert
-          | `Push n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st + n)
-            |> set_mode Assert
+          | `Pop _ | `Push _ -> st |> set_mode Assert
           | _ -> st
         in
         (* TODO:

@@ -155,7 +155,7 @@ module type S = sig
 
   val th_assume : E.th_elt process
 
-  val optimize : (Expr.t * bool) process
+  val optimize : Objective.Function.t process
 
   val process_decl:
     ?hook_on_status: (sat_env status -> int -> unit) ->
@@ -401,11 +401,11 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
-  let internal_optimize ?(loc = Loc.dummy) (f, is_max) env =
+  let internal_optimize ?(loc = Loc.dummy) fn env =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
-      SAT.optimize env.sat_env ~is_max f
+      SAT.optimize env.sat_env fn
     | `Unsat -> ()
 
   (** Checks whether the env can be used before actually calling the
@@ -475,8 +475,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         end
       | ThAssume th_elt ->
         check_if_over (internal_th_assume ~loc:d.st_loc th_elt) env
-      | Optimize (f, to_max) ->
-        check_if_over (internal_optimize ~loc:d.st_loc (f, to_max)) env
+      | Optimize fn ->
+        check_if_over (internal_optimize ~loc:d.st_loc fn) env
     with
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,

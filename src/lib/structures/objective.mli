@@ -32,10 +32,14 @@ module Function : sig
 
     is_max : bool;
     (** Determine if we want to maximize or minimize this objective function. *)
+
+    index : int;
+    (** Unique identifier from the input. This field is used as a priority
+        index. *)
   }
   (** Type of an objective function. *)
 
-  val mk : is_max:bool -> Expr.t -> t
+  val mk : index:int -> is_max:bool -> Expr.t -> t
 
   val pp : t Fmt.t
   (** [pp ppf o] prints the objective function [o] on the formatter [ppf]
@@ -78,7 +82,7 @@ module Model : sig
   (** Iterator on the objective functions in decreasing order of priority. *)
 
   val add : Function.t -> Value.t -> t -> t
-  (** [add o v] adds or updates the value of the objective function [o]. *)
+  (** [add fn v] adds or updates the value of the objective function [fn]. *)
 
   val pp : t Fmt.t
   (** [pp ppf mdl] prints the model [mdl] using the MaxSMT format. *)

@@ -90,7 +90,11 @@ module type SAT_ML = sig
   val push : t -> Satml_types.Atom.atom -> unit
   val pop : t -> unit
 
-  val optimize : t -> is_max:bool -> Expr.t -> unit
+  val optimize : t -> Objective.Function.t -> unit
+  (** [optimize env fn] adds the objection [fn] to the environment
+      [env].
+
+      @raise invalid_argurment if the decision level of [env] is not zero. *)
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t
