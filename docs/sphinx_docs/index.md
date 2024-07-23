@@ -9,6 +9,8 @@ It was developed at [LRI](https://www.lri.fr), and is now improved and maintaine
 You can [try Alt-Ergo](https://alt-ergo.ocamlpro.com/try.html) online.
 You can also learn more about our partners with the [Alt-Ergo Users' Club](https://alt-ergo.ocamlpro.com/#club).
 
+If you are using Alt-Ergo as a library, see the [API documentation](API/index) (also available [on ocaml.org](https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html)).
+
 ## Input file formats
 
 Alt-ergo supports different input languages:
@@ -16,7 +18,7 @@ Alt-ergo supports different input languages:
 - Alt-ergo supports the SMT-LIB language v2.6. **This is Alt-Ergo's preferred
   and recommended input format.** 
 - The original input language is its native language, based on the language of the Why3 platform.
-- It also (partially) supports the input language of Why3 through the :doc:`AB-Why3 plugin <../Plugins/ab_why3>`.
+- It also (partially) supports the input language of Why3 through the [AB-Why3 plugin](../Plugins/ab_why3).
 
 ```{toctree}
 :caption: Contents

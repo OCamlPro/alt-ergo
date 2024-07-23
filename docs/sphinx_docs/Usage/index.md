@@ -105,16 +105,17 @@ Look at the `worker_json_example.json` in the ressources `rsc` of the project to
 
 A small example of how to use the Alt-Ergo web worker can be build with the command ```make js-example```. This command also makes the web worker if it has not already been built. It produces a `www` directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file sent
 
+## Library
+
+Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the
+[API documentation] (also available [on ocaml.org](https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html))
+for more information.
 
 [install section]: ../Install/index.md
 [Lwt]: https://ocsigen.org/lwt/
 [js_of_ocaml]: https://ocsigen.org/js_of_ocaml/
-[API documentation]: ../API/index.md
+[API documentation]: ../API/index
 [AB-Why3 README]: ../Plugins/ab_why3.md
 [Alt-ergo native language]: ../Alt_ergo_native/index
 [SMT-LIB language]: ../SMT-LIB_language/index
 [Dune-site plugins]: https://dune.readthedocs.io/en/stable/sites.html#plugins
-
-## Library
-
-Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the [API documentation] for more information.
