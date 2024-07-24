@@ -1441,27 +1441,14 @@ let parse_theory_opt =
     let preludes enable_theories disable_theories =
       let theories = Theories.default in
       let rec aux th en dis =
-        let theories =
-          match en, dis with
-          | _ :: _, [] -> aux (List.rev_append en th) [] []
-          | e :: _, d :: _ when e = d ->
-            Fmt.error_msg "theory prelude '%a' cannot be both enabled and
-            disabled" Theories.pp e
-          | e :: en, d :: _ when e < d -> aux (e :: th) en dis
-          | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
-          | [], [] -> Ok th
-        in
-        Result.bind theories @@ fun theories ->
-        if Lists.mem Theories.equal Theories.(Prelude Fpa) en then
-          if List.for_all (fun th ->
-              match (th : Theories.t) with
-              | Prelude Nra | Prelude Ria -> false
-              | _ -> true
-            ) dis then
-            Ok Theories.(Prelude Nra :: Prelude Ria :: theories)
-          else
-            Fmt.error_msg "theory prelude fpa requires both ria and nra"
-        else Ok th
+        match en, dis with
+        | _ :: _, [] -> aux (List.rev_append en th) [] []
+        | e :: _, d :: _ when e = d ->
+          Fmt.error_msg "theory prelude '%a' cannot be both enabled and
+          disabled" Theories.pp e
+        | e :: en, d :: _ when e < d -> aux (e :: th) en dis
+        | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
+        | [], [] -> Ok th
       in
       aux
         theories
