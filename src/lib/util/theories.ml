@@ -55,9 +55,9 @@ let all_preludes = [ Fpa; Ria; Nra ]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-let default_preludes = [ Fpa; Ria; Nra ]
+let default_preludes = all_preludes
 
-let default = [ ADT; AC ]
+let default = all
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)

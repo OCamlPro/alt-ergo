@@ -688,11 +688,11 @@ let parse_execution_opt =
                  developers by writing to <alt-ergo@ocamlpro.com>."
             else if Stdcompat.String.starts_with ~prefix:"fpa-theory" p then
               Printer.print_wrn ~header:true
-                "@[Support for the FPA theory has been integrated as a builtin \
-                 theory prelude in version 2.5.0. Please use \
-                 `--enable-theories fpa` to enable it. \
-                 This option and the '%s'@ prelude will \
-                 be removed in a later version.@]" p
+                "@[Support for the FPA theory has been integrated as a \
+                 builtin theory prelude in version 2.5.0 and is enabled \
+                 by default.\
+                 This option and the '%s'@ prelude will \ be removed in a \
+                 later version.@]" p
           end;
 
           Ok p'
