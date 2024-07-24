@@ -1719,6 +1719,7 @@ let make dloc_file acc stmt =
       let e =
         mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
       in
+      let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
         begin
           Printer.print_wrn
@@ -1728,7 +1729,7 @@ let make dloc_file acc stmt =
           acc
         end
       else
-        let st_decl = C.Optimize (e, is_max) in
+        let st_decl = C.Optimize fn in
         C.{ st_decl; st_loc } :: acc
 
     (* Push and Pop commands *)

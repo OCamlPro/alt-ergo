@@ -1105,7 +1105,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     in
     let acc =
       try
-        Objective.Model.fold (fun { e; is_max } value acc ->
+        Objective.Model.fold (fun { e; is_max; _ } value acc ->
             match (value : Objective.Value.t) with
             | Pinfinity | Minfinity ->
               raise (Give_up acc)
@@ -1375,7 +1375,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let assume_th_elt env th_elt dep =
     SAT.assume_th_elt env.satml th_elt dep
 
-  let optimize env ~is_max obj = SAT.optimize env.satml ~is_max obj
+  let optimize env fn = SAT.optimize env.satml fn
 
   let get_model env =
     Option.map Lazy.force env.last_saved_model
@@ -1411,6 +1411,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Id.Namespace.reinit ();
     Symbols.clear_labels ();
     Var.reinit_cnt ();
+    Objective.Function.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();

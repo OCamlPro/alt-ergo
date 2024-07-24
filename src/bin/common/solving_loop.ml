@@ -351,10 +351,6 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let incremental_depth : int State.key =
-    State.create_key ~pipe:"" "is_incremental"
-  in
-
   let set_steps_bound i st =
     try DO.Steps.set i st with
       Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
@@ -506,7 +502,6 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set incremental_depth 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -674,12 +669,6 @@ let main () =
         D_cnf.make (State.get State.logic_file st).loc
           (State.get solver_ctx_key st).ctx stmt
       in
-      (* Using both optimization and incremental mode may be wrong if
-         some optimization constraints aren't at the toplevel.
-         See issue: https://github.com/OCamlPro/alt-ergo/issues/993. *)
-      if State.get incremental_depth st > 0 then
-        warning "Optimization constraints in presence of push \
-                 and pop statements are not correctly processed.";
       State.set solver_ctx_key (
         let solver_ctx = State.get solver_ctx_key st in
         { solver_ctx with ctx = cnf }
@@ -983,14 +972,7 @@ let main () =
       | td ->
         let st =
           match td.contents with
-          | `Pop n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st - n)
-            |> set_mode Assert
-          | `Push n ->
-            st
-            |> State.set incremental_depth (State.get incremental_depth st + n)
-            |> set_mode Assert
+          | `Pop _ | `Push _ -> st |> set_mode Assert
           | _ -> st
         in
         (* TODO:

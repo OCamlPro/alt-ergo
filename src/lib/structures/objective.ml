@@ -26,17 +26,26 @@
 (**************************************************************************)
 
 module Function = struct
+  type index = int
+
   type t = {
     e : Expr.t;
     is_max : bool;
+    index : index;
   }
 
-  let equal { e = e1; is_max = m1 } { e = e2; is_max = m2 } =
-    Bool.equal m1 m2 && Expr.equal e1 e2
+  let cnt = ref 0
 
-  let mk ~is_max e = { e; is_max }
+  let compare { index = i1; _ } { index = i2; _ } = i1 - i2
+
+  let mk ~is_max e =
+    let r = { e; is_max; index = !cnt } in
+    incr cnt;
+    r
 
   let pp ppf { e; _ } = Expr.print ppf e
+
+  let reinit_cnt () = cnt := 0
 end
 
 module Value = struct
@@ -62,30 +71,17 @@ module Value = struct
 end
 
 module Model = struct
-  type s = { f: Function.t; order: int }
-
-  module M =  Map.Make (struct
-      type t = s
-
-      let compare { order = o1; _ } { order = o2; _ } = o1 - o2
-    end)
+  module M =  Map.Make (Function)
 
   type t = Value.t M.t
 
   let empty = M.empty
   let is_empty = M.is_empty
-  let fold g = M.fold (fun { f; _ } acc -> g f acc)
+  let fold = M.fold
+  let add = M.add
 
-  let add o v mdl =
-    let order =
-      match M.find_first (fun { f; _ } -> Function.equal f o) mdl with
-      | ({ order; _ }, _) -> order
-      | exception Not_found -> M.cardinal mdl
-    in
-    M.add { f = o; order } v mdl
-
-  let pp_binding ppf ({ f; _ }, v) =
-    Fmt.pf ppf "(%a %a)" Function.pp f Value.pp v
+  let pp_binding ppf (fn, v) =
+    Fmt.pf ppf "(%a %a)" Function.pp fn Value.pp v
 
   let pp ppf mdl =
     if M.is_empty mdl then
@@ -96,7 +92,7 @@ module Model = struct
 
   let functions mdl =
     M.bindings mdl
-    |> List.map (fun ({ f; _ }, _) -> f)
+    |> List.map (fun (fn, _) -> fn)
 
   let has_no_limit mdl =
     M.for_all
@@ -110,13 +106,13 @@ module Model = struct
 
   let next_unknown mdl =
     try
-      M.iter (fun { f; order = _ } v ->
+      M.iter (fun fn v ->
           match (v : Value.t) with
-          | Unknown -> raise (Found f)
+          | Unknown -> raise (Found fn)
           | Value _ | Limit _ | Pinfinity | Minfinity -> ()
         ) mdl;
       None
     with
-    | Found f -> Some f
+    | Found fn -> Some fn
     | Exit -> None
 end

@@ -83,12 +83,18 @@ val push : 'a t -> 'a -> unit
 
 val get : 'a t -> int -> 'a
 (** Get the element at the given index, or
-    @raise Invalid_argument if the index is not valid. *)
+    @raise Assert_failure if the index is not valid. *)
 
 val set : 'a t -> int -> 'a -> unit
 (** Set the element at the given index, either already set or the first
     free slot if [not (is_full vec)], or
     @raise Invalid_argument if the index is not valid. *)
+
+val replace : (' a -> 'a) -> 'a t -> int -> unit
+(** [replace f vec n] is equalivalent to [set vec n (f (get vec n))],
+    but with a single bound check.
+
+    @raise Assert_failure if the index is not valid. *)
 
 val copy : 'a t -> 'a t
 (** Fresh copy. *)

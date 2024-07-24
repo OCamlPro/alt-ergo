@@ -340,8 +340,9 @@ let mk_assume acc f name loc =
   Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
 let mk_optimize acc obj is_max loc =
-  let obj = make_term "" obj in
-  Commands.{st_decl=Optimize (obj, is_max); st_loc=loc } :: acc
+  let e = make_term "" obj in
+  let fn = Objective.Function.mk ~is_max e in
+  Commands.{st_decl=Optimize fn; st_loc=loc } :: acc
 
 (* extract defining term of the function or predicate. From the
    transformation of the parsed AST above, the typed AST is either of the

@@ -105,6 +105,11 @@ let[@inline] set vec i elt =
   vec.data.(i) <- elt;
   vec.sz <- max vec.sz (i+1)
 
+let[@inline] replace f vec i =
+  assert (0 <= i && i < vec.sz);
+  let n = Array.unsafe_get vec.data i in
+  Array.unsafe_set vec.data i (f n)
+
 let[@inline] fast_remove vec i =
   assert (i>= 0 && i < vec.sz);
   Array.unsafe_set vec.data i @@ Array.unsafe_get vec.data (vec.sz - 1);

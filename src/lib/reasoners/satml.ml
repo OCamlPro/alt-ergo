@@ -136,7 +136,7 @@ module type SAT_ML = sig
   val push : t -> Satml_types.Atom.atom -> unit
   val pop : t -> unit
 
-  val optimize : t -> is_max:bool -> Expr.t -> unit
+  val optimize : t -> Objective.Function.t -> unit
 
 end
 
@@ -413,10 +413,17 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable next_dec_guard : int;
 
+      mutable objectives : Objective.Function.t list Vec.t;
+      (** Queue of the objectives per incremental levels.
+
+          Notice that objectives of the incremental toplevel are
+          directly added to the theory and so do not appear in this queue. *)
+
       mutable next_decisions : Atom.atom list;
       (** Literals that must be decided on before the solver can answer [Sat].
 
-          These are added by the theory through calls to [acts_add_decision]. *)
+          These are added by the theory through calls to
+          [acts_add_decision_lit]. *)
 
       mutable next_split : Atom.atom option;
       (** Literal that should be decided on before the solver answers [Sat].
@@ -428,7 +435,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           the [decisions] are guaranteed to be decided on at some point (unless
           backtracking occurs). *)
 
-      mutable next_objective :
+      mutable next_optimized_split :
         (Objective.Function.t * Objective.Value.t * Atom.atom) option;
       (** Objective functions that must be optimized before the solver can
           answer [Sat].
@@ -549,13 +556,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       increm_guards = Vec.make 1 ~dummy:Atom.dummy_atom;
 
+      objectives = Vec.make 1 ~dummy:[];
+
       next_dec_guard = 0;
 
       next_decisions = [];
 
       next_split = None;
 
-      next_objective = None;
+      next_optimized_split = None;
     }
 
   let insert_var_order env (v : Atom.var) =
@@ -737,7 +746,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       );
       env.next_decisions <- [];
       env.next_split <- None;
-      env.next_objective <- None;
+      env.next_optimized_split <- None;
       (* Some variables that were irrelevant because of canceled
          decisions/propagations may become relevant again. Add them back to the
          heap. *)
@@ -907,7 +916,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        We can't update the theory inside this function, because it is called
        from within the theory. *)
     let atom, _ = Atom.add_atom env.hcons_env lit [] in
-    env.next_objective <- Some (fn, value, atom)
+    env.next_optimized_split <- Some (fn, value, atom)
 
   let[@inline] theory_slice env : _ Th_util.acts = {
     acts_add_decision_lit = acts_add_decision_lit env ;
@@ -1601,7 +1610,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let conflict_analyze_and_fix env confl =
     env.next_decisions <- [];
     env.next_split <- None;
-    env.next_objective <- None;
+    env.next_optimized_split <- None;
     env.conflicts <- env.conflicts + 1;
     if decision_level env = 0 then report_conflict env confl;
     match confl with
@@ -1802,9 +1811,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       make_decision env atom
 
   and pick_branch_lit env =
-    match env.next_objective with
+    match env.next_optimized_split with
     | Some (fn, value, atom) ->
-      env.next_objective <- None;
+      env.next_optimized_split <- None;
       let v = atom.var in
       if v.level >= 0 then (
         assert (v.pa.is_true || v.na.is_true);
@@ -1840,13 +1849,22 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         let a = Vec.get env.increm_guards env.next_dec_guard in
         (assert (not (a.neg.is_guard || a.neg.is_true)));
         env.next_dec_guard <- env.next_dec_guard + 1;
-        make_decision env a
+        make_decision env a;
+        let fns = Vec.get env.objectives (env.next_dec_guard-1) in
+        let tenv =
+          List.fold_right
+            (fun fn tenv ->
+               Th.add_objective tenv fn Objective.Value.Unknown
+            ) fns env.tenv
+        in
+        env.tenv <- tenv;
       end
     else
       pick_branch_lit env
 
   let is_sat env =
-    Option.is_none env.next_objective &&
+    env.next_dec_guard = Vec.size env.increm_guards &&
+    Option.is_none env.next_optimized_split &&
     Lists.is_empty env.next_decisions &&
     Option.is_none env.next_split && (
       nb_assigns env = nb_vars env ||
@@ -2096,7 +2114,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       let old_tenv = env.tenv in
       let old_decisions = env.next_decisions in
       let old_split = env.next_split in
-      let old_objective = env.next_objective in
+      let old_optimized_split = env.next_optimized_split in
       let fictive_lazy =
         SFF.fold (fun ff acc -> add_form_to_lazy_cnf env acc ff)
           sf old_lazy
@@ -2113,7 +2131,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           env.tenv     <- old_tenv;
           env.next_decisions <- old_decisions;
           env.next_split <- old_split;
-          env.next_objective <- old_objective
+          env.next_optimized_split <- old_optimized_split
         end
     in
     fun env sff ->
@@ -2238,11 +2256,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     guard.is_guard <- true;
     guard.neg.is_guard <- false;
     cancel_until env env.next_dec_guard;
-    Vec.push env.increm_guards guard
+    Vec.push env.increm_guards guard;
+    Vec.push env.objectives []
 
   let pop env =
-    (assert (not (Vec.is_empty env.increm_guards)));
+    assert (not (Vec.is_empty env.increm_guards));
     let g = Vec.pop env.increm_guards in
+    let _ = Vec.pop env.objectives in
     g.is_guard <- false;
     g.neg.is_guard <- false;
     assert (not g.var.na.is_true); (* atom not false *)
@@ -2260,7 +2280,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       assert (env.next_dec_guard <= Vec.size env.increm_guards);
     enqueue env g.neg 0 None
 
-  let optimize env ~is_max obj =
-    let fn = Objective.Function.mk ~is_max obj in
-    env.tenv <- Th.add_objective env.tenv fn Objective.Value.Unknown
+  let optimize env fn =
+    if decision_level env > 0 then Fmt.invalid_arg "Satml.optimize";
+    if Vec.size env.increm_guards = 0 then
+      env.tenv <- Th.add_objective env.tenv fn Objective.Value.Unknown
+    else
+      Vec.replace (fun fns -> fn :: fns) env.objectives
+        (Vec.size env.objectives - 1)
 end
