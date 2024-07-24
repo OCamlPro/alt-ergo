@@ -1411,6 +1411,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Id.Namespace.reinit ();
     Symbols.clear_labels ();
     Var.reinit_cnt ();
+    Objective.Function.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();

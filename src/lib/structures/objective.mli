@@ -26,6 +26,8 @@
 (**************************************************************************)
 
 module Function : sig
+  type index
+
   type t = private {
     e : Expr.t;
     (** Term that represents the objective function. *)
@@ -33,17 +35,20 @@ module Function : sig
     is_max : bool;
     (** Determine if we want to maximize or minimize this objective function. *)
 
-    index : int;
+    index : index;
     (** Unique identifier from the input. This field is used as a priority
         index. *)
   }
   (** Type of an objective function. *)
 
-  val mk : index:int -> is_max:bool -> Expr.t -> t
+  val mk : is_max:bool -> Expr.t -> t
 
   val pp : t Fmt.t
   (** [pp ppf o] prints the objective function [o] on the formatter [ppf]
       using the SMT-LIB format. *)
+
+  val reinit_cnt : unit -> unit
+  (** Reinitializes the internal counter used to produce unique indexes. *)
 end
 
 module Value : sig

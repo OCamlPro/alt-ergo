@@ -339,12 +339,9 @@ let mk_assume acc f name loc =
   let ff = make_form name f loc ~decl_kind:E.Daxiom in
   Commands.{st_decl=Assume(name, ff, true) ; st_loc=loc} :: acc
 
-let index = ref 0
-
 let mk_optimize acc obj is_max loc =
   let e = make_term "" obj in
-  let fn = Objective.Function.mk ~index:!index ~is_max e in
-  incr index;
+  let fn = Objective.Function.mk ~is_max e in
   Commands.{st_decl=Optimize fn; st_loc=loc } :: acc
 
 (* extract defining term of the function or predicate. From the

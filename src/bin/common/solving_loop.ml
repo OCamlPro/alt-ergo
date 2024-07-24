@@ -351,10 +351,6 @@ let main () =
     State.create_key ~pipe:"" "named_terms"
   in
 
-  let index_optimize_stmt : int State.key =
-    State.create_key ~pipe:"" "index_optimize_stmt"
-  in
-
   let set_steps_bound i st =
     try DO.Steps.set i st with
       Invalid_argument _ -> (* Raised by Steps.set_steps_bound *)
@@ -506,7 +502,6 @@ let main () =
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
     |> State.set named_terms Util.MS.empty
-    |> State.set index_optimize_stmt 0
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -666,9 +661,7 @@ let main () =
       recoverable_error "the selected solver does not support optimization";
       st
     ) else
-      let index = State.get index_optimize_stmt st in
-      let st = State.set index_optimize_stmt (index + 1) st in
-      let contents = `Optimize (term, is_max, index) in
+      let contents = `Optimize (term, is_max) in
       let stmt =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
       in

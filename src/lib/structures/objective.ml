@@ -26,17 +26,26 @@
 (**************************************************************************)
 
 module Function = struct
+  type index = int
+
   type t = {
     e : Expr.t;
     is_max : bool;
-    index : int;
+    index : index;
   }
+
+  let cnt = ref 0
 
   let compare { index = i1; _ } { index = i2; _ } = i1 - i2
 
-  let mk ~index ~is_max e = { e; is_max; index }
+  let mk ~is_max e =
+    let r = { e; is_max; index = !cnt } in
+    incr cnt;
+    r
 
   let pp ppf { e; _ } = Expr.print ppf e
+
+  let reinit_cnt () = cnt := 0
 end
 
 module Value = struct

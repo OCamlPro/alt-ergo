@@ -1714,12 +1714,12 @@ let make dloc_file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
     match stmt with
     (* Optimize terms *)
-    | { contents = `Optimize (t, is_max, index); loc; _ } ->
+    | { contents = `Optimize (t, is_max); loc; _ } ->
       let st_loc = dl_to_ael dloc_file loc in
       let e =
         mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
       in
-      let fn = Objective.Function.mk ~index ~is_max e in
+      let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
         begin
           Printer.print_wrn
