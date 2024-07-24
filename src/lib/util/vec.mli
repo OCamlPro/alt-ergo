@@ -91,8 +91,8 @@ val set : 'a t -> int -> 'a -> unit
     @raise Invalid_argument if the index is not valid. *)
 
 val replace : (' a -> 'a) -> 'a t -> int -> unit
-(** [replace f vec n] replaces the n-th element of [vec]
-    by [f (get vec n)].
+(** [replace f vec n] is equalivalent to [set vec n (f (get vec n))],
+    but with a single bound check.
 
     @raise Assert_failure if the index is not valid. *)
 

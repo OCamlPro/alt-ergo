@@ -1850,12 +1850,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         (assert (not (a.neg.is_guard || a.neg.is_true)));
         env.next_dec_guard <- env.next_dec_guard + 1;
         make_decision env a;
-        let objs = Vec.get env.objectives (env.next_dec_guard-1) in
+        let fns = Vec.get env.objectives (env.next_dec_guard-1) in
         let tenv =
-          List.fold_left
-            (fun tenv fn ->
+          List.fold_right
+            (fun fn tenv ->
                Th.add_objective tenv fn Objective.Value.Unknown
-            ) env.tenv objs
+            ) fns env.tenv
         in
         env.tenv <- tenv;
       end
@@ -2282,7 +2282,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let optimize env fn =
     if decision_level env > 0 then Fmt.invalid_arg "Satml.optimize";
-    assert (decision_level env = 0);
     if Vec.size env.increm_guards = 0 then
       env.tenv <- Th.add_objective env.tenv fn Objective.Value.Unknown
     else
