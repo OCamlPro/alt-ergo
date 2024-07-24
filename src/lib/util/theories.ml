@@ -55,9 +55,7 @@ let all_preludes = [ Fpa; Ria; Nra ]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-(* By default we disable Fpa, Ria and Nra preludes to prevent
-   regressions. *)
-let default_preludes = []
+let default_preludes = [ Fpa; Ria; Nra ]
 
 let default = [ ADT; AC ]
 
