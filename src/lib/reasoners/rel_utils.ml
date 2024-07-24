@@ -1073,10 +1073,8 @@ struct
     let nrr_nf = NF.normal_form nrr in
     let nrrd = find_or_default nrr_nf t in
     let nnrrd = D.intersect nrrd rrd in
-    let t =
-      if D.equal nnrrd rrd then t
-      else { t with triggers = W.Set.union ws t.triggers }
-    in
+    (* Always trigger to ensure we check for simplifications. *)
+    let t = { t with triggers = W.Set.union ws t.triggers } in
     let t =
       match nrr_nf with
       | Constant _ -> t
