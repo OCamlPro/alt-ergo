@@ -8,10 +8,17 @@ name: Documentation
 # - deploy_docs only run on the next branch when code is pushed. It retrieve
 # the ocaml and sphinx documentation and deploy them on the gh-pages branch
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+      - "v*.*.*"
+    branches:
+      - next
+      - main
+  pull_request:
 
 env:
-  OCAML_DEFAULT_VERSION: 4.10.0
+  OCAML_DEFAULT_VERSION: 4.14.1
   # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
   # in any opam call
   OPAMYES: true
@@ -44,54 +51,49 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-          dune-cache: true
+          # https://github.com/ocaml/dune/issues/7720
+          dune-cache: false
+
+      - name: Retrieve annotated tags for dune
+        run: git fetch --tags --force
+
 
       # Install dependencies if the cache is not retrieved
       # odoc is installed as deps with { with-doc } in opam files
       - name: opam install deps
         run: opam exec -- make deps
-      # if: steps.cache-opam.outputs.cache-hit != 'true'
 
-      # Try to upgrade installed packages and fix dependencies if needed,
-      # when the cache is retrieved
-      # - run: opam upgrade --fixup
-      #  if: steps.cache-opam.outputs.cache-hit == 'true'
+      - name: Perform version substitution
+        run: opam exec -- dune subst
 
       # Make the documentation
       - name: Make OCaml documentation
-        run: opam exec -- make odoc
+        run: opam exec -- dune build @doc
 
       # Create and upload an artifact `ocaml_doc` that contains the ocaml
       # documentation in html format.
-      # This is only done if this workflow is triggered in a PR or on the
-      # following branches : next, main
       - name: Upload ocaml documentation
         uses: actions/upload-artifact@v4
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
         with:
           name: ocaml_doc
           path: _build/default/_doc/_html/
 
-
-  # On PR, or push on next/main, build the sphinx general documentation
-  # If this build fails, the documentation workflow stops
-  # If it succeeds, an artifact is made with the generated documentation
-  # This artifact is used in the deploying job
   sphinx_docs:
     name: Sphinx documentation
-
-    # We only run this if the ocaml documentation build is successful
-    needs: ocaml_docs
-
-    # Sphinx documentation is only builded if a PR is open or when it's
-    # pushed on next or main
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/next' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
+    outputs:
+      version-name: ${{ steps.version-name.outputs.target }}
 
     steps:
       # Checkout the code of the current branch
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Determine version name
+        id: version-name
+        run: |
+          echo "target=${GITHUB_REF#*/*/}" >> $GITHUB_OUTPUT
 
       # Build the sphinx documentation
       # and automatically print any error or warning
@@ -99,7 +101,8 @@ jobs:
         uses: ammaraskar/sphinx-action@master
         with:
           docs-folder: "docs/sphinx_docs/"
-          build-command: "sphinx-build -b html . _build"
+          build-command: |
+            sphinx-build -b html -A current_version=${{ steps.version-name.outputs.target }} . _build
 
       # Create and upload an artifact `sphinx_doc` that contains the sphinx
       # documentation in html format.
@@ -109,13 +112,12 @@ jobs:
           name: sphinx_doc
           path: docs/sphinx_docs/_build
 
-
-  # For every push on main, retrieve ocaml and sphinx documentation
-  # and publish them on gh-pages branch
   deploy_docs:
     name: Deploy documentation
+    permissions:
+      contents: write
 
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.event_name == 'push' }}
 
     needs:
       - ocaml_docs
@@ -123,27 +125,18 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      # Retrieve ocaml documentation artifact
-      - name: Download ocaml documentation
-        uses: actions/download-artifact@v4
-        with:
-          name: ocaml_doc
-          path: _build/odoc/dev
-
-      # Retrieve sphinx documentation artifact
       - name: Download sphinx documentation
         uses: actions/download-artifact@v4
         with:
           name: sphinx_doc
-          path: _build
+          path: _build/${{ needs.sphinx_docs.outputs.version-name }}
 
-      - name: Add files to bypass nojekyll
-        run: |
-          touch _build/.nojekyll
-          touch _build/odoc/.nojekyll
-          touch _build/odoc/dev/.nojekyll
+      - name: Download ocaml documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: ocaml_doc
+          path: _build/${{ needs.sphinx_docs.outputs.version-name }}/API
 
-      # Deploy files contain in _build directory on gh-pages branch
       - name: deploy-doc
         uses: JamesIves/github-pages-deploy-action@3.6.2
         with:
@@ -151,3 +144,44 @@ jobs:
           BRANCH: gh-pages
           FOLDER: _build
           CLEAN: false
+
+  update_versions:
+    name: Update documentation versions
+    permissions:
+      contents: write
+
+    needs: deploy_docs
+    runs-on: ubuntu-latest
+
+    if: ${{ github.event_name == 'push' }}
+
+    steps:
+      - name: Checkout documentation
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Update latest version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          ln -nsf ${{ needs.sphinx_docs.outputs.version-name }} latest
+
+      - name: Write versions to JSON file
+        run: |
+          rm -f versions.json
+          echo -n '[' >versions.json
+          PREFIX=''
+          for version in $(ls -d */ | sort -n); do
+            echo -n "$PREFIX" >>versions.json
+            PREFIX=','
+            echo -n '{"url": "/alt-ergo/'$version'", "slug": "'${version%/}'"}' >>versions.json
+          done
+          echo -n ']' >>versions.json
+
+      - name: Push new versions
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add versions.json
+          git commit -m 'Update versions.json' || exit 0
+          git push
