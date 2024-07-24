@@ -44,11 +44,9 @@ precisely, Alt-Ergo implements the second and third layers from the paper "[A
 Three-tier Strategy for Reasoning about Floating-Point Numbers in
 SMT](https://inria.hal.science/hal-01522770)" by Conchon et al.
 
-*Note*: Support for floating-point arithmetic is available as a built-in theory
-since version 2.5.0. It is enabled using flag `--enable-theory fpa`, which will
-become the default in a future release. Previous versions used the external
-prelude mechanism and required command line flags `--use-fpa` and
-`--prelude fpa-theory-2019-10-08-19h00.ae`.
+*Note*: Support for floating-point arithmetic is enabled by default in Alt-Ergo since version 2.6.0.
+
+Versions 2.5.x required to use the command line flag `--enable-theory fpa` and previous versions used the external prelude mechanism and required command line flags `--use-fpa` and `--prelude fpa-theory-2019-10-08-19h00.ae`.
 
 This means that Alt-Ergo doesn't actually support a floating-point type (that
 may come in a future release); instead, it supports a rounding function, as
