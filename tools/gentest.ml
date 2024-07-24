@@ -257,11 +257,9 @@ end = struct
               | "models" -> {
                   acc with
                   exclude =
-                    "legacy" :: "fpa" :: acc.exclude;
+                    "legacy" :: acc.exclude;
                   filters = Some ["dolmen"]
                 }
-              | "fpa" ->
-                {acc with filters = Some ["fpa"]}
               | _ -> acc
           )
             Test.base_params
@@ -334,11 +332,7 @@ let () =
     ]
   in
   let solvers = [
-    ("runtest-quick", "fpa",
-     [ "--output=smtlib2"
-     ; "--enable-theories fpa"
-     ])
-  ; ("runtest-quick", "dolmen",
+    ("runtest-quick", "dolmen",
      [ "--output=smtlib2"
      ; "--frontend dolmen" ])
   ; ("runtest-quick", "legacy",

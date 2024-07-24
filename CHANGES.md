@@ -2,6 +2,7 @@
 
 ### Command-line interface
 
+ - Enable FPA theory by default (#1177)
  - Remove deprecated output channels (#782)
  - Deprecate the --use-underscore since it produces models that are not SMT-LIB
    compliant (#805)
