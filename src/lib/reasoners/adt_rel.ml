@@ -542,19 +542,6 @@ let propagate_domains new_terms domains =
          eqs, new_terms
     ) ([], new_terms) domains
 
-(* Remove duplicate literals in the list [la]. *)
-let remove_redundancies la =
-  let cache = ref SLR.empty in
-  List.filter
-    (fun (a, _, _, _) ->
-       let a = LR.make a in
-       if SLR.mem a !cache then false
-       else begin
-         cache := SLR.add a !cache;
-         true
-       end
-    ) la
-
 (* Update the counter of case split size in [env]. *)
 let count_splits env la =
   List.fold_left
@@ -568,8 +555,6 @@ let assume env uf la =
   let ds = Uf.domains uf in
   let domains = Uf.GlobalDomains.find (module Domains) ds in
   Debug.pp_domains "before assume" domains;
-  (* should be done globally in CCX *)
-  let la = remove_redundancies la in
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let domains =
     try
