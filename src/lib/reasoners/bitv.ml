@@ -1482,7 +1482,20 @@ module Shostak(X : ALIEN) = struct
 
   let term_extract _ = None, false
 
-  let abstract_selectors v acc = is_mine v, acc
+  let abstract_selectors v acc =
+    let acc, v =
+      Stdcompat.List.fold_left_map (fun acc bv ->
+          match bv with
+          | { bv = Cte _ ; _ } -> acc, bv
+          | { bv = Other { negated ; value = r } ; sz } ->
+            let r', acc = X.abstract_selectors r acc in
+            acc, { bv = Other { negated ; value = r' } ; sz }
+          | { bv = Ext ({ negated ; value = r }, i, j, r_sz) ; sz } ->
+            let r', acc = X.abstract_selectors r acc in
+            acc, { bv = Ext ({ negated ; value = r' }, i, j, r_sz) ; sz }
+        ) acc v
+    in
+    is_mine v, acc
 
   let solve r1 r2 pb =
     Sig.{pb with sbt = List.rev_append (solve_bis r1 r2) pb.sbt}
