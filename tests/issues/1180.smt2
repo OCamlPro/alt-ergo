@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-datatype boxed ((box (unbox (_ BitVec 16)))))
+(declare-const b boxed)
+(assert (= (concat (unbox b) #xbeef) #xdeadbeef))
+(check-sat)
