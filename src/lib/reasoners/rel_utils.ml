@@ -31,11 +31,7 @@ module SX = Shostak.SXH
 module HX = Shostak.HX
 module L = Xliteral
 module LR = Uf.LX
-module SR = Set.Make(
-  struct
-    type t = X.r L.view
-    let compare a b = LR.compare (LR.make a) (LR.make b)
-  end)
+module HLR = Hashtbl.Make(LR)
 
 (** [assume_nontrivial_eqs eqs la] can be used by theories to remove from the
     equations [eqs] both duplicates and those that are implied by the
@@ -44,16 +40,23 @@ let assume_nontrivial_eqs
     (eqs : X.r Sig_rel.input list)
     (la : X.r Sig_rel.input list)
   : X.r Sig_rel.fact list =
-  let la =
-    List.fold_left (fun m (a, _, _, _) -> SR.add a m) SR.empty la
-  in
-  let eqs, _ =
-    List.fold_left
-      (fun ((eqs, m) as acc) ((sa, _, _, _) as e) ->
-         if SR.mem sa m then acc else e :: eqs, SR.add sa m
-      )([], la) eqs
-  in
-  List.rev_map (fun (sa, _, ex, orig) -> Literal.LSem sa, ex, orig) eqs
+  match eqs with
+  | [] -> []
+  | eqs ->
+    let table = HLR.create 17 in
+    List.iter (fun (a, _, _, _) -> HLR.add table (LR.make a) ()) la;
+    let eqs =
+      List.fold_left
+        (fun eqs ((sa, _, _, _) as e) ->
+           let sa = LR.make sa in
+           if HLR.mem table sa then eqs
+           else (
+             HLR.replace table sa ();
+             e :: eqs
+           )
+        ) [] eqs
+    in
+    List.rev_map (fun (sa, _, ex, orig) -> Literal.LSem sa, ex, orig) eqs
 
 (* The type of delayed functions. A delayed function is given an [Uf.t] instance
    for resolving expressions to semantic values, the operator to compute, and a

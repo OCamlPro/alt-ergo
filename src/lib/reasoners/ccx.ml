@@ -433,35 +433,40 @@ module Main : S = struct
          env
       ) {env with uf=uf}  res
 
-  module LRE =
-    Map.Make (struct
+  module HLR =
+    Hashtbl.Make (struct
       type t = LR.t * E.t option
-      let compare (x, y) (x', y') =
-        let c = LR.compare x x' in
-        if c <> 0 then c
-        else match y, y' with
-          | None, None      ->  0
-          | Some _, None    ->  1
-          | None, Some _    -> -1
-          | Some a, Some a' -> E.compare a a'
+      let equal (x, y) (x', y') =
+        LR.equal x x' &&
+        match y, y' with
+        | None, None      ->  true
+        | Some _, None    ->  false
+        | None, Some _    -> false
+        | Some a, Some a' -> E.equal a a'
+
+      let hash (x, y) =
+        match y with
+        | None -> Hashtbl.hash (LR.hash x, 0)
+        | Some e -> Hashtbl.hash (LR.hash x, E.hash e)
     end)
 
   let make_unique sa =
-    let mp =
-      List.fold_left
-        (fun mp ((ra, aopt ,_ , _) as e) ->
+    match sa with
+    | [] | [ _ ] -> sa
+    | _ ->
+      let table = HLR.create 17 in
+      List.iter
+        (fun ((ra, aopt ,_ , _) as e) ->
            (* Make sure to prefer equalities of [Subst] origin because they are
               used for partial computations (see {!Rel_utils}). In general, we
               want to make sure that the relations see all the equalities from
               representative changes in the union-find. *)
-           LRE.update (LR.make ra, aopt) (function
-               | Some ((_, _, _, Th_util.Subst) as e') -> Some e'
-               | _ -> Some e
-             ) mp
-
-        ) LRE.empty sa
-    in
-    LRE.fold (fun _ e acc -> e::acc) mp []
+           let lra = LR.make ra in
+           match HLR.find table (lra, aopt) with
+           | (_, _, _, Th_util.Subst) -> ()
+           | _ | exception Not_found -> HLR.replace table (lra, aopt) e
+        ) sa;
+      HLR.fold (fun _ e acc -> e::acc) table []
 
   let replay_atom env sa =
     Options.exec_thread_yield ();
