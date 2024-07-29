@@ -101,9 +101,9 @@ jobs:
         uses: ammaraskar/sphinx-action@master
         with:
           docs-folder: "docs/sphinx_docs/"
-          build-command: |
-            sphinx-build -W -b html \
-              -A current_version=${{ steps.version-name.outputs.target }} \
+          build-command: >
+            sphinx-build -W -b html
+              -A current_version=${{ steps.version-name.outputs.target }}
               . _build
 
       # Create and upload an artifact `sphinx_doc` that contains the sphinx
