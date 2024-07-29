@@ -102,7 +102,9 @@ jobs:
         with:
           docs-folder: "docs/sphinx_docs/"
           build-command: |
-            sphinx-build -b html -A current_version=${{ steps.version-name.outputs.target }} . _build
+            sphinx-build -W -b html \
+              -A current_version=${{ steps.version-name.outputs.target }} \
+              . _build
 
       # Create and upload an artifact `sphinx_doc` that contains the sphinx
       # documentation in html format.

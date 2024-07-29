@@ -25,8 +25,10 @@ author = 'Alt-Ergo developers'
 
 # Import our custom lexer
 from alt_ergo_lexer import AltErgoLexer
+from smt_lib_lexer import Smt2Lexer
 from sphinx.highlighting import lexers
 lexers['alt-ergo'] = AltErgoLexer()
+lexers['smt-lib'] = Smt2Lexer()
 
 # Use alt-ergo as the default language
 highlight_language = 'alt-ergo'
