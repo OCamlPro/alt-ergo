@@ -22,7 +22,7 @@ case "$LINK_MODE" in
     FLAGS="-noautolink"
     # Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
     # https://github.com/ocaml/ocaml/issues/12562
-    CCLIB="-lcamlzip -lnums -lzarith -lcamlstr -lunix -lz"
+    CCLIB="-lcamlzip -lzarith -lcamlstr -lunix -lz"
     LIBS="gmp"
     case "$OS" in
       linux)
