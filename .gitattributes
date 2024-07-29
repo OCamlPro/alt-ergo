@@ -1,5 +1,4 @@
 # Declare files will always have LF line endings on checkout.
-configure text eol=lf
 *.sh text eol=lf
 
 # Hide the file in statistics and pull request diffs.
