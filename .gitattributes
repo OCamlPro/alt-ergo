@@ -1,2 +1,5 @@
-# Declare files that will always have LF line endings on checkout.
-configure eol=lf
+# Declare files will always have LF line endings on checkout.
+*.sh text eol=lf
+
+# Hide the file in statistics and pull request diffs.
+tests/dune.inc linguist-generated
