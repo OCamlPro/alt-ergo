@@ -257,7 +257,6 @@ module BV2Nat = struct
     ; eqs = [] }
 
   let fold_ext x f t acc =
-    assert (X.is_a_leaf x);
     match MX.find x t.bv2nat with
     | exception Not_found -> acc
     | m -> Extraction.Map.fold (f x) m acc
