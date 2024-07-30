@@ -1,3 +1,43 @@
+type os = Linux | Macos
+type link_mode = Dynamic | Static | Mixed
+
+module Cmd = struct
+  open Cmdliner
+
+  let show l = List.map (fun (s, _) -> s) l
+
+  let os_term =
+    let all = [
+      ("linux", Linux);
+      ("macosx", Macos)
+    ]
+    in
+    let doc =
+      Fmt.str "Choose the operating system, $(docv) must be %s."
+        (Arg.doc_alts @@ show all)
+    in
+    Arg.(value & opt (enum all) Linux & info ["os"] ~docv:"OS" ~doc)
+
+  let link_mode_term =
+    let all = [
+      ("dynamic", Dynamic);
+      ("static", Static);
+      ("mixed", Mixed)
+    ]
+    in
+    let doc =
+      Fmt.str "Choose the operating system, $(docv) must be %s."
+        (Arg.doc_alts @@ show all)
+    in
+    Arg.(value & opt (enum all) Dynamic &
+         info ["link-mode"] ~docv:"MODE" ~doc)
+
+  let parse k =
+    let info = Cmd.info "rewrite-gen-link-flags" in
+    Cmd.v info Term.(ret (const k $ link_mode_term $ os_term))
+    |> Cmd.eval
+end
+
 let pkgconfig lib archive =
   let cmd = Fmt.str "pkg-config %s --variable libdir" lib in
   let output =
@@ -9,61 +49,48 @@ let pkgconfig lib archive =
 
 let pp_lib ppf s = Fmt.pf ppf "-cclib %s" s
 
+
 let () =
-  let link_mode = Sys.argv.(1) in
-  let os = Sys.argv.(2) in
-  let flags, cclib =
-    match link_mode with
-    | "dynamic" -> [], []
-    | "static" ->
-      begin
-        match os with
-        | "linux" -> [], ["-static"; "-no-pie"]
-        | _ ->
-          Fmt.epr "No known static compilation flags for %s" os;
-          exit 1
-      end
-    | "mixed" ->
-      begin
-        let flags = ["-noautolink"] in
-        let cclib = [
-          "-lstdcompat_stubs";
-          "-lcamlzip";
-          "-lzarith";
-          "-lcamlstr";
-          "-lunix";
-          "-lz"
-        ]
-        in
-        let libs = ["gmp"] in
-        match os with
-        | "linux" ->
-          let cclib = cclib @ List.map (fun s -> "-l" ^ s) libs in
-          flags,
-          "-Wl,-Bstatic" :: cclib @ ["-Wl,-Bdynamic"]
-        | "macosx" ->
-          let cclib = cclib @
-                      List.map
-                        (fun lib ->
-                           let archive =
-                             if Stdcompat.String.starts_with ~prefix:"lib" lib then
-                               Fmt.str "%s.a" lib
-                             else
-                               Fmt.str "lib%s.a" lib
-                           in
-                           pkgconfig lib archive
-                        ) libs
-          in
-          flags,
-          cclib
-        | _ ->
-          Fmt.epr "No known mixed compilation flags for %s" os;
-          exit 1
-      end
-    | _ ->
-      Fmt.epr "Invalid link mode %s" link_mode;
-      exit 1
+  let mixed_flags = ["-noautolink"] in
+  let mixed_cclib = [
+    "-lstdcompat_stubs";
+    "-lcamlzip";
+    "-lzarith";
+    "-lcamlstr";
+    "-lunix";
+    "-lz"
+  ]
   in
-  Fmt.pr "@[(-linkall %a %a)@]"
-    Fmt.(list ~sep:sp string) flags
-    Fmt.(list ~sep:sp pp_lib) cclib
+  let libs = ["gmp"] in
+  let rc =
+    Cmd.parse @@ fun link_mode os ->
+    let flags, cclib =
+      match link_mode, os with
+      | Dynamic, _ -> [], []
+      | Static, Linux -> [], ["-static"; "-no-pie"]
+      | Mixed, Linux ->
+        let cclib = mixed_cclib @ List.map (fun s -> "-l" ^ s) libs in
+        mixed_flags, "-Wl,-Bdynamic" :: "-Wl,-Bstatic" :: cclib
+      | Mixed, Macos ->
+        let cclib = mixed_cclib @
+                    List.map
+                      (fun lib ->
+                         let archive =
+                           if Stdcompat.String.starts_with
+                               ~prefix:"lib" lib then
+                             Fmt.str "%s.a" lib
+                           else
+                             Fmt.str "lib%s.a" lib
+                         in
+                         pkgconfig lib archive
+                      ) libs
+        in
+        mixed_flags, cclib
+      | _ -> Fmt.invalid_arg "unsupported mode and OS"
+    in
+    Fmt.pr "@[(-linkall %a %a)@]"
+      Fmt.(list ~sep:sp string) flags
+      Fmt.(list ~sep:sp pp_lib) cclib;
+    `Ok ()
+  in
+  exit rc
