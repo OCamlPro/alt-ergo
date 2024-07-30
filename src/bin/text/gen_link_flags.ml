@@ -11,6 +11,8 @@ let pp_lib ppf s = Fmt.pf ppf "-cclib %s" s
 
 let () =
   let mixed_flags = ["-noautolink"] in
+  (* Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
+     https://github.com/ocaml/ocaml/issues/12562 *)
   let mixed_cclib = [
     "-lstdcompat_stubs";
     "-lcamlzip";
