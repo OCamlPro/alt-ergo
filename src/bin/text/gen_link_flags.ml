@@ -2,7 +2,7 @@ let pkgconfig lib archive =
   let cmd = Fmt.str "pkg-config %s --variable libdir" lib in
   let output =
     Unix.open_process_in cmd
-    |> In_channel.input_line
+    |> Stdcompat.In_channel.input_line
     |> Option.get
   in
   Fmt.str "%s/%s" output archive
