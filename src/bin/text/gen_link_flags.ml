@@ -1,10 +1,6 @@
 let pkgconfig lib archive =
   let cmd = Fmt.str "pkg-config %s --variable libdir" lib in
-  let output =
-    Unix.open_process_in cmd
-    |> Stdcompat.In_channel.input_line
-    |> Option.get
-  in
+  let output = Unix.open_process_in cmd |> input_line in
   Fmt.str "%s/%s" output archive
 
 let pp_lib ppf s = Fmt.pf ppf "-cclib %s" s
