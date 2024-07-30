@@ -12,7 +12,7 @@
  (deps (:gen gen_link_flags.exe))
  (action
    (with-stdout-to link_flags.dune
-    (run %{gen} --link-mode %{env:LINK_MODE=dynamic} --os %{ocaml-config:system}))))
+    (run %{gen} %{env:LINK_MODE=dynamic} %{ocaml-config:system}))))
 
 (executable
   (name Main_text)
