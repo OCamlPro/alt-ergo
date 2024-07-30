@@ -21,13 +21,14 @@ let starts_with ~prefix s =
 
 let () =
   let mixed_flags = ["-noautolink"] in
+  (* Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
+     https://github.com/ocaml/ocaml/issues/12562 *)
   let mixed_cclib = [
-    "-lstdcompat_stubs";
     "-lcamlzip";
+    "-lnums";
     "-lzarith";
     "-lcamlstr";
     "-lunix";
-    "-lnums";
     "-lz"
   ]
   in
