@@ -18,7 +18,7 @@ let () =
     | "static" ->
       begin
         match os with
-        | "linux" -> ["-static"; "-no-pie"], []
+        | "linux" -> [], ["-static"; "-no-pie"]
         | _ ->
           Fmt.epr "No known static compilation flags for %s" os;
           exit 1
