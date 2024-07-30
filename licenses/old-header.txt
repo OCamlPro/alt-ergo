@@ -11,5 +11,14 @@
 
    ---------------------------------------------------------------
 
+   The Alt-Ergo theorem prover
+
+   Sylvain Conchon, Evelyne Contejean, Francois Bobot
+   Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout
+
+   CNRS - INRIA - Universite Paris Sud
+
+   ---------------------------------------------------------------
+
    More details can be found in the directory licenses/
 
