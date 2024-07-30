@@ -1,9 +1,18 @@
 (documentation
   (package alt-ergo))
 
+(executable
+  (name gen_link_flags)
+  (libraries unix fmt cmdliner)
+  (modules gen_link_flags)
+  (promote (until-clean)))
+
 (rule
- (with-stdout-to link_flags.dune
-  (run ./gen-link-flags.sh %{env:LINK_MODE=dynamic} %{ocaml-config:system})))
+ (target link_flags.dune)
+ (deps (:gen gen_link_flags.exe))
+ (action
+   (with-stdout-to link_flags.dune
+    (run %{gen} %{env:LINK_MODE=dynamic} %{ocaml-config:system}))))
 
 (executable
   (name Main_text)
