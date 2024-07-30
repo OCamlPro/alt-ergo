@@ -50,6 +50,7 @@
    #1152)
  - Add interval domains and arithmetic propagators for the BV theory (#1058,
    #1083, #1084, #1085)
+ - Native support for bv2nat of bit-vector normal forms (#1154)
  - Fix incompleteness issues in the BV solver (#978, #979)
  - Abstract more arguments of AC symbols to avoid infinite loops when
    they contain other AC symbols (#990)
