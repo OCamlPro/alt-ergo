@@ -30,7 +30,7 @@
 (**************************************************************************)
 
 module List = struct
-  open List
+  include List
 
   let is_empty = function
     | [] -> true
@@ -69,8 +69,19 @@ module List = struct
     aux accu [] l
 end
 
+module Bytes = struct
+  include Bytes
+
+  let fold_left f x a =
+    let r = ref x in
+    for i = 0 to length a - 1 do
+      r := f !r (unsafe_get a i)
+    done;
+    !r
+end
+
 module String = struct
-  open String
+  include String
 
   let fold_left f a x =
     Bytes.fold_left f a (Bytes.unsafe_of_string x)
@@ -87,7 +98,7 @@ module String = struct
 end
 
 module Seq = struct
-  open Seq
+  include Seq
 
   let uncons xs =
     match xs() with
