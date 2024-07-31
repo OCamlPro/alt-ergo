@@ -18,7 +18,7 @@
 (**************************************************************************)
 
 module List = struct
-  include List
+  open List
 
   let is_empty = function
     | [] -> true
@@ -55,10 +55,12 @@ module List = struct
         let accu, x = f accu x in
         aux accu (x :: l_accu) l in
     aux accu [] l
+
+  include List [@@@ocaml.warning "-32-33"]
 end
 
 module Bytes = struct
-  include Bytes
+  open Bytes
 
   let fold_left f x a =
     let r = ref x in
@@ -66,10 +68,12 @@ module Bytes = struct
       r := f !r (unsafe_get a i)
     done;
     !r
+
+  include Bytes [@@@ocaml.warning "-32-33"]
 end
 
 module String = struct
-  include String
+  open String
 
   let fold_left f a x =
     Bytes.fold_left f a (Bytes.unsafe_of_string x)
@@ -83,10 +87,12 @@ module String = struct
         false
       else aux (i + 1)
     in len_s >= len_pre && aux 0
+
+  include String [@@@ocaml.warning "-32-33"]
 end
 
 module Seq = struct
-  include Seq
+  open Seq
 
   let uncons xs =
     match xs() with
@@ -116,4 +122,6 @@ module Seq = struct
     | Nil, Cons (_, _)
     | Cons (_, _), Nil ->
       false
+
+  include Seq [@@@ocaml.warning "-32-33"]
 end

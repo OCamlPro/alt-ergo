@@ -12,12 +12,24 @@
 (*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
+(*     The Alt-Ergo theorem prover                                        *)
+(*                                                                        *)
+(*     Sylvain Conchon, Evelyne Contejean, Francois Bobot                 *)
+(*     Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout              *)
+(*                                                                        *)
+(*     CNRS - INRIA - Universite Paris Sud                                *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
 (*                                                                        *)
 (**************************************************************************)
 
-val mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
-(** Similar to [List.mem] but use a monomorphic comparison function. *)
+(** Lists utilies
+    This modules defines some helper functions on lists
+*)
+
+(** {3 Misc functions} *)
 
 val assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
 (** Similar to [List.assoc] but use a monomorphic comparison function. *)

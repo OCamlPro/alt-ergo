@@ -462,13 +462,14 @@ let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
     _use_fpa (theories)
   =
-  set_no_ac (not (My_list.mem Theories.equal Theories.AC theories));
+  set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_restricted restricted;
-  set_disable_adts (not (My_list.mem Theories.equal Theories.ADT theories));
+  set_disable_adts
+    (not (List.exists (Theories.equal Theories.ADT) theories));
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
   set_theory_preludes (Theories.preludes theories);
@@ -1316,7 +1317,7 @@ let parse_theory_opt =
 
   let inequalities_plugin =
     let load_inequalities_plugin debug path =
-      let debug = List.exists (My_list.mem Debug.equal Debug.Fm) debug in
+      let debug = List.exists (List.exists (Debug.equal Debug.Fm)) debug in
       match path with
       | "" ->
         if debug then

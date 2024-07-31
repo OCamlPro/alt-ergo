@@ -322,7 +322,7 @@ module Shostak (X : ALIEN) = struct
      | Record (lbs, ty) ->
       Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
      | Access (lb, e', _) when compare_mine x e' = 0 ->
-      Compat.List.assoc Uid.equal lb s
+      My_list.assoc Uid.equal lb s
      | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
      | Other _ -> e
   *)
@@ -359,7 +359,7 @@ module Shostak (X : ALIEN) = struct
 
 
   let orient_solved p v pb =
-    if My_list.mem X.equal p (X.leaves v) then raise Util.Unsolvable;
+    if List.exists (X.equal p) (X.leaves v) then raise Util.Unsolvable;
     Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
   let solve r1 r2 (pb : _ Sig.solve_pb) =

@@ -12,13 +12,18 @@
 (*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
+(*     The Alt-Ergo theorem prover                                        *)
+(*                                                                        *)
+(*     Sylvain Conchon, Evelyne Contejean, Francois Bobot                 *)
+(*     Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout              *)
+(*                                                                        *)
+(*     CNRS - INRIA - Universite Paris Sud                                *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
 (*                                                                        *)
 (**************************************************************************)
-
-let rec mem eq x = function
-  | [] -> false
-  | a::l -> eq a x || mem eq x l
 
 let rec assoc eq x = function
   | [] -> raise Not_found

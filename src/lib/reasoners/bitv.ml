@@ -558,7 +558,7 @@ module Shostak(X : ALIEN) = struct
     exception Valid
 
     let add elt l =
-      if My_list.mem (equal_signed X.equal) elt l then l else elt::l
+      if List.exists (equal_signed X.equal elt) l then l else elt::l
 
     let get_vars = List.fold_left
         (fun ac st -> match st.bv with
@@ -602,8 +602,8 @@ module Shostak(X : ALIEN) = struct
       let f_add (s1,s2) acc =
         let b =
           equal_simple_term X.equal s1 s2
-          || My_list.mem equal_pair_simple_term (s1,s2) acc
-          || My_list.mem equal_pair_simple_term (s2,s1) acc
+          || List.exists (equal_pair_simple_term (s1,s2)) acc
+          || List.exists (equal_pair_simple_term (s2,s1)) acc
         in
         if b then acc else (s1,s2)::acc
       in let rec f_rec acc = function
