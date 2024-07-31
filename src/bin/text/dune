@@ -3,14 +3,12 @@
 
 (executable
   (name gen_link_flags)
-  (public_name gen_link_flags)
-  (package alt-ergo)
   (libraries unix fmt stdcompat)
   (modules gen_link_flags))
 
 (rule
  (with-stdout-to link_flags.dune
-  (run %{bin:gen_link_flags} %{env:LINK_MODE=dynamic} %{ocaml-config:system})))
+  (run ./gen_link_flags.exe %{env:LINK_MODE=dynamic} %{ocaml-config:system})))
 
 (executable
   (name Main_text)
