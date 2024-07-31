@@ -177,7 +177,7 @@ module Domains = struct
     match X.type_info r with
     | Tadt (name, args) ->
       let cases = Ty.type_body name args in
-      Lists.is_empty @@ Ty.assoc_destrs c cases
+      Compat.List.is_empty @@ Ty.assoc_destrs c cases
     | _ -> assert false
 
   let internal_update r nd t =
@@ -267,7 +267,7 @@ let calc_destructor d e uf =
   let r, ex = Uf.find uf e in
   match Th.embed r with
   | Constr { c_args; _ } ->
-    begin match Lists.assoc Uid.equal d c_args with
+    begin match My_list.assoc Uid.equal d c_args with
       | v -> Some (v, ex)
       | exception Not_found -> None
     end
@@ -511,7 +511,7 @@ let build_constr_eq r c =
            a nonempty context only for interpreted semantic values
            of the `Arith` and `Records` theories. The semantic
            values `cons` never involves such values. *)
-        assert (Lists.is_empty ctx);
+        assert (Compat.List.is_empty ctx);
         let eq = Shostak.L.(view @@ mk_eq r r') in
         Some (eq, E.mk_constr c xs ty)
 
@@ -674,7 +674,7 @@ let split_domain ~for_model env uf =
        a nonempty context only for interpreted semantic values
        of the `Arith` and `Records` theories. The semantic
        values `cons` never involves such values. *)
-    assert (Lists.is_empty ctx);
+    assert (Compat.List.is_empty ctx);
     Some (LR.mkv_eq r nr)
   else
     None

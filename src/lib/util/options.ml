@@ -622,16 +622,16 @@ module Time = struct
   let u = ref 0.0
 
   let start () =
-    u := MyUnix.cur_time()
+    u := My_unix.cur_time()
 
   let value () =
-    MyUnix.cur_time () -. !u
+    My_unix.cur_time () -. !u
 
-  let set_timeout tm = MyUnix.set_timeout tm
+  let set_timeout tm = My_unix.set_timeout tm
 
   let unset_timeout () =
     if Float.compare (get_timelimit ()) 0. <> 0 then
-      MyUnix.unset_timeout ()
+      My_unix.unset_timeout ()
 
   let with_timeout tm f =
     Fun.protect

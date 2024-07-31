@@ -1597,7 +1597,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
   let trigger = E.mk_trigger ~user:from_user ~hyp content in
-  if not in_theory && not (Lists.is_empty trigger.semantic) then
+  if not in_theory && not (Compat.List.is_empty trigger.semantic) then
     Errors.typing_error ThSemTriggerError loc;
   E.clean_trigger ~in_theory name trigger
 

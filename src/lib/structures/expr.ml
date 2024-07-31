@@ -1348,7 +1348,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
     if Var.Map.is_empty s_t && Ty.M.is_empty s_ty then t
     else
       let s = s_t, s_ty in
-      let xs', same = Lists.apply (apply_subst_aux s) xs in
+      let xs', same = My_list.apply (apply_subst_aux s) xs in
       let ty' = Ty.apply_subst s_ty ty in
       (*invariant: we are sure that the subst will impact xs or ty
          (or inside a lemma/skolem or let) *)

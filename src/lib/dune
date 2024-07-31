@@ -24,7 +24,6 @@
     dune-build-info
     alt_ergo_prelude
     fmt
-    stdcompat
   )
   (preprocess
     (pps
@@ -59,10 +58,9 @@
     Parsed Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral ModelMap Id Uid Objective Literal
     ; util
-    Emap Gc_debug Hconsing Hstring Heap Lists Loc
-    MyUnix Numbers Uqueue
-    Options Timers Util Vec Version Steps Printer My_zip
-    Theories Nest
+    Emap Gc_debug Hconsing Hstring Heap Loc Numbers Uqueue
+    Options Timers Util Vec Version Steps Printer
+    My_zip My_unix My_list Theories Nest Compat
   )
 
  (js_of_ocaml

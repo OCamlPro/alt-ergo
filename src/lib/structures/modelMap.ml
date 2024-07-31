@@ -93,7 +93,7 @@ module Constraints = struct
     let rec aux ppf seq =
       match seq () with
       | Seq.Nil -> ()
-      | Cons ((ret_val, _), seq) when Stdcompat.Seq.is_empty seq ->
+      | Cons ((ret_val, _), seq) when Compat.Seq.is_empty seq ->
         Fmt.pf ppf "%a" Expr.pp_smtlib ret_val
       | Cons ((ret_val, fiber), seq) ->
         Fmt.pf ppf "(@[<hv>ite %a@ %a@ %a)@]"

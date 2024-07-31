@@ -91,7 +91,6 @@
    `(alt-ergo plugins)` site to be picked up by Alt-Ergo (#1049).
  - Add a release workflow (#827)
  - Mark the dune.inc file as linguist-generated to avoid huge diffs (#830)
- - Use stdcompat to support older OCaml versions (#866)
  - Use GitHub Actions badges in the README (#882)
  - Use `dune build @check` to build the project (#887)
  - Enable warnings as errors on the CI (#888)

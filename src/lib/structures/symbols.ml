@@ -145,7 +145,7 @@ let var s = Var s
 let int i = Int (Z.of_string i)
 let bitv s =
   let biv =
-    Stdcompat.String.fold_left (fun n c ->
+    Compat.String.fold_left (fun n c ->
         match c with
         | '0' -> Z.(n lsl 1)
         | '1' -> Z.((n lsl 1) lor ~$1)

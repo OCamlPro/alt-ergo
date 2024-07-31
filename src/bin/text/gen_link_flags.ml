@@ -5,12 +5,21 @@ let pkgconfig lib archive =
 
 let pp_lib ppf s = Fmt.pf ppf "-cclib %s" s
 
+let starts_with ~prefix s =
+  let open String in
+  let len_s = length s
+  and len_pre = length prefix in
+  let rec aux i =
+    if i = len_pre then true
+    else if unsafe_get s i <> unsafe_get prefix i then false
+    else aux (i + 1)
+  in len_s >= len_pre && aux 0
+
 let () =
   let mixed_flags = ["-noautolink"] in
   (* Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
      https://github.com/ocaml/ocaml/issues/12562 *)
   let mixed_cclib = [
-    "-lstdcompat_stubs";
     "-lcamlzip";
     "-lzarith";
     "-lcamlstr";
@@ -32,7 +41,7 @@ let () =
                   List.map
                     (fun lib ->
                        let archive =
-                         if Stdcompat.String.starts_with
+                         if starts_with
                              ~prefix:"lib" lib then
                            Fmt.str "%s.a" lib
                          else

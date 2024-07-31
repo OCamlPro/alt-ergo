@@ -273,9 +273,9 @@ let to_Z_opt r = to_Z_opt_aux Z.zero r
 let int2bv_const n z =
   [ { bv = Cte (Z.extract z 0 n) ; sz = n } ]
 
-let equal_abstract eq = Stdcompat.List.equal (equal_simple_term eq)
+let equal_abstract eq = Compat.List.equal (equal_simple_term eq)
 
-let compare_abstract cmp = Stdcompat.List.compare (compare_simple_term cmp)
+let compare_abstract cmp = Compat.List.compare (compare_simple_term cmp)
 
 let hash_abstract hash =
   List.fold_left (fun acc e -> acc + 19 * hash_simple_term hash e) 19
@@ -557,7 +557,8 @@ module Shostak(X : ALIEN) = struct
 
     exception Valid
 
-    let add elt l = if Lists.mem (equal_signed X.equal) elt l then l else elt::l
+    let add elt l =
+      if List.exists (equal_signed X.equal elt) l then l else elt::l
 
     let get_vars = List.fold_left
         (fun ac st -> match st.bv with
@@ -601,8 +602,8 @@ module Shostak(X : ALIEN) = struct
       let f_add (s1,s2) acc =
         let b =
           equal_simple_term X.equal s1 s2
-          || Lists.mem equal_pair_simple_term (s1,s2) acc
-          || Lists.mem equal_pair_simple_term (s2,s1) acc
+          || List.exists (equal_pair_simple_term (s1,s2)) acc
+          || List.exists (equal_pair_simple_term (s2,s1)) acc
         in
         if b then acc else (s1,s2)::acc
       in let rec f_rec acc = function
@@ -1035,7 +1036,7 @@ module Shostak(X : ALIEN) = struct
            a B-variable has been split into parts below.
            Therefore we assert that the variable is indeed a B variable and that
            list of substitutions for B variables is not empty. *)
-        assert (not (Lists.is_empty (fst subs)));
+        assert (not (Compat.List.is_empty (fst subs)));
         assert (
           match st.bv.defn with Droot { sorte = B; _ } -> true | _ -> false
         );
@@ -1163,17 +1164,17 @@ module Shostak(X : ALIEN) = struct
         |[] -> bw
         |(t,vls)::r ->
           let (vls', csub) = uniforme_slice vls in
-          if Lists.is_empty csub then slice_rec ((t,vls')::bw) r
+          if Compat.List.is_empty csub then slice_rec ((t,vls')::bw) r
           else
             begin
               let _bw = apply_subs csub bw in
               let _fw = apply_subs csub r in
               let eq (_, l1) (_, l2) =
                 (* [apply_subs] does not change the left-hand sides *)
-                Stdcompat.List.(equal (equal (equal_alpha_term equal_tvar)))
+                Compat.List.(equal (equal (equal_alpha_term equal_tvar)))
                   l1 l2
               in
-              if Stdcompat.List.equal eq _bw bw
+              if Compat.List.equal eq _bw bw
               then slice_rec ((t,vls')::bw) _fw
               else slice_rec [] (_bw@((t,vls'):: _fw))
             end
@@ -1243,7 +1244,7 @@ module Shostak(X : ALIEN) = struct
       else begin
         let varsU = get_vars u in
         let varsV = get_vars v in
-        if Lists.is_empty varsU && Lists.is_empty varsV
+        if Compat.List.is_empty varsU && Compat.List.is_empty varsV
         then raise Util.Unsolvable
         else
           begin
@@ -1451,7 +1452,7 @@ module Shostak(X : ALIEN) = struct
       Printer.print_dbg
         ~module_name:"Bitv" ~function_name:"subst"
         "subst %a |-> %a in %a" X.print x X.print subs print biv;
-    if Lists.is_empty biv then is_mine biv
+    if Compat.List.is_empty biv then is_mine biv
     else
       let r = Canon.normalize (subst_rec x subs biv) in
       is_mine r
@@ -1484,7 +1485,7 @@ module Shostak(X : ALIEN) = struct
 
   let abstract_selectors v acc =
     let acc, v =
-      Stdcompat.List.fold_left_map (fun acc bv ->
+      Compat.List.fold_left_map (fun acc bv ->
           match bv with
           | { bv = Cte _ ; _ } -> acc, bv
           | { bv = Other { negated ; value = r } ; sz } ->

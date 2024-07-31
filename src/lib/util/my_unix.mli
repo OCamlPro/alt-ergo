@@ -25,45 +25,19 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Lists utilies
+(** Unix wrapper
 
-    This modules defines some helper functions on lists
+    This module defines some wrappers around Unix function,
+    in order to more easily maintain compatibility when
+    compiling to javascript.
 *)
 
-(** {3 Misc functions} *)
+val cur_time : unit -> float
+(** Returns the current time. **)
 
-val is_empty : 'a list -> bool
-(** Is the list empty? *)
+val set_timeout : float -> unit
+(** Set a timeout, using Unix timers.
+    No-op on javascript. *)
 
-val mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
-(** Similar to [List.mem] but use a monomorphic comparison function. *)
-
-val assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
-(** Similar to [List.assoc] but use a monomorphic comparison function. *)
-
-val assoc_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
-(** Similar to [List.assoc_opt] but use a monomorphic comparison function. *)
-
-val mem_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> bool
-(** Similar to [List.mem_assoc] but use a monomorphic comparison function. *)
-
-val remove_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> ('a * 'b) list
-(** Similar to [List.remove_assoc] but use a monomorphic comparison function. *)
-
-val apply : ('a -> 'a) -> 'a list -> 'a list * bool
-(** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
-    same such that: (1) "same" is true if and only if a_i == a_i for
-    each i; and (2) if same is true, then the resulting list is
-    physically equal to the argument **)
-
-val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
-(** similar to function apply, but the elements of the list are
-    couples **)
-
-val try_map : ('a -> 'b option) -> 'a list -> 'b list option
-(** [try_map f l] is similar to [List.map f l] but the function [f]
-    may fail and the iterator shortcuts the computation. *)
-
-val is_sorted : ('a -> 'a -> int) -> 'a list -> bool
-(** [is_sorted cmp l] checks that [l] is sorted for the comparison function
-    [cmp]. *)
+val unset_timeout : unit -> unit
+(** Unset the previously set timer. *)

@@ -3,7 +3,7 @@
 
 (executable
   (name gen_link_flags)
-  (libraries unix fmt stdcompat)
+  (libraries unix fmt)
   (modules gen_link_flags))
 
 (rule

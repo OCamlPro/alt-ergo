@@ -69,7 +69,7 @@ let formats_list =
 
 let format_parser s =
   try
-    Ok (Lists.assoc String.equal s formats_list)
+    Ok (My_list.assoc String.equal s formats_list)
   with
     Not_found ->
     Error (`Msg (Format.sprintf
@@ -462,13 +462,14 @@ let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
     _use_fpa (theories)
   =
-  set_no_ac (not (Lists.mem Theories.equal Theories.AC theories));
+  set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_restricted restricted;
-  set_disable_adts (not (Lists.mem Theories.equal Theories.ADT theories));
+  set_disable_adts
+    (not (List.exists (Theories.equal Theories.ADT) theories));
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
   set_theory_preludes (Theories.preludes theories);
@@ -680,13 +681,13 @@ let parse_execution_opt =
       else
         match Config.lookup_prelude p with
         | Some p' ->
-          begin if Stdcompat.String.starts_with ~prefix:"b-set-theory" p then
+          begin if Compat.String.starts_with ~prefix:"b-set-theory" p then
               Printer.print_wrn ~header:true
                 "Support for the B set theory is deprecated since version \
                  2.5.0 and may be removed in a future version. If you are \
                  actively using it, please make yourself known to the Alt-Ergo \
                  developers by writing to <alt-ergo@ocamlpro.com>."
-            else if Stdcompat.String.starts_with ~prefix:"fpa-theory" p then
+            else if Compat.String.starts_with ~prefix:"fpa-theory" p then
               Printer.print_wrn ~header:true
                 "@[Support for the FPA theory has been integrated as a \
                  builtin theory prelude in version 2.5.0 and is enabled \
@@ -1316,7 +1317,7 @@ let parse_theory_opt =
 
   let inequalities_plugin =
     let load_inequalities_plugin debug path =
-      let debug = List.exists (Lists.mem Debug.equal Debug.Fm) debug in
+      let debug = List.exists (List.exists (Debug.equal Debug.Fm)) debug in
       match path with
       | "" ->
         if debug then

@@ -25,60 +25,38 @@
 (*                                                                        *)
 (**************************************************************************)
 
-let is_empty = function
-  | [] -> true
-  | _ -> false
+(** Lists utilies
+    This modules defines some helper functions on lists
+*)
 
-let rec mem eq x = function
-  | [] -> false
-  | a::l -> eq a x || mem eq x l
+(** {3 Misc functions} *)
 
-let rec assoc eq x = function
-  | [] -> raise Not_found
-  | (a,b)::l -> if eq a x then b else assoc eq x l
+val assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
+(** Similar to [List.assoc] but use a monomorphic comparison function. *)
 
-let rec assoc_opt eq x = function
-    [] -> None
-  | (a,b)::l -> if eq a x then Some b else assoc_opt eq x l
+val assoc_opt : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
+(** Similar to [List.assoc_opt] but use a monomorphic comparison function. *)
 
-let rec mem_assoc eq x = function
-  | [] -> false
-  | (a, _) :: l -> eq a x || mem_assoc eq x l
+val mem_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> bool
+(** Similar to [List.mem_assoc] but use a monomorphic comparison function. *)
 
-let rec remove_assoc eq x = function
-  | [] -> []
-  | (a, _ as pair) :: l ->
-    if eq a x then l else pair :: remove_assoc eq x l
+val remove_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> ('a * 'b) list
+(** Similar to [List.remove_assoc] but use a monomorphic comparison function. *)
 
-let apply f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) a ->
-         let b = f a in
-         b :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
+val apply : ('a -> 'a) -> 'a list -> 'a list * bool
+(** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
+    same such that: (1) "same" is true if and only if a_i == a_i for
+    each i; and (2) if same is true, then the resulting list is
+    physically equal to the argument **)
 
-let apply_right f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) (v, a) ->
-         let b = f a in
-         (v, b) :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
+val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
+(** similar to function apply, but the elements of the list are
+    couples **)
 
-let rec try_map f l =
-  match l with
-  | [] -> Some []
-  | x :: xs ->
-    Option.bind (f x) @@ fun y ->
-    Option.bind (try_map f xs) @@ fun ys ->
-    Some (y :: ys)
+val try_map : ('a -> 'b option) -> 'a list -> 'b list option
+(** [try_map f l] is similar to [List.map f l] but the function [f]
+    may fail and the iterator shortcuts the computation. *)
 
-let rec is_sorted cmp l =
-  match l with
-  | x :: y :: xs -> cmp x y <= 0 && is_sorted cmp (y :: xs)
-  | [_] | [] -> true
+val is_sorted : ('a -> 'a -> int) -> 'a list -> bool
+(** [is_sorted cmp l] checks that [l] is sorted for the comparison function
+    [cmp]. *)
