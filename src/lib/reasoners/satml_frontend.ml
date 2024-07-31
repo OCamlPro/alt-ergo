@@ -1387,7 +1387,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Ty.Tbool ->
       begin
         let bmodel = SAT.boolean_model env.satml in
-        Stdcompat.List.find_map
+        Compat.List.find_map
           (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
              let tlit = Shostak.Literal.make (LTerm t) in
              if Shostak.Literal.equal tlit lit then

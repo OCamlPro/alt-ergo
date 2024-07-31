@@ -25,60 +25,19 @@
 (*                                                                        *)
 (**************************************************************************)
 
-let is_empty = function
-  | [] -> true
-  | _ -> false
+(** Unix wrapper
 
-let rec mem eq x = function
-  | [] -> false
-  | a::l -> eq a x || mem eq x l
+    This module defines some wrappers around Unix function,
+    in order to more easily maintain compatibility when
+    compiling to javascript.
+*)
 
-let rec assoc eq x = function
-  | [] -> raise Not_found
-  | (a,b)::l -> if eq a x then b else assoc eq x l
+val cur_time : unit -> float
+(** Returns the current time. **)
 
-let rec assoc_opt eq x = function
-    [] -> None
-  | (a,b)::l -> if eq a x then Some b else assoc_opt eq x l
+val set_timeout : float -> unit
+(** Set a timeout, using Unix timers.
+    No-op on javascript. *)
 
-let rec mem_assoc eq x = function
-  | [] -> false
-  | (a, _) :: l -> eq a x || mem_assoc eq x l
-
-let rec remove_assoc eq x = function
-  | [] -> []
-  | (a, _ as pair) :: l ->
-    if eq a x then l else pair :: remove_assoc eq x l
-
-let apply f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) a ->
-         let b = f a in
-         b :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
-
-let apply_right f l =
-  let res, same =
-    List.fold_left
-      (fun (acc, same) (v, a) ->
-         let b = f a in
-         (v, b) :: acc, same && a == b
-      )([], true) l
-  in
-  (if same then l else List.rev res), same
-
-let rec try_map f l =
-  match l with
-  | [] -> Some []
-  | x :: xs ->
-    Option.bind (f x) @@ fun y ->
-    Option.bind (try_map f xs) @@ fun ys ->
-    Some (y :: ys)
-
-let rec is_sorted cmp l =
-  match l with
-  | x :: y :: xs -> cmp x y <= 0 && is_sorted cmp (y :: xs)
-  | [_] | [] -> true
+val unset_timeout : unit -> unit
+(** Unset the previously set timer. *)

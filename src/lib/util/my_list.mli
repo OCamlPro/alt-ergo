@@ -12,28 +12,9 @@
 (*                                                                        *)
 (*     ---------------------------------------------------------------    *)
 (*                                                                        *)
-(*     The Alt-Ergo theorem prover                                        *)
-(*                                                                        *)
-(*     Sylvain Conchon, Evelyne Contejean, Francois Bobot                 *)
-(*     Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout              *)
-(*                                                                        *)
-(*     CNRS - INRIA - Universite Paris Sud                                *)
-(*                                                                        *)
-(*     ---------------------------------------------------------------    *)
-(*                                                                        *)
 (*     More details can be found in the directory licenses/               *)
 (*                                                                        *)
 (**************************************************************************)
-
-(** Lists utilies
-
-    This modules defines some helper functions on lists
-*)
-
-(** {3 Misc functions} *)
-
-val is_empty : 'a list -> bool
-(** Is the list empty? *)
 
 val mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
 (** Similar to [List.mem] but use a monomorphic comparison function. *)

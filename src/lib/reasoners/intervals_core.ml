@@ -190,7 +190,7 @@ module Make(Ex : Explanations) : Core with type explanation = Ex.t = struct
         | NonEmpty i :: u' ->
           if not (Ex.is_empty ex) then Fmt.pf ppf "!%a U@ " Ex.pp ex;
           Interval.pp ppf i;
-          if not (Lists.is_empty u') then Fmt.pf ppf " U@ ";
+          if not (Compat.List.is_empty u') then Fmt.pf ppf " U@ ";
           loop ex u'
       in
       begin match u with
@@ -302,24 +302,24 @@ module Make(Ex : Explanations) : Core with type explanation = Ex.t = struct
         (* i1 is entirely after i2; skip i2
            NB: we never need (i1 U s1) to be a strict subset of s2 because i2 is
            in (i2 U s2) but not in (i1 U s1), making the inclusion strict. *)
-        match Stdcompat.Seq.uncons s2 with
+        match Compat.Seq.uncons s2 with
         | None -> false
         | Some (i2', s2') -> subset_seq ~strict:false i1 s1 i2' s2'
       else
         i2.lb <= i1.lb && i1.ub <= i2.ub &&
         let strict = strict && i1.lb = i2.lb && i1.ub = i2.ub in
-        match Stdcompat.Seq.uncons s1 with
-        | None -> not strict || Option.is_some (Stdcompat.Seq.uncons s2)
+        match Compat.Seq.uncons s1 with
+        | None -> not strict || Option.is_some (Compat.Seq.uncons s2)
         | Some (i1', s1') ->
           if strict then
-            match Stdcompat.Seq.uncons s2 with
+            match Compat.Seq.uncons s2 with
             | None -> false
             | Some (i2', s2') -> subset_seq ~strict:true i1' s1' i2' s2'
           else
             subset_seq ~strict:false i1' s1' i2 s2
 
     let subset ?(strict = false) u1 u2 =
-      let uncons = Stdcompat.Seq.uncons in
+      let uncons = Compat.Seq.uncons in
       match uncons (to_seq u1), uncons (to_seq u2) with
       | None, None -> not strict
       | Some _, None -> false
@@ -328,7 +328,7 @@ module Make(Ex : Explanations) : Core with type explanation = Ex.t = struct
         subset_seq ~strict i1 s1 i2 s2
 
     let equal u1 u2 =
-      Stdcompat.Seq.equal Interval.equal (to_seq u1) (to_seq u2)
+      Compat.Seq.equal Interval.equal (to_seq u1) (to_seq u2)
 
     let checked ((glb, u', gub) as u) =
       let rec loop ex = function
@@ -461,7 +461,7 @@ module Make(Ex : Explanations) : Core with type explanation = Ex.t = struct
         | Empty ex :: u' -> Empty ex :: loop u'
         | NonEmpty i :: u' ->
           let f_i = { lb = f i.lb ; ub = f i.ub } in
-          if Lists.is_empty u' then f_gub := Some f_i.ub;
+          if Compat.List.is_empty u' then f_gub := Some f_i.ub;
           NonEmpty f_i :: loop u'
       in
       let f_u = loop u in

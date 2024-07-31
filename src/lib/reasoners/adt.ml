@@ -416,7 +416,9 @@ module Shostak (X : ALIEN) = struct
   let to_model_term r =
     match embed r with
     | Constr { c_name; c_ty; c_args } ->
-      let args = Lists.try_map (fun (_, arg) -> X.to_model_term arg) c_args in
+      let args =
+        My_list.try_map (fun (_, arg) -> X.to_model_term arg) c_args
+      in
       Option.bind args @@ fun args ->
       Some (E.mk_constr c_name args c_ty)
 

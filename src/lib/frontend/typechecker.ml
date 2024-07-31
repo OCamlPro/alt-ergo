@@ -142,7 +142,7 @@ module Types = struct
       let ty = Ty.text ty_vars (Uid.of_string id) in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Enum l ->
-      if not (Lists.is_empty ty_vars) then
+      if not (Compat.List.is_empty ty_vars) then
         Errors.typing_error (PolymorphicEnum id) loc;
       let body = List.map (fun constr -> Uid.of_string constr, []) l in
       let ty = Ty.t_adt ~body:(Some body) (Uid.of_string id) [] in
@@ -202,7 +202,7 @@ module Types = struct
         Errors.typing_error WrongNumberOfLabels loc;
       List.iter
         (fun (lb, _) ->
-           try ignore (Lists.assoc Uid.equal lb l)
+           try ignore (My_list.assoc Uid.equal lb l)
            with Not_found ->
              Errors.typing_error
                (WrongLabel((Hstring.make @@ Uid.show lb), ty)) loc) lbs;
@@ -869,7 +869,7 @@ let rec type_term ?(call_from_type_form=false) env f =
           begin
             try
               TTdot(te, Hstring.make a),
-              Lists.assoc Uid.equal (Uid.of_string a) lbs
+              My_list.assoc Uid.equal (Uid.of_string a) lbs
             with Not_found ->
               let g = Uid.show g in
               Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc

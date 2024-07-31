@@ -994,7 +994,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             List.fold_left (add_aux env) ma l
 
           | OR l  ->
-            match Stdcompat.List.find_opt (fun e ->
+            match List.find_opt (fun e ->
                 let p = get_atom_or_proxy e env.proxies in
                 p.is_true) l
             with
@@ -1865,7 +1865,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let is_sat env =
     env.next_dec_guard = Vec.size env.increm_guards &&
     Option.is_none env.next_optimized_split &&
-    Lists.is_empty env.next_decisions &&
+    Compat.List.is_empty env.next_decisions &&
     Option.is_none env.next_split && (
       nb_assigns env = nb_vars env ||
       (Options.get_cdcl_tableaux_inst () &&

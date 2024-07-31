@@ -278,7 +278,7 @@ let main () =
                 ~format:(Some (Filename.extension filename)))
         in
         let preludes = Options.get_preludes () in
-        Stdcompat.Seq.append theory_preludes @@
+        Compat.Seq.append theory_preludes @@
         I.parse_files ~filename ~preludes
       with
       | Util.Timeout ->

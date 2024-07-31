@@ -120,7 +120,7 @@ module Shostak (X : ALIEN) = struct
     | Access (a, x, ty) ->
       begin
         match normalize x with
-        | Record (lbs, _) -> Lists.assoc Uid.equal a lbs
+        | Record (lbs, _) -> My_list.assoc Uid.equal a lbs
         | x_n -> Access (a, x_n, ty)
       end
     | Other _ -> v
@@ -252,7 +252,7 @@ module Shostak (X : ALIEN) = struct
   let abstract_access field e ty acc =
     let xe = is_mine e in
     let abs_right_xe, acc =
-      try Lists.assoc X.equal xe acc, acc
+      try My_list.assoc X.equal xe acc, acc
       with Not_found ->
         let left_abs_xe2, acc = X.abstract_selectors xe acc in
         match X.type_info left_abs_xe2 with
@@ -322,7 +322,7 @@ module Shostak (X : ALIEN) = struct
      | Record (lbs, ty) ->
       Record (List.map (fun (n,e') -> n, subst_access x s e') lbs, ty)
      | Access (lb, e', _) when compare_mine x e' = 0 ->
-      Lists.assoc Uid.equal lb s
+      Compat.List.assoc Uid.equal lb s
      | Access (lb', e', ty) -> Access (lb', subst_access x s e', ty)
      | Other _ -> e
   *)
@@ -359,7 +359,7 @@ module Shostak (X : ALIEN) = struct
 
 
   let orient_solved p v pb =
-    if Lists.mem X.equal p (X.leaves v) then raise Util.Unsolvable;
+    if My_list.mem X.equal p (X.leaves v) then raise Util.Unsolvable;
     Sig.{ pb with sbt = (p,v) :: pb.sbt }
 
   let solve r1 r2 (pb : _ Sig.solve_pb) =
@@ -407,7 +407,7 @@ module Shostak (X : ALIEN) = struct
         (* We can ignore the names of fields as they are inlined in the
            type [ty] of the record. *)
         let l =
-          Lists.try_map (fun (_name, rf) -> to_model_term rf) fields
+          My_list.try_map (fun (_name, rf) -> to_model_term rf) fields
         in
         Option.bind l @@ fun l ->
         Some (E.mk_term Sy.(Op Record) l ty)

@@ -1,0 +1,120 @@
+(**************************************************************************)
+(*                                                                        *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                 *)
+(*     Copyright (C) --- OCamlPro SAS                                     *)
+(*                                                                        *)
+(*     This file is distributed under the terms of OCamlPro               *)
+(*     Non-Commercial Purpose License, version 1.                         *)
+(*                                                                        *)
+(*     As an exception, Alt-Ergo Club members at the Gold level can       *)
+(*     use this file under the terms of the Apache Software License       *)
+(*     version 2.0.                                                       *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
+(*                                 OCaml                                  *)
+(*                                                                        *)
+(*             Xavier Leroy, projet Cristal, INRIA Rocquencourt           *)
+(*                                                                        *)
+(*   Copyright 1996 Institut National de Recherche en Informatique et     *)
+(*     en Automatique.                                                    *)
+(*                                                                        *)
+(*   All rights reserved.  This file is distributed under the terms of    *)
+(*   the GNU Lesser General Public License version 2.1, with the          *)
+(*   special exception on linking described in the file LICENSE.          *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
+(*     More details can be found in the directory licenses/               *)
+(*                                                                        *)
+(**************************************************************************)
+
+module List = struct
+  open List
+
+  let is_empty = function
+    | [] -> true
+    | _ -> false
+
+  let rec equal eq l1 l2 =
+    match l1, l2 with
+    | [], [] -> true
+    | [], _::_ | _::_, [] -> false
+    | a1::l1, a2::l2 -> eq a1 a2 && equal eq l1 l2
+
+  let rec compare cmp l1 l2 =
+    match l1, l2 with
+    | [], [] -> 0
+    | [], _::_ -> -1
+    | _::_, [] -> 1
+    | a1::l1, a2::l2 ->
+      let c = cmp a1 a2 in
+      if c <> 0 then c
+      else compare cmp l1 l2
+
+  let rec find_map f = function
+    | [] -> None
+    | x :: l ->
+      begin match f x with
+        | Some _ as result -> result
+        | None -> find_map f l
+      end
+
+  let fold_left_map f accu l =
+    let rec aux accu l_accu = function
+      | [] -> accu, rev l_accu
+      | x :: l ->
+        let accu, x = f accu x in
+        aux accu (x :: l_accu) l in
+    aux accu [] l
+end
+
+module String = struct
+  open String
+
+  let fold_left f a x =
+    Bytes.fold_left f a (Bytes.unsafe_of_string x)
+
+  let starts_with ~prefix s =
+    let len_s = length s
+    and len_pre = length prefix in
+    let rec aux i =
+      if i = len_pre then true
+      else if not @@ Char.equal (unsafe_get s i) (unsafe_get prefix i) then
+        false
+      else aux (i + 1)
+    in len_s >= len_pre && aux 0
+end
+
+module Seq = struct
+  open Seq
+
+  let uncons xs =
+    match xs() with
+    | Cons (x, xs) ->
+      Some (x, xs)
+    | Nil ->
+      None
+
+  let is_empty xs =
+    match xs() with
+    | Nil ->
+      true
+    | Cons (_, _) ->
+      false
+
+  let rec append seq1 seq2 () =
+    match seq1() with
+    | Nil -> seq2()
+    | Cons (x, next) -> Cons (x, append next seq2)
+
+  let rec equal eq xs ys =
+    match xs(), ys() with
+    | Nil, Nil ->
+      true
+    | Cons (x, xs), Cons (y, ys) ->
+      eq x y && equal eq xs ys
+    | Nil, Cons (_, _)
+    | Cons (_, _), Nil ->
+      false
+end

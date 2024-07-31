@@ -1316,7 +1316,7 @@ let assume env uf la =
       let eqs, constraints, domain, int_domain =
         propagate_all eqs constraints domain int_domain
       in
-      if Options.get_debug_bitv () && not (Lists.is_empty eqs) then (
+      if Options.get_debug_bitv () && not (Compat.List.is_empty eqs) then (
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"assume"
           "bitlist domain: @[%a@]" Bitlist_domains.pp domain;

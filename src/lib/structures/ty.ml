@@ -200,7 +200,7 @@ let rec shorten ty =
   | Tvar { value = Some t'; _ } -> shorten t'
 
   | Text (l,s) ->
-    let l, same = Lists.apply shorten l in
+    let l, same = My_list.apply shorten l in
     if same then ty else Text(l,s)
 
   | Tfarray (t1,t2) ->
@@ -342,7 +342,7 @@ let apply_subst =
       (try M.find n s with Not_found -> ty)
 
     | Text (l,e) ->
-      let l, same = Lists.apply (apply_subst s) l in
+      let l, same = My_list.apply (apply_subst s) l in
       if same then ty else Text(l, e)
 
     | Tfarray (t1,t2) ->
@@ -351,8 +351,8 @@ let apply_subst =
       if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
 
     | Trecord r ->
-      let lbs,  same1 = Lists.apply_right (apply_subst s) r.lbs in
-      let args, same2 = Lists.apply (apply_subst s) r.args in
+      let lbs,  same1 = My_list.apply_right (apply_subst s) r.lbs in
+      let args, same2 = My_list.apply (apply_subst s) r.args in
       if same1 && same2 then ty
       else
         Trecord

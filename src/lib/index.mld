@@ -148,7 +148,7 @@ AltErgoLib.Util
 AltErgoLib.Heap
 AltErgoLib.Emap
 AltErgoLib.Hstring
-AltErgoLib.Lists
+AltErgoLib.Compat
 AltErgoLib.Gc_debug
 AltErgoLib.Timers
 AltErgoLib.Hconsing
