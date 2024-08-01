@@ -302,13 +302,13 @@ let negate_bitv : bitv -> bitv = List.map negate_solver_simple_term
 
 let extract_st i j { bv; sz } =
   if sz = j - i + 1 then
-    [ { bv ; sz } ]
+    { bv ; sz }
   else
     match bv with
-    | Cte b -> [{ bv = Cte (Z.extract b i (j - i + 1)); sz = j - i + 1 }]
-    | Other r -> [{ bv = Ext (r, sz, i, j) ; sz = j - i + 1 }]
+    | Cte b -> { bv = Cte (Z.extract b i (j - i + 1)); sz = j - i + 1 }
+    | Other r -> { bv = Ext (r, sz, i, j) ; sz = j - i + 1 }
     | Ext (r, sz, k, _) ->
-      [{ bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }]
+      { bv = Ext (r, sz, i + k, j + k) ; sz = j - i + 1 }
 
 (* extract [i..j] from a composition of size [size]
 
@@ -320,14 +320,37 @@ let rec extract size i j = function
     assert false
   | [ st ] ->
     assert (st.sz = size);
-    extract_st i j st
+    [ extract_st i j st ]
   | { sz; _ } :: sts when j < size - sz ->
     extract (size - sz) i j sts
   | ({ sz; _ } as st) :: _ when i >= size - sz ->
-    extract_st (i - (size - sz)) (j - (size - sz)) st
+    [ extract_st (i - (size - sz)) (j - (size - sz)) st ]
   | ({ sz; _ } as st) :: sts ->
-    extract_st 0 (j - (size - sz)) st @
+    extract_st 0 (j - (size - sz)) st ::
     extract (size - sz) i (size - sz - 1) sts
+
+(* [repeat n b] concatenates [n] copies of [b] *)
+let repeat n b =
+  assert (n > 0);
+  let rec loop b n acc =
+    if n = 0 then acc
+    else loop b (n - 1) (b @ acc)
+  in
+  loop b (n - 1) b
+
+(* [sign_extend n sts] is [concat (repeat n (sign sts)) sts]. *)
+let sign_extend n sts =
+  match n, sts with
+  | _, [] -> assert false
+  | 0, sts -> sts
+  | n, ({ sz; bv } as st) :: sts ->
+    match bv with
+    | Cte b ->
+      int2bv_const (n + sz) (Z.signed_extract b 0 sz) @ sts
+    | _ ->
+      List.rev_append
+        (repeat n [ extract_st (sz - 1) (sz - 1) st ])
+        (st :: sts)
 
 module type ALIEN = sig
   include Sig.X
@@ -348,7 +371,8 @@ module Shostak(X : ALIEN) = struct
     match sy with
     | Sy.Bitv _
     | Op (
-        Concat | Extract _ | BV2Nat
+        Concat | Extract _ | Sign_extend _ | Repeat _
+        | BV2Nat
         | BVnot | BVand | BVor | BVxor
         | BVadd | BVsub | BVmul | BVudiv | BVurem
         | BVshl | BVlshr)
@@ -371,6 +395,8 @@ module Shostak(X : ALIEN) = struct
       | Vother of 'a
       | Vextract of 'a * int * int
       | Vconcat of 'a * 'a
+      | Vsign_extend of int * 'a
+      | Vrepeat of int * 'a
       | Vnot of 'a
 
     type 'a view = { descr : 'a view_descr ; size : int }
@@ -381,6 +407,10 @@ module Shostak(X : ALIEN) = struct
         { descr = Vcte s; size }
       | { f = Op Concat; xs = [ t1; t2 ]; ty = Tbitv size; _ } ->
         { descr = Vconcat (t1, t2); size }
+      | { f = Op (Sign_extend n) ; xs = [ t ] ; ty = Tbitv size; _ } ->
+        { descr = Vsign_extend (n, t); size }
+      | { f = Op (Repeat n) ; xs = [ t ] ; ty = Tbitv size; _ } ->
+        { descr = Vrepeat (n, t) ; size }
       | { f = Op Extract (i, j); xs = [ t' ]; ty = Tbitv size; _ } ->
         assert (size = j - i + 1);
         { descr = Vextract (t', i, j); size }
@@ -463,6 +493,40 @@ module Shostak(X : ALIEN) = struct
           let+ u = vextract ~neg 0 (j - vv.size) vu
           and+ v = vextract ~neg i (vv.size - 1) vv
           in u @ v
+      | Vsign_extend (_, u) ->
+        let vu = view u in
+        if j < vu.size then
+          (* extraction from the original vector *)
+          vextract ~neg i j vu
+        else if i >= vu.size then
+          (* extraction from the repeated sign part *)
+          let+ sgn = vextract ~neg (vu.size - 1) (vu.size - 1) vu in
+          repeat size sgn
+        else
+          (* extraction from both repeated sign and original vector *)
+          let+ u = vextract ~neg i (vu.size - 1) vu in
+          sign_extend (j - vu.size + 1) u
+      | Vrepeat (_, u) ->
+        let vu = view u in
+        (* i = ib * vu.size + il
+           j = jb * vu.size + jl *)
+        let ib = i / vu.size and jb = j / vu.size in
+        let il = i mod vu.size and jl = j mod vu.size in
+        if ib = jb then (
+          (* extraction from within a single repetition *)
+          assert (il <= jl);
+          vextract ~neg il jl vu
+        ) else
+          (* extraction across consecutive repetitions *)
+          let+ u = vmake ~neg vu in
+          let suffix =
+            if il = 0 then []
+            else extract vu.size il (vu.size - 1) u
+          and prefix =
+            if jl = 0 then []
+            else extract vu.size 0 jl u
+          in
+          prefix @ repeat (jb - ib - 1) u @ suffix
       | Vnot t ->
         vextract ~neg:(not neg) i j (view t)
     and vmake ~neg tv ctx =
@@ -473,6 +537,16 @@ module Shostak(X : ALIEN) = struct
       | Vother t -> other ~neg t tv.size ctx
       | Vextract (t', i, j) ->
         run ctx @@ vextract ~neg i j (view t')
+      | Vsign_extend (n, t) ->
+        run ctx @@
+        let+ r = make ~neg t in
+        let sz = tv.size - n in
+        let b = extract sz (sz - 1) (sz - 1) r in
+        repeat n b @ r
+      | Vrepeat (n, t) ->
+        run ctx @@
+        let+ r = make ~neg t in
+        repeat n r
       | Vconcat (t1, t2) ->
         run ctx @@
         let+ t1 = make ~neg t1 and+ t2 = make ~neg t2 in
@@ -1478,7 +1552,7 @@ module Shostak(X : ALIEN) = struct
 *)
   let fully_interpreted sb =
     match sb with
-    | Sy.Op (Concat | Extract _ | BVnot) -> true
+    | Sy.Op (Concat | Extract _ | Sign_extend _ | Repeat _ | BVnot) -> true
     | _ -> false
 
   let term_extract _ = None, false
