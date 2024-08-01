@@ -497,7 +497,7 @@ module DomainMap
     (** The type of per-variable domains. *)
 
     val find : key -> t -> domain
-    (** Find the domain associatd with the given key.
+    (** Find the domain associated with the given key.
 
         @raise Not_found if there is no domain associated with the key. *)
 
@@ -593,7 +593,7 @@ struct
   end
 
   let edit ~notify ~default t =
-    SX.iter notify t .changed;
+    SX.iter notify t.changed;
 
     { Ephemeral.domains = EX.edit ~default t.domains
     ; notify }
