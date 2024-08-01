@@ -17,6 +17,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+[@@@ocaml.warning "-32-33"]
+
 module List = struct
   open List
 
@@ -56,7 +58,7 @@ module List = struct
         aux accu (x :: l_accu) l in
     aux accu [] l
 
-  include List [@@@ocaml.warning "-32-33"]
+  include List
 end
 
 module Bytes = struct
@@ -69,7 +71,7 @@ module Bytes = struct
     done;
     !r
 
-  include Bytes [@@@ocaml.warning "-32-33"]
+  include Bytes
 end
 
 module String = struct
@@ -88,7 +90,7 @@ module String = struct
       else aux (i + 1)
     in len_s >= len_pre && aux 0
 
-  include String [@@@ocaml.warning "-32-33"]
+  include String
 end
 
 module Seq = struct
@@ -123,5 +125,5 @@ module Seq = struct
     | Cons (_, _), Nil ->
       false
 
-  include Seq [@@@ocaml.warning "-32-33"]
+  include Seq
 end
