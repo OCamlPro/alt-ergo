@@ -426,8 +426,8 @@ module type EphemeralDomainMap = sig
 
     val set_domain : t -> domain -> unit
     (** Intersect the domain associated with this entry and the provided
-        [domain]. The explanation [ex] justifies that the [domain] applies to
-        the entry's key.
+        [domain]. The domain must contain sufficient justifications
+        for it to apply to the entry's key.
 
         @raise Domain.Inconsistent if the intersection is empty. *)
   end
@@ -436,11 +436,11 @@ module type EphemeralDomainMap = sig
   (** [entry t k] returns the [handle] associated with [k].
 
       There is a unique entry associated with each key [k] that is created
-      on-the-fly when [handle t k] is called for the first time.
+      on-the-fly when [entry t k] is called for the first time.
 
       The domain associated with the entry is initialized from the underlying
       persistent domain the first time it is accessed, and updated with
-      [update]. *)
+      [set_domain]. *)
 end
 
 module type OrderedType = sig
@@ -618,8 +618,11 @@ module BinRel(X : OrderedType)(W : OrderedType) : sig
   (** [add x w r] adds the tuple [(x, w)] to the relation. *)
 
   val add_many : X.t -> W.Set.t -> t -> t
+  (** [add_many x ws t] adds the tuples [(x, w)] for each [w] in [ws]. *)
 
   val range : X.t -> t -> W.Set.t
+  (** [range x t] returns all the watches [w] such that [(x, w)] is in the
+      relation. *)
 
   val remove_dom : X.t -> t -> t
   (** [remove_dom x r] removes all tuples of the form [(x, _)] from the
@@ -994,9 +997,9 @@ struct
     DMC.needs_propagation t.composites ||
     not (W.Set.is_empty t.triggers)
 
-  let variables { variables ; _ } = variables
+  let[@inline] variables { variables ; _ } = variables
 
-  let parents { parents ; _ } = parents
+  let[@inline] parents { parents ; _ } = parents
 
   let track c parents =
     C.fold (fun a t ->

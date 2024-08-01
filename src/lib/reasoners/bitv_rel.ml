@@ -147,11 +147,13 @@ module BitvNormalForm = struct
       chopped off, and an offset with all the constant bits. We consider the
       variable part atomic if it is a single non-negated variable.
 
-      Assuming [x] and [y] are bit-vectors of width 2:
+      Assuming [x] and [y] are bit-vectors of width 2, the normal form of:
       - [101 @ x] is [x + 10100] ;
       - [10 @ x @ 01] is [(x @ 00) + 100001] ;
-      - [10 @ y<0, 0> @ y<1, 1>] is [(y<0, 0> @ y<1>1) + 1000] ;
-      - [10 @ x @ 11 @ y] is [(x @ 00 @ y) + 10001100] *)
+      - [10 @ y<0, 0> @ y<1, 1>] is [(y<0, 0> @ y<1, 1>) + 1000] ;
+      - [10 @ x @ 11 @ y] is [(x @ 00 @ y) + 10001100]
+
+      ([x<i, j>] denotes the extraction from bit [i] to [j]) *)
 
   type constant = Z.t
 
