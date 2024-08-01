@@ -25,6 +25,7 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
+          - windows-latest
         ocaml-compiler:
           - 4.08.1
           - 4.14.2
@@ -32,6 +33,9 @@ jobs:
         exclude:
           # No longer seems to be available
           - os: macos-latest
+            ocaml-compiler: 4.08.1
+          # Opam 2.2 requires at least OCaml 4.13
+          - os: windows-latest
             ocaml-compiler: 4.08.1
 
     runs-on: ${{ matrix.os }}
