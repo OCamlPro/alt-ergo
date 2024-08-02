@@ -317,14 +317,14 @@ module type EphemeralDomainMap = sig
   type key
   (** The type of keys in the ephemeral map. *)
 
-  type domain
-  (** The type of domains. *)
-
   module Entry : sig
     type t
     (** A mutable entry associated with a given key. Can be used to access and
         update the associated domain imperatively. A single (physical) entry is
         associated with a given key. *)
+
+    type domain
+    (** The type of domains associated with an entry. *)
 
     val domain : t -> domain
     (** Return the domain associated with this entry. *)
@@ -335,8 +335,7 @@ module type EphemeralDomainMap = sig
 
         {b Note}: if you need to tighten an existing domain, this must be done
         explicitely by accessing the current domain through [domain] before
-        calling [set_domain].  The {!HandleNotations} module provides an
-        [update] function that does this. *)
+        calling [set_domain].  See {!MakEntryNotation}. *)
   end
 
   val entry : t -> key -> Entry.t
@@ -349,7 +348,16 @@ module type EphemeralDomainMap = sig
 
       The domain associated with the entry is initialized from the underlying
       persistent domain (or the [default] function provided to [edit]) the first
-      time it is accessed, and updated with [set_domain]. *)
+      time it is accessed, and updated with [set_domain] or [update]. *)
+
+  val ( !! ) : Entry.t -> Entry.domain
+  (** Return the domain associated with this entry. *)
+
+  val update : ex:Explanation.t -> Entry.t -> Entry.domain -> unit
+  (** [update ~ex e d] updates the domain associated with [e], intersecting it
+      with [d]. The explanation [ex] is added to [d].
+
+      @raises Domain.Inconsistent if the domains are incompatible. *)
 end
 
 module DomainMap
@@ -395,7 +403,7 @@ module DomainMap
         associated with any variable has changed. *)
 
     module Ephemeral : EphemeralDomainMap
-      with type key = key and type domain = domain
+      with type key = key and type Entry.domain = domain
 
     val edit :
       notify:(key -> unit) -> default:(key -> domain) -> t -> Ephemeral.t
@@ -448,9 +456,10 @@ struct
 
   module Ephemeral = struct
     type key = X.t
-    type domain = D.t
 
     module Entry = struct
+      type domain = D.t
+
       type t =
         { key : X.t
         ; notify : X.t -> unit
@@ -490,6 +499,14 @@ struct
         in
         X.Table.replace t.entries x entry;
         entry
+
+    let ( !! ) = Entry.domain
+
+    let update ~ex entry domain =
+      let current = !!entry in
+      let domain = D.intersect current (D.add_explanation ~ex domain) in
+      if not (D.equal domain current) then
+        Entry.set_domain entry domain
   end
 
   let edit ~notify ~default { domains ; changed } =
@@ -778,12 +795,12 @@ module Domains_make
 
     module Ephemeral : sig
       include EphemeralDomainMap
-        with type key = X.r and type domain = D.t
+        with type key = X.r and type Entry.domain = D.t
 
       (** The [Canon] module first computes the canonical representative in an
           [Uf.t] instance before accessing the ephemeral map. *)
       module Canon : EphemeralDomainMap
-        with type key = X.r and type domain = D.t
+        with type key = X.r and type Entry.domain = D.t
 
       val canon : Uf.t -> t -> Canon.t
       (** Wraps the ephemeral domain map to first compute the canonical
@@ -996,9 +1013,10 @@ struct
 
   module Ephemeral = struct
     type key = X.r
-    type domain = D.t
 
     module Entry = struct
+      type domain = D.t
+
       type t =
         | Constant of NF.constant
         | Atom of DMA.Ephemeral.Entry.t * NF.constant
@@ -1037,11 +1055,20 @@ struct
       | NF.Composite (c, o) ->
         Entry.Composite (DMC.Ephemeral.entry t.composites c, o)
 
+    let ( !! ) = Entry.domain
+
+    let update ~ex entry domain =
+      let current = !!entry in
+      let domain = D.intersect current (D.add_explanation ~ex domain) in
+      if not (D.equal domain current) then
+        Entry.set_domain entry domain
+
     module Canon = struct
       type key = X.r
-      type domain = D.t
 
       module Entry = struct
+        type domain = D.t
+
         type t =
           { repr : X.r
           ; entry : Entry.t
@@ -1071,6 +1098,14 @@ struct
             ; explanation }
           in
           HX.replace t.cache r h; h
+
+      let ( !! ) = Entry.domain
+
+      let update ~ex entry domain =
+        let current = !!entry in
+        let domain = D.intersect current (D.add_explanation ~ex domain) in
+        if not (D.equal domain current) then
+          Entry.set_domain entry domain
     end
 
     let canon uf domains =
@@ -1109,17 +1144,4 @@ struct
     ; composite_watches = t.Ephemeral.composite_watches
     ; parents = t.Ephemeral.parents
     ; triggers = W.Set.empty }
-end
-
-module HandleNotations
-    (D : Domain)
-    (E : EphemeralDomainMap with type domain = D.t) =
-struct
-  let (!!) = E.Entry.domain
-
-  let update ~ex entry domain =
-    let current = E.Entry.domain entry in
-    let domain = D.intersect current (D.add_explanation ~ex domain) in
-    if not (D.equal domain current) then
-      E.Entry.set_domain entry domain
 end

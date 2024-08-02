@@ -612,9 +612,7 @@ end = struct
 
   let propagate_binop ~ex sz dx op dy dz =
     let norm bl = Bitlist.extract bl 0 sz in
-    let open
-      Rel_utils.HandleNotations(Bitlist_domain)(Bitlist_domains.Ephemeral.Canon)
-    in
+    let open Bitlist_domains.Ephemeral.Canon in
     match op with
     | Band ->
       update ~ex dx @@ norm @@ Bitlist.logand !!dy !!dz;
@@ -666,11 +664,7 @@ end = struct
       ()
 
   let propagate_interval_binop ~ex sz dr op dx dy =
-    let open
-      Rel_utils.HandleNotations
-        (Interval_domain)
-        (Interval_domains.Ephemeral.Canon)
-    in
+    let open Interval_domains.Ephemeral.Canon in
     let norm i = Intervals.Int.extract i ~ofs:0 ~len:sz in
     match op with
     | Badd ->
@@ -726,10 +720,7 @@ end = struct
     Intervals.Int.of_bounds ~ex:(Ex.union ex ex') inf  Unbounded
 
   let propagate_less_than ~ex ~strict dx dy =
-    let open
-      Rel_utils.HandleNotations
-        (Interval_domain)
-        (Interval_domains.Ephemeral.Canon) in
+    let open Interval_domains.Ephemeral.Canon in
     (* Add justification prior to calling [update] to ensure that it is only
        stored on the appropriate bound. *)
     update ~ex:Ex.empty dx (less_than_sup ~ex ~strict !!dy);
@@ -1224,9 +1215,7 @@ let finite_upper_bound ~size:sz = function
    five most-significant bits, denoted [00110???]. Therefore, a bit-vector bl =
    [0??1???0] can be refined into [00110??0]. *)
 let constrain_bitlist_from_interval ~size:sz bv int =
-  let
-    open Rel_utils.HandleNotations(Bitlist_domain)(Bitlist_domains.Ephemeral)
-  in
+  let open Bitlist_domains.Ephemeral in
   let inf, inf_ex = Intervals.Int.lower_bound int in
   let inf = finite_lower_bound inf in
   let sup, sup_ex = Intervals.Int.upper_bound int in
@@ -1256,9 +1245,7 @@ let constrain_bitlist_from_interval ~size:sz bv int =
    [Bitlist.decrease_upper_bound] on all the constituent intervals of an union;
    see the documentation of these functions for details. *)
 let constrain_interval_from_bitlist ~size:sz int bv =
-  let
-    open Rel_utils.HandleNotations(Interval_domain)(Interval_domains.Ephemeral)
-  in
+  let open Interval_domains.Ephemeral in
   let ex = Bitlist.explanation bv in
   (* Handy wrapper around [of_complement] *)
   let remove ~ex i2 i1 =
@@ -1315,16 +1302,9 @@ let iter_parents a f t =
 
 let propagate_bitlist queue vars dom =
   let structural_propagation r =
-    let open
-      Rel_utils.HandleNotations
-        (Bitlist_domain)
-        (Bitlist_domains.Ephemeral.Canon)
-    in
-    let get r = !!(Bitlist_domains.Ephemeral.Canon.entry dom r) in
-    let update r d =
-      update ~ex:Explanation.empty
-        (Bitlist_domains.Ephemeral.Canon.entry dom r) d
-    in
+    let open Bitlist_domains.Ephemeral.Canon in
+    let get r = !!(entry dom r) in
+    let update r d = update ~ex:Explanation.empty (entry dom r) d in
     if X.is_a_leaf r then
       iter_parents r (fun p ->
           if X.is_a_leaf p then
@@ -1369,16 +1349,9 @@ let propagate_bitlist queue vars dom =
 
 let propagate_intervals queue vars dom =
   let structural_propagation r =
-    let open
-      Rel_utils.HandleNotations
-        (Interval_domain)
-        (Interval_domains.Ephemeral.Canon)
-    in
-    let get r = !!(Interval_domains.Ephemeral.Canon.entry dom r) in
-    let update r d =
-      update ~ex:Explanation.empty
-        (Interval_domains.Ephemeral.Canon.entry dom r) d
-    in
+    let open Interval_domains.Ephemeral.Canon in
+    let get r = !!(entry dom r) in
+    let update r d = update ~ex:Explanation.empty (entry dom r) d in
     if X.is_a_leaf r then
       iter_parents r (fun p ->
           if X.is_a_leaf p then
@@ -1509,7 +1482,7 @@ let rec propagate_all uf eqs bdom idom =
         HX.replace shostak_candidates r ();
         constrain_interval_from_bitlist ~size:(bitwidth r)
           Interval_domains.Ephemeral.(entry idom r)
-          Bitlist_domains.Ephemeral.(Entry.domain (entry bdom r))
+          Bitlist_domains.Ephemeral.(!!(entry bdom r))
       ) bitlist_changed;
     HX.clear bitlist_changed;
     propagate_intervals interval_queue ivars uf_idom;
@@ -1522,7 +1495,7 @@ let rec propagate_all uf eqs bdom idom =
       HX.iter (fun r () ->
           constrain_bitlist_from_interval ~size:(bitwidth r)
             Bitlist_domains.Ephemeral.(entry bdom r)
-            Interval_domains.Ephemeral.(Entry.domain (entry idom r))
+            Interval_domains.Ephemeral.(!!(entry idom r))
         ) interval_changed;
       HX.clear interval_changed;
       propagate_bitlist bitlist_queue bvars uf_bdom;
@@ -1532,7 +1505,7 @@ let rec propagate_all uf eqs bdom idom =
           HX.replace shostak_candidates r ();
           constrain_interval_from_bitlist ~size:(bitwidth r)
             Interval_domains.Ephemeral.(entry idom r)
-            Bitlist_domains.Ephemeral.(Entry.domain (entry bdom r))
+            Bitlist_domains.Ephemeral.(!!(entry bdom r))
         ) bitlist_changed;
       HX.clear bitlist_changed;
       propagate_intervals interval_queue ivars uf_idom;
@@ -1541,7 +1514,7 @@ let rec propagate_all uf eqs bdom idom =
 
     let eqs =
       HX.fold (fun r () acc ->
-          let d = Bitlist_domains.Ephemeral.(Entry.domain (entry bdom r)) in
+          let d = Bitlist_domains.Ephemeral.(!!(entry bdom r)) in
           add_eqs acc (Shostak.Bitv.embed r) (bitwidth r) d
         ) shostak_candidates eqs
     in
