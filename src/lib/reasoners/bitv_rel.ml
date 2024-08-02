@@ -135,8 +135,8 @@ type 'a explained = { value : 'a ; explanation : Explanation.t }
 
 let explained ~ex value = { value ; explanation = ex }
 
-module ExplainedOrdered(V : Rel_utils.OrderedType) :
-  Rel_utils.OrderedType with type t = V.t explained =
+module ExplainedOrdered(V : Domains_intf.OrderedType) :
+  Domains_intf.OrderedType with type t = V.t explained =
 struct
   type t = V.t explained
 
@@ -193,8 +193,6 @@ module BitvNormalForm = struct
     | Constant of constant
     | Atom of Atom.t * constant
     | Composite of Composite.t * constant
-
-  type expr = X.r
 
   let normal_form r =
     let rec loop cte rev_acc = function
@@ -1456,11 +1454,11 @@ let rec propagate_all uf eqs bdom idom =
     let bitlist_changed = HX.create 17 in
     let interval_changed = HX.create 17 in
     let bitlist_events =
-      { Rel_utils.evt_atomic_change = touch bitlist_changed bitlist_queue
+      { Domains_intf.evt_atomic_change = touch bitlist_changed bitlist_queue
       ; evt_composite_change = touch bitlist_changed bitlist_queue
       ; evt_watch_trigger = touch_c bitlist_queue }
     and interval_events =
-      { Rel_utils.evt_atomic_change = touch interval_changed interval_queue
+      { Domains_intf.evt_atomic_change = touch interval_changed interval_queue
       ; evt_composite_change = touch interval_changed interval_queue
       ; evt_watch_trigger = touch_c interval_queue }
     in
