@@ -111,6 +111,24 @@ module Interval_domain = struct
 
   let sub_offset d cte =
     Intervals.Int.sub d (Intervals.Int.of_bounds (Closed cte) (Closed cte))
+
+  type var = X.r
+
+  type atom = X.r
+
+  let map_signed f { Bitv.value; negated } sz =
+    if negated then lognot sz (f value) else f value
+
+  let map_domain f r =
+    List.fold_left (fun ival { Bitv.bv; sz } ->
+        let ival = Intervals.Int.scale Z.(~$1 lsl sz) ival in
+        Intervals.Int.add ival @@
+        match bv with
+        | Bitv.Cte z -> constant z
+        | Other s -> map_signed f s sz
+        | Ext (s, sz', i, j) ->
+          Intervals.Int.extract (map_signed f s sz') ~ofs:i ~len:(j - i + 1)
+      ) (constant Z.zero) (Shostak.Bitv.embed r)
 end
 
 type 'a explained = { value : 'a ; explanation : Explanation.t }
@@ -157,14 +175,24 @@ module BitvNormalForm = struct
 
   type constant = Z.t
 
-  type atom = X.r
+  module Atom = Rel_utils.XComparable
 
-  type composite = X.r
+  let type_info = X.type_info
+
+  module Composite = Rel_utils.XComparable
+
+  let fold_composite f r acc =
+    List.fold_left (fun acc { Bitv.bv ; _ } ->
+        match bv with
+        | Bitv.Cte _ -> acc
+        | Other { value ; _ } -> f value acc
+        | Ext ({ value ; _ }, _, _, _) -> f value acc
+      ) acc (Shostak.Bitv.embed r)
 
   type t =
     | Constant of constant
-    | Atom of atom * constant
-    | Composite of composite * constant
+    | Atom of Atom.t * constant
+    | Composite of Composite.t * constant
 
   type expr = X.r
 
@@ -481,55 +509,10 @@ module EC = ExplainedOrdered(struct
     module Map = Map.Make(Constraint)
   end)
 
-module CompositeIntervalDomain = struct
-  type var = X.r
-
-  type atom = X.r
-
-  type domain = Interval_domain.t
-
-  let map_signed f { Bitv.value; negated } sz =
-    if negated then Interval_domain.lognot sz (f value) else f value
-
-  let map_domain f r =
-    List.fold_left (fun ival { Bitv.bv; sz } ->
-        let ival = Intervals.Int.scale Z.(~$1 lsl sz) ival in
-        Intervals.Int.add ival @@
-        match bv with
-        | Bitv.Cte z -> Interval_domain.constant z
-        | Other s -> map_signed f s sz
-        | Ext (s, sz', i, j) ->
-          Intervals.Int.extract (map_signed f s sz') ~ofs:i ~len:(j - i + 1)
-      ) (Interval_domain.constant Z.zero) (Shostak.Bitv.embed r)
-end
-
-module XComposite = struct
-  include Rel_utils.XComparable
-
-  type atom = X.r
-
-  let fold f r acc =
-    List.fold_left (fun acc { Bitv.bv ; _ } ->
-        match bv with
-        | Bitv.Cte _ -> acc
-        | Other { value ; _ } -> f value acc
-        | Ext ({ value ; _ }, _, _, _) -> f value acc
-      ) acc (Shostak.Bitv.embed r)
-end
-
-module XAtom = struct
-  include Rel_utils.XComparable
-
-  let type_info = X.type_info
-end
-
 module Interval_domains =
   Rel_utils.Domains_make
-    (Interval_domain)
-    (XAtom)
-    (XComposite)
-    (CompositeIntervalDomain)
     (BitvNormalForm)
+    (Interval_domain)
     (EC)
 
 module Interval_domains_uf =
@@ -561,14 +544,10 @@ module Bitlist_domain = struct
   let sub_offset d cte =
     let cte = Bitlist.exact cte Explanation.empty in
     Bitlist.logand d (Bitlist.lognot cte)
-end
 
-module CompositeBitlistDomain = struct
   type var = X.r
 
   type atom = X.r
-
-  type domain = Bitlist_domain.t
 
   let map_signed sz f { Bitv.value; negated } =
     let bl = f value in
@@ -579,20 +558,17 @@ module CompositeBitlistDomain = struct
         let open Bitlist in
         bl lsl sz lor
         match bv with
-        | Bitv.Cte z -> extract (Bitlist_domain.constant z) 0 sz
+        | Bitv.Cte z -> extract (constant z) 0 sz
         | Other r -> map_signed sz f r
         | Ext (r, r_sz, i, j) ->
           extract (map_signed r_sz f r) i (j - i + 1)
-      ) (Bitlist_domain.constant Z.zero) (Shostak.Bitv.embed r)
+      ) (constant Z.zero) (Shostak.Bitv.embed r)
 end
 
 module Bitlist_domains =
   Rel_utils.Domains_make
-    (Bitlist_domain)
-    (XAtom)
-    (XComposite)
-    (CompositeBitlistDomain)
     (BitvNormalForm)
+    (Bitlist_domain)
     (EC)
 
 module Bitlist_domains_uf =
@@ -1349,7 +1325,7 @@ let propagate_bitlist queue vars dom =
           if X.is_a_leaf p then
             assert (X.equal r p)
           else
-            update p (CompositeBitlistDomain.map_domain get p)
+            update p (Bitlist_domain.map_domain get p)
         ) vars
     else
       let iter_signed sz f { Bitv.value; negated } bl =
@@ -1398,7 +1374,7 @@ let propagate_intervals queue vars dom =
           if X.is_a_leaf p then
             assert (X.equal r p)
           else
-            update p (CompositeIntervalDomain.map_domain get p)
+            update p (Interval_domain.map_domain get p)
         ) vars
     else
       let iter_signed f { Bitv.value; negated } sz int =

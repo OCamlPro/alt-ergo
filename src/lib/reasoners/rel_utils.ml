@@ -294,6 +294,16 @@ module type Domain = sig
 
   val sub_offset : t -> constant -> t
   (** [sub_offset ofs d] removes the offset [ofs] from domain [d]. *)
+
+  type var
+  (** The type of (composite) variable this domain applies to. *)
+
+  type atom
+  (** The type of atomic variables this domain applies to. *)
+
+  val map_domain : (atom -> t) -> var -> t
+  (** [map_domain f c] constructs a domain for a composite variable [c] from a
+      function [f] that returns the domain of an atom. *)
 end
 
 module type EphemeralDomainMap = sig
@@ -687,19 +697,25 @@ module type NormalForm = sig
   type constant
   (** The type of constant values. *)
 
-  type atom
-  (** The type of atomic variables that cannot be decomposed further. *)
+  module Atom : ComparableType
+  (** Atomic variables cannot be decomposed further. *)
 
-  type composite
-  (** The type of composite variables that are obtained through a combination of
+  val type_info : Atom.t -> Ty.t
+  (** [type_info a] returns the type of atomic variable [x]. *)
+
+  module Composite : ComparableType
+  (** Composite variables are obtained through a combination of
       atomic variables (e.g. a multi-variate polynomial). *)
+
+  val fold_composite : (Atom.t -> 'a -> 'a) -> Composite.t -> 'a -> 'a
+  (** [fold_composite f c acc] folds [f] over all the atoms that make up [c]. *)
 
   type t =
     | Constant of constant
     (** A constant value. *)
-    | Atom of atom * constant
+    | Atom of Atom.t * constant
     (** An atomic variable with a constant offset. *)
-    | Composite of composite * constant
+    | Composite of Composite.t * constant
     (** A composite variable with a constant offset. *)
   (** The type of normal forms. *)
 
@@ -708,37 +724,6 @@ module type NormalForm = sig
 
   val normal_form : expr -> t
   (** [normal_form e] computes the normal form of expression [e]. *)
-end
-
-module type CompositeType = sig
-  (** Extension of the [ComparableType] signature for composite types, i.e.
-      types that are built up from a collection of smaller components. *)
-
-  include ComparableType
-
-  type atom
-  (** The type of atoms that build up a composite value. *)
-
-  val fold : (atom -> 'a -> 'a) -> t -> 'a -> 'a
-  (** [fold f c acc] folds [f] over all the atoms that make up [c]. *)
-end
-
-module type CompositeDomain = sig
-  (** Module signature to build a domain for a composite type from the domain of
-      its component atoms. *)
-
-  type var
-  (** The type of (composite) variables. *)
-
-  type atom
-  (** The type of atomic variables. *)
-
-  type domain
-  (** The type of domains we are building. *)
-
-  val map_domain : (atom -> domain) -> var -> domain
-  (** [map_domain f c] constructs a domain for [c] from a function [f] that
-      returns the domain of an atom. *)
 end
 
 type ('a, 'c, 'w) events =
@@ -751,29 +736,12 @@ type ('a, 'c, 'w) events =
   }
 (** Handlers for events used by the ephemeral interface. *)
 
-module type VariableType = sig
-  (** Extension of the [ComparableType] signature for variables that have an
-      associated type. *)
-
-  include ComparableType
-
-  val type_info : t -> Ty.t
-  (** [type_info x] returns the type of variable [x]. *)
-end
-
 module Domains_make
-    (D : Domain)
-    (A : VariableType)
-    (C : CompositeType with type atom = A.t)
-    (CD : CompositeDomain
-     with type var = C.t
-      and type atom = A.t
-      and type domain = D.t)
-    (NF : NormalForm
-     with type atom = A.t
-      and type composite = C.t
-      and type constant = D.constant
-      and type expr = X.r)
+    (NF : NormalForm with type expr = X.r)
+    (D : Domain
+     with type var = NF.Composite.t
+      and type atom = NF.Atom.t
+      and type constant = NF.constant)
     (W : OrderedType)
   : sig
     include Uf.GlobalDomain
@@ -801,10 +769,10 @@ module Domains_make
     (** Returns [true] if the domains needs propagation, i.e. if any variable's
         domain has changed. *)
 
-    val variables : t -> A.Set.t
+    val variables : t -> NF.Atom.Set.t
     (** Returns the set of atomic variables that are currently being tracked. *)
 
-    val parents : t -> C.Set.t A.Map.t
+    val parents : t -> NF.Composite.Set.t NF.Atom.Map.t
     (** Returns a map from atomic variables to all the composite variables that
         contain them and are currently being tracked. *)
 
@@ -812,7 +780,8 @@ module Domains_make
       with type key = X.r
        and type domain = D.t
 
-    val edit : events:(A.t, C.t, W.t) events -> t -> Ephemeral.t
+    val edit :
+      events:(NF.Atom.t, NF.Composite.t, W.t) events -> t -> Ephemeral.t
     (** [edit ~events t] returns an ephemeral copy of the domains for edition.
 
         The [events] argument is used to notify the caller about domain changes
@@ -827,6 +796,9 @@ module Domains_make
   end
 =
 struct
+  module A = NF.Atom
+  module C = NF.Composite
+
   module DMA = DomainMap(A)(D)
   module DMC = DomainMap(C)(D)
 
@@ -902,7 +874,7 @@ struct
   let[@inline] parents { parents ; _ } = parents
 
   let track c parents =
-    C.fold (fun a t ->
+    NF.fold_composite (fun a t ->
         A.Map.update a (function
             | Some cs -> Some (C.Set.add c cs)
             | None -> Some (C.Set.singleton c)
@@ -910,7 +882,7 @@ struct
       ) c parents
 
   let untrack c parents =
-    C.fold (fun a t ->
+    NF.fold_composite (fun a t ->
         A.Map.update a (function
             | Some cs ->
               let cs = C.Set.remove c cs in
@@ -927,13 +899,13 @@ struct
     | Composite (c, _) ->
       { t with parents = track c t.parents }
 
-  let default_atom a = D.unknown (A.type_info a)
+  let default_atom a = D.unknown (NF.type_info a)
 
   let find_or_default_atom a t =
     try DMA.find a t.atoms
     with Not_found -> default_atom a
 
-  let default_composite c = CD.map_domain default_atom c
+  let default_composite c = D.map_domain default_atom c
 
   let find_or_default_composite c t =
     try DMC.find c t.composites
