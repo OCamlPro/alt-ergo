@@ -515,11 +515,6 @@ module Interval_domains =
     (Interval_domain)
     (EC)
 
-module Interval_domains_uf =
-  Rel_utils.UfHandle
-    (Interval_domain)
-    (Interval_domains.Ephemeral)
-
 module Bitlist_domain = struct
   (* Note: these functions are not in [Bitlist] proper in order to avoid a
      (direct) dependency from [Bitlist] to the [Shostak] module. *)
@@ -571,11 +566,6 @@ module Bitlist_domains =
     (Bitlist_domain)
     (EC)
 
-module Bitlist_domains_uf =
-  Rel_utils.UfHandle
-    (Bitlist_domain)
-    (Bitlist_domains.Ephemeral)
-
 (** The ['c acts] type is used to register new facts and constraints in
     [Propagator.simplify]. *)
 type 'c acts =
@@ -608,20 +598,23 @@ module Propagator : sig
       facts/constraints but keep the existing constraint (usually a bad idea),
       return [false] instead. *)
 
-  val propagate_bitlist : Bitlist_domains_uf.t -> ex:Ex.t -> t -> unit
+  val propagate_bitlist :
+    Bitlist_domains.Ephemeral.Canon.t -> ex:Ex.t -> t -> unit
   (** [propagate dom ~ex t] propagates the constraint [t] in domain [dom].
 
       The explanation [ex] justifies that the constraint [t] applies, and must
       be added to any domain that gets updated during propagation. *)
 
   val propagate_interval :
-    Interval_domains_uf.t -> ex:Ex.t -> t -> unit
+    Interval_domains.Ephemeral.Canon.t -> ex:Ex.t -> t -> unit
 end = struct
   include Constraint
 
   let propagate_binop ~ex sz dx op dy dz =
     let norm bl = Bitlist.extract bl 0 sz in
-    let open Rel_utils.HandleNotations(Bitlist_domain)(Bitlist_domains_uf) in
+    let open
+      Rel_utils.HandleNotations(Bitlist_domain)(Bitlist_domains.Ephemeral.Canon)
+    in
     match op with
     | Band ->
       update ~ex dx @@ norm @@ Bitlist.logand !!dy !!dz;
@@ -673,7 +666,11 @@ end = struct
       ()
 
   let propagate_interval_binop ~ex sz dr op dx dy =
-    let open Rel_utils.HandleNotations(Interval_domain)(Interval_domains_uf) in
+    let open
+      Rel_utils.HandleNotations
+        (Interval_domain)
+        (Interval_domains.Ephemeral.Canon)
+    in
     let norm i = Intervals.Int.extract i ~ofs:0 ~len:sz in
     match op with
     | Badd ->
@@ -701,14 +698,14 @@ end = struct
       ()
 
   let propagate_fun_t ~ex dom r f =
-    let get r = Bitlist_domains_uf.entry dom r in
+    let get r = Bitlist_domains.Ephemeral.Canon.entry dom r in
     match f with
     | Fbinop (op, x, y) ->
       let n = bitwidth r in
       propagate_binop ~ex n (get r) op (get x) (get y)
 
   let propagate_interval_fun_t ~ex dom r f =
-    let get r = Interval_domains_uf.entry dom r in
+    let get r = Interval_domains.Ephemeral.Canon.entry dom r in
     match f with
     | Fbinop (op, x, y) ->
       let sz = bitwidth r in
@@ -729,7 +726,10 @@ end = struct
     Intervals.Int.of_bounds ~ex:(Ex.union ex ex') inf  Unbounded
 
   let propagate_less_than ~ex ~strict dx dy =
-    let open Rel_utils.HandleNotations(Interval_domain)(Interval_domains_uf) in
+    let open
+      Rel_utils.HandleNotations
+        (Interval_domain)
+        (Interval_domains.Ephemeral.Canon) in
     (* Add justification prior to calling [update] to ensure that it is only
        stored on the appropriate bound. *)
     update ~ex:Ex.empty dx (less_than_sup ~ex ~strict !!dy);
@@ -743,13 +743,13 @@ end = struct
       propagate_less_than ~ex ~strict:true dy dx
 
   let propagate_rel_t ~ex dom r =
-    let get r = Bitlist_domains_uf.entry dom r in
+    let get r = Bitlist_domains.Ephemeral.Canon.entry dom r in
     match r with
     | Rbinrel (op, x, y) ->
       propagate_binrel ~ex op (get x) (get y)
 
   let propagate_interval_rel_t ~ex dom r =
-    let get r = Interval_domains_uf.entry dom r in
+    let get r = Interval_domains.Ephemeral.Canon.entry dom r in
     match r with
     | Rbinrel (op, x, y) ->
       propagate_interval_binrel ~ex op (get x) (get y)
@@ -1315,10 +1315,15 @@ let iter_parents a f t =
 
 let propagate_bitlist queue vars dom =
   let structural_propagation r =
-    let open Rel_utils.HandleNotations(Bitlist_domain)(Bitlist_domains_uf) in
-    let get r = !!(Bitlist_domains_uf.entry dom r) in
+    let open
+      Rel_utils.HandleNotations
+        (Bitlist_domain)
+        (Bitlist_domains.Ephemeral.Canon)
+    in
+    let get r = !!(Bitlist_domains.Ephemeral.Canon.entry dom r) in
     let update r d =
-      update ~ex:Explanation.empty (Bitlist_domains_uf.entry dom r) d
+      update ~ex:Explanation.empty
+        (Bitlist_domains.Ephemeral.Canon.entry dom r) d
     in
     if X.is_a_leaf r then
       iter_parents r (fun p ->
@@ -1364,10 +1369,15 @@ let propagate_bitlist queue vars dom =
 
 let propagate_intervals queue vars dom =
   let structural_propagation r =
-    let open Rel_utils.HandleNotations(Interval_domain)(Interval_domains_uf) in
-    let get r = !!(Interval_domains_uf.entry dom r) in
+    let open
+      Rel_utils.HandleNotations
+        (Interval_domain)
+        (Interval_domains.Ephemeral.Canon)
+    in
+    let get r = !!(Interval_domains.Ephemeral.Canon.entry dom r) in
     let update r d =
-      update ~ex:Explanation.empty (Interval_domains_uf.entry dom r) d
+      update ~ex:Explanation.empty
+        (Interval_domains.Ephemeral.Canon.entry dom r) d
     in
     if X.is_a_leaf r then
       iter_parents r (fun p ->
@@ -1487,8 +1497,8 @@ let rec propagate_all uf eqs bdom idom =
     let bdom = Bitlist_domains.edit ~events:bitlist_events bdom in
     let idom = Interval_domains.edit ~events:interval_events idom in
 
-    let uf_bdom = Bitlist_domains_uf.wrap uf bdom in
-    let uf_idom = Interval_domains_uf.wrap uf idom in
+    let uf_bdom = Bitlist_domains.Ephemeral.canon uf bdom in
+    let uf_idom = Interval_domains.Ephemeral.canon uf idom in
 
     (* First, we propagate the pending constraints to both domains. Changes in
        the bitlist domain are used to shrink the interval domains. *)

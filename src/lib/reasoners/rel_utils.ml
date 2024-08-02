@@ -776,9 +776,23 @@ module Domains_make
     (** Returns a map from atomic variables to all the composite variables that
         contain them and are currently being tracked. *)
 
-    module Ephemeral : EphemeralDomainMap
-      with type key = X.r
-       and type domain = D.t
+    module Ephemeral : sig
+      include EphemeralDomainMap
+        with type key = X.r and type domain = D.t
+
+      (** The [Canon] module first computes the canonical representative in an
+          [Uf.t] instance before accessing the ephemeral map. *)
+      module Canon : EphemeralDomainMap
+        with type key = X.r and type domain = D.t
+
+      val canon : Uf.t -> t -> Canon.t
+      (** Wraps the ephemeral domain map to first compute the canonical
+          representative in the current union-find environment prior to
+          accessing the ephemeral map.
+
+          {b Note}: The canonical map shares the same mutable space with the
+          original map. *)
+    end
 
     val edit :
       events:(NF.Atom.t, NF.Composite.t, W.t) events -> t -> Ephemeral.t
@@ -1022,6 +1036,45 @@ struct
         Atom (DMA.Ephemeral.entry t.atoms a, o)
       | NF.Composite (c, o) ->
         Entry.Composite (DMC.Ephemeral.entry t.composites c, o)
+
+    module Canon = struct
+      type key = X.r
+      type domain = D.t
+
+      module Entry = struct
+        type t =
+          { repr : X.r
+          ; entry : Entry.t
+          ; explanation : Explanation.t }
+
+        let domain { repr ; entry ; explanation = ex } =
+          if Explanation.is_empty ex then Entry.domain entry
+          else
+            D.intersect (D.unknown (X.type_info repr)) @@
+            D.add_explanation ~ex (Entry.domain entry)
+
+        let set_domain { entry ; explanation = ex ; _ } d =
+          Entry.set_domain entry (D.add_explanation ~ex d)
+      end
+
+      type nonrec t =
+        { uf : Uf.t
+        ; cache : Entry.t HX.t
+        ; domains : t }
+
+      let entry t r =
+        try HX.find t.cache r with Not_found ->
+          let r, explanation = Uf.find_r t.uf r in
+          let h =
+            { Entry.repr = r
+            ; entry = entry t.domains r
+            ; explanation }
+          in
+          HX.replace t.cache r h; h
+    end
+
+    let canon uf domains =
+      { Canon.uf ; cache = HX.create 17 ; domains }
   end
 
   let edit ~events t =
@@ -1056,57 +1109,6 @@ struct
     ; composite_watches = t.Ephemeral.composite_watches
     ; parents = t.Ephemeral.parents
     ; triggers = W.Set.empty }
-end
-
-(** Wrapper around an ephemeral domain map to access domains associated with a
-    representative computed by the [Uf] module. *)
-module UfHandle
-    (D : Domain)
-    (DM : EphemeralDomainMap with type key = X.r and type domain = D.t)
-  : sig
-    include EphemeralDomainMap with type key = X.r and type domain = D.t
-
-    val wrap : Uf.t -> DM.t -> t
-  end
-=
-struct
-  type key = X.r
-
-  type domain = DM.domain
-
-  module Entry = struct
-    type t =
-      { repr : X.r
-      ; handle : DM.Entry.t
-      ; explanation : Explanation.t }
-
-    let domain { repr ; handle ; explanation = ex } =
-      if Explanation.is_empty ex then DM.Entry.domain handle
-      else
-        D.intersect (D.unknown (X.type_info repr)) @@
-        D.add_explanation ~ex (DM.Entry.domain handle)
-
-    let set_domain { handle ; explanation = ex ; _ } d =
-      DM.Entry.set_domain handle (D.add_explanation ~ex d)
-  end
-
-  type t =
-    { uf : Uf.t
-    ; cache : Entry.t HX.t
-    ; domains : DM.t }
-
-  let entry t r =
-    try HX.find t.cache r with Not_found ->
-      let r, explanation = Uf.find_r t.uf r in
-      let h =
-        { Entry.repr = r
-        ; handle = DM.entry t.domains r
-        ; explanation }
-      in
-      HX.replace t.cache r h; h
-
-  let wrap uf t =
-    { uf ; cache = HX.create 17 ; domains = t }
 end
 
 module HandleNotations
