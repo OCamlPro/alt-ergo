@@ -211,134 +211,36 @@ end = struct
     MX.iter (fun r -> OMap.iter (fun op -> Expr.Set.iter (f r op))) t.used_by
 end
 
-module type Map_like = sig
-  (** Minimal signature for a persistent map type, used by [EphemeralMap]. *)
+module type OrderedType = sig
+  (** Module signature for an ordered type equipped with a [compare] function.
 
-  type 'a t
+      This is similar to [Set.OrderedType] and [Map.OrderedType], but includes
+      pre-built [Set] and [Map] modules. *)
 
-  type key
+  type t
 
-  val find : key -> 'a t -> 'a
+  val pp : t Fmt.t
 
-  val add : key -> 'a -> 'a t -> 'a t
+  val compare : t -> t -> int
+
+  module Set : Set.S with type elt = t
+
+  module Map : Map.S with type key = t
 end
 
-module type Hashtbl_like = sig
-  (** Minimal signature for an imperative map type, used by [EphemeralMap]. *)
+module type ComparableType = sig
+  (** Module signature combining [OrderedType] and [Hashtbl.HashedType].
 
-  type 'a t
+      This includes a pre-built [Table] module that implements the [Hashtbl.S]
+      signature. *)
 
-  type key
+  include OrderedType
 
-  val create : int -> 'a t
+  val equal : t -> t -> bool
 
-  val find : 'a t -> key -> 'a
+  val hash : t -> int
 
-  val replace : 'a t -> key -> 'a -> unit
-
-  val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-end
-
-module EphemeralMap
-    (MX : Map_like)
-    (HX : Hashtbl_like with type key = MX.key)
-  : sig
-    (** This module implements an ephemeral (mutable) interface for efficient
-        (repeated) lookup and update to the underlying persistent map, as well
-        as conversion functions between persistent and ephemeral maps. *)
-
-    type 'a t
-    (** The type of ephemeral maps with values of type ['a]. *)
-
-    type key = MX.key
-    (** The type of keys in the ephemeral map. *)
-
-    module Entry : sig
-      (** Entries associate a (mutable) content to keys in the map. *)
-
-      type 'a t
-      (** The type of entries with values ['a]. *)
-
-      val content : 'a t -> 'a
-      (** [content e] is the content associated with [key e] in the map. *)
-
-      val set_content : 'a t -> 'a -> unit
-      (** [set_content e v] sets the content of entry [e] to [v]. This
-          overwrites any pre-existing content associated with [e]. *)
-    end
-
-    val entry : 'a t -> key -> 'a Entry.t
-    (** [entry t k] returns an entry associated with key [k] in the map.
-
-        Each key is associated with a single entry: calling [entry t k] several
-        times will always return the same entry. *)
-
-    val edit : default:(key -> 'a) -> 'a MX.t -> 'a t
-    (** [edit ~default t] returns an ephemeral copy of [t] for edition.
-
-        The [default] argument is used to compute a default value for missing
-        keys. *)
-
-    val snapshot : 'a t -> 'a MX.t
-    (** [snapshot t] computes a persistent snapshot of the ephemeral map [t],
-        applying all the changes made using [set_content]. Entries that were
-        never written to using [set_content] are unchanged, even if they contain
-        a [default] value due to not present in the map when it was [edit]ed. *)
-  end =
-struct
-  type key = MX.key
-
-  module Entry = struct
-    type 'a t =
-      { key : MX.key
-      ; mutable value : 'a
-      ; mutable dirty : bool
-      ; dirty_cache : 'a t HX.t }
-
-    let content { value; _ } = value
-
-    let set_dirty handle =
-      if not handle.dirty then (
-        handle.dirty <- true;
-        HX.replace handle.dirty_cache handle.key handle
-      )
-
-    let set_content handle value =
-      set_dirty handle;
-      handle.value <- value
-  end
-
-  type 'a t =
-    { values : 'a MX.t
-    ; handles : 'a Entry.t HX.t
-    ; dirty_cache : 'a Entry.t HX.t
-    ; default : MX.key -> 'a }
-
-  let entry t r =
-    try HX.find t.handles r with Not_found ->
-      let handle =
-        { Entry.key = r
-        ; value = (try MX.find r t.values with Not_found -> t.default r)
-        ; dirty = false
-        ; dirty_cache = t.dirty_cache }
-      in
-      HX.replace t.handles r handle;
-      handle
-
-  let edit ~default t =
-    let size = 17 in
-    { values = t
-    ; handles = HX.create size
-    ; dirty_cache = HX.create size
-    ; default }
-
-  let snapshot t =
-    let persistent = t.values in
-    HX.fold (fun repr handle t ->
-        (* NB: we are in the [dirty_cache] so we know that the domain has been
-           updated. *)
-        MX.add repr (Entry.content handle) t
-      ) t.dirty_cache persistent
+  module Table : Hashtbl.S with type key = t
 end
 
 module type Domain = sig
@@ -425,54 +327,26 @@ module type EphemeralDomainMap = sig
     (** Return the domain associated with this entry. *)
 
     val set_domain : t -> domain -> unit
-    (** Intersect the domain associated with this entry and the provided
-        [domain]. The domain must contain sufficient justifications
-        for it to apply to the entry's key.
+    (** [set_domain e d] sets the domain of entry [e] to [d]. This overwrites
+        any pre-existing domain associated with [e].
 
-        @raise Domain.Inconsistent if the intersection is empty. *)
+        {b Note}: if you need to tighten an existing domain, this must be done
+        explicitely by accessing the current domain through [domain] before
+        calling [set_domain].  The {!HandleNotations} module provides an
+        [update] function that does this. *)
   end
 
   val entry : t -> key -> Entry.t
-  (** [entry t k] returns the [handle] associated with [k].
+  (** [entry t k] returns the entry associated with [k].
 
       There is a unique entry associated with each key [k] that is created
-      on-the-fly when [entry t k] is called for the first time.
+      on-the-fly when [entry t k] is called for the first time. Calling
+      [entry t k] with the same key will always return the same (physical)
+      entry.
 
       The domain associated with the entry is initialized from the underlying
-      persistent domain the first time it is accessed, and updated with
-      [set_domain]. *)
-end
-
-module type OrderedType = sig
-  (** Module signature for an ordered type equipped with a [compare] function.
-
-      This is similar to [Set.OrderedType] and [Map.OrderedType], but includes
-      pre-built [Set] and [Map] modules. *)
-
-  type t
-
-  val pp : t Fmt.t
-
-  val compare : t -> t -> int
-
-  module Set : Set.S with type elt = t
-
-  module Map : Map.S with type key = t
-end
-
-module type ComparableType = sig
-  (** Module signature combining [OrderedType] and [Hashtbl.HashedType].
-
-      This includes a pre-built [Table] module that implements the [Hashtbl.S]
-      signature. *)
-
-  include OrderedType
-
-  val equal : t -> t -> bool
-
-  val hash : t -> int
-
-  module Table : Hashtbl.S with type key = t
+      persistent domain (or the [default] function provided to [edit]) the first
+      time it is accessed, and updated with [set_domain]. *)
 end
 
 module DomainMap
@@ -525,18 +399,22 @@ module DomainMap
     (** Create an ephemeral domain map from the current domain map.
 
         [notify] will be called whenever the domain associated with a variable
-        changes. *)
+        changes.
+
+        The [default] argument is used to compute a default value for missing
+        keys. *)
 
     val snapshot : Ephemeral.t -> t
-    (** Convert back a (modified) ephemeral domain map into a persistent one. *)
-  end
+    (** Convert back a (modified) ephemeral domain map into a persistent one.
 
+        Only entries that had their value changed through [set_domain] are
+        updated. *)
+  end
 =
 struct
   module MX = X.Map
   module SX = X.Set
   module HX = X.Table
-  module EX = EphemeralMap(MX)(HX)
 
   type t =
     { domains : D.t MX.t
@@ -566,40 +444,69 @@ struct
   let needs_propagation t = not (SX.is_empty t.changed)
 
   module Ephemeral = struct
-    type nonrec key = key
-    type nonrec domain = domain
+    type key = X.t
+    type domain = D.t
 
     module Entry = struct
       type t =
-        { entry : domain EX.Entry.t
-        ; key : key
-        ; notify : X.t -> unit }
+        { key : X.t
+        ; notify : X.t -> unit
+        ; mutable domain : D.t
+        ; mutable dirty : bool
+        ; dirty_cache : t X.Table.t }
 
-      let domain { entry ; _ } = EX.Entry.content entry
+      let[@inline] domain { domain ; _ } = domain
 
-      let set_domain { entry ; notify ; key } dom =
-        EX.Entry.set_content entry @@ dom;
-        notify key
+      let set_dirty entry =
+        if not entry.dirty then (
+          entry.dirty <- true;
+          X.Table.replace entry.dirty_cache entry.key entry
+        )
+
+      let set_domain entry dom =
+        set_dirty entry;
+        entry.domain <- dom;
+        entry.notify entry.key
     end
 
     type t =
-      { domains : domain EX.t
-      ; notify : X.t -> unit }
+      { domains : D.t X.Map.t
+      ; entries : Entry.t X.Table.t
+      ; dirty_cache : Entry.t X.Table.t
+      ; notify : X.t -> unit
+      ; default : X.t -> D.t }
 
     let entry t x =
-      { Entry.entry = EX.entry t.domains x
-      ; key = x
-      ; notify = t.notify }
+      try X.Table.find t.entries x with Not_found ->
+        let entry =
+          { Entry.key = x
+          ; notify = t.notify
+          ; domain = (try X.Map.find x t.domains with Not_found -> t.default x)
+          ; dirty = false
+          ; dirty_cache = t.dirty_cache }
+        in
+        X.Table.replace t.entries x entry;
+        entry
   end
 
-  let edit ~notify ~default t =
-    SX.iter notify t.changed;
+  let edit ~notify ~default { domains ; changed } =
+    SX.iter notify changed;
 
-    { Ephemeral.domains = EX.edit ~default t.domains
-    ; notify }
+    { Ephemeral.domains
+    ; entries = X.Table.create 17
+    ; dirty_cache = X.Table.create 17
+    ; notify
+    ; default }
 
   let snapshot t =
-    { domains = EX.snapshot t.Ephemeral.domains
+    let domains =
+      X.Table.fold (fun x entry t ->
+          (* NB: we are in the [dirty_cache] so we know that the domain has been
+             updated *)
+          X.Map.add x (Ephemeral.Entry.domain entry) t
+        ) t.Ephemeral.dirty_cache t.Ephemeral.domains
+    in
+    { domains
     ; changed = SX.empty }
 end
 
