@@ -508,7 +508,7 @@ module EC = ExplainedOrdered(struct
   end)
 
 module Interval_domains =
-  Rel_utils.Domains_make
+  Domains.Make
     (BitvNormalForm)
     (Interval_domain)
     (EC)
@@ -559,7 +559,7 @@ module Bitlist_domain = struct
 end
 
 module Bitlist_domains =
-  Rel_utils.Domains_make
+  Domains.Make
     (BitvNormalForm)
     (Bitlist_domain)
     (EC)
