@@ -288,13 +288,6 @@ module type Domain = sig
 
       @raise Inconsistent if [d1] and [d2] are not compatible (the
       intersection would be empty). *)
-end
-
-module type OffsetDomain = sig
-  (** This module represents domains to which (constant) offsets can be added or
-      removed. It extends the [Domain] signature. *)
-
-  include Domain
 
   val add_offset : t -> constant -> t
   (** [add_offset ofs d] adds the offset [ofs] to domain [d]. *)
@@ -769,7 +762,7 @@ module type VariableType = sig
 end
 
 module Domains_make
-    (D : OffsetDomain)
+    (D : Domain)
     (A : VariableType)
     (C : CompositeType with type atom = A.t)
     (CD : CompositeDomain
