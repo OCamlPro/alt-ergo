@@ -156,74 +156,23 @@ module type EphemeralDomainMap = sig
       The domain associated with the entry is initialized from the underlying
       persistent domain (or the [default] function provided to [edit]) the first
       time it is accessed, and updated with [set_domain] or [update]. *)
+end
 
-  val ( !! ) : Entry.t -> Entry.domain
+module type EntryNotation = sig
+  type entry
+  (** The type of entries that hold a mutable reference to a domain. *)
+
+  type domain
+  (** The type of domains. *)
+
+  val ( !! ) : entry -> domain
   (** Return the domain associated with this entry. *)
 
-  val update : ex:Explanation.t -> Entry.t -> Entry.domain -> unit
+  val update : ex:Explanation.t -> entry -> domain -> unit
   (** [update ~ex e d] updates the domain associated with [e], intersecting it
       with [d]. The explanation [ex] is added to [d].
 
       @raises Domain.Inconsistent if the domains are incompatible. *)
-end
-
-module type DomainMap = sig
-  (** A persistent map to a domain type, with an ephemeral interface. *)
-
-  type t
-  (** The type of domain maps. *)
-
-  val pp : t Fmt.t
-  (** Pretty-printer for domain maps. *)
-
-  val empty : t
-  (** The empty domain map. *)
-
-  type key
-  (** The type of keys in the map. *)
-
-  type domain
-  (** The type of per-variable domains. *)
-
-  val find : key -> t -> domain
-  (** Find the domain associated with the given key.
-
-      @raise Not_found if there is no domain associated with the key. *)
-
-  val add : key -> domain -> t -> t
-  (** Adds a domain associated with a given key.
-
-      {b Warning}: If the key is not constant, [add] updates the domain
-      associated with the variable part of the key, and hence influences the
-      domains of other keys that have the same variable part as this key. *)
-
-  val remove : key -> t -> t
-  (** Removes the domain associated with a single variable. This will
-      effectively remove the domains associated with all keys that have the
-      same variable part. *)
-
-  val needs_propagation : t -> bool
-  (** Returns [true] if the domain map needs propagation, i.e. if the domain
-      associated with any variable has changed. *)
-
-  module Ephemeral : EphemeralDomainMap
-    with type key = key and type Entry.domain = domain
-
-  val edit :
-    notify:(key -> unit) -> default:(key -> domain) -> t -> Ephemeral.t
-  (** Create an ephemeral domain map from the current domain map.
-
-      [notify] will be called whenever the domain associated with a variable
-      changes.
-
-      The [default] argument is used to compute a default value for missing
-      keys. *)
-
-  val snapshot : Ephemeral.t -> t
-  (** Convert back a (modified) ephemeral domain map into a persistent one.
-
-      Only entries that had their value changed through [set_domain] are
-      updated. *)
 end
 
 module type NormalForm = sig
@@ -314,10 +263,18 @@ module type S = sig
     include EphemeralDomainMap
       with type key = X.r and type Entry.domain = domain
 
+    include EntryNotation
+      with type entry := Entry.t and type domain := domain
+
     (** The [Canon] module first computes the canonical representative in an
         [Uf.t] instance before accessing the ephemeral map. *)
-    module Canon : EphemeralDomainMap
-      with type key = X.r and type Entry.domain = domain
+    module Canon : sig
+      include EphemeralDomainMap
+        with type key = X.r and type Entry.domain = domain
+
+      include EntryNotation
+        with type entry := Entry.t and type domain := domain
+    end
 
     val canon : Uf.t -> t -> Canon.t
     (** Wraps the ephemeral domain map to first compute the canonical

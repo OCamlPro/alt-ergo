@@ -16,15 +16,91 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Domains_intf
+
 module X = Shostak.Combine
 module MX = Shostak.MXH
 module SX = Shostak.SXH
 module HX = Shostak.HX
 
 module DomainMap
-    (X : Domains_intf.ComparableType)
-    (D : Domains_intf.Domain)
-  : Domains_intf.DomainMap with type key = X.t and type domain = D.t
+    (X : ComparableType)
+    (D : Domain)
+    (W : OrderedType) :
+sig
+  (** A persistent map to a domain type, with an ephemeral interface.
+
+      This is used to encapsulate some of the logic of the [Make] functor below.
+
+      A domain map maps variables of type [X.t] to domains of type [D.t]. It
+      also keeps track of "watches" of type [W.t]: arbitrary object associated
+      with one or several variables. Typically, watches represent constraints
+      that involve the corresponding variable; they are tracked so that the
+      constraints can be marked for propagation as needed.
+  *)
+
+  type t
+  (** The type of domain maps. *)
+
+  val pp : t Fmt.t
+  (** Pretty-printer for domain maps. *)
+
+  val empty : t
+  (** The empty domain map. *)
+
+  type key = X.t
+  (** The type of keys in the map. *)
+
+  type domain = D.t
+  (** The type of per-variable domains. *)
+
+  val find : key -> t -> domain
+  (** Find the domain associated with the given key.
+
+      @raise Not_found if there is no domain associated with the key. *)
+
+  val add : key -> domain -> t -> t
+  (** Adds a domain associated with a given key.
+
+      {b Warning}: If the key is not constant, [add] updates the domain
+      associated with the variable part of the key, and hence influences the
+      domains of other keys that have the same variable part as this key. *)
+
+  val remove : key -> t -> t
+  (** Removes the domain associated with a single variable. This will
+      effectively remove the domains associated with all keys that have the
+      same variable part. *)
+
+  module Ephemeral : EphemeralDomainMap
+    with type key = key and type Entry.domain = domain
+
+  val edit :
+    notify:(key -> unit) -> default:(key -> domain) -> t -> Ephemeral.t
+  (** Create an ephemeral domain map from the current domain map.
+
+      [notify] will be called whenever the domain associated with a variable
+      changes.
+
+      The [default] argument is used to compute a default value for missing
+      keys. *)
+
+  val snapshot : Ephemeral.t -> t
+  (** Convert back a (modified) ephemeral domain map into a persistent one.
+
+      Only entries that had their value changed through [set_domain] are
+      updated. *)
+
+  val add_watches : key -> W.Set.t -> t -> t
+  (** [add_watches x ws t] associates all the watches in [ws] with the variable
+      [x].*)
+
+  val remove_watch : W.t -> t -> t
+  (** [remove_watch w t] removes the watch from all the variables it is
+      associated with. *)
+
+  val watches : key -> t -> W.Set.t
+  (** Returns the set of watches associated with object [x]. *)
+end
 =
 struct
   module MX = X.Map
@@ -33,7 +109,14 @@ struct
 
   type t =
     { domains : D.t MX.t
-    ; changed : SX.t }
+    (** Map from variables to their domain. *)
+    ; watches : W.Set.t MX.t
+    (** Reverse map from variables to their watches. Used to trigger
+        watches when a domain changes. *)
+    ; watching : SX.t W.Map.t
+    (** Map from watches to the variables they watch. Used to be able
+        to remove watches. *)
+    }
 
   type key = X.t
 
@@ -46,17 +129,71 @@ struct
 
   let empty =
     { domains = MX.empty
-    ; changed = SX.empty }
+    ; watches = MX.empty
+    ; watching = W.Map.empty }
 
   let find x t = MX.find x t.domains
 
   let remove x t =
-    { domains = MX.remove x t.domains
-    ; changed = SX.remove x t.changed }
+    let domains = MX.remove x t.domains in
+    let watches, watching =
+      match MX.find x t.watches with
+      | ws ->
+        let watching =
+          W.Set.fold (fun w watching ->
+              W.Map.update w (function
+                  | None ->
+                    (* maps must be mutual inverses *)
+                    assert false
+                  | Some xs ->
+                    let xs = SX.remove x xs in
+                    if SX.is_empty xs then None else Some xs
+                ) watching
+            ) ws t.watching
+        in
+        MX.remove x t.watches, watching
+      | exception Not_found -> t.watches, t.watching
+    in
+    { domains ; watches ; watching }
 
-  let add x d t = { t with domains = MX.add x d t.domains }
+  let add_watches x ws t =
+    let watches =
+      MX.update x (function
+          | None -> Some ws
+          | Some ws' -> Some (W.Set.union ws ws')) t.watches
+    and watching =
+      W.Set.fold (fun w watching ->
+          W.Map.update w (function
+              | None -> Some (SX.singleton x)
+              | Some xs -> Some (SX.add x xs)) watching
+        ) ws t.watching
+    in
+    { domains = t.domains ; watches ; watching }
 
-  let needs_propagation t = not (SX.is_empty t.changed)
+  let remove_watch w t =
+    match W.Map.find w t.watching with
+    | xs ->
+      let watches =
+        SX.fold (fun x watches ->
+            MX.update x (function
+                | None ->
+                  (* maps must be mutual inverses *)
+                  assert false
+                | Some ws ->
+                  let ws = W.Set.remove w ws in
+                  if W.Set.is_empty ws then None else Some ws
+              ) watches
+          ) xs t.watches
+      in
+      let watching = W.Map.remove w t.watching in
+      { domains = t.domains ; watches ; watching }
+    | exception Not_found -> t
+
+  let watches x t =
+    try MX.find x t.watches with Not_found -> W.Set.empty
+
+  let add x d t =
+    { t with domains = MX.add x d t.domains }
 
   module Ephemeral = struct
     type key = X.t
@@ -87,6 +224,8 @@ struct
 
     type t =
       { domains : D.t X.Map.t
+      ; watches : W.Set.t MX.t
+      ; watching : SX.t W.Map.t
       ; entries : Entry.t X.Table.t
       ; dirty_cache : Entry.t X.Table.t
       ; notify : X.t -> unit
@@ -103,20 +242,12 @@ struct
         in
         X.Table.replace t.entries x entry;
         entry
-
-    let ( !! ) = Entry.domain
-
-    let update ~ex entry domain =
-      let current = !!entry in
-      let domain = D.intersect current (D.add_explanation ~ex domain) in
-      if not (D.equal domain current) then
-        Entry.set_domain entry domain
   end
 
-  let edit ~notify ~default { domains ; changed } =
-    SX.iter notify changed;
-
+  let edit ~notify ~default { domains ; watches ; watching } =
     { Ephemeral.domains
+    ; watches
+    ; watching
     ; entries = X.Table.create 17
     ; dirty_cache = X.Table.create 17
     ; notify
@@ -131,112 +262,8 @@ struct
         ) t.Ephemeral.dirty_cache t.Ephemeral.domains
     in
     { domains
-    ; changed = SX.empty }
-end
-
-
-module WatchMap(X : Domains_intf.OrderedType)(W : Domains_intf.OrderedType)
-  : sig
-    (** This module provides a thin abstraction to keep track of
-        "watchers" associated to a given variable.
-
-        It allows finding all the watches associated to a variable, and
-        conversely of all the variable associated with a watch. *)
-
-    type t
-    (** The type of maps from variables [X.t] to watches [W.t]. *)
-
-    val empty : t
-    (** The empty relation. *)
-
-    val add_watches : X.t -> W.Set.t -> t -> t
-    (** [add_watches x ws t] associates all of the watches in [ws] to the
-        variable [x]. *)
-
-    val watches : X.t -> t -> W.Set.t
-    (** [watches x t] returns all the watches associated to [x]. *)
-
-    val take_watches : X.t -> t -> W.Set.t * t
-    (** [take_watches x t] returns a pair [ws, t'] where [ws] is the set of
-        watches associated with [x] in [t], and [t'] is identical to [t]
-        except that no watches are associated to [x]. *)
-
-    val remove_watch : W.t -> t -> t
-    (** [remove_watch w t] removes [w] from [t] so that it is no longer
-        associated to any variable. *)
-  end = struct
-  module MX = X.Map
-  module MW = W.Map
-  module SX = X.Set
-  module SW = W.Set
-
-  type t =
-    { watches : SW.t MX.t ;
-      (** Reverse map from variables to their watches. Used to trigger watches
-          when a domain changes. *)
-
-      watching : SX.t MW.t
-      (** Map from watches to the variables they watch. Used to be able to
-          remove watches. *)
-    }
-
-  let empty =
-    { watches = MX.empty
-    ; watching = MW.empty }
-
-  let add_watches x ws t =
-    let watches =
-      MX.update x (function
-          | None -> Some ws
-          | Some ws' -> Some (SW.union ws ws')) t.watches
-    and watching =
-      SW.fold (fun w watching ->
-          MW.update w (function
-              | None -> Some (SX.singleton x)
-              | Some xs -> Some (SX.add x xs)) watching
-        ) ws t.watching
-    in
-    { watches ; watching }
-
-  let remove_watch w t =
-    match MW.find w t.watching with
-    | xs ->
-      let watches =
-        SX.fold (fun x watches ->
-            MX.update x (function
-                | None ->
-                  (* maps must be mutual inverses *)
-                  assert false
-                | Some ws ->
-                  let ws = SW.remove w ws in
-                  if SW.is_empty ws then None else Some ws
-              ) watches
-          ) xs t.watches
-      in
-      let watching = MW.remove w t.watching in
-      { watches ; watching }
-    | exception Not_found -> t
-
-  let watches x t =
-    try MX.find x t.watches with Not_found -> W.Set.empty
-
-  let take_watches x t =
-    match MX.find x t.watches with
-    | ws ->
-      let watching =
-        SW.fold (fun w watching ->
-            MW.update w (function
-                | None ->
-                  (* maps must be mutual inverses *)
-                  assert false
-                | Some xs ->
-                  let xs = SX.remove x xs in
-                  if SX.is_empty xs then None else Some xs
-              ) watching
-          ) ws t.watching
-      and watches = MX.remove x t.watches in
-      ws, { watches ; watching }
-    | exception Not_found -> W.Set.empty, t
+    ; watches = t.Ephemeral.watches
+    ; watching = t.Ephemeral.watching }
 end
 
 module Make
@@ -255,25 +282,16 @@ struct
   module A = NF.Atom
   module C = NF.Composite
 
-  module DMA = DomainMap(A)(D)
-  module DMC = DomainMap(C)(D)
-
-  module AW = WatchMap(A)(W)
-  module CW = WatchMap(C)(W)
+  module DMA = DomainMap(A)(D)(W)
+  module DMC = DomainMap(C)(D)(W)
 
   type t =
     { atoms : DMA.t
     (* Map from atomic variables to their (non-default) domain. *)
-    ; atom_watches : AW.t
-    (* Map (and reverse map) from atomic variables to the watches that must be
-       triggered when their domain gets updated. *)
     ; variables : A.Set.t
     (* Set of all atomic variables being tracked. *)
     ; composites : DMC.t
     (* Map from composite variables to their (non-default) domain. *)
-    ; composite_watches : CW.t
-    (* Map (and reverse map) from composite variables to the watches that must
-       be triggered when their domain gets udpated. *)
     ; parents : C.Set.t A.Map.t
     (* Reverse map from atomic variables to the composite variables that
        contain them. Useful for structural propagation. *)
@@ -288,10 +306,8 @@ struct
 
   let empty =
     { atoms = DMA.empty
-    ; atom_watches = AW.empty
     ; variables = A.Set.empty
     ; composites = DMC.empty
-    ; composite_watches = CW.empty
     ; parents = A.Map.empty
     ; triggers = W.Set.empty
     }
@@ -308,25 +324,19 @@ struct
     | Constant _ -> t
     | Atom (a, _) ->
       { t with
-        atom_watches =
-          AW.add_watches a (W.Set.singleton w) t.atom_watches }
+        atoms = DMA.add_watches a (W.Set.singleton w) t.atoms }
     | Composite (c, _) ->
       { t with
-        composite_watches =
-          CW.add_watches c (W.Set.singleton w) t.composite_watches }
+        composites = DMC.add_watches c (W.Set.singleton w) t.composites }
 
   let unwatch w t =
-    { atoms = t.atoms
-    ; atom_watches = AW.remove_watch w t.atom_watches
+    { atoms = DMA.remove_watch w t.atoms
     ; variables = t.variables
-    ; composites = t.composites
-    ; composite_watches = CW.remove_watch w t.composite_watches
+    ; composites = DMC.remove_watch w t.composites
     ; parents = t.parents
     ; triggers = t.triggers }
 
   let needs_propagation t =
-    DMA.needs_propagation t.atoms ||
-    DMC.needs_propagation t.composites ||
     not (W.Set.is_empty t.triggers)
 
   let[@inline] variables { variables ; _ } = variables
@@ -388,22 +398,18 @@ struct
       | Constant _ -> invalid_arg "subst: cannot substitute a constant"
       | Atom (a, o) ->
         let variables = A.Set.remove a t.variables in
-        let ws, atom_watches = AW.take_watches a t.atom_watches in
+        let ws = DMA.watches a t.atoms in
+        let atoms = DMA.remove a t.atoms in
         D.add_offset (find_or_default_atom a t) o,
         ws,
-        { t with
-          atoms = DMA.remove a t.atoms ;
-          atom_watches ;
-          variables }
+        { t with atoms ; variables }
       | Composite (c, o) ->
         let parents = untrack c t.parents in
-        let ws, composite_watches = CW.take_watches c t.composite_watches in
+        let ws = DMC.watches c t.composites in
+        let composites = DMC.remove c t.composites in
         D.add_offset (find_or_default_composite c t) o,
         ws,
-        { t with
-          composites = DMC.remove c t.composites ;
-          composite_watches ;
-          parents }
+        { t with composites ; parents }
     in
     (* Add [ex] to justify that it applies to [nrr] *)
     let rrd = D.add_explanation ~ex rrd in
@@ -416,13 +422,13 @@ struct
       match nrr_nf with
       | Constant _ -> t
       | Atom (a, _) ->
-        let atom_watches = AW.add_watches a ws t.atom_watches in
         let variables = A.Set.add a t.variables in
-        { t with atom_watches ; variables }
+        let atoms = DMA.add_watches a ws t.atoms in
+        { t with atoms ; variables }
       | Composite (c, _) ->
-        let composite_watches = CW.add_watches c ws t.composite_watches in
         let parents = track c t.parents in
-        { t with composite_watches ; parents }
+        let composites = DMC.add_watches c ws t.composites in
+        { t with composites ; parents }
     in
     if D.equal nnrrd nrrd then t
     else
@@ -432,15 +438,11 @@ struct
            shrunk it, it can only be empty. *)
         assert false
       | Atom (a, o) ->
-        let triggers =
-          W.Set.union (AW.watches a t.atom_watches) t.triggers
-        in
+        let triggers = W.Set.union (DMA.watches a t.atoms) t.triggers in
         let atoms = DMA.add a (D.sub_offset nnrrd o) t.atoms in
         { t with atoms ; triggers }
       | Composite (c, o) ->
-        let triggers =
-          W.Set.union (CW.watches c t.composite_watches) t.triggers
-        in
+        let triggers = W.Set.union (DMC.watches c t.composites) t.triggers in
         let composites = DMC.add c (D.sub_offset nnrrd o) t.composites in
         { t with composites ; triggers }
 
@@ -473,10 +475,8 @@ struct
 
     type t =
       { atoms : DMA.Ephemeral.t
-      ; atom_watches : AW.t
       ; variables : A.Set.t
       ; composites : DMC.Ephemeral.t
-      ; composite_watches : CW.t
       ; parents : C.Set.t A.Map.t }
 
     let entry t r =
@@ -546,35 +546,31 @@ struct
   end
 
   let edit ~events t =
-    W.Set.iter events.Domains_intf.evt_watch_trigger t.triggers;
+    W.Set.iter events.evt_watch_trigger t.triggers;
 
     let notify_atom a =
       events.evt_atomic_change a;
-      W.Set.iter events.evt_watch_trigger (AW.watches a t.atom_watches);
+      W.Set.iter events.evt_watch_trigger (DMA.watches a t.atoms);
     and notify_composite c =
       events.evt_composite_change c;
-      W.Set.iter events.evt_watch_trigger (CW.watches c t.composite_watches);
+      W.Set.iter events.evt_watch_trigger (DMC.watches c t.composites);
     in
 
     { Ephemeral.atoms =
         DMA.edit
           ~notify:notify_atom ~default:default_atom
           t.atoms
-    ; atom_watches = t.atom_watches
     ; variables = t.variables
     ; composites =
         DMC.edit
           ~notify:notify_composite ~default:default_composite
           t.composites
-    ; composite_watches = t.composite_watches
     ; parents = t.parents }
 
   let snapshot t =
     { atoms = DMA.snapshot t.Ephemeral.atoms
-    ; atom_watches = t.Ephemeral.atom_watches
     ; variables = t.Ephemeral.variables
     ; composites = DMC.snapshot t.Ephemeral.composites
-    ; composite_watches = t.Ephemeral.composite_watches
     ; parents = t.Ephemeral.parents
     ; triggers = W.Set.empty }
 end
