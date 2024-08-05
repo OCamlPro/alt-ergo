@@ -239,11 +239,9 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 lock:
 	dune build ./alt-ergo-lib.opam
 	opam lock ./alt-ergo-lib.opam -w
-	# Remove OCaml compiler constraints
-	sed -i '/"ocaml"\|"ocaml-base-compiler"\|"ocaml-system"\|"ocaml-config"\|"base-domains"\|"base-nnp"/d' ./alt-ergo-lib.opam.locked
 
 dev-switch:
-	opam switch create -y . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
+	opam switch create . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
 js-deps:
 	opam install \
@@ -255,10 +253,10 @@ js-deps:
 		lwt_ppx -y
 
 deps:
-	opam install -y . --locked --deps-only
+	opam install . --deps-only
 
 test-deps:
-	opam install -y . --locked --deps-only --with-test
+	opam install . --deps-only --with-test
 
 dune-deps:
 	dune-deps . | dot -Tpng -o docs/deps.png

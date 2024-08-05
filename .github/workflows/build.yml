@@ -8,7 +8,7 @@ on:
 permissions: {}
 
 env:
-  OCAML_DEFAULT_VERSION: 4.14.2
+  OCAML_DEFAULT_VERSION: 4.14.1
   # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
   # in any opam call
   OPAMYES: true
@@ -59,6 +59,8 @@ jobs:
 
   make:
     name: Make all
+    env:
+      OPAMLOCKED: locked
     runs-on: ubuntu-latest
 
     steps:

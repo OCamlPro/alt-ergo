@@ -6,6 +6,7 @@ on:
 env:
   OCAML_DEFAULT_VERSION: 4.14.1
   OPAMYES: true
+  OPAMLOCKED: locked
 
 jobs:
   dune_release:
