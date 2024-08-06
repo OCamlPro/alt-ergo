@@ -46,7 +46,8 @@
 ### Theory reasoning
 
  - Add word-level propagators for the BV theory (#944, #1004, #1007, #1010,
-   #1011, #1012, #1040, #1044, #1054, #1055, #1056, #1057, #1065, #1073, #1144)
+   #1011, #1012, #1040, #1044, #1054, #1055, #1056, #1057, #1065, #1073, #1144,
+   #1152)
  - Add interval domains and arithmetic propagators for the BV theory (#1058,
    #1083, #1084, #1085)
  - Fix incompleteness issues in the BV solver (#978, #979)
