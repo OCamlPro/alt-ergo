@@ -306,11 +306,11 @@ struct
     | { v = Abstract (_, t); _ } -> CX.type_info t
 
   (* Constraint that must be maintained:
-     all theories should have Xi < Term < Abstract < Ac *)
+     all theories should have Xi < Abstract < Term < Ac *)
   let theory_num x = match x with
     | Ac _ -> -1
-    | Abstract _ -> -2
-    | Term  _ -> -3
+    | Term  _ -> -2
+    | Abstract _ -> -3
     | Arith _ -> -4
     | Records _ -> -5
     | Bitv _ -> -6
@@ -328,8 +328,10 @@ struct
       | Adt _, Adt _ -> ADT.compare a b
       | Term x, Term y -> Expr.compare x y
       | Abstract (kx, x), Abstract (ky, y) ->
-        let c = compare_abs_kind kx ky in
-        if c <> 0 then c else CX.str_cmp x y
+        (* Make sure that new abstractions are smaller, i.e.
+           old abstractions are rewritten into new abstractions. *)
+        let c = Int.compare y.id x.id in
+        if c <> 0 then c else compare_abs_kind kx ky
       | Ac x, Ac y -> AC.compare x y
       | va, vb -> compare_tag va vb
 
