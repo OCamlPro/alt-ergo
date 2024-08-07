@@ -239,6 +239,7 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 lock:
 	dune build ./alt-ergo-lib.opam
 	opam lock ./alt-ergo-lib.opam -w
+	# Remove OCaml compiler constraints
 	sed -i \
 		'/"ocaml"\|"ocaml-base-compiler"\|"ocaml-system"\|"ocaml-config"\|"base-domains"\|"base-nnp"/d' \
 		./alt-ergo-lib.opam.locked

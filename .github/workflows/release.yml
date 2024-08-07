@@ -4,7 +4,7 @@ on:
   workflow_dispatch
 
 env:
-  OCAML_DEFAULT_VERSION: 4.14.1
+  OCAML_DEFAULT_VERSION: 4.14.2
   OPAMYES: true
   OPAMLOCKED: locked
 
