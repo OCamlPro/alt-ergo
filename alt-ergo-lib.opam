@@ -15,7 +15,7 @@ doc: "https://ocamlpro.github.io/alt-ergo"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
   "ocaml" {>= "4.08.1"}
-  "dune" {>= "3.0"}
+  "dune" {>= "3.14"}
   "dune-build-info"
   "dolmen" {>= "0.10"}
   "dolmen_type" {>= "0.10"}

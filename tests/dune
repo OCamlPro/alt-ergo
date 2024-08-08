@@ -2,28 +2,14 @@
  (package alt-ergo)
  (deps %{bin:alt-ergo}))
 
-(include dune.inc)
+(subdir run
+  (dynamic_include ../generate/dune.inc))
 
-(rule
- (deps (file ../tools/gentest.exe) (source_tree .))
- (action
-  (with-stdout-to dune.inc.gen (run ../tools/gentest.exe .))))
-
-(rule
- (alias gentest)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest-quick)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest-ci)
- (action (diff dune.inc dune.inc.gen)))
+(subdir generate
+  (rule
+   (deps (source_tree ../input))
+   (action
+    (with-stdout-to dune.inc (run ../../tools/gentest.exe ../input)))))
 
 (test
  (package alt-ergo-lib)
