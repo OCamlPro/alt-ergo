@@ -65,7 +65,7 @@ jobs:
       # Run simple test with node
       # TODO: use gentest to run more tests there.
       - name: Run simple example with node
-        run: opam exec -- node alt-ergo.js tests/everything/f1.ae
+        run: opam exec -- node alt-ergo.js tests/input/everything/f1.ae
 
       # Upload Alt-Ergo.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
