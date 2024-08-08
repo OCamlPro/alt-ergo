@@ -574,16 +574,20 @@ let main () =
       st
     | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
       begin
-        match int_of_string_opt level with
-        | Some i when i > 0 ->
-          Options.set_timelimit_per_goal true;
-          Options.set_timelimit (float_of_int i /. 1000.)
-        | Some 0 ->
-          Options.set_timelimit_per_goal false;
-          Options.set_timelimit 0.
-        | None | Some _ ->
-          print_wrn_opt ~name:":reproducible-resource-limit" st_loc
-            "nonnegative integer" value
+        if Sys.unix then
+          match int_of_string_opt level with
+          | Some i when i > 0 ->
+            Options.set_timelimit_per_goal true;
+            Options.set_timelimit (float_of_int i /. 1000.)
+          | Some 0 ->
+            Options.set_timelimit_per_goal false;
+            Options.set_timelimit 0.
+          | None | Some _ ->
+            print_wrn_opt ~name:":reproducible-resource-limit" st_loc
+              "nonnegative integer" value
+        else
+          warning "%a :reproducible-resource-limit is only supported on Unix"
+            Loc.report st_loc
       end;
       st
     | ":sat-solver", Symbol { name = Simple solver; _ } -> (
