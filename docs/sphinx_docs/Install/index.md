@@ -7,14 +7,9 @@ Alt-ergo is available on [opam], the ocaml package manager with the following co
 opam install alt-ergo
 ```
 
-This two command will install the Alt-ergo library `alt-ergo-lib` and the parsers `alt-ergo-parsers`, as well as other librairies detailled in [dependencies](#dependencies).
+This command will install the Alt-ergo library `alt-ergo-lib` and the parsers `alt-ergo-parsers`, as well as other librairies detailled in [dependencies](#dependencies).
 
-## From GitHub releases (Linux and macOS)
-
-For convenience, binary releases for Linux and macOS (amd64 and arm64) of
-Alt-Ergo are provided on the GitHub release page. These binary releases are
-statically linked and very portable. They are distributed under the same
-licensing restrictions as the source code.
+Since version 2.6.0, Alt-Ergo is officially supported on Windows through opam 2.2 with both Cygwin and MSYS2. To setup opam on Windows, please follow the instructions [here](https://ocamlpro.com/blog/2024_07_01_opam_2_2_0_releases/).
 
 ### On Debian
 
@@ -23,6 +18,13 @@ Alt-ergo is also available in the debian package manager [here]. You can install
 ```
 sudo apt install alt-ergo
 ```
+
+## From GitHub releases (Linux and macOS)
+
+For convenience, binary releases for Linux and macOS (amd64 and arm64) of
+Alt-Ergo are provided on the GitHub release page. These binary releases are
+statically linked and very portable. They are distributed under the same
+licensing restrictions as the source code.
 
 ## From sources
 
