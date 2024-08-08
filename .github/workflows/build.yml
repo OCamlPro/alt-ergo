@@ -27,7 +27,7 @@ jobs:
           - ubuntu-latest
         ocaml-compiler:
           - 4.08.1
-          - 4.14.1
+          - 4.14.2
           - 5.0.0
         exclude:
           # No longer seems to be available
@@ -59,6 +59,8 @@ jobs:
 
   make:
     name: Make all
+    env:
+      OPAMLOCKED: locked
     runs-on: ubuntu-latest
 
     steps:
