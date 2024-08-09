@@ -1,0 +1,8 @@
+(subdir runtest
+  (dynamic_include ../gentest/dune.inc))
+
+(subdir gentest
+  (rule
+   (deps (source_tree ../tests))
+   (action
+    (with-stdout-to dune.inc (run ../tools/gentest.exe --kind rule ../tests)))))

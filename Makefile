@@ -114,27 +114,23 @@ packages:
 # Generate tests
 # ==============
 
-# Generate new Dune tests from the problems in
-# the directory tests/.
-gentest: $(wildcard tests/**/*)
-	# TODO: There should be an option to gentest to avoid printing the
-	# dune.inc file and only touch the expected files in this call.
-	dune exec -- tools/gentest.exe tests >/dev/null
-	dune build @tests/gentest --auto-promote
+# Generate dummy expected file for new tests.
+genexpected:
+	dune exec -- tools/gentest.exe --kind expected tests >/dev/null
 
 # Run non-regression tests.
-runtest: gentest bin
+runtest: genexpected bin
 	dune build @runtest @runtest-quick
 
 # Run non-regression tests for the CI.
-runtest-ci: gentest bin
+runtest-ci: genexpected bin
 	dune build @runtest @runtest-quick @runtest-ci
 
 # Promote new outputs of the tests.
 promote:
 	dune promote
 
-.PHONY: gentest runtest runtest-ci promote
+.PHONY: runtest runtest-ci promote
 
 # ============
 # Installation

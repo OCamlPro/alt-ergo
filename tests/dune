@@ -2,29 +2,6 @@
  (package alt-ergo)
  (deps %{bin:alt-ergo}))
 
-(include dune.inc)
-
-(rule
- (deps (file ../tools/gentest.exe) (source_tree .))
- (action
-  (with-stdout-to dune.inc.gen (run ../tools/gentest.exe .))))
-
-(rule
- (alias gentest)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest-quick)
- (action (diff dune.inc dune.inc.gen)))
-
-(rule
- (alias runtest-ci)
- (action (diff dune.inc dune.inc.gen)))
-
 (test
  (package alt-ergo-lib)
  (name bitvec_tests)
