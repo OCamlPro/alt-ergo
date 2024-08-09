@@ -20,6 +20,12 @@ type 'a printer = Format.formatter -> 'a -> unit
 
 let (//) = Filename.concat
 
+let mandle_regexp =
+  if Sys.win32 then Str.regexp {|\|}
+  else Str.regexp {|/|}
+
+let mandle_path = Str.global_replace mandle_regexp "__"
+
 module File : sig
   val touch: string -> unit
   (** [create fl] create an empty file of name [fl]. *)
@@ -108,19 +114,26 @@ module Test : sig
   type t = private {
     cmd: Cmd.t;
     pb_file: string;
-    params: params
+    params: params;
+    root: string;
+    path: string;
   }
   (** Type of a test. *)
 
   val base_params : params
 
-  val make: cmd: Cmd.t -> pb_file: string -> params:params -> t
+  val make:
+    cmd:Cmd.t ->
+    pb_file:string ->
+    params:params ->
+    root:string ->
+    path:string -> t
   (** Set up the test. *)
 
-  val pp_expected_output: root:string -> path:string -> t printer
+  val pp_expected_output: t printer
   (** Print the expect filename of the test. *)
 
-  val pp_stanza: root:string -> path:string -> t printer
+  val pp_stanza: t printer
   (** Pretty print the dune test. *)
 end = struct
 
@@ -135,6 +148,8 @@ end = struct
     cmd: Cmd.t;
     pb_file: string;
     params: params;
+    root: string;
+    path: string;
   }
 
   let base_params = {
@@ -144,33 +159,35 @@ end = struct
     accepted_exit_codes = [0];
   }
 
-  let make ~cmd ~pb_file ~params = {cmd; pb_file; params}
+  let make ~cmd ~pb_file ~params ~root ~path =
+    {cmd; pb_file; params; root; path}
 
-  let pp_input ~root ~path fmt input =
-    let filename = root // path // input in
+  let pp_input fmt tst =
+    let filename = tst.root // tst.path // tst.pb_file in
     Format.fprintf fmt "%s" filename
 
   let pp_output fmt tst =
     let filename = Filename.chop_extension tst.pb_file in
     let name = Cmd.name tst.cmd in
-    Format.fprintf fmt "%s_%s.output" filename name
+    let basename = Format.asprintf "%s_%s.output" filename name in
+    Format.fprintf fmt "%s" ((tst.path // basename) |> mandle_path)
 
-  let pp_expected_output ~root ~path fmt tst =
+  let pp_expected_output fmt tst =
     let filename =
-      root // path // Filename.chop_extension tst.pb_file
+      tst.root // tst.path // Filename.chop_extension tst.pb_file
     in
     Format.fprintf fmt "%s.expected" filename
 
-  let pp_stanza ~root ~path fmt tst =
+  let pp_stanza fmt tst =
     let pp_diff_command fmt tst =
       if tst.params.compare_should_succeed then
         Format.fprintf fmt "@[(diff %a %a)@]"
-          (pp_expected_output ~root ~path) tst
+          pp_expected_output tst
           pp_output tst
       else
         Format.fprintf fmt
           "@[(ignore-stdout (with-accepted-exit-codes (not 0) (run diff %a %a)))@]"
-          (pp_expected_output ~root ~path) tst
+          pp_expected_output tst
           pp_output tst
     in
     let accepted_ae_exit_code =
@@ -196,7 +213,7 @@ end = struct
 @[<v 1>(package alt-ergo)@,\
 @[<v 1>(action@ %a))@]@]@]@]@]"
       pp_output tst
-      (pp_input ~root ~path) tst.pb_file
+      pp_input tst
       accepted_ae_exit_code
       Cmd.pp tst.cmd
       pp_output tst
@@ -221,7 +238,6 @@ module Batch : sig
 end = struct
   type t = {
     root: string;
-    path: string;
     tests: Test.t list;
   }
 
@@ -265,12 +281,12 @@ end = struct
         in
         List.fold_left (fun acc2 cmd ->
             if filter params cmd then
-              Test.make ~cmd ~pb_file ~params :: acc2
+              Test.make ~cmd ~pb_file ~params ~root ~path :: acc2
             else
               acc2
           ) acc1 cmds) [] pb_files
     in
-    {root; path; tests}
+    {root; tests}
 
   (* Pretty print a dune file containing all the test of the batch. *)
   let pp_stanza : t printer =
@@ -282,15 +298,12 @@ end = struct
     fprintf fmt "; Auto-generated part begin@ ";
     let pp_sep fmt () = fprintf fmt "@ " in
     fprintf fmt "@[<v 2>%a@]@ "
-      (pp_print_list ~pp_sep (Test.pp_stanza ~root:batch.root ~path:batch.path)) batch.tests;
+      (pp_print_list ~pp_sep Test.pp_stanza) batch.tests;
     fprintf fmt "; Auto-generated part end"
 
   let generate_expected_file batch =
-    List.iter (fun (test : Test.t) ->
-        let pb_file =
-          Format.asprintf "%a"
-            (Test.pp_expected_output ~root:batch.root ~path:batch.path) test
-        in
+    List.iter (fun (tst : Test.t) ->
+        let pb_file = Format.asprintf "%a" Test.pp_expected_output tst in
         if not @@ Sys.file_exists pb_file then File.touch pb_file
       ) batch.tests
 end
