@@ -26,7 +26,7 @@
 (**************************************************************************)
 
 (** A functional SAT solver implementation. *)
-module Make (Th : Theory.S) : sig
+module Make (_ : Theory.S) : sig
   type t
 
   exception Sat of t

@@ -137,5 +137,5 @@ end
 
 
 module type SatContainer = sig
-  module Make (Th : Theory.S) : S
+  module Make (_ : Theory.S) : S
 end
