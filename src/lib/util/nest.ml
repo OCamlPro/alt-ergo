@@ -47,7 +47,7 @@ type node = {
   (* This weight is used to prioritize constructors with less destructors
      during the sorting (see [add_nest]). *)
 
-  mutable outgoing : edge;
+  outgoing : edge;
   (* Hyperedge from a subset S in S(ty) to a subset G in G(ty) where ty is
      the type of [id]. At the beginning, we have S = S(ty) and G = G(ty).
 

@@ -64,7 +64,7 @@ module G :Set.S with type elt = gtype = Set.Make
     (struct type t = gtype let compare t1 t2 = E.compare t1.g t2.g end)
 
 (* ensemble de termes "set" avec leurs arguments et leurs types *)
-type stype = {s:E.t; st:E.t; si:E.t; sv:E.t; sty:Ty.t}
+type stype = {s:E.t; st:E.t; si:E.t; sv:E.t}
 module S :Set.S with type elt = stype = Set.Make
     (struct type t = stype let compare t1 t2 = E.compare t1.s t2.s end)
 
@@ -199,7 +199,7 @@ let rec relevant_terms env t =
   match Sy.is_get f, Sy.is_set f, xs with
   | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
   | false, true , [a;i;v] ->
-    gets, TBS.add a {s=t; st=a; si=i; sv=v; sty=ty} tbset
+    gets, TBS.add a {s=t; st=a; si=i; sv=v} tbset
   | false, false, _ -> (gets,tbset)
   | _  -> assert false
 

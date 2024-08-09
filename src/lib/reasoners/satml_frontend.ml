@@ -46,7 +46,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   type t = {
     satml : SAT.t;
-    mutable ff_hcons_env : FF.hcons_env;
+    ff_hcons_env : FF.hcons_env;
     mutable nb_mrounds : int;
     mutable last_forced_normal : int;
     mutable last_forced_greedy : int;

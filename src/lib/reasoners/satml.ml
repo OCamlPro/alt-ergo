@@ -184,10 +184,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable unsat_core : Atom.clause list option;
 
       (* clauses du probleme *)
-      mutable clauses : Atom.clause Vec.t;
+      clauses : Atom.clause Vec.t;
 
       (* clauses apprises *)
-      mutable learnts : Atom.clause Vec.t;
+      learnts : Atom.clause Vec.t;
 
       (* valeur de l'increment pour l'activite des clauses *)
       mutable clause_inc : float;
@@ -196,13 +196,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable var_inc : float;
 
       (* un vecteur des variables du probleme *)
-      mutable vars : Atom.var Vec.t;
+      vars : Atom.var Vec.t;
 
       (* la pile de decisions avec les faits impliques *)
-      mutable trail : Atom.atom Vec.t;
+      trail : Atom.atom Vec.t;
 
       (* une pile qui pointe vers les niveaux de decision dans trail *)
-      mutable trail_lim : int Vec.t;
+      trail_lim : int Vec.t;
 
       mutable nchoices : int ;
       (** Number of semantic choices (case splits) that have been made. Semantic
@@ -210,7 +210,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           trail; we keep track of this number to properly compute the number of
           assignments to boolean literals in [nb_assigns]. *)
 
-      mutable nchoices_stack : int Vec.t;
+      nchoices_stack : int Vec.t;
       (** Stack for [nchoices] values. *)
 
       (* Tete de la File des faits unitaires a propager.
@@ -226,10 +226,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       mutable simpDB_props : int;
 
       (* Un tas ordone en fonction de l'activite des variables *)
-      mutable order : Vheap.t;
+      order : Vheap.t;
 
       (* estimation de progressions, mis a jour par 'search()' *)
-      mutable progress_estimate : float;
+      (*       mutable progress_estimate : float; *)
 
       (* *)
       remove_satisfied : bool;
@@ -241,24 +241,18 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       clause_decay : float;
 
       (* la limite de restart initiale, vaut 100 par defaut *)
-      mutable restart_first : int;
+      restart_first : int;
 
       (* facteur de multiplication de restart limite, vaut 1.5 par defaut*)
       restart_inc : float;
 
       (* limite initiale du nombre de clause apprises, vaut 1/3
          des clauses originales par defaut *)
-      mutable learntsize_factor : float;
+      learntsize_factor : float;
 
       (* multiplier learntsize_factor par cette valeur a chaque restart,
          vaut 1.1 par defaut *)
       learntsize_inc : float;
-
-      (* controler la minimisation des clauses conflit, vaut true par defaut *)
-      expensive_ccmin : bool;
-
-      (* controle la polarite a choisir lors de la decision *)
-      polarity_mode : bool;
 
       mutable starts : int;
 
@@ -272,19 +266,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       mutable learnts_literals : int;
 
-      mutable max_literals : int;
-
-      mutable tot_literals : int;
-
       mutable nb_init_clauses : int;
 
       mutable tenv : Th.t;
 
       mutable unit_tenv : Th.t;
 
-      mutable tenv_queue : Th.t Vec.t;
+      tenv_queue : Th.t Vec.t;
 
-      mutable tatoms_queue : Atom.atom Queue.t;
+      tatoms_queue : Atom.atom Queue.t;
       (** Queue of atoms that have been added to the [trail] through either
           decision or boolean propagation, but have not been otherwise processed
           yet (in particular, they have not been propagated to the theory).
@@ -297,7 +287,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           [relevancy_propagation]); instead, the [th_tableaux] field is used to
           dictate theory propagations. *)
 
-      mutable th_tableaux : Atom.atom Queue.t;
+      th_tableaux : Atom.atom Queue.t;
       (** Queue of atoms to propagate to the theory when using CDCL-Tableaux
           with the [get_cdcl_tableaux_th ()] option.
 
@@ -409,11 +399,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           level. Set inverse of [ff_lvl]. Only used with the CDCL-Tableaux
           solver. *)
 
-      mutable increm_guards : Atom.atom Vec.t;
+      increm_guards : Atom.atom Vec.t;
 
       mutable next_dec_guard : int;
 
-      mutable objectives : Objective.Function.t list Vec.t;
+      objectives : Objective.Function.t list Vec.t;
       (** Queue of the objectives per incremental levels.
 
           Notice that objectives of the incremental toplevel are
@@ -487,7 +477,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       order = Vheap.create 0 Atom.dummy_var; (* sera mis a jour dans solve *)
 
-      progress_estimate = 0.;
+      (*       progress_estimate = 0.; *)
 
       remove_satisfied = true;
 
@@ -503,10 +493,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
       learntsize_inc = 1.1;
 
-      expensive_ccmin = true;
-
-      polarity_mode = false;
-
       starts = 0;
 
       decisions = 0;
@@ -518,10 +504,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       clauses_literals = 0;
 
       learnts_literals = 0;
-
-      max_literals = 0;
-
-      tot_literals = 0;
 
       nb_init_clauses = 0;
 
@@ -806,19 +788,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.index <- Vec.size env.trail;
     Options.heavy_assert (fun () -> debug_enqueue_level a lvl reason)
 
-  let progress_estimate env =
-    let prg = ref 0. in
-    let nbv = Atom.to_float (nb_vars env) in
-    let lvl = decision_level env in
-    let _F = 1. /. nbv in
-    for i = 0 to lvl do
+  (* let progress_estimate env =
+     let prg = ref 0. in
+     let nbv = Atom.to_float (nb_vars env) in
+     let lvl = decision_level env in
+     let _F = 1. /. nbv in
+     for i = 0 to lvl do
       let _beg = if i = 0 then 0 else Vec.get env.trail_lim (i-1) in
       let _end =
         if i=lvl then Vec.size env.trail
         else Vec.get env.trail_lim i in
       prg := !prg +. _F**(Atom.to_float i) *. (Atom.to_float (_end - _beg))
-    done;
-    !prg /. nbv
+     done;
+     !prg /. nbv *)
 
   let check_levels propag_lvl current_lvl =
     assert (propag_lvl <= current_lvl);
@@ -1881,7 +1863,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         raise Sat;
       if Options.get_enable_restarts ()
       && n_of_conflicts >= 0 && !conflictC >= n_of_conflicts then begin
-        env.progress_estimate <- progress_estimate env;
+        (*         env.progress_estimate <- progress_estimate env; *)
         cancel_until env 0;
         raise Restart
       end;

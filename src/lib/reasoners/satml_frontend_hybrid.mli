@@ -25,7 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Make (Th : Theory.S) : sig
+module Make (_ : Theory.S) : sig
 
   type t
 
