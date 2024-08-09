@@ -1,4 +1,4 @@
-(subdir run
+(subdir runtest
   (dynamic_include ../gentest/dune.inc))
 
 (subdir gentest
