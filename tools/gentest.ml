@@ -109,6 +109,7 @@ module Test : sig
     filters: string list option;
     compare_should_succeed: bool;
     accepted_exit_codes: int list;
+    ignore: bool;
   }
 
   type t = private {
@@ -142,6 +143,7 @@ end = struct
     filters: string list option;
     compare_should_succeed: bool;
     accepted_exit_codes: int list;
+    ignore: bool;
   }
 
   type t = {
@@ -157,6 +159,7 @@ end = struct
     filters = None;
     compare_should_succeed = true;
     accepted_exit_codes = [0];
+    ignore = false;
   }
 
   let make ~cmd ~pb_file ~params ~root ~path =
@@ -250,6 +253,10 @@ end = struct
           List.fold_left (
             fun (acc : Test.params) ->
               function
+              | "unix" when not Sys.unix -> {
+                  acc with
+                  ignore = true
+                }
               | "fail" ->
                 {acc with compare_should_succeed = false}
               | "err" ->
@@ -277,7 +284,7 @@ end = struct
             (String.split_on_char '.' pb_file)
         in
         List.fold_left (fun acc2 cmd ->
-            if filter params cmd then
+            if not params.ignore && filter params cmd then
               Test.make ~cmd ~pb_file ~params ~root ~path :: acc2
             else
               acc2
