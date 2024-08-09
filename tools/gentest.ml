@@ -309,26 +309,47 @@ let is_a_problem file =
   File.has_extension_in file [".ae"; ".smt2"; ".pstm2"; ".zip"]
 
 (* Generate a dune file for each subfolder of the path given as argument. *)
-let rec generate root path cmds =
+let rec generate ~kind ~root path cmds =
   let files, folders = File.scan_folder (root // path) in
   let () = match List.filter is_a_problem files with
     | [] -> ()
     | pb_files -> (
         let batch = Batch.make ~root ~path ~cmds ~pb_files in
-        Batch.generate_expected_file batch;
-        Batch.pp_stanza Format.std_formatter batch
-      ) in
+        match kind with
+        | `Rule -> Batch.pp_stanza Format.std_formatter batch
+        | `Expected -> Batch.generate_expected_file batch
+      )
+  in
   List.iter (fun folder ->
       let path = path // folder in
-      generate root path cmds
+      generate ~kind ~root path cmds
     ) folders
 
+module Commands = struct
+  let kind = ref `Rule
+  let set_kind k =
+    let k =
+      match k with
+      | "rule" -> `Rule
+      | "expected" -> `Expected
+      | _ -> invalid_arg "unexpected kind"
+    in
+    kind := k
+
+  let dir = ref ""
+  let set_dir d = dir := d
+
+  let usage_msg = "gentest [--kind <k>] <dir>"
+
+  let speclist = [
+    ("--kind", Arg.String set_kind, "rule or expected");
+  ]
+
+  let parse () = Arg.parse speclist set_dir usage_msg
+end
+
 let () =
-  let path =
-    if Array.length Sys.argv >= 2 then
-      Sys.argv.(1)
-    else "."
-  in
+  Commands.parse ();
   let bin = "%{bin:alt-ergo}" in
   let timelimit = "--timelimit=2" in
   let shared =
@@ -396,5 +417,5 @@ let () =
       Cmd.make ~name ~group ~bin ~args) solvers
   in
   Format.fprintf Format.std_formatter "@[<v 0>";
-  generate path "" cmds;
+  generate ~kind:!Commands.kind ~root:!Commands.dir "" cmds;
   Format.fprintf Format.std_formatter "@]@."

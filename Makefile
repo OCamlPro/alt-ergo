@@ -114,12 +114,16 @@ packages:
 # Generate tests
 # ==============
 
+# Generate dummy expected file for new tests.
+genexpected:
+	dune exec -- tools/gentest.exe --kind expected tests >/dev/null
+
 # Run non-regression tests.
-runtest: bin
+runtest: genexpected bin
 	dune build @runtest @runtest-quick
 
 # Run non-regression tests for the CI.
-runtest-ci: bin
+runtest-ci: genexpected bin
 	dune build @runtest @runtest-quick @runtest-ci
 
 # Promote new outputs of the tests.
