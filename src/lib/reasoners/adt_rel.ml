@@ -322,45 +322,9 @@ let empty uf = {
 (* ################################################################ *)
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
-  open Printer
-
-  let assume a =
-    if Options.get_debug_adt () then
-      print_dbg
-        ~module_name:"Adt_rel"
-        ~function_name:"assume"
-        "assume %a" LR.print (LR.make a)
-
-  let pp_domains loc domains =
-    if Options.get_debug_adt () then begin
-      print_dbg ~flushed:false ~module_name:"Adt_rel"
-        "@[<v 2>--ADT env %s ---------------------------------@ " loc;
-      print_dbg ~flushed:false ~header:false "domains:@ %a"
-        Domains.pp domains;
-      print_dbg ~header:false "---------------------"
-    end
-
-  (* unused --
-     let case_split r r' =
-     if get_debug_adt () then
-       Printer.print_dbg
-          "[ADT.case-split] %a = %a" X.print r X.print r'
-  *)
-
-  let no_case_split () =
-    if Options.get_debug_adt () then
-      print_dbg
-        ~module_name:"Adt_rel"
-        ~function_name:"case-split"
-        "nothing"
-
-  let add r =
-    if Options.get_debug_adt () then
-      print_dbg
-        ~module_name:"Adt_rel"
-        ~function_name:"add"
-        "%a" X.print r
-
+  let assume l =
+    Logs.debug ~src:Sources.adt_rel
+      (fun k -> k "assume the literal:@ %a" (Xliteral.print_view X.print) l)
 end
 (*BISECT-IGNORE-END*)
 (* ################################################################ *)
@@ -439,7 +403,7 @@ let assume_not_is_constr ~ex r c domains =
 let add r uf domains =
   match X.type_info r with
   | Ty.Tadt _ ->
-    Debug.add r;
+    Logs.debug ~src:Sources.adt_rel (fun k -> k "add %a" X.print r);
     let rr, _ = Uf.find_r uf r in
     Domains.init rr domains
   | _ ->
@@ -557,7 +521,8 @@ let count_splits env la =
 let assume env uf la =
   let ds = Uf.domains uf in
   let domains = Uf.GlobalDomains.find (module Domains) ds in
-  Debug.pp_domains "before assume" domains;
+  Logs.debug ~src:Sources.adt_rel
+    (fun k -> k "environment before assume:@ %a" Domains.pp domains);
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let domains =
     try
@@ -573,7 +538,8 @@ let assume env uf la =
     new_terms;
   }
   in
-  Debug.pp_domains "after assume" domains;
+  Logs.debug ~src:Sources.adt_rel
+    (fun k -> k "environment after assume:@ %a" Domains.pp domains);
   env,
   Uf.GlobalDomains.add (module Domains) domains ds,
   Sig_rel.{ assume; remove = [] }
@@ -693,17 +659,16 @@ let case_split env uf ~for_model =
   else begin
     match next_case_split ~for_model env uf with
     | Some cs ->
-      if Options.get_debug_adt () then begin
-        Debug.pp_domains "before cs"
-          (Uf.GlobalDomains.find (module Domains) (Uf.domains uf));
-        Printer.print_dbg ~flushed:false
-          ~module_name:"Adt_rel" ~function_name:"case_split"
-          "Assume %a" (Xliteral.print_view X.print) cs;
-      end;
+      Logs.debug ~src:Sources.adt_rel
+        (fun k -> k "environment before case split:@ %a"
+            Domains.pp
+            (Uf.GlobalDomains.find (module Domains) (Uf.domains uf)));
+      Logs.debug ~src:Sources.adt_rel
+        (fun k -> k "assume by case splitting:@ %a"
+            (Xliteral.print_view X.print) cs);
       [ cs, true, Th_util.CS (Th_util.Th_adt, two)]
     | None ->
-      if Options.get_debug_adt () then
-        Debug.no_case_split ();
+      Logs.debug (fun k -> k "no case split done");
       []
   end
 
