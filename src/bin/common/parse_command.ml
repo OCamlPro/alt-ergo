@@ -222,7 +222,12 @@ module Debug = struct
         | Arith -> Options.set_debug_arith true
         | Arrays -> Options.set_debug_arrays true
         | Bitv -> Options.set_debug_bitv true
-        | Sum -> Options.set_debug_sum true
+        | Sum ->
+          Printer.print_wrn
+            "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
+             It has the same effect as 'adt' and will be removed in a future \
+             version.";
+          Options.set_debug_adt true
         | Ite -> Options.set_debug_ite true
         | Cc -> Options.set_debug_cc true
         | Combine -> Options.set_debug_combine true

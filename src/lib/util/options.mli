@@ -158,9 +158,6 @@ val set_debug_sat : bool -> unit
 (** Set [debug_split] accessible with {!val:get_debug_split} *)
 val set_debug_split : bool -> unit
 
-(** Set [debug_sum] accessible with {!val:get_debug_sum} *)
-val set_debug_sum : bool -> unit
-
 (** Set [debug_triggers] accessible with {!val:get_debug_triggers} *)
 val set_debug_triggers : bool -> unit
 
@@ -513,9 +510,6 @@ val get_debug_intervals : unit -> bool
 (** Get the debugging value of floating-point. *)
 val get_debug_fpa : unit -> int
 (** Default to [0]. *)
-
-(** Get the debugging flag of Sum. *)
-val get_debug_sum : unit -> bool
 
 (** Get the debugging flag of ADTs. *)
 val get_debug_adt : unit -> bool

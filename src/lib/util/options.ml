@@ -155,7 +155,6 @@ let debug_ite = ref false
 let debug_matching = ref 0
 let debug_sat = ref false
 let debug_split = ref false
-let debug_sum = ref false
 let debug_triggers = ref false
 let debug_types = ref false
 let debug_typing = ref false
@@ -186,7 +185,6 @@ let set_debug_ite b = debug_ite := b
 let set_debug_matching i = debug_matching := i
 let set_debug_sat b = debug_sat := b
 let set_debug_split b = debug_split := b
-let set_debug_sum b = debug_sum := b
 let set_debug_triggers b = debug_triggers := b
 let set_debug_types b = debug_types := b
 let set_debug_typing b = debug_typing := b
@@ -217,7 +215,6 @@ let get_debug_ite () = !debug_ite
 let get_debug_matching () = !debug_matching
 let get_debug_sat () = !debug_sat
 let get_debug_split () = !debug_split
-let get_debug_sum () = !debug_sum
 let get_debug_triggers () = !debug_triggers
 let get_debug_types () = !debug_types
 let get_debug_typing () = !debug_typing
