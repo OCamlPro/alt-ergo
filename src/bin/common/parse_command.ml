@@ -250,7 +250,11 @@ module Debug = struct
         | Uf -> Options.set_debug_uf true
         | Unsat_core -> Options.set_debug_unsat_core true
         | Use -> Options.set_debug_use true
-        | Warnings -> Options.set_debug_warnings true
+        | Warnings ->
+          Printer.print_wrn
+            "The debug flag 'warning' is deprecated and will be removed in a \
+             future version.";
+          Options.set_debug_warnings true
         | Commands -> Options.set_debug_commands true
         | Optimize -> Options.set_debug_optimize true
       )
