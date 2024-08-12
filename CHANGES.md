@@ -99,6 +99,7 @@
  - Uniformization of internal identifiers generation (#905, #918)
  - Use an efficient `String.starts_with` implementation (#912)
  - Fix the Makefile (#914)
+ - Add `Logs` dependency (#1206)
 
 ### Testing
 

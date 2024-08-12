@@ -185,7 +185,7 @@ type options = {
   debug_cc : bool option;
   debug_combine : bool option;
   debug_constr : bool option;
-  debug_explanations : bool option;
+  debug_explanation : bool option;
   debug_fm : bool option;
   debug_fpa : int option;
   debug_gc : bool option;
@@ -286,7 +286,7 @@ let init_options () = {
   debug_cc = None;
   debug_combine = None;
   debug_constr = None;
-  debug_explanations = None;
+  debug_explanation = None;
   debug_fm = None;
   debug_fpa = None;
   debug_gc = None;
@@ -392,7 +392,7 @@ let opt_dbg1_encoding =
        (opt "debug_cc" bool)
        (opt "debug_combine" bool)
        (opt "debug_constr" bool)
-       (opt "debug_explanations" bool)
+       (opt "debug_explanation" bool)
     )
 
 let opt_dbg2_encoding =
@@ -555,7 +555,7 @@ let options_to_json opt =
      opt.debug_cc,
      opt.debug_combine,
      opt.debug_constr,
-     opt.debug_explanations)
+     opt.debug_explanation)
   in
   let dbg_opt2 =
     (opt.debug_fm,
@@ -685,7 +685,7 @@ let options_from_json options =
          debug_cc,
          debug_combine,
          debug_constr,
-         debug_explanations) =
+         debug_explanation) =
       dbg_opt1 in
     let (debug_fm,
          debug_fpa,
@@ -771,7 +771,7 @@ let options_from_json options =
       debug_cc;
       debug_combine;
       debug_constr;
-      debug_explanations;
+      debug_explanation;
       debug_fm;
       debug_fpa;
       debug_gc;

@@ -106,7 +106,7 @@ let set_options r =
   set_options_opt Options.set_debug_cc r.debug_cc;
   set_options_opt Options.set_debug_combine r.debug_combine;
   set_options_opt Options.set_debug_constr r.debug_constr;
-  set_options_opt Options.set_debug_explanations r.debug_explanations;
+  set_options_opt Options.set_debug_explanation r.debug_explanation;
   set_options_opt Options.set_debug_fm r.debug_fm;
   set_options_opt Options.set_debug_fpa r.debug_fpa;
   set_options_opt Options.set_debug_gc r.debug_gc;

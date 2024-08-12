@@ -106,7 +106,7 @@ let add_fresh fe s = S.add fe s
 
 let print fmt ex =
   let open Format in
-  if Options.get_debug_explanations () then begin
+  if Options.get_debug_explanation () then begin
     fprintf fmt "{";
     S.iter (function
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a

@@ -120,8 +120,8 @@ val set_debug_combine : bool -> unit
 (** Set [debug_constr] accessible with {!val:get_debug_constr} *)
 val set_debug_constr : bool -> unit
 
-(** Set [debug_explanations] accessible with {!val:get_debug_explanations} *)
-val set_debug_explanations : bool -> unit
+(** Set [debug_explanation] accessible with {!val:get_debug_explanation} *)
+val set_debug_explanation : bool -> unit
 
 (** Set [debug_fm] accessible with {!val:get_debug_fm} *)
 val set_debug_fm : bool -> unit
@@ -552,8 +552,8 @@ val get_debug_split : unit -> bool
 *)
 val get_debug_matching : unit -> int
 
-(** Get the debugging flag of explanations. *)
-val get_debug_explanations : unit -> bool
+(** Get the debugging flag of explanation. *)
+val get_debug_explanation : unit -> bool
 
 (** Get the debugging flag of triggers. *)
 val get_debug_triggers : unit -> bool

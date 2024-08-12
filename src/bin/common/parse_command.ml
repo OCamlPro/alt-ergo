@@ -213,50 +213,107 @@ module Debug = struct
     | Commands -> "commands"
     | Optimize -> "optimize"
 
+  let set_level src = Logs.Src.set_level src (Some Debug)
+
   let mk ~verbosity flags =
+    let module S = Sources in
     List.concat flags
     |> List.iter (function
-        | Debug -> Options.set_debug true
-        | Ac -> Options.set_debug_ac true
-        | Adt -> Options.set_debug_adt true
-        | Arith -> Options.set_debug_arith true
-        | Arrays -> Options.set_debug_arrays true
-        | Bitv -> Options.set_debug_bitv true
+        | Debug ->
+          Options.set_debug true
+        | Ac ->
+          Options.set_debug_ac true;
+          set_level S.ac
+        | Adt ->
+          Options.set_debug_adt true;
+          set_level S.adt;
+          set_level S.adt_rel
+        | Arith ->
+          Options.set_debug_arith true;
+          set_level S.arith;
+          set_level S.interval_calculus
+        | Arrays ->
+          Options.set_debug_arrays true;
+          set_level S.arrays_rel
+        | Bitv ->
+          Options.set_debug_bitv true;
+          set_level S.bitv
         | Sum ->
           Printer.print_wrn
             "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
              It has the same effect as 'adt' and will be removed in a future \
              version.";
-          Options.set_debug_adt true
-        | Ite -> Options.set_debug_ite true
-        | Cc -> Options.set_debug_cc true
-        | Combine -> Options.set_debug_combine true
-        | Constr -> Options.set_debug_constr true
-        | Explanation -> Options.set_debug_explanations true
-        | Fm -> Options.set_debug_fm true
-        | Fpa -> Options.set_debug_fpa verbosity
-        | Gc -> Options.set_debug_gc true
-        | Interpretation -> Options.set_debug_interpretation true
-        | Intervals -> Options.set_debug_intervals true
-        | Matching -> Options.set_debug_matching verbosity
-        | Sat -> Options.set_debug_sat true
-        | Split -> Options.set_debug_split true
-        | Triggers -> Options.set_debug_triggers true
-        | Types -> Options.set_debug_types true
+          Options.set_debug_adt true;
+          set_level S.adt;
+          set_level S.adt_rel
+        | Ite ->
+          Options.set_debug_ite true;
+          set_level S.ite_rel
+        | Cc ->
+          Options.set_debug_cc true;
+          set_level S.cc
+        | Combine ->
+          Options.set_debug_combine true;
+          set_level S.combine
+        | Constr ->
+          Options.set_debug_constr true;
+          set_level S.constr
+        | Explanation ->
+          Options.set_debug_explanation true;
+          set_level S.explanation
+        | Fm ->
+          Options.set_debug_fm true;
+          set_level S.fm
+        | Fpa ->
+          Options.set_debug_fpa verbosity
+        | Gc ->
+          Options.set_debug_gc true;
+          set_level S.gc_debug
+        | Interpretation ->
+          Options.set_debug_interpretation true;
+          set_level S.interpretation
+        | Intervals ->
+          Options.set_debug_intervals true;
+          set_level S.intervals
+        | Matching ->
+          Options.set_debug_matching verbosity
+        | Sat ->
+          Options.set_debug_sat true;
+          set_level S.sat
+        | Split ->
+          Options.set_debug_split true;
+          set_level S.split
+        | Triggers ->
+          Options.set_debug_triggers true;
+          set_level S.triggers
+        | Types ->
+          Options.set_debug_types true;
+          set_level S.types
         | Typing ->
           Printer.print_wrn
             "The debug flag 'typing' has no effect. It will be removed in a \
              future version."
-        | Uf -> Options.set_debug_uf true
-        | Unsat_core -> Options.set_debug_unsat_core true
-        | Use -> Options.set_debug_use true
+        | Uf ->
+          Options.set_debug_uf true;
+          set_level S.uf
+        | Unsat_core ->
+          Options.set_debug_unsat_core true;
+          set_level S.unsat_core
+        | Use ->
+          Options.set_debug_use true;
+          set_level S.use
         | Warnings ->
           Printer.print_wrn
             "The debug flag 'warning' is deprecated and will be removed in a \
              future version.";
-          Options.set_debug_warnings true
-        | Commands -> Options.set_debug_commands true
-        | Optimize -> Options.set_debug_optimize true
+          Options.set_debug_warnings true;
+          set_level S.warnings
+        | Commands ->
+          Options.set_debug_commands true;
+          set_level S.commands
+        | Optimize ->
+          Options.set_debug_optimize true;
+          set_level S.optimize
       )
 
   let light_flag_term, medium_flag_term, full_flag_term =
