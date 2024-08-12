@@ -243,7 +243,10 @@ module Debug = struct
         | Split -> Options.set_debug_split true
         | Triggers -> Options.set_debug_triggers true
         | Types -> Options.set_debug_types true
-        | Typing -> Options.set_debug_typing true
+        | Typing ->
+          Printer.print_wrn
+            "The debug flag 'typing' has no effect. It will be removed in a \
+             future version."
         | Uf -> Options.set_debug_uf true
         | Unsat_core -> Options.set_debug_unsat_core true
         | Use -> Options.set_debug_use true

@@ -196,7 +196,6 @@ type options = {
   debug_split : bool option;
   debug_triggers : bool option;
   debug_types : bool option;
-  debug_typing : bool option;
   debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
@@ -298,7 +297,6 @@ let init_options () = {
   debug_split = None;
   debug_triggers = None;
   debug_types = None;
-  debug_typing = None;
   debug_uf = None;
   debug_unsat_core = None;
   debug_use = None;
@@ -417,9 +415,8 @@ let opt_dbg3_encoding =
   conv
     (fun dbg3 -> dbg3)
     (fun dbg3 -> dbg3)
-    (obj6
+    (obj5
        (opt "debug_types" bool)
-       (opt "debug_typing" bool)
        (opt "debug_uf" bool)
        (opt "debug_unsat_core" bool)
        (opt "debug_use" bool)
@@ -573,7 +570,6 @@ let options_to_json opt =
   in
   let dbg_opt3 =
     (opt.debug_types,
-     opt.debug_typing,
      opt.debug_uf,
      opt.debug_unsat_core,
      opt.debug_use,
@@ -701,7 +697,6 @@ let options_from_json options =
          debug_split,
          debug_triggers) = dbg_opt2 in
     let (debug_types,
-         debug_typing,
          debug_uf,
          debug_unsat_core,
          debug_use,
@@ -787,7 +782,6 @@ let options_from_json options =
       debug_split;
       debug_triggers;
       debug_types;
-      debug_typing;
       debug_uf;
       debug_unsat_core;
       debug_use;
