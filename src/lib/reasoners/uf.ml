@@ -1144,7 +1144,8 @@ module Cache = struct
 
     abstracts: (r, Expr.t) Hashtbl.t;
     (** Contains all the abstract values generated. This cache is necessary
-        to ensure we don't generate twice an abstract value for a given symbol. *)
+        to ensure we don't generate twice an abstract value for a given
+        symbol. *)
   }
 
   let mk () = {
