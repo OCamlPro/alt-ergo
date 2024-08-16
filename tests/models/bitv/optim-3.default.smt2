@@ -1,6 +1,7 @@
 ; Test constrained optimization
 (set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models false)
 (declare-const x (_ BitVec 32))
 (maximize x)
 (assert (bvslt x ((_ int2bv 32) (- 1))))
