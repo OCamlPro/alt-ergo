@@ -35,8 +35,7 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Uid.term_cst | Record
-  | Constr of Uid.term_cst (* enums, adts *)
+  | Constr of Uid.term_cst
   | Destruct of Uid.term_cst
   (* Arrays *)
   | Get | Set

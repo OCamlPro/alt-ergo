@@ -90,7 +90,7 @@ module Domain = struct
 
   let unknown ty =
     match ty with
-    | Ty.Tadt (name, params) ->
+    | Ty.Tadt (name, params, _) ->
       (* Return the list of all the constructors of the type of [r]. *)
       let cases = Ty.type_body name params in
       let constrs =
@@ -175,7 +175,7 @@ module Domains = struct
      contains the type of constructor and in particular its arity. *)
   let is_enum_constr r c =
     match X.type_info r with
-    | Tadt (name, args) ->
+    | Tadt (name, args, _) ->
       let cases = Ty.type_body name args in
       Compat.List.is_empty @@ Ty.assoc_destrs c cases
     | _ -> assert false
@@ -499,7 +499,7 @@ let build_constr_eq r c =
   match Th.embed r with
   | Alien r ->
     begin match X.type_info r with
-      | Ty.Tadt (name, params) as ty ->
+      | Ty.Tadt (name, params, _) as ty ->
         let cases = Ty.type_body name params in
         let ds =
           try Ty.assoc_destrs c cases with Not_found -> assert false
@@ -585,7 +585,7 @@ let two = Numbers.Q.from_int 2
 (* TODO: we should compute this reverse map in `Ty` and store it there. *)
 let constr_of_destr ty d =
   match ty with
-  | Ty.Tadt (name, params) ->
+  | Ty.Tadt (name, params, _) ->
     begin
       let cases = Ty.type_body name params in
       try

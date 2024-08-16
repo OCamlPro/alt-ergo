@@ -110,12 +110,18 @@ let rec make_term quant_basename t =
       E.mk_term (Sy.Op Sy.Concat)
         [mk_term t1; mk_term t2] ty
 
-    | TTdot (t, s) ->
-      E.mk_term (Sy.Op (Sy.Access (Uid.of_hstring s))) [mk_term t] ty
-
-    | TTrecord lbs ->
+    | TTrecord (ty, lbs) ->
       let lbs = List.map (fun (_, t) -> mk_term t) lbs in
-      E.mk_record lbs ty
+      let cstr =
+        match ty with
+        | Tadt (name, params, true) ->
+          begin match Ty.type_body name params  with
+            | [{ constr; _ }] -> Uid.show constr
+            | _ -> assert false
+          end
+        | _ -> assert false
+      in
+      E.mk_constr (Uid.of_string cstr) lbs ty
 
     | TTlet (binders, t2) ->
       let binders =

@@ -51,7 +51,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Uid.ty_cst * t list
+  | Tadt of Uid.ty_cst * t list * bool
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -59,9 +59,6 @@ type t =
       For instance the type of integer lists can be represented by the
       value [Tadt (Hstring.make "list", [Tint]] where the identifier
       {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
-
-  | Trecord of trecord
-  (** Record type. *)
 
 and tvar = {
   v : int;
@@ -73,20 +70,6 @@ and tvar = {
     The [value] field is mutated during unification,
     hence distinct types should have disjoints sets of
     type variables (see function {!val:fresh}). *)
-
-and trecord = {
-  mutable args : t list;
-  (** Arguments passed to the record constructor *)
-  name : Uid.ty_cst;
-  (** Name of the record type *)
-  mutable lbs :  (Uid.term_cst * t) list;
-  (** List of fields of the record. Each field has a name,
-      and an associated type. *)
-  record_constr : Uid.term_cst;
-  (** record constructor. Useful is case it's a specialization of an
-      algeberaic datatype. Default value is "\{__[name]" *)
-}
-(** Record types. *)
 
 type adt_constr =
   { constr : Uid.term_cst ;
@@ -165,6 +148,7 @@ val text : t list -> Uid.ty_cst -> t
     given. *)
 
 val t_adt :
+  ?record:bool ->
   ?body:((Uid.term_cst * (Uid.term_cst * t) list) list) option ->
   Uid.ty_cst -> t list -> t
 (** Create an algebraic datatype. The body is a list of
@@ -173,18 +157,6 @@ val t_adt :
     then no definition will be registered for this type. The second
     argument is the name of the type. The third one provides its list
     of arguments. *)
-
-val trecord :
-  ?sort_fields:bool ->
-  record_constr:Uid.term_cst ->
-  t list -> Uid.ty_cst -> (Uid.term_cst * t) list -> t
-(** Create a record type. [trecord args name lbs] creates a record
-    type with name [name], arguments [args] and fields [lbs].
-
-    If [sort_fields] is true, the record fields are sorted according to
-    [Hstring.compare]. This is to preserve compatibility with the old
-    typechecker behavior and should not be used in new code. *)
-
 
 (** {2 Substitutions} *)
 

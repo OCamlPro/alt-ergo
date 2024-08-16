@@ -68,8 +68,7 @@ module Types = struct
   let check_number_args loc lty ty =
     match ty with
     | Ty.Text (lty', s)
-    | Ty.Trecord { Ty.args = lty'; name = s; _ }
-    | Ty.Tadt (s,lty') ->
+    | Ty.Tadt (s,lty', _) ->
       if List.length lty <> List.length lty' then
         Errors.typing_error (WrongNumberofArgs (Uid.show s)) loc;
       lty'
@@ -148,18 +147,16 @@ module Types = struct
       let ty = Ty.t_adt ~body:(Some body) (Uid.of_string id) [] in
       ty, { env with to_ty = MString.add id ty env.to_ty }
     | Record (record_constr, lbs) ->
-      let lbs =
-        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs in
-      let sort_fields = String.equal record_constr "{" in
-      let record_constr =
-        if sort_fields then
-          Uid.of_string @@ Fmt.str "%s___%s" record_constr id
-        else
-          Uid.of_string record_constr
+      let lbs' =
+        List.map (fun (x, pp) -> Uid.of_string x, ty_of_pp loc env None pp) lbs
       in
+      let lbs =
+        List.map (fun (x, pp) -> x, ty_of_pp loc env None pp) lbs
+      in
+      let record_constr = Uid.of_string record_constr in
       let ty =
-        Ty.trecord ~sort_fields ~record_constr ty_vars
-          (Uid.of_string id) (List.map (fun (s, ty) -> Uid.of_string s, ty) lbs)
+        Ty.t_adt ~record:true ~body:(Some [record_constr, lbs'])
+          (Uid.of_string id) ty_vars
       in
       ty, { to_ty = MString.add id ty env.to_ty;
             builtins = env.builtins;
@@ -197,7 +194,9 @@ module Types = struct
     in
     check_duplicates Uid.Term_set.empty lbs;
     match ty with
-    | Ty.Trecord { Ty.lbs = l; _ } ->
+    | Ty.Tadt (name, params, true) ->
+      let cases = Ty.type_body name params in
+      let l = match cases with [{ destrs; _ }] -> destrs | _ -> assert false in
       if List.length lbs <> List.length l then
         Errors.typing_error WrongNumberOfLabels loc;
       List.iter
@@ -238,10 +237,7 @@ module Env = struct
   type profile = { args : Ty.t list; result : Ty.t }
 
   type logic_kind =
-    | RecordConstr
-    | RecordDestr
     | AdtConstr
-    | EnumConstr
     | AdtDestr
     | Other
 
@@ -271,7 +267,7 @@ module Env = struct
   let add_fpa_enum map =
     let ty = Fpa_rounding.fpa_rounding_mode in
     match ty with
-    | Ty.Tadt (name, []) ->
+    | Ty.Tadt (name, [], _) ->
       let cases = Ty.type_body name [] in
       let constrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.fold_left
@@ -297,7 +293,7 @@ module Env = struct
 
   let find_builtin_constr ty n =
     match ty with
-    | Ty.Tadt (name, []) ->
+    | Ty.Tadt (name, [], _) ->
       let cases = Ty.type_body name [] in
       let constrs = List.map (fun Ty.{ constr; _ } -> constr) cases in
       List.find (Uid.equal n) constrs
@@ -500,20 +496,15 @@ module Env = struct
     in
     decl, { env with logics }
 
-  let add_constr ~record env constr args_ty ty loc =
+  let add_constr env constr args_ty ty loc =
     let pp_profile = PFunction (args_ty, ty) in
-    let kind = if record then RecordConstr else AdtConstr in
-    let mk_constr = fun s -> Symbols.constr @@ Uid.of_string s in
-    add_logics ~kind env mk_constr [constr, ""] pp_profile loc
+    let mk_constr s = Symbols.constr @@ Uid.of_string s in
+    add_logics ~kind:AdtConstr env mk_constr [constr, ""] pp_profile loc
 
-  let add_destr ~record env destr pur_ty lbl_ty loc =
+  let add_destr env destr pur_ty lbl_ty loc =
     let pp_profile = PFunction ([pur_ty], lbl_ty) in
-    let mk_sy s =
-      if record then (Symbols.Op (Access (Uid.of_string s)))
-      else Symbols.destruct (Uid.of_string s)
-    in
-    let kind = if record then RecordDestr else AdtDestr in
-    add_logics ~kind env mk_sy [destr, ""] pp_profile loc
+    let mk_sy s = Symbols.destruct @@ Uid.of_string s in
+    add_logics ~kind:AdtDestr env mk_sy [destr, ""] pp_profile loc
 
   let find { var_map = m; _ } n = MString.find n m
 
@@ -569,7 +560,7 @@ let type_var_desc env p loc =
   match Env.fresh_type env p loc with
   | s,
     { Env.args = []; result = ty},
-    (Env.Other | Env.AdtConstr | Env.EnumConstr) ->
+    (Env.Other | Env.AdtConstr) ->
     TTapp (s, []) , ty
   | _ -> Errors.typing_error (ShouldBeApply p) loc
 
@@ -631,24 +622,12 @@ let check_pattern_matching missing dead loc =
 let mk_adequate_app p s te_args ty logic_kind =
   let hp = Hstring.make p in
   match logic_kind, te_args, ty with
-  | (Env.AdtConstr | Env.EnumConstr | Env.Other), _, _ ->
+  | (Env.AdtConstr | Env.Other), _, _ ->
     (* symbol 's' alreadt contains the information *)
     TTapp(s, te_args)
 
-  | Env.RecordConstr, _, Ty.Trecord { Ty.lbs; _ } ->
-    let lbs =
-      try
-        List.map2 (fun (hs, _) e -> Hstring.make @@ Uid.show hs, e) lbs te_args
-      with Invalid_argument _ -> assert false
-    in
-    TTrecord lbs
-
-  | Env.RecordDestr, [te], _ -> TTdot(te, hp)
-
   | Env.AdtDestr, [te], _ -> TTproject (te, hp)
 
-  | Env.RecordDestr, _, _ -> assert false
-  | Env.RecordConstr, _, _ -> assert false
   | Env.AdtDestr, _, _ -> assert false
 
 let fresh_type_app env p loc =
@@ -860,22 +839,6 @@ let rec type_term ?(call_from_type_form=false) env f =
         Options.tool_req 1 (append_type "TR-Typing-Ite type" ty2);
         TTite (cond, te2, te3) , ty2
       end
-    | PPdot(t, a) ->
-      begin
-        let te = type_term env t in
-        let ty = Ty.shorten te.c.tt_ty in
-        match ty with
-        | Ty.Trecord { Ty.name = g; lbs; _ } ->
-          begin
-            try
-              TTdot(te, Hstring.make a),
-              My_list.assoc Uid.equal (Uid.of_string a) lbs
-            with Not_found ->
-              let g = Uid.show g in
-              Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc
-          end
-        | _ -> Errors.typing_error (ShouldHaveTypeRecord ty) t.pp_loc
-      end
     | PPrecord lbs ->
       begin
         let lbs =
@@ -888,7 +851,11 @@ let rec type_term ?(call_from_type_form=false) env f =
         let ty = Types.from_labels env.Env.types fake_lbs loc in
         let ty, _ = Ty.fresh (Ty.shorten ty) Ty.esubst in
         match ty with
-        | Ty.Trecord { Ty.lbs=ty_lbs; _ } ->
+        | Ty.Tadt (name, params, true) ->
+          let cases = Ty.type_body name params in
+          let ty_lbs =
+            match cases with [{ destrs; _ }] -> destrs | _ -> assert false
+          in
           begin
             try
               let lbs =
@@ -897,7 +864,7 @@ let rec type_term ?(call_from_type_form=false) env f =
                      Ty.unify te.c.tt_ty ty_lb;
                      Hstring.make @@ Uid.show lb, te) lbs ty_lbs
               in
-              TTrecord(lbs), ty
+              TTrecord (ty, lbs), ty
             with Ty.TypeClash(t1,t2) ->
               Errors.typing_error (Unification(t1,t2)) loc
           end
@@ -911,20 +878,22 @@ let rec type_term ?(call_from_type_form=false) env f =
             (fun (lb, t) -> Hstring.make lb, (type_term env t, t.pp_loc)) lbs in
         let ty = Ty.shorten te.c.tt_ty in
         match ty with
-        | Ty.Trecord { Ty.lbs = ty_lbs; _ } ->
+        | Ty.Tadt (name, params, true) ->
+          let cases = Ty.type_body name params in
           let ty_lbs =
-            List.map (fun (uid, ty) -> Hstring.make @@ Uid.show uid, ty) ty_lbs
+            match cases with [{ destrs; _ }] -> destrs | _ -> assert false
           in
           let nlbs =
             List.map
               (fun (lb, ty_lb) ->
+                 let lb = Hstring.make @@ Uid.show lb in
                  try
                    let v, _ = Hstring.list_assoc lb lbs in
                    Ty.unify ty_lb v.c.tt_ty;
                    lb, v
                  with
                  | Not_found ->
-                   lb, {c = { tt_desc = TTdot(te, lb); tt_ty = ty_lb};
+                   lb, {c = { tt_desc = TTproject(te, lb); tt_ty = ty_lb};
                         annot = te.annot }
                  | Ty.TypeClash(t1,t2) ->
                    Errors.typing_error (Unification(t1,t2)) loc
@@ -932,10 +901,10 @@ let rec type_term ?(call_from_type_form=false) env f =
           in
           List.iter
             (fun (lb, _) ->
-               try ignore (Hstring.list_assoc lb ty_lbs)
+               try ignore (Hstring.list_assoc lb nlbs)
                with Not_found ->
                  Errors.typing_error (NoLabelInType(lb, ty)) loc) lbs;
-          TTrecord(nlbs), ty
+          TTrecord (ty, nlbs), ty
         | _ ->  Errors.typing_error ShouldBeARecord loc
       end
     | PPlet(l, t2) ->
@@ -981,6 +950,28 @@ let rec type_term ?(call_from_type_form=false) env f =
         | Ty.TypeClash(t1,t2) -> Errors.typing_error (Unification(t1,t2)) loc
       end
 
+    | PPdot(t, a) ->
+      begin
+        let te = type_term env t in
+        let ty = Ty.shorten te.c.tt_ty in
+        match ty with
+        | Ty.Tadt (name, params, true) ->
+          let cases = Ty.type_body name params in
+          let lbs =
+            match cases with [{ destrs; _ }] -> destrs | _ -> assert false
+          in
+          begin
+            try
+              let hs = Hstring.make a in
+              let a = Uid.of_string a in
+              TTproject (te, hs), Uid.list_assoc a lbs
+            with Not_found ->
+              let g = Uid.show name in
+              Errors.typing_error (ShouldHaveLabel(g,a)) t.pp_loc
+          end
+        | _ -> Errors.typing_error (ShouldHaveTypeRecord ty) t.pp_loc
+      end
+
     | PPproject (t, lbl) ->
       let te = type_term env t in
       begin
@@ -990,9 +981,6 @@ let rec type_term ?(call_from_type_form=false) env f =
             Ty.unify te.c.tt_ty arg;
             TTproject (te, Hstring.make lbl), Ty.shorten result
 
-          | _, {Env.args = [arg] ; result}, Env.RecordDestr ->
-            Ty.unify te.c.tt_ty arg;
-            TTdot (te, Hstring.make lbl), Ty.shorten result
           | _ -> assert false
         with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) loc
@@ -1003,9 +991,8 @@ let rec type_term ?(call_from_type_form=false) env f =
       let e = type_term env e in
       let ty = Ty.shorten e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) -> Ty.type_body name params
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr; destrs = lbs}]
+        | Ty.Tadt (name, params, _) ->
+          Ty.type_body name params
         | _ -> Errors.typing_error (ShouldBeADT ty) loc
       in
       let pats =
@@ -1270,20 +1257,8 @@ and type_form ?(in_theory=false) env f =
             let top = TTisConstr (tt, Hstring.make lbl) in
             let r = TFatom { c = top; annot = new_id () } in
             r
-          | Env.EnumConstr ->
-            let tt_desc, tt_ty = type_var_desc env lbl f.pp_loc in
-            let rhs = { c = { tt_desc; tt_ty }; annot = new_id () } in
-            TFatom (mk_ta_eq tt rhs)
           | _ ->
-            begin match result with
-              | Ty.Trecord _ ->
-                (* The typechecker allows only testers whose the
-                   two arguments have the same type. Thus, we can always
-                   replace the tester of a record by the true literal. *)
-                TFatom { c = TAtrue; annot = new_id () }
-              | _ ->
-                Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
-            end
+            Errors.typing_error (NotAdtConstr (lbl, result)) f.pp_loc
         with Ty.TypeClash(t1,t2) ->
           Errors.typing_error (Unification(t1,t2)) f.pp_loc
       end
@@ -1409,10 +1384,7 @@ and type_form ?(in_theory=false) env f =
       let e = type_term env e in
       let ty = e.c.tt_ty in
       let ty_body = match ty with
-        | Ty.Tadt (name, params) -> Ty.type_body name params
-        | Ty.Trecord { Ty.record_constr; lbs; _ } ->
-          [{Ty.constr = record_constr ; destrs = lbs}]
-
+        | Ty.Tadt (name, params, _) -> Ty.type_body name params
         | _ ->
           Errors.typing_error (ShouldBeADT ty) f.pp_loc
       in
@@ -2097,10 +2069,8 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTextract(mono_term t1, i, j)
     | TTconcat (t1,t2)->
       TTconcat (mono_term t1, mono_term t2)
-    | TTdot (t1, a) ->
-      TTdot (mono_term t1, a)
-    | TTrecord lbs ->
-      TTrecord (List.map (fun (x, t) -> x, mono_term t) lbs)
+    | TTrecord (ty, lbs) ->
+      TTrecord (ty, List.map (fun (x, t) -> x, mono_term t) lbs)
     | TTlet (l,t2)->
       let l = List.rev_map (fun (x, t1) -> x, mono_term t1) (List.rev l) in
       TTlet (l, mono_term t2)
@@ -2353,7 +2323,7 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     let tlogic, env =
       (* can also use List.fold Env.add_constr *)
       let constr = fun s -> Symbols.constr @@ Uid.of_string s in
-      Env.add_logics ~kind:Env.EnumConstr env constr lcl ty loc
+      Env.add_logics ~kind:Env.AdtConstr env constr lcl ty loc
     in
     let td2_a = { c = TLogic(loc, lc, tlogic); annot=new_id () } in
     (td2_a,env)::acc, env
@@ -2369,14 +2339,14 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
       else
         let args_ty = List.map snd lrec in
         let tlogic, env =
-          Env.add_constr ~record:true env constr args_ty pur_ty loc
+          Env.add_constr env constr args_ty pur_ty loc
         in
         ({c = TLogic(loc, [constr], tlogic); annot=new_id ()}, env)::acc, env
     in
     List.fold_left (* register fields *)
       (fun (acc, env) (lbl, ty_lbl) ->
          let tlogic, env =
-           Env.add_destr ~record:true env lbl pur_ty ty_lbl loc
+           Env.add_destr env lbl pur_ty ty_lbl loc
          in
          ({c = TLogic(loc, [lbl], tlogic); annot=new_id ()}, env) :: acc, env
       )(acc, env) lrec
@@ -2385,16 +2355,14 @@ let type_user_defined_type_body ~is_recursive env acc (loc, ls, s, body) =
     List.fold_left
       (fun (acc, env) (constr, lbl_args_ty) ->
          let args_ty = List.map snd lbl_args_ty in
-         let tty, env =
-           Env.add_constr ~record:false env constr args_ty pur_ty loc
-         in
+         let tty, env = Env.add_constr env constr args_ty pur_ty loc in
          let acc =
            ({c = TLogic(loc, [constr], tty); annot=new_id ()}, env) :: acc
          in
          List.fold_left (* register destructors *)
            (fun (acc, env) (lbl, ty_lbl) ->
               let tty, env =
-                Env.add_destr ~record:false env lbl pur_ty ty_lbl loc
+                Env.add_destr env lbl pur_ty ty_lbl loc
               in
               ({c = TLogic(loc, [lbl], tty); annot=new_id ()}, env) :: acc, env
            )(acc, env) lbl_args_ty
