@@ -3097,17 +3097,18 @@ module BV = struct
       (Sy.Op (Sy.Extract (j, i))) [s] (Ty.Tbitv (i - j + 1))
 
   (* Other operations *)
-  let rec repeat i t =
-    assert (i >= 1);
-    if i = 1 then t else concat t (repeat (i - 1) t)
+  let repeat i t =
+    if i < 1 then
+      Fmt.invalid_arg "repeat: count must be positive (got %d)" i;
+    mk_term (Op (Repeat i)) [t] (Tbitv (i * size t))
 
   let zero_extend i t =
     if i = 0 then t else concat (bvzero i) t
 
   let sign_extend i t =
-    if i = 0 then t else
-      let m = size t in
-      concat (repeat i (extract (m - 1) (m - 1) t)) t
+    if i = 0 then t
+    else
+      mk_term (Op (Sign_extend i)) [t] (Tbitv (i + size t))
 
   let rotate_left i t =
     let m = size t in

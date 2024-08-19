@@ -43,6 +43,8 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | Sign_extend of int
+  | Repeat of int
   | BVnot | BVand | BVor | BVxor
   | BVadd | BVsub | BVmul | BVudiv | BVurem
   | BVshl | BVlshr
@@ -190,9 +192,12 @@ let compare_operators op1 op2 =
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
+      | Sign_extend n1, Sign_extend n2
+      | Repeat n1, Repeat n2 ->
+        Int.compare n1 n2
       | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
       | _ , (Plus | Minus | Mult | Div | Modulo | Real_is_int
-            | Concat | Extract _ | Get | Set | Float
+            | Concat | Extract _ | Sign_extend _ | Repeat _ | Get | Set | Float
             | Access _ | Record | Sqrt_real | Abs_int | Abs_real
             | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
             | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
@@ -350,6 +355,8 @@ module AEPrinter = struct
     (* FixedSizedBitVectors theory *)
     | Extract (i, j) -> Fmt.pf ppf "^{%d; %d}" i j
     | Concat -> Fmt.pf ppf "@"
+    | Sign_extend i -> Fmt.pf ppf  "sign_extend[%d]" i
+    | Repeat i -> Fmt.pf ppf "repeat[%d]" i
     | BV2Nat -> Fmt.pf ppf "bv2nat"
     | Int2BV n -> Fmt.pf ppf "int2bv[%d]" n
     | BVnot -> Fmt.pf ppf "bvnot"
@@ -458,6 +465,8 @@ module SmtPrinter = struct
     (* FixedSizedBitVectors theory *)
     | Extract (i, j) -> Fmt.pf ppf "(_ extract %d %d)" j i
     | Concat -> Fmt.pf ppf "concat"
+    | Sign_extend i -> Fmt.pf ppf "(_ sign_extend %d)" i
+    | Repeat i -> Fmt.pf ppf "(_ repeat %d)" i
     | BV2Nat -> Fmt.pf ppf "bv2nat"
     | BVnot -> Fmt.pf ppf "bvnot"
     | BVand -> Fmt.pf ppf "bvand"

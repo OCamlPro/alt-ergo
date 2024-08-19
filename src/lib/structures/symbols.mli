@@ -43,6 +43,8 @@ type operator =
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
+  | Sign_extend of int
+  | Repeat of int
   | BVnot | BVand | BVor | BVxor
   | BVadd | BVsub | BVmul | BVudiv | BVurem
   | BVshl | BVlshr
