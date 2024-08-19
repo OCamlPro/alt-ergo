@@ -73,6 +73,20 @@ module type T = sig
   val abstract_selectors : t -> (r * r) list -> t * (r * r) list
 
   val separate_constant : t -> t * Numbers.Q.t
+
+  module Set : Set.S with type elt = t
+  module Map : Map.S with type key = t
+
+  module Ints : sig
+    val of_bigint : Z.t -> t
+    val zero : t
+    val (~-) : t -> t
+    val (+) : t -> t -> t
+    val (-) : t -> t -> t
+    val (~$$) : Z.t -> t
+    val (+$$) : t -> Z.t -> t
+    val ( *$$ ) : t -> Z.t -> t
+  end
 end
 
 module type EXTENDED_Polynome = sig
@@ -351,4 +365,19 @@ module Make (X : S) = struct
 
   let separate_constant t = { t with c = Q.zero}, t.c
 
+  (* Operators and helpers for readability *)
+
+  module Set = Set.Make(struct type nonrec t = t let compare = compare end)
+  module Map = Map.Make(struct type nonrec t = t let compare = compare end)
+
+  module Ints = struct
+    let of_bigint n = create [] (Q.from_z n) Tint
+    let (~$$) = of_bigint
+    let zero = ~$$Z.zero
+    let (~-) = mult_const Q.m_one
+    let (+) = add
+    let (-) = sub
+    let (+$$) p n = add_const (Q.from_z n) p
+    let ( *$$ ) p n = mult_const (Q.from_z n) p
+  end
 end

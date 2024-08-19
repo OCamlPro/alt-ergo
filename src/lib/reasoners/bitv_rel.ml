@@ -147,32 +147,11 @@ module BV2Nat = struct
   (* Helpers for readability *)
   module T = struct
     module Ints = struct
-      module Set = Set.Make(P)
-
-      module Map = Map.Make(P)
+      include P.Ints
 
       let of_repr r = Shostak.Arith.embed r
-
       let to_repr p = Shostak.Arith.is_mine p
-
-      let of_bigint n = P.create [] (Q.of_bigint n) Tint
-
-      let (~$$) = of_bigint
-
-      let zero = ~$$Z.zero
-
-      let (~-) = P.mult_const Q.minus_one
-
-      let ( + ) = P.add
-
-      let ( - ) = P.sub
-
-      let ( +$$ ) p n = P.add_const (Q.of_bigint n) p
-
-      let ( *$$ ) p n = P.mult_const (Q.of_bigint n) p
-
       let mkv_eq p p' = Uf.LX.mkv_eq (to_repr p) (to_repr p')
-
       let mkv_le p p' = Uf.LX.mkv_builtin true LE [to_repr p; to_repr p']
     end
 
@@ -215,7 +194,7 @@ module BV2Nat = struct
 
         We maintain the invariant that if [(bv, ext)] maps to [(p, ex)] in
         [bv2nat], then [p] maps to [(bv, ext, ex)] in [nat2bv] below. *)
-    ; nat2bv : (X.r * Extraction.t * Ex.t) T.Ints.Map.t
+    ; nat2bv : (X.r * Extraction.t * Ex.t) P.Map.t
     (** Map from integer polynomials to their bit-vector representation.
 
         If [p] is associated with [(bv, ext, ex)] in this map, it means that
@@ -224,7 +203,7 @@ module BV2Nat = struct
         Note that this is the inverse of the [bv2nat] mapping, not an
         implementation of the [int2bv] function (although both coincide for
         entries in the map). *)
-    ; use : T.Ints.Set.t MX.t
+    ; use : P.Set.t MX.t
     (** Map from integer variables to the polynomials that use them.
 
         This is used for integer substitutions because of our encoding of
@@ -256,7 +235,7 @@ module BV2Nat = struct
 
   let empty =
     { bv2nat = MX.empty
-    ; nat2bv = T.Ints.Map.empty
+    ; nat2bv = P.Map.empty
     ; use = MX.empty
     ; eqs = [] }
 
@@ -270,9 +249,9 @@ module BV2Nat = struct
     match MX.find x t.use with
     | exception Not_found -> acc
     | nps ->
-      T.Ints.Set.fold (fun p acc ->
+      P.Set.fold (fun p acc ->
           let v =
-            try T.Ints.Map.find p t.nat2bv with Not_found -> assert false
+            try P.Map.find p t.nat2bv with Not_found -> assert false
           in
           f p v acc
         ) nps acc
@@ -280,8 +259,8 @@ module BV2Nat = struct
   let add_use_p p use =
     List.fold_left (fun use r ->
         MX.update r (function
-            | None -> Some (T.Ints.Set.singleton p)
-            | Some sp -> Some (T.Ints.Set.add p sp)
+            | None -> Some (P.Set.singleton p)
+            | Some sp -> Some (P.Set.add p sp)
           ) use
       ) use (P.leaves p)
 
@@ -290,8 +269,8 @@ module BV2Nat = struct
         MX.update r (function
             | None -> assert false
             | Some ps ->
-              let ps = T.Ints.Set.remove p ps in
-              if T.Ints.Set.is_empty ps then None else Some ps
+              let ps = P.Set.remove p ps in
+              if P.Set.is_empty ps then None else Some ps
           ) use
       ) use (P.leaves p)
 
@@ -306,7 +285,7 @@ module BV2Nat = struct
 
   let remove_aux bv ext p t =
     let use = remove_use_p p t.use in
-    let nat2bv = T.Ints.Map.remove p t.nat2bv in
+    let nat2bv = P.Map.remove p t.nat2bv in
     let bv2nat =
       MX.update bv (function
           | None -> None
@@ -334,7 +313,7 @@ module BV2Nat = struct
         let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
         let use = add_use_p k t.use in
         let bv2nat = add_ext ~ex:Ex.empty bv ext k t.bv2nat in
-        let nat2bv = T.Ints.Map.add k (bv, ext, Ex.empty) t.nat2bv in
+        let nat2bv = P.Map.add k (bv, ext, Ex.empty) t.nat2bv in
         (k, Ex.empty), { use ; bv2nat ; nat2bv ; eqs = t.eqs }
 
   (* Add the definining equation for [bv2nat(bv asr ofs)] to [eqs].
@@ -375,7 +354,7 @@ module BV2Nat = struct
     try find_ext bv ext t.bv2nat, t with Not_found -> init_ext bv ext t
 
   let find_p p t =
-    T.Ints.Map.find p t.nat2bv
+    P.Map.find p t.nat2bv
 
   (* Add the mapping [bv2nat(bv<ext>) -> p]. If there is already a polynomial
      associated with [bv<ext>] or a bit-vector associated with [p], the
@@ -385,7 +364,7 @@ module BV2Nat = struct
      reuse this function for substitutions. *)
   let add ~ex bv ext p t =
     let t =
-      match T.Ints.Map.find p t.nat2bv with
+      match P.Map.find p t.nat2bv with
       | exception Not_found -> t
       | (bv', ext', ex') ->
         let lit = T.BV.mkv_eq (bv, ext) (bv', ext') in
@@ -415,7 +394,7 @@ module BV2Nat = struct
     | None ->
       let use = add_use_p p t.use in
       let bv2nat = add_ext ~ex bv ext p t.bv2nat in
-      let nat2bv = T.Ints.Map.add p (bv, ext, ex) t.nat2bv in
+      let nat2bv = P.Map.add p (bv, ext, ex) t.nat2bv in
       let t = { use ; bv2nat ; nat2bv ; eqs = t.eqs } in
       if is_new then
         let (p', ex'), t = init_ext bv ext t in
