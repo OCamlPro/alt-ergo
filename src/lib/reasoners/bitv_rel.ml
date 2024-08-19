@@ -1662,6 +1662,7 @@ end = struct
 
     let push q k p = Q.push q (B (k, p))
 
+    (* Returns [false] if no propagation was performed (empty queue). *)
     let run1 st q =
       match Q.pop q with
       | B ({ run ; _ }, p) -> run st p; true
@@ -2002,40 +2003,40 @@ let state uf idom bdom =
   ; bitlist_variables = bvars
   ; bitlist_changed = HX.create 17 }
 
-(* Schedule specifications *)
-type schedule =
-  | Single of Any_propagator.Queue.t
-  (** Propagate a single constraint from the given queue. *)
-  | Round_robin of (schedule * int) array
-  (** Performs [n] propagations from the provided schedules in round-robin
-      fashion the coefficient adjusts how many propagations are performed
-      before moving on to the next schedule. *)
-  | Repeat of schedule
-  (** Repeat the given schedule to completion. *)
+module Schedule = struct
+  (* Schedule specifications *)
+  type t =
+    | Single of Any_propagator.Queue.t
+    (** Propagate a single constraint from the given queue. *)
+    | Sequence of t array
+    (** Performs propagations from the provided schedules in sequence. *)
+    | Repeat of t
+    (** Repeat the given schedule to completion. *)
 
-let rec run_schedule state schedule =
-  match schedule with
-  | Single queue -> Any_propagator.Queue.run1 state queue
-  | Round_robin schedules ->
-    Array.fold_left (fun did_run (schedule, niter) ->
-        run_many state schedule false niter || did_run
-      ) false schedules
-  | Repeat schedule ->
-    run_repeatedly state schedule false
+  (* Returns [false] if no propagation was performed. *)
+  let rec run state schedule =
+    match schedule with
+    | Single queue ->
+      Any_propagator.Queue.run1 state queue
+    | Sequence schedules ->
+      Array.fold_left (fun did_run schedule ->
+          run state schedule || did_run
+        ) false schedules
+    | Repeat schedule ->
+      run_repeatedly state schedule false
 
-and run_many state schedule did_run n =
-  if n <= 0 then did_run
-  else
-  if run_schedule state schedule then
-    run_many state schedule true (n - 1)
-  else
-    did_run
+  and run_repeatedly state schedule did_run =
+    if run state schedule then
+      run_repeatedly state schedule true
+    else
+      did_run
 
-and run_repeatedly state schedule did_run =
-  if run_schedule state schedule then
-    run_repeatedly state schedule true
-  else
-    did_run
+  let queue q = Single q
+
+  let sequence scheds = Sequence scheds
+
+  let repeat s = Repeat s
+end
 
 let rec propagate_all uf eqs bdom idom =
   (* Optimization to avoid unnecessary allocations *)
@@ -2047,14 +2048,13 @@ let rec propagate_all uf eqs bdom idom =
 
     (* We run all propagations over a single domain to completion, then run
        the consistency propagators to perform cross-domain propagations. *)
-    ignore (
-      run_schedule state @@ Repeat (
-        Round_robin
-          [| (Repeat (Single queues.propagation_queue), 1)
-           ; (Repeat (Single queues.consistency_queue), 1)
+    ignore Schedule.(
+        run state @@ repeat @@
+        sequence
+          [| repeat @@ queue queues.propagation_queue
+           ; repeat @@ queue queues.consistency_queue
           |]
-      )
-    );
+      );
 
     let bdom = state.bitlists in
     let idom = state.intervals in
