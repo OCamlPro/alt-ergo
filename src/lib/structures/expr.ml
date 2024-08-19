@@ -3098,7 +3098,8 @@ module BV = struct
 
   (* Other operations *)
   let repeat i t =
-    assert (i >= 1);
+    if i < 1 then
+      Fmt.invalid_arg "repeat: count must be positive (got %d)" i;
     mk_term (Op (Repeat i)) [t] (Tbitv (i * size t))
 
   let zero_extend i t =
