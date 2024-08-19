@@ -213,9 +213,8 @@ module BV2Nat = struct
         If [(bv, ext)] is associated with [(p, ex)] in this map, it means
         that [p = bv2nat(bv<ext>)] is justified by [ex].
 
-        We maintain the invariant that if [(bv, ext)] is associated with
-        [(p, ex)] in this map, then [(bv, ext, ex)] is associated with [p]
-        in [nat2bv]. *)
+        We maintain the invariant that if [(bv, ext)] maps to [(p, ex)] in
+        [bv2nat], then [p] maps to [(bv, ext, ex)] in [nat2bv] below. *)
     ; nat2bv : (X.r * Extraction.t * Ex.t) T.Ints.Map.t
     (** Map from integer polynomials to their bit-vector representation.
 
@@ -231,7 +230,12 @@ module BV2Nat = struct
         This is used for integer substitutions because of our encoding of
         extractions in [bv2nat]: we encode [bv2nat(bv<i, j>)] in
         terms of [bv2nat(bv<0, i>)] and [bv2nat(bv<0, j>)] which we create
-        dynamically. The polynomials associated with these expressions are
+        dynamically.
+
+        This is done to reduce the number of variables introduced to represent
+        extractions from quadratic to linear in the bitwidth.
+
+        The polynomials associated with these expressions are
         thus not tracked by the UnionFind module, and are not given to
         [subst]. *)
     ; eqs : (X.r Xliteral.view * Ex.t) list
@@ -313,12 +317,12 @@ module BV2Nat = struct
     in
     { use ; nat2bv ; bv2nat ; eqs = t.eqs }
 
-  (* Returns the polynomial associated with [bv2nat(bv) asr ofs], or raises
+  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], or raises
      [Not_found] if there is none. *)
   let find_asr bv ofs t =
     find_ext bv (Extraction.shift_right ~size:(bitwidth bv) ofs) t.bv2nat
 
-  (* Returns the polynomial associated with [bv2nat(bv) asr ofs], creating a
+  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], creating a
      fresh variable for it if it does not exist. *)
   let find_or_create_asr bv ofs t =
     let ext = Extraction.shift_right ~size:(bitwidth bv) ofs in
@@ -333,11 +337,11 @@ module BV2Nat = struct
         let nat2bv = T.Ints.Map.add k (bv, ext, Ex.empty) t.nat2bv in
         (k, Ex.empty), { use ; bv2nat ; nat2bv ; eqs = t.eqs }
 
-  (* Add the definining equation for [bv2nat(bv) asr ofs] to [eqs].
+  (* Add the definining equation for [bv2nat(bv asr ofs)] to [eqs].
 
-     The defining equation for [bv2nat(bv) asr ofs] is:
+     The defining equation for [bv2nat(bv asr ofs)] is:
 
-        0 <= bv2nat(bv) - (bv2nat(bv) asr ofs) < 2^ofs
+        0 <= bv2nat(bv) - bv2nat(bv asr ofs) < 2^ofs
   *)
   let init_asr bv ofs t =
     let (p, ex), t = find_or_create_asr bv 0 t in
@@ -348,7 +352,7 @@ module BV2Nat = struct
       let eqs = add_width_ineqs ~ex:(Ex.union ex ex_asr) ofs delta t.eqs in
       (p_asr, ex_asr), { t with eqs }
 
-  (* Returns the polynomial associated with [bv2nat(bv) asr ofs].
+  (* Returns the polynomial associated with [bv2nat(bv asr ofs)].
 
      If no such polynomial exists, create a fresh variable for it and adds its
      defining equation to [t]. *)
@@ -497,10 +501,10 @@ module BV2Nat = struct
 
      for a fresh variable [k].
 
-     If we know that [int_r] is an exact bit-vector representation (i.e. [int_r]
-     is equal to [bv2nat(bv)] for some bit-vector [bv]) we introduce the
-     appropriate equalities between [bv] and [bv_r] instead. This is required
-     for completeness. *)
+     If we know that [int_r] has an exact bit-vector representation (i.e.
+     [int_r] is equal to [bv2nat(bv)] for some bit-vector [bv]) we introduce
+     the appropriate equalities between [bv] and [bv_r] instead. This is
+     required for completeness. *)
   let add_int2bv ~ex bv_r int_r t =
     assert (X.is_a_leaf bv_r);
     let sz = bitwidth bv_r in
