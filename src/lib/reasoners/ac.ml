@@ -199,7 +199,7 @@ module Make (X : Sig.X) = struct
   let rec abstract2 sy r =
     match List.find (is_other_ac_symbol sy) (X.leaves r) with
     | ac_lv ->
-      (* Abstraction in depth: [f(x, y) + 1] -> [@ac(f(x, y) + 1]
+      (* Abstraction in depth: [f(x, y) + 1] -> [@ac(f(x, y)) + 1]
          and not [@ac(f(x, y) + 1)]. *)
       abstract2 sy (X.subst ac_lv (X.abstract ~kind:Ac ac_lv) r)
     | exception Not_found -> r
