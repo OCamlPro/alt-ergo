@@ -115,10 +115,8 @@ let set_options r =
   set_options_opt Options.set_debug_matching r.debug_matching;
   set_options_opt Options.set_debug_sat r.debug_sat;
   set_options_opt Options.set_debug_split r.debug_split;
-  set_options_opt Options.set_debug_sum r.debug_sum;
   set_options_opt Options.set_debug_triggers r.debug_triggers;
   set_options_opt Options.set_debug_types r.debug_types;
-  set_options_opt Options.set_debug_typing r.debug_typing;
   set_options_opt Options.set_debug_uf r.debug_uf;
   set_options_opt Options.set_debug_unsat_core r.debug_unsat_core;
   set_options_opt Options.set_debug_use r.debug_use;

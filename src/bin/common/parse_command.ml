@@ -222,7 +222,12 @@ module Debug = struct
         | Arith -> Options.set_debug_arith true
         | Arrays -> Options.set_debug_arrays true
         | Bitv -> Options.set_debug_bitv true
-        | Sum -> Options.set_debug_sum true
+        | Sum ->
+          Printer.print_wrn
+            "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
+             It has the same effect as 'adt' and will be removed in a future \
+             version.";
+          Options.set_debug_adt true
         | Ite -> Options.set_debug_ite true
         | Cc -> Options.set_debug_cc true
         | Combine -> Options.set_debug_combine true
@@ -238,11 +243,18 @@ module Debug = struct
         | Split -> Options.set_debug_split true
         | Triggers -> Options.set_debug_triggers true
         | Types -> Options.set_debug_types true
-        | Typing -> Options.set_debug_typing true
+        | Typing ->
+          Printer.print_wrn
+            "The debug flag 'typing' has no effect. It will be removed in a \
+             future version."
         | Uf -> Options.set_debug_uf true
         | Unsat_core -> Options.set_debug_unsat_core true
         | Use -> Options.set_debug_use true
-        | Warnings -> Options.set_debug_warnings true
+        | Warnings ->
+          Printer.print_wrn
+            "The debug flag 'warning' is deprecated and will be removed in a \
+             future version.";
+          Options.set_debug_warnings true
         | Commands -> Options.set_debug_commands true
         | Optimize -> Options.set_debug_optimize true
       )

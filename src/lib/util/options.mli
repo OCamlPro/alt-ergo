@@ -158,17 +158,11 @@ val set_debug_sat : bool -> unit
 (** Set [debug_split] accessible with {!val:get_debug_split} *)
 val set_debug_split : bool -> unit
 
-(** Set [debug_sum] accessible with {!val:get_debug_sum} *)
-val set_debug_sum : bool -> unit
-
 (** Set [debug_triggers] accessible with {!val:get_debug_triggers} *)
 val set_debug_triggers : bool -> unit
 
 (** Set [debug_types] accessible with {!val:get_debug_types} *)
 val set_debug_types : bool -> unit
-
-(** Set [debug_typing] accessible with {!val:get_debug_typing} *)
-val set_debug_typing : bool -> unit
 
 (** Set [debug_uf] accessible with {!val:get_debug_uf} *)
 val set_debug_uf : bool -> unit
@@ -514,9 +508,6 @@ val get_debug_intervals : unit -> bool
 val get_debug_fpa : unit -> int
 (** Default to [0]. *)
 
-(** Get the debugging flag of Sum. *)
-val get_debug_sum : unit -> bool
-
 (** Get the debugging flag of ADTs. *)
 val get_debug_adt : unit -> bool
 
@@ -531,9 +522,6 @@ val get_debug_ac : unit -> bool
 
 (** Get the debugging flag of SAT. *)
 val get_debug_sat : unit -> bool
-
-(** Get the debugging flag of typing. *)
-val get_debug_typing : unit -> bool
 
 (** Get the debugging flag of constructors. *)
 val get_debug_constr : unit -> bool

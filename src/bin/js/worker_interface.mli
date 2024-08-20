@@ -77,10 +77,8 @@ type options = {
   debug_matching : int option;
   debug_sat : bool option;
   debug_split : bool option;
-  debug_sum : bool option;
   debug_triggers : bool option;
   debug_types : bool option;
-  debug_typing : bool option;
   debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;

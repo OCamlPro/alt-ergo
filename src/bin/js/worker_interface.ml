@@ -194,10 +194,8 @@ type options = {
   debug_matching : int option;
   debug_sat : bool option;
   debug_split : bool option;
-  debug_sum : bool option;
   debug_triggers : bool option;
   debug_types : bool option;
-  debug_typing : bool option;
   debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
@@ -297,10 +295,8 @@ let init_options () = {
   debug_matching = None;
   debug_sat = None;
   debug_split = None;
-  debug_sum = None;
   debug_triggers = None;
   debug_types = None;
-  debug_typing = None;
   debug_uf = None;
   debug_unsat_core = None;
   debug_use = None;
@@ -403,7 +399,7 @@ let opt_dbg2_encoding =
   conv
     (fun dbg2 -> dbg2)
     (fun dbg2 -> dbg2)
-    (obj10
+    (obj9
        (opt "debug_fm" bool)
        (opt "debug_fpa" int31)
        (opt "debug_gc" bool)
@@ -412,7 +408,6 @@ let opt_dbg2_encoding =
        (opt "debug_matching" int31)
        (opt "debug_sat" bool)
        (opt "debug_split" bool)
-       (opt "debug_sum" bool)
        (opt "debug_triggers" bool)
     )
 
@@ -420,9 +415,8 @@ let opt_dbg3_encoding =
   conv
     (fun dbg3 -> dbg3)
     (fun dbg3 -> dbg3)
-    (obj6
+    (obj5
        (opt "debug_types" bool)
-       (opt "debug_typing" bool)
        (opt "debug_uf" bool)
        (opt "debug_unsat_core" bool)
        (opt "debug_use" bool)
@@ -572,12 +566,10 @@ let options_to_json opt =
      opt.debug_matching,
      opt.debug_sat,
      opt.debug_split,
-     opt.debug_sum,
      opt.debug_triggers)
   in
   let dbg_opt3 =
     (opt.debug_types,
-     opt.debug_typing,
      opt.debug_uf,
      opt.debug_unsat_core,
      opt.debug_use,
@@ -703,10 +695,8 @@ let options_from_json options =
          debug_matching,
          debug_sat,
          debug_split,
-         debug_sum,
          debug_triggers) = dbg_opt2 in
     let (debug_types,
-         debug_typing,
          debug_uf,
          debug_unsat_core,
          debug_use,
@@ -790,10 +780,8 @@ let options_from_json options =
       debug_matching;
       debug_sat;
       debug_split;
-      debug_sum;
       debug_triggers;
       debug_types;
-      debug_typing;
       debug_uf;
       debug_unsat_core;
       debug_use;
