@@ -1134,34 +1134,57 @@ let terms env =
 
 (* Helper functions used by the caches during the computation of the model. *)
 module Cache = struct
-  let store_array_get arrays_cache (t : Expr.t) (i : Expr.t) (v : Expr.t) =
-    match Hashtbl.find_opt arrays_cache t with
-    | Some values ->
-      Hashtbl.replace values i v
-    | None ->
+  type t = {
+    arrays : (Expr.t, unit) Hashtbl.t;
+    (** Set of arrays for which we need to generate a model value.
+        Notice that this set also contains embedded arrays. *)
+
+    selects: (X.r, (Expr.t, Expr.t) Hashtbl.t) Hashtbl.t;
+    (** Contains all the accesses to arrays. *)
+
+    abstracts: (r, Expr.t) Hashtbl.t;
+    (** Contains all the abstract values generated. This cache is necessary
+        to ensure we don't generate twice an abstract value for a given
+        symbol. *)
+  }
+
+  let mk () = {
+    arrays = Hashtbl.create 17;
+    selects = Hashtbl.create 17;
+    abstracts = Hashtbl.create 17;
+  }
+
+  let add_array cache env (t : Expr.t) =
+    Hashtbl.add cache.arrays t ();
+    let r, _ = find env t in
+    match Hashtbl.find cache.selects r with
+    | exception Not_found ->
+      Hashtbl.add cache.selects r (Hashtbl.create 17)
+    | _ -> ()
+
+  let update_select cache env (t : Expr.t) (i : Expr.t) (v : Expr.t) =
+    let r, _ = find env t in
+    match Hashtbl.find cache.selects r with
+    | exception Not_found ->
       let values = Hashtbl.create 17 in
       Hashtbl.add values i v;
-      Hashtbl.add arrays_cache t values
+      Hashtbl.add cache.selects r values
+    | values ->
+      Hashtbl.replace values i v
 
-  let get_abstract_for abstracts_cache env (t : Expr.t) =
+  let retrieve_selects cache env (t : Expr.t) =
     let r, _ = find env t in
-    match Hashtbl.find_opt abstracts_cache r with
-    | Some abstract -> abstract
-    | None ->
+    Hashtbl.find cache.selects r
+
+  let get_abstract_for cache env (t : Expr.t) =
+    let r, _ = find env t in
+    match Hashtbl.find cache.abstracts r with
+    | exception Not_found ->
       let abstract = Expr.mk_abstract (Expr.type_info t) in
-      Hashtbl.add abstracts_cache r abstract;
+      Hashtbl.add cache.abstracts r abstract;
       abstract
+    | abstract -> abstract
 end
-
-type cache = {
-  array_selects: (Expr.t, (Expr.t, Expr.t) Hashtbl.t)
-      Hashtbl.t;
-  (** Stores all the get accesses to arrays. *)
-
-  abstracts: (r, Expr.t) Hashtbl.t;
-  (** Stores all the abstract values generated. This cache is necessary
-      to ensure we don't generate twice an abstract value for a given symbol. *)
-}
 
 let is_destructor = function
   | Sy.Op (Destruct _) -> true
@@ -1179,8 +1202,9 @@ let is_destructor = function
      Alt-Ergo cannot produces a constant value for them. This function creates
      a new abstract value in this case. *)
 let compute_concrete_model_of_val cache =
-  let store_array_select = Cache.store_array_get cache.array_selects
-  and get_abstract_for = Cache.get_abstract_for cache.abstracts
+  let add_array = Cache.add_array cache
+  and get_abstract_for = Cache.get_abstract_for cache
+  and update_select = Cache.update_select cache
   in fun env t ((mdl, mrepr) as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
     (* TODO: We have to filter out destructors here as we don't consider
@@ -1208,23 +1232,18 @@ let compute_concrete_model_of_val cache =
         let ret_rep, mrepr = model_repr_of_term t env mrepr in
         match f, arg_vals, ty with
         | Sy.Name _, [], Ty.Tfarray _ ->
-          begin
-            match Hashtbl.find_opt cache.array_selects t with
-            | Some _ -> acc
-            | None ->
-              (* We have to add an abstract array in case there is no
-                 constraint on its values. *)
-              Hashtbl.add cache.array_selects t (Hashtbl.create 17);
-              acc
-          end
+          add_array env t;
+          acc
 
         | Sy.Op Sy.Set, _, _ -> acc
 
         | Sy.Op Sy.Get, [a; i], _ ->
-          begin
-            store_array_select a i ret_rep;
-            acc
-          end
+          (* We need to save the array [a] as it can be an embedded array
+             that is not declared by the user but should appear in some
+             values of the model. *)
+          add_array env a;
+          update_select env a i ret_rep;
+          acc
 
         | Sy.Name { hs = id; _ }, _, _ ->
           let value =
@@ -1246,8 +1265,9 @@ let compute_concrete_model_of_val cache =
       end
 
 let extract_concrete_model cache =
-  let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
-  let get_abstract_for = Cache.get_abstract_for cache.abstracts
+  let compute_concrete_model_of_val = compute_concrete_model_of_val cache
+  and get_abstract_for = Cache.get_abstract_for cache
+  and retrieve_selects = Cache.retrieve_selects cache
   in fun ~prop_model ~declared_ids env ->
     let terms, suspicious = terms env in
     let model, mrepr =
@@ -1255,10 +1275,11 @@ let extract_concrete_model cache =
         terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
     in
     let model =
-      Hashtbl.fold (fun t vals mdl ->
+      Hashtbl.fold (fun t () mdl ->
           (* We produce a fresh identifiant for abstract value in order to
              prevent any capture. *)
           let abstract = get_abstract_for env t in
+          let vals = retrieve_selects env t in
           let ty = Expr.type_info t in
           let arr_val =
             Hashtbl.fold (fun i v arr_val ->
@@ -1272,7 +1293,7 @@ let extract_concrete_model cache =
             | Sy.Name { hs; _ } -> hs, false
             | _ ->
               (* We only store array declarations as keys in the cache
-                 [array_selects]. *)
+                 [cache.selects]. *)
               assert false
           in
           let mdl =
@@ -1280,23 +1301,21 @@ let extract_concrete_model cache =
               ModelMap.add (id, [], ty) [] arr_val mdl
             else
               (* Internal identifiers can occur here if we need to generate
-                 a model term for an embedded array but this array isn't itself
-                 declared by the user -- see the [embedded-array] test . *)
+                 a model term for an embedded array but this array is not
+                 itself declared by the user -- see the [embedded-array]
+                 test. *)
               mdl
           in
           (* We need to update the model [mdl] in order to substitute all the
              occurrences of the array identifier [id] by an appropriate model
              term. This cannot be performed while computing the model with
-             `compute_concrete_model_of_val` because we need to first iterate
+             [compute_concrete_model_of_val] because we need to first iterate
              on all the union-find environment to collect array values. *)
           ModelMap.subst id arr_val mdl
-        ) cache.array_selects model
+        ) cache.arrays model
     in
     { Models.propositional = prop_model; model; term_values = mrepr }
 
 let extract_concrete_model ~prop_model ~declared_ids =
-  let cache : cache = {
-    array_selects = Hashtbl.create 17;
-    abstracts = Hashtbl.create 17;
-  }
+  let cache = Cache.mk ()
   in fun env -> extract_concrete_model cache ~prop_model ~declared_ids env

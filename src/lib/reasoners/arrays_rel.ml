@@ -31,6 +31,7 @@ module A  = Xliteral
 module L  = List
 
 module X = Shostak.Combine
+module SX = Shostak.SXH
 module Ex = Explanation
 
 module LR = Uf.LX
@@ -91,6 +92,8 @@ type t =
    new_terms : E.Set.t;
    size_splits : Numbers.Q.t;
    cached_relevant_terms : (G.t * S.t TBS.t) H.t;
+   arrays : SX.t;
+   (* Set of all class representatives of arrays. *)
   }
 
 
@@ -103,6 +106,7 @@ let empty uf =
    new_terms = E.Set.empty;
    size_splits = Numbers.Q.one;
    cached_relevant_terms = H.create 1024;
+   arrays = SX.empty
   }, Uf.domains uf
 
 (*BISECT-IGNORE-BEGIN*)
@@ -415,17 +419,40 @@ let new_equalities env eqs la class_of =
   implied_consequences env eqs la
 
 (* choisir une egalite sur laquelle on fait un case-split *)
-let two = Numbers.Q.from_int 2
+let two = Numbers.Q.from_int 3
 
-let case_split env _uf ~for_model:_ =
+let split_arrays ~for_model env =
+  if for_model then
+    match SX.choose env.arrays with
+    | exception Not_found -> None
+    | a1 ->
+      match SX.find_first (fun a -> not @@ X.equal a a1) env.arrays with
+      | exception Not_found -> None
+      | a2 ->
+        Some (LR.neg @@ LR.mk_eq a1 a2)
+  else
+    None
+
+let (let*) = Option.bind
+
+let split_indices env =
+  let* cs = LR.Set.choose_opt env.split in
+  Some (LR.neg cs)
+
+let next_split ~for_model env =
+  match split_indices env with
+  | None -> split_arrays ~for_model env
+  | cs -> cs
+
+let case_split env _uf ~for_model =
   (*if Numbers.Q.compare
     (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
     Numbers.Q.sign  (max_split ()) < 0 then*)
-  try
-    let a = LR.neg (LRset.choose env.split) in
-    Debug.case_split a;
-    [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
-  with Not_found ->
+  match next_split ~for_model env with
+  | Some cs ->
+    Debug.case_split cs;
+    [LR.view cs, true, Th_util.CS (Th_util.Th_arrays, two)]
+  | None ->
     Debug.case_split_none ();
     []
 
@@ -442,11 +469,27 @@ let count_splits env la =
   in
   {env with size_splits = nb}
 
+let is_array r =
+  match X.type_info r with
+  | Ty.Tfarray _ -> true
+  | _ -> false
+
 let assume env uf la =
   let are_eq = Uf.are_equal uf ~added_terms:true in
   let are_neq = Uf.are_distinct uf in
   let class_of = Uf.class_of uf in
   let env = count_splits env la in
+
+  (* Update the set of representatives of arrays. *)
+  let env =
+    List.fold_left
+      (fun env l ->
+         match l with
+         | Xliteral.Eq (r1, r2), _, _, Th_util.Subst when is_array r2 ->
+           { env with arrays = SX.remove r1 env.arrays |> SX.add r2 }
+         | _ -> env
+      ) env la
+  in
 
   (* instantiation des axiomes des tableaux *)
   Debug.assume la;
@@ -462,7 +505,15 @@ let assume env uf la =
   env, Uf.domains uf, { Sig_rel.assume = l; remove = [] }
 
 let query _ _ _ = None
-let add env uf _ _ = env, Uf.domains uf, []
+
+let add env uf r _ =
+  match X.type_info r with
+  | Ty.Tfarray _ ->
+    let rr, _ = Uf.find_r uf r in
+    let arrays = SX.add rr env.arrays in
+    { env with arrays }, Uf.domains uf, []
+  | _ ->
+    env, Uf.domains uf, []
 
 let new_terms env = env.new_terms
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
