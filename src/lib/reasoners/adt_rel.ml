@@ -323,7 +323,7 @@ let empty uf = {
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
   let assume l =
-    Logs.debug ~src:Sources.adt_rel
+    Log.debug
       (fun k -> k "assume the literal:@ %a" (Xliteral.print_view X.print) l)
 end
 (*BISECT-IGNORE-END*)
@@ -403,7 +403,7 @@ let assume_not_is_constr ~ex r c domains =
 let add r uf domains =
   match X.type_info r with
   | Ty.Tadt _ ->
-    Logs.debug ~src:Sources.adt_rel (fun k -> k "add %a" X.print r);
+    Log.debug (fun k -> k "add %a" X.print r);
     let rr, _ = Uf.find_r uf r in
     Domains.init rr domains
   | _ ->
@@ -521,8 +521,7 @@ let count_splits env la =
 let assume env uf la =
   let ds = Uf.domains uf in
   let domains = Uf.GlobalDomains.find (module Domains) ds in
-  Logs.debug ~src:Sources.adt_rel
-    (fun k -> k "environment before assume:@ %a" Domains.pp domains);
+  Log.debug (fun k -> k "environment before assume:@ %a" Domains.pp domains);
   let delayed, result = Rel_utils.Delayed.assume env.delayed uf la in
   let domains =
     try
@@ -538,8 +537,7 @@ let assume env uf la =
     new_terms;
   }
   in
-  Logs.debug ~src:Sources.adt_rel
-    (fun k -> k "environment after assume:@ %a" Domains.pp domains);
+  Log.debug (fun k -> k "environment after assume:@ %a" Domains.pp domains);
   env,
   Uf.GlobalDomains.add (module Domains) domains ds,
   Sig_rel.{ assume; remove = [] }
@@ -659,16 +657,16 @@ let case_split env uf ~for_model =
   else begin
     match next_case_split ~for_model env uf with
     | Some cs ->
-      Logs.debug ~src:Sources.adt_rel
+      Log.debug
         (fun k -> k "environment before case split:@ %a"
             Domains.pp
             (Uf.GlobalDomains.find (module Domains) (Uf.domains uf)));
-      Logs.debug ~src:Sources.adt_rel
+      Log.debug
         (fun k -> k "assume by case splitting:@ %a"
             (Xliteral.print_view X.print) cs);
       [ cs, true, Th_util.CS (Th_util.Th_adt, two)]
     | None ->
-      Logs.debug (fun k -> k "no case split done");
+      Log.debug (fun k -> k "no case split done");
       []
   end
 
