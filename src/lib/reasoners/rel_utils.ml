@@ -212,7 +212,7 @@ end = struct
 end
 
 (** Implementation of the [ComparableType] interface for semantic values. *)
-module XComparable : Domains_intf.ComparableType with type t = X.r = struct
+module XComparable = struct
   type t = X.r
 
   let pp = X.print
