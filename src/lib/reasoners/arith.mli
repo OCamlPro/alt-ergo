@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+val src : Logs.src
+
 (** [calc_power x y t] Compute x^y. Raise Exit if y is not an Int
     (castable in Int). *)
 val calc_power : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t

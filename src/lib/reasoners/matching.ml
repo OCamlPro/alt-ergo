@@ -29,6 +29,9 @@ module E = Expr
 module ME = E.Map
 module SubstE = Var.Map
 
+let src = Logs.Src.create ~doc:"Matching" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module type S = sig
   type t
   type theory

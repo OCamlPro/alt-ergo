@@ -37,6 +37,9 @@
  major_words; (* num of alloc words in major heap, since beginning *)
 *)
 
+let src = Logs.Src.create ~doc:"Gc_debug" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let init () =
   if Options.get_debug_gc() then
     begin

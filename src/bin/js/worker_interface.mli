@@ -68,7 +68,7 @@ type options = {
   debug_cc : bool option;
   debug_combine : bool option;
   debug_constr : bool option;
-  debug_explanation : bool option;
+  debug_explanations : bool option;
   debug_fm : bool option;
   debug_fpa : int option;
   debug_gc : bool option;

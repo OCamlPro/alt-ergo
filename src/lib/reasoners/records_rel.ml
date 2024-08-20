@@ -27,6 +27,9 @@
 
 type t = unit
 
+let src = Logs.Src.create ~doc:"Records" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let timer = Timers.M_Records
 
 let empty uf = (), Uf.domains uf

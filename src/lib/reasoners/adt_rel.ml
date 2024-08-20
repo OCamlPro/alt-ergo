@@ -40,6 +40,9 @@ module DE = Dolmen.Std.Expr
 module DT = Dolmen.Std.Expr.Ty
 module B = Dolmen.Std.Builtin
 
+let src = Logs.Src.create ~doc:"Adt_rel" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module TSet =
   Set.Make
     (struct

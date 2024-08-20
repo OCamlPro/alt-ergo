@@ -30,6 +30,9 @@ module SE = E.Set
 module ME = E.Map
 module Ex = Explanation
 
+let src = Logs.Src.create ~doc:"Sat" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module Make (Th : Theory.S) = struct
   module Inst = Instances.Make(Th)
   module CDCL = Satml_frontend_hybrid.Make(Th)

@@ -27,6 +27,8 @@
 
 open Intervals_intf
 
+val src : Logs.src
+
 val map_bound : ('a -> 'b) -> 'a bound -> 'b bound
 (** [map_bound f b] applies [f] to a finite (open or closed) bound [b] and
     does not change an unbounded bound. *)

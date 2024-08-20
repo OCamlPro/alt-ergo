@@ -680,6 +680,9 @@ and AC : Ac.S
 module Combine = struct
   include CX
 
+  let src = Logs.Src.create ~doc:"Combine" "AltErgoLib__Combine"
+  module Log = (val Logs.src_log src : Logs.LOG)
+
   module H = Ephemeron.K1.Make(Expr)
 
   let make, save_cache, reinit_cache =

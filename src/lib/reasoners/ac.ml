@@ -28,6 +28,9 @@
 module HS = Hstring
 module Sy = Symbols
 
+let src = Logs.Src.create ~doc:"Ac" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module type S = sig
 
   (* embeded AC semantic values *)

@@ -34,6 +34,8 @@ type r = Shostak.Combine.r
 type _ id = ..
 (** Extensible type for global domains identifiers, see {!GlobalDomains}. *)
 
+val src : Logs.src
+
 module type GlobalDomain = sig
   (** Module signature for global domains used by the union-find module.
 

@@ -67,6 +67,9 @@ module FF = Satml_types.Flat_Formula
 
 module Ex = Explanation
 
+let src = Logs.Src.create ~doc:"Sat" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 exception Sat
 exception Unsat of Atom.clause list option
 exception Last_UIP_reason of Atom.Set.t

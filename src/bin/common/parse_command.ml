@@ -154,7 +154,8 @@ module Debug = struct
     | Cc
     | Combine
     | Constr
-    | Explanation
+    | Explanation (* deprecated *)
+    | Explanations
     | Fm
     | Fpa
     | Gc
@@ -176,7 +177,7 @@ module Debug = struct
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
-    Cc; Combine; Constr; Explanation; Fm; Fpa; Gc;
+    Cc; Combine; Constr; Explanation; Explanations; Fm; Fpa; Gc;
     Interpretation; Intervals; Matching; Sat; Split; Triggers;
     Types; Typing; Uf; Unsat_core; Use; Warnings;
     Commands; Optimize
@@ -195,6 +196,7 @@ module Debug = struct
     | Combine -> "combine"
     | Constr -> "constr"
     | Explanation -> "explanation"
+    | Explanations -> "explanations"
     | Fm -> "fm"
     | Fpa -> "fpa"
     | Gc -> "gc"
@@ -216,51 +218,56 @@ module Debug = struct
   let set_level src = Logs.Src.set_level src (Some Debug)
 
   let mk ~verbosity flags =
-    let module S = Sources in
+    let module S = Options.Sources in
     List.concat flags
     |> List.iter (function
         | Debug ->
           Options.set_debug true
         | Ac ->
           Options.set_debug_ac true;
-          set_level S.ac
+          set_level Ac.src
         | Adt ->
           Options.set_debug_adt true;
-          set_level S.adt;
-          set_level S.adt_rel
+          set_level Adt.src;
+          set_level Adt_rel.src
         | Arith ->
           Options.set_debug_arith true;
-          set_level S.arith;
-          set_level S.interval_calculus
+          set_level Arith.src;
+          set_level IntervalCalculus.src
         | Arrays ->
           Options.set_debug_arrays true;
-          set_level S.arrays_rel
+          set_level Arrays_rel.src
         | Bitv ->
           Options.set_debug_bitv true;
-          set_level S.bitv
+          set_level Bitv.src
         | Sum ->
           Printer.print_wrn
             "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
              It has the same effect as 'adt' and will be removed in a future \
              version.";
           Options.set_debug_adt true;
-          set_level S.adt;
-          set_level S.adt_rel
+          set_level Adt.src;
+          set_level Adt_rel.src
         | Ite ->
           Options.set_debug_ite true;
-          set_level S.ite_rel
+          set_level Ite_rel.src
         | Cc ->
           Options.set_debug_cc true;
-          set_level S.cc
+          set_level Ccx.src
         | Combine ->
           Options.set_debug_combine true;
-          set_level S.combine
+          set_level Shostak.Combine.src
         | Constr ->
           Options.set_debug_constr true;
           set_level S.constr
         | Explanation ->
-          Options.set_debug_explanation true;
-          set_level S.explanation
+          Printer.print_wrn
+            "The debug flag 'explanation' is deprecated and is replaced \
+             by 'explanations'. It has the same effect as 'explanations' \
+             and will be removed in a future version.";
+          Options.set_debug_explanations true
+        | Explanations ->
+          Options.set_debug_explanations true
         | Fm ->
           Options.set_debug_fm true;
           set_level S.fm
@@ -268,18 +275,20 @@ module Debug = struct
           Options.set_debug_fpa verbosity
         | Gc ->
           Options.set_debug_gc true;
-          set_level S.gc_debug
+          set_level Gc_debug.src
         | Interpretation ->
           Options.set_debug_interpretation true;
           set_level S.interpretation
         | Intervals ->
           Options.set_debug_intervals true;
-          set_level S.intervals
+          set_level Intervals.src
         | Matching ->
-          Options.set_debug_matching verbosity
+          Options.set_debug_matching verbosity;
+          set_level Matching.src
         | Sat ->
           Options.set_debug_sat true;
-          set_level S.sat
+          set_level Satml.src;
+          set_level Satml_frontend.src
         | Split ->
           Options.set_debug_split true;
           set_level S.split
@@ -295,22 +304,21 @@ module Debug = struct
              future version."
         | Uf ->
           Options.set_debug_uf true;
-          set_level S.uf
+          set_level Uf.src
         | Unsat_core ->
           Options.set_debug_unsat_core true;
           set_level S.unsat_core
         | Use ->
           Options.set_debug_use true;
-          set_level S.use
+          set_level Use.src
         | Warnings ->
           Printer.print_wrn
             "The debug flag 'warning' is deprecated and will be removed in a \
              future version.";
-          Options.set_debug_warnings true;
-          set_level S.warnings
+          Options.set_debug_warnings true
         | Commands ->
           Options.set_debug_commands true;
-          set_level S.commands
+          set_level Commands.src
         | Optimize ->
           Options.set_debug_optimize true;
           set_level S.optimize

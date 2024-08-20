@@ -27,6 +27,9 @@
 
 module X = Shostak.Combine
 
+let src = Logs.Src.create ~doc:"Sat" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)

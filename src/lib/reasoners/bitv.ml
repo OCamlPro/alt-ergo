@@ -28,6 +28,9 @@
 module Sy = Symbols
 module E = Expr
 
+let src = Logs.Src.create ~doc:"Bitv" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type sort_var = A | B | C
 (* The variables used by the bitvector solver can be split into three
    categories that have associated invariants.

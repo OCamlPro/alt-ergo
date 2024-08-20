@@ -35,6 +35,9 @@ module Ex = Explanation
 
 module LR = Uf.LX
 
+let src = Logs.Src.create ~doc:"Arrays_rel" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 (* map get |-> { set } des associations (get,set) deja splites *)
 module Tmap = struct
   include E.Map

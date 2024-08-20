@@ -28,6 +28,8 @@
 module Combine : sig
   include Sig.X
 
+  val src : Logs.src
+
   val top : r
   val bot : r
 end

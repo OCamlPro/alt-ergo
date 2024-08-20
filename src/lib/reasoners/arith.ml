@@ -32,6 +32,9 @@ module ZA = Z
 module Z = Numbers.Z
 module Q = Numbers.Q
 
+let src = Logs.Src.create ~doc:"Arith" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
 let mod_symb = Sy.name ~ns:Internal "@mod"
 

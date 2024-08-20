@@ -10,7 +10,7 @@
     "debug": false, "debug_ac": false, "debug_adt": false,
     "debug_arith": false, "debug_arrays": false, "debug_bitv": false,
     "debug_cc": false, "debug_combine": false, "debug_constr": false,
-    "debug_explanation": false, "debug_fm": false, "debug_fpa": 0,
+    "debug_explanations": false, "debug_fm": false, "debug_fpa": 0,
     "debug_gc": false, "debug_interpretation": false, "debug_ite": false,
     "debug_matching": 0, "debug_sat": false, "debug_split": false,
     "debug_triggers": false, "debug_types": false,

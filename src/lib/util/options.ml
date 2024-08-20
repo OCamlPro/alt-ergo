@@ -91,6 +91,21 @@ module Output = struct
   let get_fmt_models () = to_formatter !dump_models_output
 end
 
+module Sources = struct
+  let constr = Logs.Src.create ~doc:"Constr" "AltErgoLib.constr"
+  let fm = Logs.Src.create ~doc:"fm" "AltErgoLib.fm"
+  let fpa = Logs.Src.create ~doc:"fpa" "AltErgoLib.fpa"
+  let interpretation =
+    Logs.Src.create ~doc:"Interpretation" "AltErgoLib.Interpretation"
+  let model = Logs.Src.create ~doc:"Model" "AltErgoLib.Model"
+  let optimize = Logs.Src.create ~doc:"Optimize" "AltErgoLib.Optimize"
+  let split = Logs.Src.create ~doc:"Split" "AltErgoLib.Split"
+  let triggers = Logs.Src.create ~doc:"Triggers" "AltErgoLib.Triggers"
+  let types = Logs.Src.create ~doc:"Types" "AltErgoLib.Types"
+  let typing = Logs.Src.create ~doc:"Typing" "AltErgoLib.Typing"
+  let unsat_core = Logs.Src.create ~doc:"Unsat_core" "AltErgoLib.Unsat_core"
+end
+
 (* Declaration of all the options as refs with default values *)
 
 type instantiation_heuristic = INormal | IAuto | IGreedy
@@ -145,7 +160,7 @@ let debug_bitv = ref false
 let debug_cc = ref false
 let debug_combine = ref false
 let debug_constr = ref false
-let debug_explanation = ref false
+let debug_explanations = ref false
 let debug_fm = ref false
 let debug_intervals = ref false
 let debug_fpa = ref 0
@@ -174,7 +189,7 @@ let set_debug_bitv b = debug_bitv := b
 let set_debug_cc b = debug_cc := b
 let set_debug_combine b = debug_combine := b
 let set_debug_constr b = debug_constr := b
-let set_debug_explanation b = debug_explanation := b
+let set_debug_explanations b = debug_explanations := b
 let set_debug_fm b = debug_fm := b
 let set_debug_intervals b = debug_intervals := b
 let set_debug_fpa i = debug_fpa := i
@@ -203,7 +218,7 @@ let get_debug_bitv () = !debug_bitv
 let get_debug_cc () = !debug_cc
 let get_debug_combine () = !debug_combine
 let get_debug_constr () = !debug_constr
-let get_debug_explanation () = !debug_explanation
+let get_debug_explanations () = !debug_explanations
 let get_debug_fm () = !debug_fm
 let get_debug_intervals () = !debug_intervals
 let get_debug_fpa () = !debug_fpa

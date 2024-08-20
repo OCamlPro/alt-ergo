@@ -25,6 +25,9 @@ module MX = Shostak.MXH
 module HX = Shostak.HX
 module L = Xliteral
 
+let src = Logs.Src.create ~doc:"Bitv_rel" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let timer = Timers.M_Bitv
 
 let is_bv_ty = function

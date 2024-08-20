@@ -414,7 +414,7 @@ let reporter =
         Fmt.kpf k (Options.Output.get_fmt_regular ())
           ("%a@[" ^^ fmt ^^ "@]@.")
           pp_smtlib_header level
-      else if Logs.Src.equal src Sources.model then
+      else if Logs.Src.equal src Options.Sources.model then
         Fmt.kpf k (Options.Output.get_fmt_models ())
           ("@[" ^^ fmt ^^ "@]@.")
       else
