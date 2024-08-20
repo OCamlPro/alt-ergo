@@ -1376,95 +1376,10 @@ module Shostak(X : ALIEN) = struct
 
   let print = Debug.print_C_ast
 
-  (* This is used to extract terms from non-bitv semantic values.
-
-     We assume that non-bitv semantic values of a bitvector type are
-     necessarily uninterpreted terms, because that should be the case at the
-     time this code is written.
-
-     If this ever ceases to be the case, we should either preserve the original
-     term along with the semantic value, or fail more gracefully here. *)
-  let term_extract r =
-    match X.term_extract r with
-    | Some t, _ -> t
-    | None, _ ->
-      Util.internal_error "Non-BV semantic value: %a" X.print r
-
-  (* This is a helper function that converts a [simple_term] to an integer
-     expression. *)
-  let simple_term_to_nat acc st =
-    match st.bv with
-    | Cte n -> E.Ints.(acc * ~$$Z.(~$1 lsl st.sz) + ~$$n)
-    | Other r ->
-      let t = term_extract r.value in
-      let t = if r.negated then E.BV.bvnot t else t in
-      E.Ints.(acc * ~$$Z.(~$1 lsl st.sz) + E.BV.bv2nat t)
-    | Ext (o, _, i, j) ->
-      assert (st.sz = j - i + 1);
-      let t = term_extract o.value in
-      let t = if o.negated then E.BV.bvnot t else t in
-      E.Ints.(
-        acc * ~$$Z.(~$1 lsl st.sz) +
-        (E.BV.bv2nat t / ~$$Z.(~$1 lsl i)) mod ~$$Z.(~$1 lsl st.sz))
-
-  let abstract_to_nat r =
-    List.fold_left simple_term_to_nat (E.Ints.of_int 0) r
-
-  (* Ideally, we would want to just call [abstract_to_nat r |> X.make]. But if
-     we do so, we may end up in a loop where we repeatedly call [X.make] on a
-     [BV2Nat] term -- so instead if we are a single [Other] term, we become
-     uninterpreted. *)
-  let bv2nat ot bv =
-    match bv with
-    | [{ bv = Other { value = r; negated }; sz }] ->
-      let t = term_extract r in
-      let maybe_negate t =
-        if negated then E.Ints.(~$$Z.(~$1 lsl sz - ~$1) - t) else t
-      in
-      let t', ctx =
-        begin match E.term_view t with
-          | { f = Op Int2BV _; _ } ->
-            (* bv2nat will simplify: we must call [X.make] again *)
-            E.BV.bv2nat t |> maybe_negate, []
-          | { ty = Tbitv n; _ } ->
-            assert (n = sz);
-            if negated then
-              (* if we are negated, we will simplify *)
-              E.BV.bv2nat t |> maybe_negate, []
-            else
-              (* bv2nat will *not* simplify: become uninterpreted with interval
-                 information *)
-              let t = E.BV.bv2nat t |> maybe_negate in
-              t, [ E.Ints.(~$0 <= t) ; E.Ints.(t < ~$$Z.(~$1 lsl n)) ]
-          | { ty; _ } ->
-            Util.internal_error "expected bitv, got %a" Ty.print ty
-        end
-      in
-      X.term_embed ot, E.Core.eq ot t' :: ctx
-    | _ ->
-      (* Note: we can't just call [X.make] on the result of [abstract_to_nat]
-         because [X.make] should only be called on subterms. If we do it, it
-         causes crashes when `IntervalCalculus.add` assumes that the arguments
-         of division operators have been added to the `Uf` prior to the
-         division itself. *)
-      let t' = abstract_to_nat bv in
-      X.term_embed ot, [ E.Core.eq ot t' ]
-
   let make t =
-    let { E.f; xs; _ } = E.term_view t in
-    match f, xs with
-    | Op BV2Nat, [x] ->
-      (* When we have a BV2Nat expression, we try our best to convert it to
-         something that is usable by the arithmetic theory.
-
-         More precisely, after simplification of the argument, we get a
-         composition of constants and aliens or alien extractions, to which we
-         apply [bv2nat] recursively. If the alien or alien extraction are
-         [int2bv] terms, we convert the composition [(bv2nat ((_ int2bv n) x))]
-         into [(mod x (pow 2 n))]. *)
-      let r, ctx = Canon.make x in
-      let r, ctx' = bv2nat t r in
-      r, List.rev_append ctx' ctx
+    match E.term_view t with
+    | { f = Op BV2Nat; _ } ->
+      X.term_embed t, []
     | _ ->
       let r, ctx = Canon.make t in
       is_mine r, ctx
