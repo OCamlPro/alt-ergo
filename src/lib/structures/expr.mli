@@ -254,12 +254,6 @@ val real : string -> t
 val bitv : string -> Ty.t -> t
 val fresh_name : Ty.t -> t
 
-(** Special names used for AC(X) abstraction.
-    These corresponds to the K sort in the AC(X) paper. *)
-
-val fresh_ac_name : Ty.t -> t
-val is_fresh_ac_name : t -> bool
-
 val mk_abstract : Ty.t -> t
 (** [mk_abstract ty] creates an abstract model term of type [ty].
     This function is intended to be used only in models. *)

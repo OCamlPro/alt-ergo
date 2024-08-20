@@ -183,10 +183,10 @@ module Make (X : Sig.X) = struct
      presentation in the paper to accomodate those differences, globally,
      between the implementation and theoretical description of AC(X).
 
-     More precisely, `abstract2` will abstract terms that *contain* AC leaves
-     when they appear as argument of an AC symbol. This ensures that AC terms
-     satisfy the T_AC definition from page 22 of the paper, although
-     correctness of the corresponding abstraction process has not been proven.
+     More precisely, `abstract2` will abstract all AC leaves that appear in the
+     arguments of an AC symbol. This ensures that AC terms satisfy the T_AC
+     definition from page 22 of the paper, although correctness of the
+     corresponding abstraction process has not been formally proven.
      See also https://github.com/OCamlPro/alt-ergo/issues/989
 
      [1]: Canonized Rewriting and Ground AC Completion Modulo Shostak Theories:
@@ -196,42 +196,24 @@ module Make (X : Sig.X) = struct
             Volume 8, Issue 3.
           doi:10.2168/LMCS-8(3:16)2012
           https://arxiv.org/pdf/1207.3262.pdf *)
-  let abstract2 sy t r acc =
-    if List.exists (is_other_ac_symbol sy) (X.leaves r) then
-      match X.ac_extract r, Expr.term_view t with
-      | Some ac, { f = Name { hs; kind = Ac; _ } ; xs; ty; _ } ->
-        (* It should have been abstracted when building [r] *)
-        assert (not (Sy.equal sy ac.h));
-        let aro_sy = Sy.name ~ns:Internal ("@" ^ (HS.view hs)) in
-        let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
-      | Some ac, { f = Op Mult; xs; ty; _ } ->
-        (* It should have been abstracted when building [r] *)
-        assert (not (Sy.equal sy ac.h));
-        let aro_sy = Sy.name ~ns:Internal "@*" in
-        let aro_t = Expr.mk_term aro_sy xs ty  in
-        let eq = Expr.mk_eq ~iff:false aro_t t in
-        X.term_embed aro_t, eq::acc
-      | _, { ty; _ } ->
-        let k = Expr.fresh_ac_name ty in
-        let eq = Expr.mk_eq ~iff:false k t in
-        X.term_embed k, eq::acc
-
-    else
-      r, acc
+  let rec abstract2 sy r =
+    match List.find (is_other_ac_symbol sy) (X.leaves r) with
+    | ac_lv ->
+      (* Abstraction in depth: [f(x, y) + 1] -> [@ac(f(x, y)) + 1]
+         and not [@ac(f(x, y) + 1)]. *)
+      abstract2 sy (X.subst ac_lv (X.abstract ~kind:Ac ac_lv) r)
+    | exception Not_found -> r
 
   let make t =
     match Expr.term_view t with
     | { Expr.f = sy; xs = [a;b]; ty; _ } when Sy.is_ac sy ->
       let ra, ctx1 = X.make a in
       let rb, ctx2 = X.make b in
-      let ra, ctx = abstract2 sy a ra (ctx1 @ ctx2) in
-      let rb, ctx = abstract2 sy b rb ctx in
-      let rxs = [ ra,1 ; rb,1 ] in
-      X.ac_embed {h=sy; l=compact (fold_flatten sy (fun x -> x) rxs); t=ty;
-                  distribute = true},
-      ctx
+      let l = flatten sy (rb, 1) @@ flatten sy (ra, 1) [] in
+      let l = List.map (fun (r, n) -> (abstract2 sy r, n)) l in
+      let l = compact (fold_flatten sy (fun x -> x) l) in
+      X.ac_embed {h=sy; l; t=ty;distribute = true},
+      ctx1 @ ctx2
     | {xs; _} ->
       Printer.print_err
         "AC theory expects only terms with 2 arguments; \

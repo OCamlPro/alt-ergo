@@ -407,12 +407,7 @@ module Shostak
       List.fold_left (fun acc (_, x) -> max acc (nb_vars_in_alien x)) acc l
 
   let contains_a_fresh_alien xp =
-    List.exists
-      (fun x ->
-         match X.term_extract x with
-         | Some t, _ -> E.is_fresh_ac_name t
-         | _ -> false
-      ) (X.leaves xp)
+    List.exists (X.is_abstract ~kind:Ac) (X.leaves xp)
 
   let has_ac p kind =
     List.exists
@@ -495,7 +490,7 @@ module Shostak
     List.fold_left
       (fun (l, sb) (b, y) ->
          if X.ac_extract y != None && X.str_cmp y x > 0 then
-           let k = X.term_embed (E.fresh_ac_name Ty.Tint) in
+           let k = X.abstract ~kind:Ac y in
            (b, k) :: l, (y, embed k)::sb
          else (b, y) :: l, sb)
       ([], []) l

@@ -117,7 +117,7 @@ end
 module LX = Shostak.L
 
 val empty : t
-val add : t -> Expr.t -> t * Expr.t list
+val add : t -> Expr.t -> t * r list * Expr.t list
 
 val mem : t -> Expr.t -> bool
 

@@ -2234,7 +2234,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
            | E.Interval (t, lb, ub) ->
              let tt = E.apply_subst sbt t in
              assert (E.is_ground tt);
-             let uf, _ = Uf.add uf tt in
+             let uf, _, _ = Uf.add uf tt in
              let rr, _ex = Uf.find uf tt in
              let p = poly_of rr in
              let p', c', d = P.normal_form_pos p in
@@ -2247,7 +2247,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
 
            | E.NotTheoryConst t ->
              let tt = E.apply_subst sbt t in
-             let uf, _ = Uf.add uf tt in
+             let uf, _, _ = Uf.add uf tt in
              if X.leaves (fst (Uf.find uf tt)) == [] ||
                 X.leaves (fst (X.make tt)) == [] then
                raise (Sem_match_fails env);
@@ -2255,7 +2255,7 @@ let domain_matching _lem_name tr sbt env uf optimized =
 
            | E.IsTheoryConst t ->
              let tt = E.apply_subst sbt t in
-             let uf, _ = Uf.add uf tt in
+             let uf, _, _ = Uf.add uf tt in
              let r, _ = X.make tt in
              if X.leaves r != [] then raise (Sem_match_fails env);
              idoms, maps_to, env, uf
@@ -2265,8 +2265,8 @@ let domain_matching _lem_name tr sbt env uf optimized =
              let y = E.apply_subst sbt y in
              if not (terms_linear_dep env [x;y]) then
                raise (Sem_match_fails env);
-             let uf, _ = Uf.add uf x in
-             let uf, _ = Uf.add uf y in
+             let uf, _, _ = Uf.add uf x in
+             let uf, _, _ = Uf.add uf y in
              idoms, maps_to, env, uf
         )(Var.Map.empty, [], env, uf) tr.E.semantic
     in

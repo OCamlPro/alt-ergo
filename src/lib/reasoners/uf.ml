@@ -587,7 +587,7 @@ module Env = struct
     with GlobalDomains.Inconsistent ex ->
       raise (Ex.Inconsistent (ex, cl_extract env))
 
-  let init_leaf env p =
+  let init_leaf env abs p =
     Debug.init_leaf p;
     let in_repr = MapX.mem p env.repr in
     let rp, ex_rp =
@@ -599,6 +599,11 @@ module Env = struct
       match X.term_extract p with
       | Some t, true when not (ME.mem t mk_env) -> ME.add t p mk_env
       | _ -> mk_env
+    in
+    let abs =
+      match X.abstract_extract rp with
+      | Some _  when not in_repr -> rp :: abs
+      | Some _ | None -> abs
     in
     let env =
       { env with
@@ -620,21 +625,28 @@ module Env = struct
           else update_neqs p rp Ex.empty env }
     in
     Debug.check_invariants "init_leaf" env;
-    env
+    env, abs
 
-  let init_leaves env v =
-    let env = List.fold_left init_leaf env (X.leaves v) in
-    init_leaf env v
+  let init_leaves env abs v =
+    let env, abs =
+      List.fold_left
+        (fun (env, abs) lv -> init_leaf env abs lv)
+        (env, abs)
+        (X.leaves v)
+    in
+    init_leaf env abs v
 
-  let init_new_ac_leaves env mkr =
+  let is_dyn_leaf r =
+    Option.is_some (X.ac_extract r) || X.is_abstract r
+
+  let init_new_dyn_leaves env mkr =
     List.fold_left
-      (fun env x ->
-         match X.ac_extract x with
-         | None -> env
-         | Some _ ->
-           if MapX.mem x env.repr then env
-           else init_leaves env x
-      ) env (X.leaves mkr)
+      (fun (env, abs) x ->
+         if is_dyn_leaf x && not (MapX.mem x env.repr) then
+           init_leaves env abs x
+         else
+           env, abs
+      ) (env, []) (X.leaves mkr)
 
   let init_term env t =
     let mkr, ctx = X.make t in
@@ -650,7 +662,8 @@ module Env = struct
          if MapX.mem rp env.neqs then env.neqs (* pourquoi ce test *)
          else MapX.add rp MapL.empty env.neqs}
     in
-    (init_new_ac_leaves env mkr), ctx
+    let env, abs = init_new_dyn_leaves env mkr in
+    env, abs, ctx
 
   let head_cp eqs env pac ({ Sig.h ; _ } as ac) v dep =
     try (*if RS.mem h env.ac_rs then*)
@@ -792,21 +805,27 @@ module Env = struct
       update_aux dep neqs_to_up env, tch
 
   let apply_sigma eqs env tch ((p, v, dep) as sigma) =
-    let env = init_leaves env p in
-    let env = init_leaves env v in
+    let env, abs = init_leaves env [] p in
+    let env, abs = init_leaves env abs v in
     let env = apply_sigma_ac eqs env sigma in
     let env, touched_sigma, tch = apply_sigma_uf env sigma tch in
-    up_uf_rs dep env ((p, touched_sigma, v) :: tch)
+    let env, tch = up_uf_rs dep env ((p, touched_sigma, v) :: tch) in
+    List.iter (fun r ->
+        match X.abstract_extract r with
+        | Some r' -> Queue.push (r, r', Ex.empty) eqs
+        | None -> assert false
+      ) abs;
+    env, tch
 
 end
 
 let add env t =
   Options.tool_req 3 "TR-UFX-Add";
-  if ME.mem t env.make then env, []
+  if ME.mem t env.make then env, [], []
   else
-    let env, l = Env.init_term env t in
+    let env, abs, l = Env.init_term env t in
     Debug.check_invariants "add" env;
-    env, l
+    env, abs, l
 
 let ac_solve eqs dep (env, tch) (p, v) =
   Debug.ac_solve p v dep;
@@ -859,9 +878,9 @@ let union env r1 r2 dep =
   Options.tool_req 3 "TR-UFX-Union";
   let equations = Queue.create () in
   Queue.push (r1,r2, dep) equations;
-  let env, res = ac_x equations env [] in
+  let env, tch = ac_x equations env [] in
   Debug.check_invariants "union" env;
-  env, res
+  env, tch
 
 let union env r1 r2 dep =
   Timers.with_timer Timers.M_UF Timers.F_union @@ fun () ->
@@ -890,7 +909,7 @@ let rec distinct env rl dep =
              with Not_found ->
                MapL.add d uex mdis
            in
-           let env = Env.init_leaf env rr in
+           let env, _ = Env.init_leaf env [] rr in
            let env = {env with neqs = MapX.add rr mdis env.neqs} in
            env, MapX.add rr uex mapr, (rr, ex, mapr)::newds
       )
@@ -992,8 +1011,8 @@ let empty =
     ac_rs = RS.empty
   }
   in
-  let env, _ = add env E.vrai in
-  let env, _ = add env E.faux in
+  let env, _, _ = add env E.vrai in
+  let env, _, _ = add env E.faux in
   distinct env [X.top; X.bot] Ex.empty
 
 let make uf t = ME.find t uf.make
@@ -1065,7 +1084,7 @@ let assign_next env =
           we will not modify env in this function
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         *)
-      let env, _ =  add env s in (* important for termination *)
+      let env, _, _ =  add env s in (* important for termination *)
       let eq = LX.view (LX.mk_eq rep (make env s)) in
       [eq, is_cs, Th_util.CS (Th_util.Th_UF, Numbers.Q.one)], env
   in

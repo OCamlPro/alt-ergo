@@ -489,7 +489,14 @@ module Main : S = struct
       let { E.xs; _ } = E.term_view t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
       (* we update uf and use *)
-      let nuf, ctx  = Uf.add env.uf t in
+      let nuf, abs, ctx  = Uf.add env.uf t in
+      (* process definitional equality of abstracted terms *)
+      List.iter (fun r ->
+          match X.abstract_extract r with
+          | Some r' ->
+            add_fact facts (LSem (LR.mkv_eq r r'), Ex.empty, Th_util.Other)
+          | None -> assert false
+        ) abs;
       Debug.make_cst t ctx;
       List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
