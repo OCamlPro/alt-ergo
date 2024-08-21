@@ -49,8 +49,6 @@ type 'a result = {
 module type RELATION = sig
   type t
 
-  val src : Logs.src
-
   val timer : Timers.ty_module
 
   val empty : Uf.t -> t * Uf.GlobalDomains.t

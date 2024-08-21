@@ -26,6 +26,7 @@
 (**************************************************************************)
 
 include Sig_rel.RELATION
+val src : Logs.src
 
 val reinit_cache : unit -> unit
 (** Reinitializes the E-matching functor instance's inner cache

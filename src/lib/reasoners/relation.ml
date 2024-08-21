@@ -41,9 +41,6 @@ module Rel5 : Sig_rel.RELATION = Adt_rel
 
 module Rel6 : Sig_rel.RELATION = Ite_rel
 
-(* This source is unused. *)
-let src = Logs.Src.create ~doc:__MODULE__ ("AltErgoLib." ^ __MODULE__)
-
 (* This value is unused. *)
 let timer = Timers.M_None
 

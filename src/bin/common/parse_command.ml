@@ -154,7 +154,6 @@ module Debug = struct
     | Cc
     | Combine
     | Constr
-    | Explanation (* deprecated *)
     | Explanations
     | Fm
     | Fpa
@@ -177,7 +176,7 @@ module Debug = struct
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
-    Cc; Combine; Constr; Explanation; Explanations; Fm; Fpa; Gc;
+    Cc; Combine; Constr; Explanations; Fm; Fpa; Gc;
     Interpretation; Intervals; Matching; Sat; Split; Triggers;
     Types; Typing; Uf; Unsat_core; Use; Warnings;
     Commands; Optimize
@@ -195,7 +194,6 @@ module Debug = struct
     | Cc -> "cc"
     | Combine -> "combine"
     | Constr -> "constr"
-    | Explanation -> "explanation"
     | Explanations -> "explanations"
     | Fm -> "fm"
     | Fpa -> "fpa"
@@ -260,12 +258,6 @@ module Debug = struct
         | Constr ->
           Options.set_debug_constr true;
           set_level S.constr
-        | Explanation ->
-          Printer.print_wrn
-            "The debug flag 'explanation' is deprecated and is replaced \
-             by 'explanations'. It has the same effect as 'explanations' \
-             and will be removed in a future version.";
-          Options.set_debug_explanations true
         | Explanations ->
           Options.set_debug_explanations true
         | Fm ->
