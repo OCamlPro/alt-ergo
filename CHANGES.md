@@ -1,4 +1,4 @@
-## unreleased
+## v2.6.0
 
 ### Command-line interface
 
@@ -14,6 +14,7 @@
  - Add bare-bones support for interactive input in SMT-LIB format (#949)
  - Less confusing behavior on timeout (#982, #984)
  - Add `--strict` option for SMT-LIB compliant mode (#916, #1133)
+ - Deprecate `sum`, `typing` and `warnings` debug flags (#1204)
 
 ### SMT-LIB support
 
@@ -59,6 +60,13 @@
  - Rewrite the ADT theory to use domains and integrate the enum theory into the
    ADT theory (#1078, #1086, #1087, #1091, #1094, #1138)
  - Rewrite the Intervals module entirely (#1108)
+ - Add maximize/minimize terms for matching (#1166)
+ - Internalize `sign_extend` and `repeat` (#1192)
+ - Run cross-propagators to completion (#1221)
+ - Support binary distinct on arbitrary bit-widths (#1222)
+ - Only perform optimization when building a model (#1224)
+ - Make sure domains do not overflow the default domain (#1225)
+ - Do not build unnormalized values in `zero_extend` (#1226)
 
 ### Internal/library changes
 
@@ -84,6 +92,7 @@
  - Preserve trigger order when parsing quantifiers with multiple trigger
    (#1046).
  - Store domains inside the union-find module (#1119)
+ - Remove some polymorphic hashtables (#1219)
 
 ### Build and integration
 
@@ -92,6 +101,7 @@
    registered through the dune-site plugin mechanism in the
    `(alt-ergo plugins)` site to be picked up by Alt-Ergo (#1049).
  - Add a release workflow (#827)
+ - Add a Windows workflow (#1203)
  - Mark the dune.inc file as linguist-generated to avoid huge diffs (#830)
  - Use GitHub Actions badges in the README (#882)
  - Use `dune build @check` to build the project (#887)
@@ -100,6 +110,9 @@
  - Use an efficient `String.starts_with` implementation (#912)
  - Fix the Makefile (#914)
  - Add `Logs` dependency (#1206)
+ - Use `dynamic_include` to include the generated file `dune.inc` (#1199)
+ - Support Windows (#1184,#1189,#1195,#1199,#1200)
+ - Wrap the library `Alt_ergo_prelude` (#1223)
 
 ### Testing
 
@@ -117,6 +130,9 @@
  - Documentation of the `Enum` theory (#871)
  - Document `Th_util.lit_origin` (#915)
  - Document the CDCL-Tableaux solver (#995)
+ - Document Windows support (#1216)
+ - Remove instructions to install Alt-Ergo on Debian (#1217)
+ - Document optimization feature (#1231)
 
 ## v2.5.4
 
