@@ -11,14 +11,6 @@ This command will install the Alt-ergo library `alt-ergo-lib` and the parsers `a
 
 Since version 2.6.0, Alt-Ergo is compatible with opam 2.2 installations using both Cygwin and MSYS2 on Windows. To setup opam on Windows, please follow the instructions [here](https://ocamlpro.com/blog/2024_07_01_opam_2_2_0_releases/).
 
-### On Debian
-
-Alt-ergo is also available in the debian package manager [here]. You can install it with the following command :
-
-```
-sudo apt install alt-ergo
-```
-
 ## From GitHub releases (Linux and macOS)
 
 For convenience, binary releases for Linux and macOS (amd64 and arm64) of
