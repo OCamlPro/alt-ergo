@@ -155,8 +155,8 @@ and trigger = private {
   from_user : bool;
 }
 
+module Table : Hashtbl.S with type key = t
 module Set : Set.S with type elt = t
-
 module Map : Map.S with type key = t
 
 type subst = t Var.Map.t * Ty.subst

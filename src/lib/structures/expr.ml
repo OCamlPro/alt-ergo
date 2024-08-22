@@ -3267,3 +3267,10 @@ module ArraysEx = struct
   let store a i v =
     mk_term Sy.(Op Set) [a; i; v] (type_info a)
 end
+
+module Table =
+  Hashtbl.Make (struct
+    type nonrec t = t
+    let hash = hash
+    let equal = equal
+  end)
