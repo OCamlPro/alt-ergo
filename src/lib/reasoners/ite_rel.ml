@@ -51,6 +51,9 @@ module TB =
         if c <> 0 then c else Bool.compare b1 b2
     end)
 
+let src = Logs.Src.create ~doc:"Ite_rel" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let timer = Timers.M_Ite
 
 (* The present theory simplifies the ite terms t of the form

@@ -50,6 +50,9 @@ module SX = Shostak.SXH
 module MX0 = Shostak.MXH
 module MPL = Expr.Map
 
+let src = Logs.Src.create ~doc:"IntervalCalculus" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 let oracle =
   lazy (
     let module OracleContainer = (val Inequalities.get_current ()) in

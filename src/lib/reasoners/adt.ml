@@ -28,6 +28,8 @@
 module Sy = Symbols
 module E  = Expr
 
+let src = Logs.Src.create ~doc:"Adt" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
 
 type 'a abstract =
   | Constr of {

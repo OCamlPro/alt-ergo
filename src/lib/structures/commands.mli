@@ -43,4 +43,6 @@ type sat_tdecl = {
   st_decl : sat_decl_aux
 }
 
+val src : Logs.src
+
 val print : Format.formatter -> sat_tdecl -> unit

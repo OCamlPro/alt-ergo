@@ -178,3 +178,12 @@ val print_status_preprocess :
 val print_smtlib_err :
   ?flushed:bool ->
   ('a, Format.formatter, unit) format -> 'a
+
+val reporter : Logs.reporter
+(** Recommended reporter used by both the library and the binary.
+
+    All the sources are printed on [Options.Output.get_fmt_diagnostic ()] but:
+    - [Sources.model] is printed on [Options.Output.get_fmt_models ()]
+    - [Sources.default] is printed on [Options.Output.get_fmt_regular ()]
+
+    The library never prints on [Sources.default] or [Sources.model]. *)

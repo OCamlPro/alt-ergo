@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+val src : Logs.src
+
 module type S = sig
 
   (* the type of amalgamated AC semantic values *)

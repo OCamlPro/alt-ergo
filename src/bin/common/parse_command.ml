@@ -154,7 +154,7 @@ module Debug = struct
     | Cc
     | Combine
     | Constr
-    | Explanation
+    | Explanations
     | Fm
     | Fpa
     | Gc
@@ -176,7 +176,7 @@ module Debug = struct
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
-    Cc; Combine; Constr; Explanation; Fm; Fpa; Gc;
+    Cc; Combine; Constr; Explanations; Fm; Fpa; Gc;
     Interpretation; Intervals; Matching; Sat; Split; Triggers;
     Types; Typing; Uf; Unsat_core; Use; Warnings;
     Commands; Optimize
@@ -194,7 +194,7 @@ module Debug = struct
     | Cc -> "cc"
     | Combine -> "combine"
     | Constr -> "constr"
-    | Explanation -> "explanation"
+    | Explanations -> "explanations"
     | Fm -> "fm"
     | Fpa -> "fpa"
     | Gc -> "gc"
@@ -213,50 +213,107 @@ module Debug = struct
     | Commands -> "commands"
     | Optimize -> "optimize"
 
+  let set_level src = Logs.Src.set_level src (Some Debug)
+
   let mk ~verbosity flags =
+    let module S = Options.Sources in
     List.concat flags
     |> List.iter (function
-        | Debug -> Options.set_debug true
-        | Ac -> Options.set_debug_ac true
-        | Adt -> Options.set_debug_adt true
-        | Arith -> Options.set_debug_arith true
-        | Arrays -> Options.set_debug_arrays true
-        | Bitv -> Options.set_debug_bitv true
+        | Debug ->
+          Options.set_debug true
+        | Ac ->
+          Options.set_debug_ac true;
+          set_level Ac.src
+        | Adt ->
+          Options.set_debug_adt true;
+          set_level Adt.src;
+          set_level Adt_rel.src
+        | Arith ->
+          Options.set_debug_arith true;
+          set_level Arith.src;
+          set_level IntervalCalculus.src
+        | Arrays ->
+          Options.set_debug_arrays true;
+          set_level Arrays_rel.src
+        | Bitv ->
+          Options.set_debug_bitv true;
+          set_level Bitv.src
         | Sum ->
           Printer.print_wrn
             "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
              It has the same effect as 'adt' and will be removed in a future \
              version.";
-          Options.set_debug_adt true
-        | Ite -> Options.set_debug_ite true
-        | Cc -> Options.set_debug_cc true
-        | Combine -> Options.set_debug_combine true
-        | Constr -> Options.set_debug_constr true
-        | Explanation -> Options.set_debug_explanations true
-        | Fm -> Options.set_debug_fm true
-        | Fpa -> Options.set_debug_fpa verbosity
-        | Gc -> Options.set_debug_gc true
-        | Interpretation -> Options.set_debug_interpretation true
-        | Intervals -> Options.set_debug_intervals true
-        | Matching -> Options.set_debug_matching verbosity
-        | Sat -> Options.set_debug_sat true
-        | Split -> Options.set_debug_split true
-        | Triggers -> Options.set_debug_triggers true
-        | Types -> Options.set_debug_types true
+          Options.set_debug_adt true;
+          set_level Adt.src;
+          set_level Adt_rel.src
+        | Ite ->
+          Options.set_debug_ite true;
+          set_level Ite_rel.src
+        | Cc ->
+          Options.set_debug_cc true;
+          set_level Ccx.src
+        | Combine ->
+          Options.set_debug_combine true;
+          set_level Shostak.Combine.src
+        | Constr ->
+          Options.set_debug_constr true;
+          set_level S.constr
+        | Explanations ->
+          Options.set_debug_explanations true
+        | Fm ->
+          Options.set_debug_fm true;
+          set_level S.fm
+        | Fpa ->
+          Options.set_debug_fpa verbosity
+        | Gc ->
+          Options.set_debug_gc true;
+          set_level Gc_debug.src
+        | Interpretation ->
+          Options.set_debug_interpretation true;
+          set_level S.interpretation
+        | Intervals ->
+          Options.set_debug_intervals true;
+          set_level Intervals.src
+        | Matching ->
+          Options.set_debug_matching verbosity;
+          set_level Matching.src
+        | Sat ->
+          Options.set_debug_sat true;
+          set_level Satml.src;
+          set_level Satml_frontend.src
+        | Split ->
+          Options.set_debug_split true;
+          set_level S.split
+        | Triggers ->
+          Options.set_debug_triggers true;
+          set_level S.triggers
+        | Types ->
+          Options.set_debug_types true;
+          set_level S.types
         | Typing ->
           Printer.print_wrn
             "The debug flag 'typing' has no effect. It will be removed in a \
              future version."
-        | Uf -> Options.set_debug_uf true
-        | Unsat_core -> Options.set_debug_unsat_core true
-        | Use -> Options.set_debug_use true
+        | Uf ->
+          Options.set_debug_uf true;
+          set_level Uf.src
+        | Unsat_core ->
+          Options.set_debug_unsat_core true;
+          set_level S.unsat_core
+        | Use ->
+          Options.set_debug_use true;
+          set_level Use.src
         | Warnings ->
           Printer.print_wrn
             "The debug flag 'warning' is deprecated and will be removed in a \
              future version.";
           Options.set_debug_warnings true
-        | Commands -> Options.set_debug_commands true
-        | Optimize -> Options.set_debug_optimize true
+        | Commands ->
+          Options.set_debug_commands true;
+          set_level Commands.src
+        | Optimize ->
+          Options.set_debug_optimize true;
+          set_level S.optimize
       )
 
   let light_flag_term, medium_flag_term, full_flag_term =

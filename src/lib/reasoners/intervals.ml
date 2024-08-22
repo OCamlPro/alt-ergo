@@ -27,25 +27,8 @@
 
 open Intervals_intf
 
-(* Let us pretend we are using [Logs]. *)
-module Log = struct
-  type ('a, 'b) msgf =
-    (?header:string ->
-     ('a, Stdlib.Format.formatter, unit, 'b) Stdlib.format4 -> 'a)
-    -> 'b
-
-  type 'a log = ('a, unit) msgf -> unit
-
-  let module_name = "AltErgoLib.Intervals"
-
-  let debug : 'a log =
-    fun k ->
-    if Options.get_debug_intervals () then
-      k (fun ?header:function_name fmt ->
-          let header = Option.is_some function_name in
-          Printer.print_dbg ~header ~module_name ?function_name fmt
-        )
-end
+let src = Logs.Src.create ~doc:"Intervals" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
 
 let map_bound f = function
   | Unbounded -> Unbounded

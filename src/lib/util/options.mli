@@ -1163,6 +1163,20 @@ module Output : sig
       Default to [Format.err_formatter]. *)
 end
 
+module Sources : sig
+  val constr : Logs.src
+  val fm : Logs.src
+  val fpa : Logs.src
+  val interpretation : Logs.src
+  val model : Logs.src
+  val optimize : Logs.src
+  val split : Logs.src
+  val triggers : Logs.src
+  val types : Logs.src
+  val typing : Logs.src
+  val unsat_core : Logs.src
+end
+
 (** Print message as comment in the corresponding output format *)
 val pp_comment: Format.formatter -> string -> unit
 

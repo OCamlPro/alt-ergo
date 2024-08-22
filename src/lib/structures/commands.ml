@@ -27,6 +27,9 @@
 
 (* Sat entry *)
 
+let src = Logs.Src.create ~doc:"Commands" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type sat_decl_aux =
   | Decl of Id.typed
   | Assume of string * Expr.t * bool

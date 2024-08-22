@@ -157,5 +157,7 @@ end
 
 
 module type SatContainer = sig
+  val src : Logs.src
+
   module Make (_ : Theory.S) : S
 end

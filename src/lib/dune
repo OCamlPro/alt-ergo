@@ -24,6 +24,8 @@
     dune-build-info
     alt_ergo_prelude
     fmt
+    logs
+    logs.fmt
   )
   (preprocess
     (pps

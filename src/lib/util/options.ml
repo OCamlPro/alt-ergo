@@ -91,6 +91,21 @@ module Output = struct
   let get_fmt_models () = to_formatter !dump_models_output
 end
 
+module Sources = struct
+  let constr = Logs.Src.create ~doc:"Constr" "AltErgoLib.constr"
+  let fm = Logs.Src.create ~doc:"fm" "AltErgoLib.fm"
+  let fpa = Logs.Src.create ~doc:"fpa" "AltErgoLib.fpa"
+  let interpretation =
+    Logs.Src.create ~doc:"Interpretation" "AltErgoLib.Interpretation"
+  let model = Logs.Src.create ~doc:"Model" "AltErgoLib.Model"
+  let optimize = Logs.Src.create ~doc:"Optimize" "AltErgoLib.Optimize"
+  let split = Logs.Src.create ~doc:"Split" "AltErgoLib.Split"
+  let triggers = Logs.Src.create ~doc:"Triggers" "AltErgoLib.Triggers"
+  let types = Logs.Src.create ~doc:"Types" "AltErgoLib.Types"
+  let typing = Logs.Src.create ~doc:"Typing" "AltErgoLib.Typing"
+  let unsat_core = Logs.Src.create ~doc:"Unsat_core" "AltErgoLib.Unsat_core"
+end
+
 (* Declaration of all the options as refs with default values *)
 
 type instantiation_heuristic = INormal | IAuto | IGreedy

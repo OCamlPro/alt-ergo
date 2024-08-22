@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+val src : Logs.src
+
 type 'a abstract =
   | Constr of {
       c_name : Uid.term_cst;

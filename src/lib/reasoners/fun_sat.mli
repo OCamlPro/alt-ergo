@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+val src : Logs.src
+
 (** A functional SAT solver implementation. *)
 module Make (_ : Theory.S) : sig
   type t

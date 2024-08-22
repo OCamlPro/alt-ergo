@@ -39,6 +39,9 @@ module X = Shostak.Combine
 
 module MX = Shostak.MXH
 
+let src = Logs.Src.create ~doc:"Use" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type t = (SE.t * SA.t) MX.t
 type r = X.r
 

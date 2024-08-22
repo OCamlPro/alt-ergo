@@ -396,3 +396,35 @@ let print_smtlib_err ?(flushed=true) s =
   in
   Format.fprintf fmt "(error \"";
   Format.kfprintf k fmt s
+
+let pp_source ppf src =
+  let name = Logs.Src.doc src in
+  Fmt.pf ppf "%s" name
+
+let pp_smtlib_header ppf level =
+  match (level : Logs.level) with
+  | App | Info -> ()
+  | Debug | Warning | Error -> Fmt.pf ppf "; "
+
+let reporter =
+  let report src level ~over k msgf =
+    let k _ = over (); k () in
+    let with_header h _tags k fmt =
+      if Logs.Src.equal src Logs.default then
+        Fmt.kpf k (Options.Output.get_fmt_regular ())
+          ("%a@[" ^^ fmt ^^ "@]@.")
+          pp_smtlib_header level
+      else if Logs.Src.equal src Options.Sources.model then
+        Fmt.kpf k (Options.Output.get_fmt_models ())
+          ("@[" ^^ fmt ^^ "@]@.")
+      else
+        let ppf = Options.Output.get_fmt_diagnostic () in
+        if Options.get_output_with_colors () then
+          Fmt.set_style_renderer ppf `Ansi_tty;
+        Fmt.kpf k ppf ("%a[%a] @[" ^^ fmt ^^ "@]@.")
+          Logs_fmt.pp_header (level, h)
+          pp_source src
+    in
+    msgf @@ fun ?header ?tags fmt -> with_header header tags k fmt
+  in
+  { Logs.report }

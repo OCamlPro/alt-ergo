@@ -36,6 +36,8 @@ type conflict_origin =
   | C_bool of Atom.clause
   | C_theory of Explanation.t
 
+val src : Logs.src
+
 module type SAT_ML = sig
 
   (*module Make (Dummy : sig end) : sig*)

@@ -33,6 +33,9 @@ module SE = Expr.Set
 
 module Sy = Symbols
 
+let src = Logs.Src.create ~doc:"Ccx" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module type S = sig
 
   type t

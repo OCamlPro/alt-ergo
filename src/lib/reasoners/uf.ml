@@ -37,6 +37,9 @@ module SE = Expr.Set
 module LX = Shostak.L
 module MapL = Emap.Make(LX)
 
+let src = Logs.Src.create ~doc:"Uf" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 module MapX = struct
   include Shostak.MXH
   let find m x = Steps.incr (Steps.Uf); find m x
