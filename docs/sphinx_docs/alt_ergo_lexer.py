@@ -1,5 +1,6 @@
 from pygments.lexer import RegexLexer, include
-from pygments.token import *
+from pygments.token import String, Text, Name, Comment,\
+    Keyword, Operator, Number
 
 __globals__ = [ 'AltErgoLexer' ]
 
@@ -24,7 +25,7 @@ class AltErgoLexer(RegexLexer):
     keyopts = (
         r',', r';', r'\(', r'\)', r':', r'->', r'<-', r'<->', r'=', r'<', r'<=',
         r'>', r'>=', r'<>', r'\+', r'-', r'\*', r'\*\*', r'\*\*\.', r'/', r'%',
-        r'@', r'\.', r'#', r'\[', r'\]', r'\{', r'\}', 'r\|', r'\^', r'\|->',
+        r'@', r'\.', r'#', r'\[', r'\]', r'\{', r'\}', r'\|', r'\^', r'\|->',
     )
 
     word_operators = ('and', 'in', 'or', 'xor')

@@ -57,8 +57,8 @@ Valid (0.0525) (215 steps) (goal g_5)
 If you have already installed this version of Alt-Ergo and this plugin, you should be able to simply use the command:
 
 
-```
- alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
+```sh
+$ alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
 ```
 
 

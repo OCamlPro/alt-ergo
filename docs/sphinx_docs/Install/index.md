@@ -49,13 +49,13 @@ following libraries :
 
 You can install dependencies using:
 
-```
+```sh
 $ make deps
 ```
 
 and create a development switch with:
 
-```
+```sh
 $ make dev-switch
 ```
 
@@ -96,7 +96,7 @@ Note: these are somewhat obsolete; nowadays you can just use `dune`
 
 You can install dependencies using:
 
-```
+```sh
 $ make js-deps
 ```
 

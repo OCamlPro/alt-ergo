@@ -5,14 +5,14 @@ Creation and manipulation of values having those types are covered in [built-in 
 
 ## Boolean types
  * `bool`, the preferred type to represent propositional variables. Boolean constants are `true` and `false`.
- * `prop`, an historical type still supported in Alt-Ergo 2.3.0.  
-    The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`.  
-    In Alt-Ergo 2.3.0, `prop` and `bool` have been merged in order to simplify interactions with the [SMT-LIB ](http://smtlib.cs.uiowa.edu/) standard.  
+ * `prop`, an historical type still supported in Alt-Ergo 2.3.0.
+    The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`.
+    In Alt-Ergo 2.3.0, `prop` and `bool` have been merged in order to simplify interactions with the [SMT-LIB ](http://smtlib.cs.uiowa.edu/) standard.
     More information on the `bool`/`prop` conflict can be found in [this section](#the-bool-prop-conflict).
 
 ## Numeric types
  * `int` for (arbitrary large) integers.
- * `real` for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood. 
+ * `real` for reals. This type actually represents the smallest extension of the rationals which is algebraically closed and closed by exponentiation. Rationals with arbitrary precision are used under the hood.
 
 ## Unit type
  `unit` is Alt-Ergo native language's [unit type](https://en.wikipedia.org/wiki/Unit_type).
@@ -25,7 +25,7 @@ Creation and manipulation of values having those types are covered in [built-in 
  Alt-Ergo's native language's type system supports prenex polymorphism. This allows efficient reasoning about generic data structure.
  Type variables can be created implicitly, and are implicitly universally quantified in all formulas. Any formula which requires a type can accept a type variable.
  Type variable may be used to parametrize datatypes, as we will see when we will create new types, or in the following example of `farray`.
- 
+
  Type variables are indicated by an apostrophe `'`. For example, `'a` is a type variable.
 
 ## Polymorphic functional arrays
@@ -34,7 +34,7 @@ Creation and manipulation of values having those types are covered in [built-in 
  The `farray` is parametrized by two types: the type of their indexes (default is `int`) and the type of their values (no default).
  Array can be accessed using any index of valid type.
  Functional polymorphic arrays are persistent structures: they may be updated, but only for the scope of an expression.
- 
+
 
 # Built-in operators
 
@@ -57,7 +57,7 @@ For all those operators, `bool` and `prop` are fully interchangeable.
 Prior to Alt-Ergo 2.3.0, Alt-Ergo's native language handled differently boolean variables `bool` and propositional variables `prop`.
 The two keywords still exist in Alt-Ergo 2.3.0, but those two types have been made fully compatible: any function or operator taking a `bool` or a `prop` as an argument accepts both.
 
-The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`. 
+The historical separation comes from Alt-Ergo origins in the Coq ecosystem: in Coq, `prop` is much richer than `bool`.
 In Alt-Ergo 2.3.0, `prop` and `bool` have been merged in order to simplify interactions with the [SMT-LIB ](http://smtlib.cs.uiowa.edu/) standard.
 
 Note that `bool` can be used in more syntactic constructs than `prop`.
@@ -202,9 +202,9 @@ Note that bitvectors are indexed from right to left.
 
 | Operation                     | Notation                                                             | Type                          |
 |-------------------------------|----------------------------------------------------------------------|-------------------------------|
-| Explicit declaration          | `[|<x>|]` <br> where `<x>` is a string of `0` and `1` without spaces | `bitv[<len(x)>]`              |
+| Explicit declaration          | `[\|<x>\|]` where `<x>` is a string of `0` and `1` without spaces    | `bitv[<len(x)>]`              |
 | Concatenation                 | `x @ y`                                                              | bitv[n], bitv[m] -> bitv[n+m] |
-| Extraction of contiguous bits | `x^{p,q}` <br> where 0<=p<=q<len(x)                                  | `bitv[q-p+1]`                 |
+| Extraction of contiguous bits | `x^{p,q}` where `0<=p<=q<len(x)`                                     | `bitv[q-p+1]`                 |
 
 
 ### Examples
@@ -216,14 +216,14 @@ logic register: bitv[8]
 (** Explicit declaration *)
 axiom a: register = [|00101010|]
 
-(** Concatenation 
+(** Concatenation
         Both goals are valid *)
 goal g1:
     forall x,y:bitv[16]. x@y=y@x -> x = y
 
 goal g2:
     forall x,y:bitv[3]. x@[|101|] = [|000101|] -> x=[|000|]
-    
+
 (** Extraction of contiguous bits *
         All goals are valid)
 goal g3:
@@ -235,10 +235,10 @@ goal g4:
     x^{2,3}=[|11|] ->
     x=[|1110|]
 
-goal g5 : 
-    forall x:bitv[32]. forall y:bitv[32]. forall s:bitv[32]. 
+goal g5 :
+    forall x:bitv[32]. forall y:bitv[32]. forall s:bitv[32].
     s = y^{0,15} @ x^{16,31} ->
-    (s^{16,31} = y^{0,15} and s^{0,15} = x^{16,31}) 
+    (s^{16,31} = y^{0,15} and s^{0,15} = x^{16,31})
 ```
 
 ## Type variables
@@ -252,15 +252,15 @@ logic g: 'b->'b
 axiom a1: forall x:'a.  g(f(x))=f(x)
 axiom a2: forall x:int. f(x)=0
 
-goal g1: 
+goal g1:
    (* Valid *)
    g(f(0.01)) = f(0.01)
 
-goal g2: 
+goal g2:
    (* Valid *)
    g(f(1)) = g(0)
 
-goal g3: 
+goal g3:
    (* I don't know *)
    g(f(0.01)) = g(0)
 ```

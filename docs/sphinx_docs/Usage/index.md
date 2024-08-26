@@ -4,12 +4,17 @@
 
 Alt-Ergo is executed with the following command:
 
-        $ alt-ergo   [options] file.<ext>
+```sh
+$ alt-ergo [options] file.<ext>
+```
 
 The CDCL solver is now the default SAT engine. The command below
 allows to enable the old Tableaux-like SAT-solver:
 
-        $ alt-ergo   [options] --sat-solver Tableaux file.<ext>
+```sh
+$ alt-ergo [options] --sat-solver Tableaux file.<ext>
+
+```
 
 ### Files extensions
 Alt-Ergo supports file extensions:
@@ -41,7 +46,9 @@ SMT-LIB features will not work with the `legacy` frontend. Use the (default)
 
 Preludes can be passed to Alt-Ergo as follows:
 
-        $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+```sh
+$ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+```
 
    Alt-Ergo will try to load a local prelude called "p.ae". If this
    fails, Alt-Ergo tries to load it from the default preludes
@@ -57,7 +64,9 @@ Alt-Ergo can be compiled in Javascript see the [install section] for more inform
 
 The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:
 
-        $ node alt-ergo.js  [options] file.<ext>
+```sh
+$ node alt-ergo.js [options] file.<ext>
+```
 
 Note that timeout options and zip files are not supported with this version because of the lack of js primitives.
 
