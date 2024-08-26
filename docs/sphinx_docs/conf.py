@@ -58,9 +58,6 @@ exclude_patterns = ['Alt_ergo_native/TODOs.md']
 # a list of builtin themes.
 #
 html_theme = 'furo'
-html_theme_options = {
-    'navigation_depth': 5,
-}
 
 # -- Options for MyST markdown parser ----------------------------------------
 
