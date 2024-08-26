@@ -165,7 +165,6 @@ You can find more information in the [AB-Why3 README]
 
 This plugin has been "inlined" in Alt-Ergo sources.
 
-
-[AB-Why3 README]: ../Plugins/ab_why3.md
-[opam]:  https://opam.ocaml.org/
-[here]: https://packages.debian.org/buster/alt-ergo
+# Links
+- [AB-Why3 README](../Plugins/ab_why3.md)
+- [opam](https://opam.ocaml.org/)
