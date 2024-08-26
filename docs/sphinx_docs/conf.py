@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Alt-Ergo Documentation'
+project = 'Alt-Ergo'
 copyright = '2020 - 2023, Alt-Ergo developers'
 author = 'Alt-Ergo developers'
 
@@ -57,7 +57,7 @@ exclude_patterns = ['Alt_ergo_native/TODOs.md']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 html_theme_options = {
     'navigation_depth': 5,
 }

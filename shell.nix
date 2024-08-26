@@ -13,7 +13,7 @@ pkgs.mkShell {
     pkgs.sphinx
     python3Packages.myst-parser
     python3Packages.sphinx-markdown-tables
-    python3Packages.sphinx-rtd-theme
+    python3Packages.furo
     ocaml
     dune_3
     ocaml-lsp

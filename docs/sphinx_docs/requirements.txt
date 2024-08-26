@@ -4,6 +4,6 @@
 ###### Requirements for sphinx doc ######
 sphinx >= 4.4.0
 myst-parser
-sphinx_rtd_theme
+furo
 sphinx-markdown-tables
 #

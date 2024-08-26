@@ -12,6 +12,7 @@ import sources.nixpkgs {
         dolmen_loop = pkgs.callPackage ./dolmen_loop.nix { };
         landmarks = pkgs.callPackage ./landmarks.nix { };
         landmarks-ppx = pkgs.callPackage ./landmarks-ppx.nix { };
+        furo = pkgs.callPackage ./furo.nix { };
       });
     })
   ];
