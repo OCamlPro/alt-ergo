@@ -65,7 +65,7 @@ logic x, y : int
 check_sat g: x = y
 ```
 
-```
+```sh
 $ alt-ergo test.ae --model
 
 unknown
