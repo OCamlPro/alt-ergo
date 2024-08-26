@@ -1137,31 +1137,30 @@ let terms env =
 
 (* Helper functions used by the caches during the computation of the model. *)
 module Cache = struct
-  let store_array_get arrays_cache (t : Expr.t) (i : Expr.t) (v : Expr.t) =
-    match Hashtbl.find_opt arrays_cache t with
-    | Some values ->
-      Hashtbl.replace values i v
-    | None ->
-      let values = Hashtbl.create 17 in
-      Hashtbl.add values i v;
-      Hashtbl.add arrays_cache t values
+  let store_array_get arrays_cache (t : E.t) (i : E.t) (v : E.t) =
+    match E.Table.find arrays_cache t with
+    | exception Not_found ->
+      let values = E.Table.create 17 in
+      E.Table.add values i v;
+      E.Table.add arrays_cache t values
+    | values ->
+      E.Table.replace values i v
 
-  let get_abstract_for abstracts_cache env (t : Expr.t) =
+  let get_abstract_for abstracts_cache env (t : E.t) =
     let r, _ = find env t in
-    match Hashtbl.find_opt abstracts_cache r with
-    | Some abstract -> abstract
-    | None ->
-      let abstract = Expr.mk_abstract (Expr.type_info t) in
-      Hashtbl.add abstracts_cache r abstract;
+    match Shostak.HX.find abstracts_cache r with
+    | exception Not_found ->
+      let abstract = E.mk_abstract (E.type_info t) in
+      Shostak.HX.add abstracts_cache r abstract;
       abstract
+    | abstract -> abstract
 end
 
 type cache = {
-  array_selects: (Expr.t, (Expr.t, Expr.t) Hashtbl.t)
-      Hashtbl.t;
+  array_selects: Expr.t E.Table.t E.Table.t;
   (** Stores all the get accesses to arrays. *)
 
-  abstracts: (r, Expr.t) Hashtbl.t;
+  abstracts: Expr.t Shostak.HX.t;
   (** Stores all the abstract values generated. This cache is necessary
       to ensure we don't generate twice an abstract value for a given symbol. *)
 }
@@ -1212,13 +1211,13 @@ let compute_concrete_model_of_val cache =
         match f, arg_vals, ty with
         | Sy.Name _, [], Ty.Tfarray _ ->
           begin
-            match Hashtbl.find_opt cache.array_selects t with
-            | Some _ -> acc
-            | None ->
+            match E.Table.find cache.array_selects t with
+            | exception Not_found ->
               (* We have to add an abstract array in case there is no
                  constraint on its values. *)
-              Hashtbl.add cache.array_selects t (Hashtbl.create 17);
+              E.Table.add cache.array_selects t (E.Table.create 17);
               acc
+            | _ -> acc
           end
 
         | Sy.Op Sy.Set, _, _ -> acc
@@ -1258,13 +1257,13 @@ let extract_concrete_model cache =
         terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
     in
     let model =
-      Hashtbl.fold (fun t vals mdl ->
+      E.Table.fold (fun t vals mdl ->
           (* We produce a fresh identifiant for abstract value in order to
              prevent any capture. *)
           let abstract = get_abstract_for env t in
           let ty = Expr.type_info t in
           let arr_val =
-            Hashtbl.fold (fun i v arr_val ->
+            E.Table.fold (fun i v arr_val ->
                 Expr.ArraysEx.store arr_val i v
               ) vals abstract
           in
@@ -1299,7 +1298,7 @@ let extract_concrete_model cache =
 
 let extract_concrete_model ~prop_model ~declared_ids =
   let cache : cache = {
-    array_selects = Hashtbl.create 17;
-    abstracts = Hashtbl.create 17;
+    array_selects = E.Table.create 17;
+    abstracts = Shostak.HX.create 17;
   }
   in fun env -> extract_concrete_model cache ~prop_model ~declared_ids env
