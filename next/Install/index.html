@@ -50,10 +50,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Install</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#from-a-package-manager">From a package manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#from-github-releases-linux-and-macos">From GitHub releases (Linux and macOS)</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#on-debian">On Debian</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#from-github-releases-linux-and-macos">From GitHub releases (Linux and macOS)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build-and-install">Build and Install</a><ul>
@@ -118,7 +115,8 @@
 <div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span>
 </pre></div>
 </div>
-<p>This two command will install the Alt-ergo library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the parsers <code class="docutils literal notranslate"><span class="pre">alt-ergo-parsers</span></code>, as well as other librairies detailled in <a class="reference internal" href="#dependencies">dependencies</a>.</p>
+<p>This command will install the Alt-ergo library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the parsers <code class="docutils literal notranslate"><span class="pre">alt-ergo-parsers</span></code>, as well as other librairies detailled in <a class="reference internal" href="#dependencies">dependencies</a>.</p>
+<p>Since version 2.6.0, Alt-Ergo is compatible with opam 2.2 installations using both Cygwin and MSYS2 on Windows. To setup opam on Windows, please follow the instructions <a class="reference external" href="https://ocamlpro.com/blog/2024_07_01_opam_2_2_0_releases/">here</a>.</p>
 </section>
 <section id="from-github-releases-linux-and-macos">
 <h2>From GitHub releases (Linux and macOS)<a class="headerlink" href="#from-github-releases-linux-and-macos" title="Permalink to this heading"></a></h2>
@@ -126,13 +124,6 @@
 Alt-Ergo are provided on the GitHub release page. These binary releases are
 statically linked and very portable. They are distributed under the same
 licensing restrictions as the source code.</p>
-<section id="on-debian">
-<h3>On Debian<a class="headerlink" href="#on-debian" title="Permalink to this heading"></a></h3>
-<p>Alt-ergo is also available in the debian package manager <a class="reference external" href="https://packages.debian.org/buster/alt-ergo">here</a>. You can install it with the following command :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span> <span class="n">install</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span>
-</pre></div>
-</div>
-</section>
 </section>
 <section id="from-sources">
 <h2>From sources<a class="headerlink" href="#from-sources" title="Permalink to this heading"></a></h2>
