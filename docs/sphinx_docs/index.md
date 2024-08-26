@@ -16,12 +16,12 @@ If you are using Alt-Ergo as a library, see the [API documentation](API/index) (
 Alt-ergo supports different input languages:
 
 - Alt-ergo supports the SMT-LIB language v2.6. **This is Alt-Ergo's preferred
-  and recommended input format.** 
+  and recommended input format.**
 - The original input language is its native language, based on the language of the Why3 platform.
 - It also (partially) supports the input language of Why3 through the [AB-Why3 plugin](../Plugins/ab_why3).
 
+## Contents
 ```{toctree}
-:caption: Contents
 :maxdepth: 2
 
 Install                    <Install/index>
