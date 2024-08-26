@@ -49,13 +49,13 @@ following libraries :
 
 You can install dependencies using:
 
-```sh
+```console
 $ make deps
 ```
 
 and create a development switch with:
 
-```sh
+```console
 $ make dev-switch
 ```
 
@@ -96,7 +96,7 @@ Note: these are somewhat obsolete; nowadays you can just use `dune`
 
 You can install dependencies using:
 
-```sh
+```console
 $ make js-deps
 ```
 
@@ -165,6 +165,6 @@ You can find more information in the [AB-Why3 README]
 
 This plugin has been "inlined" in Alt-Ergo sources.
 
-# Links
+## Links
 - [AB-Why3 README](../Plugins/ab_why3.md)
 - [opam](https://opam.ocaml.org/)

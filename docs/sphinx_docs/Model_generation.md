@@ -176,7 +176,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   (get-model)
   ```
   Execute the command
-  ```sh
+  ```console
   alt-ergo --produce-models INPUT.smt2
   ```
   We got the output

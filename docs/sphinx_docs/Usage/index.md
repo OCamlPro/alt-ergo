@@ -4,14 +4,14 @@
 
 Alt-Ergo is executed with the following command:
 
-```sh
+```console
 $ alt-ergo [options] file.<ext>
 ```
 
 The CDCL solver is now the default SAT engine. The command below
 allows to enable the old Tableaux-like SAT-solver:
 
-```sh
+```console
 $ alt-ergo [options] --sat-solver Tableaux file.<ext>
 
 ```
@@ -46,7 +46,7 @@ SMT-LIB features will not work with the `legacy` frontend. Use the (default)
 
 Preludes can be passed to Alt-Ergo as follows:
 
-```sh
+```console
 $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
 ```
 
@@ -64,7 +64,7 @@ Alt-Ergo can be compiled in Javascript see the [install section] for more inform
 
 The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:
 
-```sh
+```console
 $ node alt-ergo.js [options] file.<ext>
 ```
 
@@ -120,11 +120,12 @@ Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the
 [API documentation] (also available [on ocaml.org](https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html))
 for more information.
 
-[install section]: ../Install/index.md
-[Lwt]: https://ocsigen.org/lwt/
-[js_of_ocaml]: https://ocsigen.org/js_of_ocaml/
-[API documentation]: ../API/index
-[AB-Why3 README]: ../Plugins/ab_why3.md
-[Alt-ergo native language]: ../Alt_ergo_native/index
-[SMT-LIB language]: ../SMT-LIB_language/index
-[Dune-site plugins]: https://dune.readthedocs.io/en/stable/sites.html#plugins
+## Links
+- [install section](../Install/index.md)
+- [Lwt](https://ocsigen.org/lwt/)
+- [js_of_ocaml](https://ocsigen.org/js_of_ocaml/)
+- [API documentation](../API/index)
+- [AB-Why3 README](../Plugins/ab_why3.md)
+- [Alt-ergo native language](../Alt_ergo_native/index)
+- [SMT-LIB language](../SMT-LIB_language/index)
+- [Dune-site plugins](https://dune.readthedocs.io/en/stable/sites.html#plugins)

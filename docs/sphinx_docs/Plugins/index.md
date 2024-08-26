@@ -13,7 +13,7 @@ The `fm-simplex` inequality plugin comes built-in with Alt-Ergo and no further
 installation is required. It is distributed under the same licensing conditions
 as Alt-Ergo. It can be used as follows:
 
-```sh
+```console
 $ alt-ergo --inequalities-plugin fm-simplex [other-options] file.<ext>
 ```
 
