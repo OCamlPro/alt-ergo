@@ -160,7 +160,7 @@ doc: odoc sphinx-doc
 sphinx-doc:
 	# cp LICENSE.md $(SPHINX_DOC_DIR)/About/license.md
 	# cp -r licenses $(SPHINX_DOC_DIR)/About
-	$(SPHINXBUILD) "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)"
+	$(SPHINXBUILD) -W "$(SPHINX_DOC_DIR)" "$(SPHINX_BUILD_DIR)"
 
 # Build the odoc
 odoc:

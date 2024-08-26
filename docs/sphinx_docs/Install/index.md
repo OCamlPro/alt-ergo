@@ -3,7 +3,7 @@
 ## From a package manager
 
 Alt-ergo is available on [opam], the ocaml package manager with the following command :
-```
+```console
 opam install alt-ergo
 ```
 
@@ -29,33 +29,36 @@ External dependencies graph generated with `dune-deps` (use `make archi` for sou
 To compile the sources of the library `alt-ergo-lib` and the binary `alt-ergo`, you will need the
 following libraries :
 ```
-  ocaml >= 4.08.0
+  ocaml >= 4.08.1
   dune >= 3.0
   dune-build-info
-  dolmen >= 0.9
-  dolmen_loop >= 0.9
-  ocplib-simplex >= 0.5
-  zarith >= 1.4
+  dune-site
+  dolmen >= 0.10
+  dolmen_type >= 0.10
+  dolmen_loop >= 0.10
+  ocplib-simplex >= 0.5.1
+  zarith >= 1.11
   seq
-  fmt
-  ppx_blob
+  fmt >= 0.9.0
+  ppx_blob >= 0.7.2
   camlzip >= 1.07
   menhir
   dune-site
-  cmdliner
+  cmdliner >= 1.1.0
   psmt2-frontend >= 0.4
   stdlib-shims
+  ppx_deriving
 ```
 
 You can install dependencies using:
 
-```
+```console
 $ make deps
 ```
 
 and create a development switch with:
 
-```
+```console
 $ make dev-switch
 ```
 
@@ -104,8 +107,8 @@ $ make js-deps
 
 For this build rule you will need the following aditional libraries :
 ```
-js_of_ocaml between 4.0.1 and 5.0.1
-zarith_stubs_js
+js_of_ocaml >= 5.4.0
+zarith_stubs_js >= v0.16.1
 ```
 
 #### Alt-Ergo web worker
@@ -114,9 +117,9 @@ zarith_stubs_js
 
 For this build rule you will need the following aditional libraries :
 ```
-js_of_ocaml between 4.0.1 and 5.0.1
+js_of_ocaml >= 5.4.0
 js_of_ocaml-lwt
-zarith_stubs_js
+zarith_stubs_js >= v0.16.1
 data-encoding
 ```
 
@@ -128,11 +131,11 @@ This command create a `www/` directory in which you can find a small js example 
 
 For this build rule you will need the following aditional libraries :
 ```
-js_of_ocaml between 4.0.1 and 5.0.1
+js_of_ocaml >= 5.4.0
 js_of_ocaml-lwt
 js_of_ocaml-ppx
 lwt_ppx
-zarith_stubs_js
+zarith_stubs_js >= v0.16.1
 data-encoding
 ```
 

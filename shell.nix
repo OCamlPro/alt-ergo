@@ -12,7 +12,6 @@ pkgs.mkShell {
     pkgs.ocamlformat
     pkgs.sphinx
     python3Packages.myst-parser
-    python3Packages.sphinx-markdown-tables
     python3Packages.sphinx-rtd-theme
     ocaml
     dune_3

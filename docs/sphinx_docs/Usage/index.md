@@ -4,18 +4,39 @@
 
 Alt-Ergo is executed with the following command:
 
-        $ alt-ergo   [options] file.<ext>
+```console
+$ alt-ergo   [options] file.<ext>
+```
 
 The CDCL solver is now the default SAT engine. The command below
 allows to enable the old Tableaux-like SAT-solver:
 
-        $ alt-ergo   [options] --sat-solver Tableaux file.<ext>
+```console
+$ alt-ergo   [options] --sat-solver Tableaux file.<ext>
+```
+
+### Output
+The results of an Alt-ergo's execution have the following form :
+```
+File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in seconde>) (<number of steps> steps) (goal <name of the goal>)
+```
+The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in
+the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`.
+You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
+
+```{admonition} Note
+When Alt-Ergo tries to prove a `goal` (with the native input language), it
+actually tries to prove the unsatisfiability of its negation. That is
+why you get `unsat` answer as an SMT-LIB 2 format output while proving a `Valid`
+goal. The same goes for `Invalid` and `sat`.
+```
 
 ### Files extensions
 Alt-Ergo supports file extensions:
 - `.psmt2`, `.smt2` for (our polymorphic extension of) the SMT-LIB 2
   standard
 - `.ae`, for its native input language (`.why` and `.mlw` are now deprecated although still accepted)
+- `.psmt2.zip`, `.smt2.zip` and `.ae.zip` for compressed files
 
 See the [SMT-LIB language] and [Alt-ergo native language] sections for more information about the format of the input files.
 
@@ -41,13 +62,28 @@ SMT-LIB features will not work with the `legacy` frontend. Use the (default)
 
 Preludes can be passed to Alt-Ergo as follows:
 
-        $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+```console
+$ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+```
 
    Alt-Ergo will try to load a local prelude called "p.ae". If this
    fails, Alt-Ergo tries to load it from the default preludes
    directory (run `alt-ergo --where preludes` to see its absolute
    path). You can also provide a relative or an absolute path as shown
    by "some-path/q.ae".
+
+### Strict mode
+Alt-Ergo supports extensions that are not part of the SMT-LIB standard. For
+convenience, some of these extensions are enabled by default. Since the
+version 2.6.0, the flag `--strict` disables the extensions:
+- MaxSMT extension for the optimization
+
+We plan to disable more nonstandard extensions with this flag in futur versions.
+## Library
+
+Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the
+[API documentation] (also available [on ocaml.org](https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html))
+for more information.
 
 ## Javascript
 
@@ -57,7 +93,9 @@ Alt-Ergo can be compiled in Javascript see the [install section] for more inform
 
 The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:
 
-        $ node alt-ergo.js  [options] file.<ext>
+```console
+$ node alt-ergo.js  [options] file.<ext>
+```
 
 Note that timeout options and zip files are not supported with this version because of the lack of js primitives.
 
@@ -104,12 +142,6 @@ Look at the `worker_json_example.json` in the ressources `rsc` of the project to
 ### Js-worker example
 
 A small example of how to use the Alt-Ergo web worker can be build with the command ```make js-example```. This command also makes the web worker if it has not already been built. It produces a `www` directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file sent
-
-## Library
-
-Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the
-[API documentation] (also available [on ocaml.org](https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html))
-for more information.
 
 [install section]: ../Install/index.md
 [Lwt]: https://ocsigen.org/lwt/
