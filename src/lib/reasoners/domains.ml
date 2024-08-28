@@ -100,6 +100,11 @@ sig
 
   val watches : key -> t -> W.Set.t
   (** Returns the set of watches associated with object [x]. *)
+
+  val needs_propagation : t -> bool
+  (** Returns [true] if the domain needs propagation. This means that the domain
+      associated with some variables has been shrunk, and cross-domain
+      propagation might be needed. *)
 end
 =
 struct
@@ -116,6 +121,9 @@ struct
     ; watching : SX.t W.Map.t
     (** Map from watches to the variables they watch. Used to be able
         to remove watches. *)
+    ; changed : SX.t
+    (** Set of variables whose domain has changed. Used for cross-domain
+        propagations.*)
     }
 
   type key = X.t
@@ -130,7 +138,8 @@ struct
   let empty =
     { domains = MX.empty
     ; watches = MX.empty
-    ; watching = W.Map.empty }
+    ; watching = W.Map.empty
+    ; changed = SX.empty }
 
   let find x t = MX.find x t.domains
 
@@ -154,7 +163,8 @@ struct
         MX.remove x t.watches, watching
       | exception Not_found -> t.watches, t.watching
     in
-    { domains ; watches ; watching }
+    let changed = SX.remove x t.changed in
+    { domains ; watches ; watching ; changed }
 
   let add_watches x ws t =
     let watches =
@@ -168,7 +178,7 @@ struct
               | Some xs -> Some (SX.add x xs)) watching
         ) ws t.watching
     in
-    { domains = t.domains ; watches ; watching }
+    { domains = t.domains ; watches ; watching ; changed = t.changed }
 
   let remove_watch w t =
     match W.Map.find w t.watching with
@@ -186,14 +196,17 @@ struct
           ) xs t.watches
       in
       let watching = W.Map.remove w t.watching in
-      { domains = t.domains ; watches ; watching }
+      { domains = t.domains ; watches ; watching ; changed = t.changed }
     | exception Not_found -> t
 
   let watches x t =
     try MX.find x t.watches with Not_found -> W.Set.empty
 
   let add x d t =
-    { t with domains = MX.add x d t.domains }
+    { t with domains = MX.add x d t.domains ; changed = SX.add x t.changed }
+
+  let needs_propagation t =
+    not (SX.is_empty t.changed)
 
   module Ephemeral = struct
     type key = X.t
@@ -244,7 +257,8 @@ struct
         entry
   end
 
-  let edit ~notify ~default { domains ; watches ; watching } =
+  let edit ~notify ~default { domains ; watches ; watching ; changed } =
+    SX.iter notify changed;
     { Ephemeral.domains
     ; watches
     ; watching
@@ -263,7 +277,8 @@ struct
     in
     { domains
     ; watches = t.Ephemeral.watches
-    ; watching = t.Ephemeral.watching }
+    ; watching = t.Ephemeral.watching
+    ; changed = SX.empty }
 end
 
 module Make
@@ -337,6 +352,8 @@ struct
     ; triggers = t.triggers }
 
   let needs_propagation t =
+    DMA.needs_propagation t.atoms ||
+    DMC.needs_propagation t.composites ||
     not (W.Set.is_empty t.triggers)
 
   let[@inline] variables { variables ; _ } = variables
