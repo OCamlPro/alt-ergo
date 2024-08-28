@@ -49,7 +49,7 @@ module type S = sig
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
   val do_optimize :
-    acts:Shostak.Literal.t Th_util.acts -> t -> t
+    acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val do_case_split :
     ?acts:Shostak.Literal.t Th_util.acts ->
     t -> Util.case_split_policy -> t * Expr.Set.t

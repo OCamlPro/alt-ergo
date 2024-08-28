@@ -1949,7 +1949,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
        about these at the SAT level. *)
     let rec loop env =
       let acts = theory_slice env in
-      env.tenv <- Th.do_optimize ~acts env.tenv;
+      Th.do_optimize ~acts env.tenv;
       if not (is_sat env) then
         try solve env; assert false
         with Sat -> loop env

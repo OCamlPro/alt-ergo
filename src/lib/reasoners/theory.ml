@@ -58,7 +58,7 @@ module type S = sig
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
   val do_optimize :
-    acts:Shostak.Literal.t Th_util.acts -> t -> t
+    acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val do_case_split :
     ?acts:Shostak.Literal.t Th_util.acts ->
     t -> Util.case_split_policy -> t * Expr.Set.t
@@ -677,9 +677,8 @@ module Main_Default : S = struct
     match Objective.Model.next_unknown objectives with
     | Some obj ->
       let add_objective = acts.Th_util.acts_add_objective in
-      optimize_obj ~for_model:false add_objective obj t;
-      t
-    | None -> t
+      optimize_obj ~for_model:false add_objective obj t
+    | None -> ()
 
   let do_sat_splits acts t =
     let splits, t = sat_splits t in
@@ -963,7 +962,7 @@ module Main_Empty : S = struct
 
   let get_real_env _ = CC_X.empty
   let get_case_split_env _ = CC_X.empty
-  let do_optimize ~acts:_ env = env
+  let do_optimize ~acts:_ _ = ()
   let do_case_split ?acts:_ env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model ~acts:_ _env = ()
