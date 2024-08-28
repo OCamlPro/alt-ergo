@@ -34,6 +34,8 @@ let is_bv_ty = function
   | Ty.Tbitv _ -> true
   | _ -> false
 
+let is_bv_r r = is_bv_ty (X.type_info r)
+
 let bitwidth r =
   match X.type_info r with Tbitv n -> n | _ -> assert false
 
@@ -678,7 +680,7 @@ module Constraint : sig
   type fun_t =
     | Fbinop of binop * X.r * X.r
 
-  type binrel = Rule | Rugt
+  type binrel = Rule | Rugt | Rdistinct
 
   type rel_t =
     | Rbinrel of binrel * X.r * X.r
@@ -742,8 +744,13 @@ module Constraint : sig
   (** [bvshl r x y] is the constraint [r = x >> y] *)
 
   val bvule : X.r -> X.r -> t
+  (** [bvule x y] is the constraint [(bvule x y)]. *)
 
   val bvugt : X.r -> X.r -> t
+  (** [bvugt x y] is the constraint [(bvugt x y)]. *)
+
+  val distinct : X.r -> X.r -> t
+  (** [distinct x y] is the constraint [(distinct x y)]. *)
 end = struct
   type binop =
     (* Bitwise operations *)
@@ -818,11 +825,12 @@ end = struct
       Fbinop (op, y, x)
     | Fbinop _ as e -> e
 
-  type binrel = Rule | Rugt
+  type binrel = Rule | Rugt | Rdistinct
 
   let pp_binrel ppf = function
     | Rule -> Fmt.pf ppf "bvule"
     | Rugt -> Fmt.pf ppf "bvugt"
+    | Rdistinct -> Fmt.pf ppf "distinct"
 
   let equal_binrel : binrel -> binrel -> bool = Stdlib.(=)
 
@@ -923,6 +931,7 @@ end = struct
 
   let bvule = cbinrel Rule
   let bvugt = cbinrel Rugt
+  let distinct = cbinrel Rdistinct
 
   let equal c1 c2 = c1.tag = c2.tag
 
@@ -1170,12 +1179,36 @@ end = struct
     update ~ex:Ex.empty dx (less_than_sup ~ex ~strict !!dy);
     update ~ex:Ex.empty dy (greater_than_inf ~ex ~strict !!dx)
 
+  let unwrap msg = function
+    | Intervals_intf.NonEmpty x -> x
+    | Intervals_intf.Empty _ ->
+      Util.internal_error "%s" msg
+
+  let propagate_distinct ~ex dx dy =
+    let open Interval_domains.Ephemeral.Canon in
+    match Intervals.Int.value_opt !!dx with
+    | Some (vx, exx) ->
+      update ~ex:Ex.empty dy @@
+      unwrap "complement cannot be empty" @@
+      Intervals.Int.of_complement ~ex:(Ex.union ex exx) @@
+      Intervals.Int.Interval.singleton vx
+    | None ->
+      match Intervals.Int.value_opt !!dy with
+      | Some (vy, exy) ->
+        update ~ex:Ex.empty dx @@
+        unwrap "complement cannot be empty" @@
+        Intervals.Int.of_complement ~ex:(Ex.union ex exy) @@
+        Intervals.Int.Interval.singleton vy
+      | None -> ()
+
   let propagate_interval_binrel ~ex op dx dy =
     match op with
     | Rule ->
       propagate_less_than ~ex ~strict:false dx dy
     | Rugt ->
       propagate_less_than ~ex ~strict:true dy dx
+    | Rdistinct ->
+      propagate_distinct ~ex dx dy
 
   let propagate_rel_t ~ex dom r =
     let get r = Bitlist_domains.Ephemeral.Canon.entry dom r in
@@ -1487,6 +1520,13 @@ end = struct
       acts.acts_add_eq ~ex X.top X.bot;
       true
     | Rule | Rugt -> false
+    | Rdistinct when X.equal x y ->
+      acts.acts_add_eq ~ex X.top X.bot;
+      true
+    | Rdistinct ->
+      (* TODO(bclement): Is it is OK to simplify here if either side is
+         constant? *)
+      false
 
   let simplify_rel_t uf acts = function
     | Rbinrel (op, x, y) ->
@@ -2107,11 +2147,6 @@ let assume env uf la =
                | Th_util.CS (Th_bitv, n) -> Q.(ss * n)
                | _ -> ss
              in
-             let is_1bit r =
-               match X.type_info r with
-               | Tbitv 1 -> true
-               | _ -> false
-             in
              match a, orig with
              | L.Builtin (is_true, BVULE, [x; y]), _ ->
                let x, exx = Uf.find_r uf x in
@@ -2131,16 +2166,17 @@ let assume env uf la =
                  int_domain
                in
                (domain, int_domain, eqs, ss)
-             | L.Distinct (false, [rr; nrr]), _ when is_1bit rr ->
-               (* We don't (yet) support [distinct] in general, but we must
-                  support it for case splits to avoid looping.
-
-                  We are a bit more general and support it for 1-bit vectors,
-                  for which `distinct` can be expressed using `bvnot`. *)
-               let not_nrr =
-                 Shostak.Bitv.is_mine (Bitv.lognot (Shostak.Bitv.embed nrr))
+             | L.Distinct (false, [x; y]), _ when is_bv_r x ->
+               let x, exx = Uf.find_r uf x in
+               let y, exy = Uf.find_r uf y in
+               let ex = Ex.union ex @@ Ex.union exx exy in
+               let c = Constraint.distinct x y in
+               let int_domain =
+                 Interval_domains.watch (explained ~ex c) x @@
+                 Interval_domains.watch (explained ~ex c) y @@
+                 int_domain
                in
-               (domain, int_domain, (Uf.LX.mkv_eq rr not_nrr, ex) :: eqs, ss)
+               (domain, int_domain, eqs, ss)
              | _ -> (domain, int_domain, eqs, ss)
           )
           (domain, int_domain, [], env.size_splits)
@@ -2182,8 +2218,11 @@ let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then
     []
   else
-    let domain =
+    let bl_domain =
       Uf.GlobalDomains.find (module Bitlist_domains) (Uf.domains uf)
+    in
+    let int_domain =
+      Uf.GlobalDomains.find (module Interval_domains) (Uf.domains uf)
     in
     (* Look for representatives with minimal, non-fully known, domain size.
 
@@ -2193,7 +2232,7 @@ let case_split env uf ~for_model =
        [nunk] is the number of unknown bits. *)
     let f_acc r acc =
       let r, _ = Uf.find_r uf r in
-      let bl = Bitlist_domains.get r domain in
+      let bl = Bitlist_domains.get r bl_domain in
       let nunk = Z.popcount (Bitlist.unknown_bits bl) in
       if nunk = 0 then
         acc
@@ -2213,7 +2252,8 @@ let case_split env uf ~for_model =
     match SX.choose candidates with
     | r ->
       let rr, _ = Uf.find_r uf r in
-      let bl = Bitlist_domains.get rr domain in
+      let bl = Bitlist_domains.get rr bl_domain in
+      let int = Interval_domains.get rr int_domain in
       let r =
         let es = Uf.rclass_of uf r in
         try Uf.make uf (Expr.Set.choose es)
@@ -2226,13 +2266,33 @@ let case_split env uf ~for_model =
         Shostak.Bitv.is_mine @@
         Bitv.extract w bitidx bitidx (Shostak.Bitv.embed r)
       in
-      (* Just always pick zero for now. *)
-      let zero = Shostak.Bitv.is_mine Bitv.[ { bv = Cte Z.zero ; sz = 1 } ] in
+      (* Make sure to pick a value that is compatible with the interval
+         domain.
+
+         This should not happen if cross-domain propagation was run to
+         completion, which it should do, but it is OK if there are corner
+         cases where it didn't (we are just going to be slower), so we
+         want to handle this case.
+
+         Raise an internal error for debugging purposes. *)
+      let value, size =
+        let bit_interval = Intervals.Int.extract int ~ofs:bitidx ~len:1 in
+        match Intervals.Int.value_opt bit_interval with
+        | Some (v, _) ->
+          if Options.get_enable_assertions () then
+            Util.internal_error
+              "High bit allowed by bitlists, but not intervals."
+          else
+            const 1 v, 1
+        | None -> const 1 Z.zero, 2
+      in
       if Options.get_debug_bitv () then
         Printer.print_dbg
           ~module_name:"Bitv_rel" ~function_name:"case_split"
-          "[BV-CS-1] Setting %a to 0" X.print lhs;
-      [ Uf.LX.mkv_eq lhs zero, true, Th_util.CS (Th_util.Th_bitv, Q.of_int 2) ]
+          "[BV-CS-1] Setting %a to %a" X.print lhs X.print value;
+      [ Uf.LX.mkv_eq lhs value,
+        true,
+        Th_util.CS (Th_util.Th_bitv, Q.of_int size) ]
     | exception Not_found -> []
 
 let add env uf r t =
