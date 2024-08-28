@@ -1796,37 +1796,36 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       make_decision env atom
 
   and pick_branch_lit env =
-    match env.next_optimized_split with
-    | Some (fn, value, atom) ->
-      env.next_optimized_split <- None;
-      let v = atom.var in
-      if v.level >= 0 then (
-        assert (v.pa.is_true || v.na.is_true);
-        if atom.is_true then
-          env.tenv <- Th.add_objective env.tenv fn value;
-        pick_branch_lit env
-      ) else (
-        make_decision env atom;
-        if atom.is_true then
-          env.tenv <- Th.add_objective env.tenv fn value
-      )
-    | None ->
-      match env.next_decisions with
-      | atom :: tl ->
-        env.next_decisions <- tl;
+    match env.next_decisions with
+    | atom :: tl ->
+      env.next_decisions <- tl;
+      pick_branch_aux env atom
+    | [] ->
+      match env.next_split with
+      | Some atom ->
+        env.next_split <- None;
         pick_branch_aux env atom
-      | [] ->
-        match env.next_split with
-        | Some atom ->
-          env.next_split <- None;
-          pick_branch_aux env atom
-        | None ->
-          match Vheap.pop_min env.order with
-          | v -> pick_branch_aux env v.na
-          | exception Not_found ->
-            if Options.get_cdcl_tableaux_inst () then
-              assert (Matoms.is_empty env.lazy_cnf);
-            raise_notrace Sat
+      | None ->
+        match Vheap.pop_min env.order with
+        | v -> pick_branch_aux env v.na
+        | exception Not_found ->
+          if Options.get_cdcl_tableaux_inst () then
+            assert (Matoms.is_empty env.lazy_cnf);
+          match env.next_optimized_split with
+          | Some (fn, value, atom) ->
+            env.next_optimized_split <- None;
+            let v = atom.var in
+            if v.level >= 0 then (
+              assert (v.pa.is_true || v.na.is_true);
+              if atom.is_true then
+                env.tenv <- Th.add_objective env.tenv fn value;
+              pick_branch_lit env
+            ) else (
+              make_decision env atom;
+              if atom.is_true then
+                env.tenv <- Th.add_objective env.tenv fn value
+            )
+          | None -> raise Sat
 
   let pick_branch_lit env =
     if env.next_dec_guard < Vec.size env.increm_guards then
@@ -1940,6 +1939,23 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | exception Ex.Inconsistent (ex, _) ->
       conflict_analyze_and_fix env (C_theory ex);
       compute_concrete_model ~declared_ids env
+
+  let compute_concrete_model ~declared_ids env =
+    assert (is_sat env);
+
+    (* Make sure all objectives are optimized before starting model
+       generation. This can cause us to backtrack some of the splits
+       done at the theory level, which is fine, because we don't care
+       about these at the SAT level. *)
+    let rec loop env =
+      let acts = theory_slice env in
+      env.tenv <- Th.do_optimize ~acts env.tenv;
+      if not (is_sat env) then
+        try solve env; assert false
+        with Sat -> loop env
+      else
+        compute_concrete_model ~declared_ids env
+    in loop env
 
   exception Trivial
 
