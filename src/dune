@@ -17,6 +17,5 @@
 (library
  (name alt_ergo_prelude)
  (package alt-ergo-lib)
- (wrapped false)
- (modules prelude)
+ (modules alt_ergo_prelude)
 )
