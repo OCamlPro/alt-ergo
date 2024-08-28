@@ -2279,11 +2279,11 @@ let case_split env uf ~for_model =
         let bit_interval = Intervals.Int.extract int ~ofs:bitidx ~len:1 in
         match Intervals.Int.value_opt bit_interval with
         | Some (v, _) ->
-          if Options.get_enable_assertions () then
-            Util.internal_error
-              "High bit allowed by bitlists, but not intervals."
-          else
-            const 1 v, 1
+          Log.debug (fun m ->
+              m "@[%a@]" Fmt.words
+                "High bit forced by intervals; cross-domain propagation bug?"
+            );
+          const 1 v, 1
         | None -> const 1 Z.zero, 2
       in
       if Options.get_debug_bitv () then
