@@ -451,20 +451,22 @@ module Env = struct
   let add_names env lv pp_ty loc =
     Types.monomorphized pp_ty;
     let ty = Types.ty_of_pp loc env.types None pp_ty in
-    add env lv Symbols.name ty
+    let fvar s = Symbols.name @@ Uid.of_string s in
+    add env lv fvar ty
 
   let add_names_lbl env lv pp_ty loc =
     Types.monomorphized pp_ty;
     let ty = Types.ty_of_pp loc env.types None pp_ty in
+    let fvar s = Symbols.name @@ Uid.of_string s in
     let rlv =
       List.fold_left (fun acc (x, lbl) ->
           let lbl = Hstring.make lbl in
           if not (Hstring.equal lbl Hstring.empty) then
-            Symbols.add_label lbl (Symbols.name x);
+            Symbols.add_label lbl (fvar x);
           x::acc
         ) [] lv in
     let lv = List.rev rlv in
-    add env lv Symbols.name ty
+    add env lv fvar ty
 
   let add_logics ?(kind=Other) env mk_symb names pp_profile loc =
     let decl, profile =
@@ -2185,7 +2187,7 @@ let axioms_of_rules loc name lf acc env =
       (fun acc f ->
          let name =
            Fmt.str "%s_%s"
-             (Id.Namespace.Internal.fresh ())
+             (Symbols.Namespace.Internal.fresh ())
              name
          in
          let td = {c = TAxiom(loc,name,Util.Default, f); annot = new_id () } in
@@ -2414,7 +2416,9 @@ let declare_fun env loc n ?(defined=false) ?ret_ty l  =
     | Some ty ->
       PPeq, PFunction(l,ty)
   in
-  let mk_symb hs = Symbols.name hs ~defined ~kind:Symbols.Other in
+  let mk_symb s =
+    Symbols.name (Uid.of_string s) ~defined ~kind:Symbols.Other
+  in
   let tlogic, env = Env.add_logics env mk_symb [n] ty loc in (* TODO *)
   env, infix, tlogic
 
@@ -2488,7 +2492,7 @@ let rec type_decl (acc, env) d assertion_stack =
 
   | Logic (loc, ac, lp, pp_ty) ->
     Options.tool_req 1 "TR-Typing-LogicFun$_F$";
-    let mk_symb hs = Symbols.name hs ~kind:ac in
+    let mk_symb s = Symbols.name (Uid.of_string s) ~kind:ac in
     let tlogic, env' = Env.add_logics env mk_symb lp pp_ty loc in
     let lp = List.map fst lp in
     let td = {c = TLogic(loc,lp,tlogic); annot = new_id () } in

@@ -88,6 +88,8 @@ and trecord = {
 }
 (** Record types. *)
 
+val id : t Compat.Type.Id.t
+
 type adt_constr =
   { constr : Uid.term_cst ;
     (** constructor of an ADT type *)
@@ -272,7 +274,7 @@ val monomorphize: t -> t
 type goal_sort =
   | Cut
   (** Introduce a cut in a goal. Once the cut proved,
-      it's added as a hypothesis. *)
+      it is added as a hypothesis. *)
   | Check
   (** Check if some intermediate assertion is prouvable *)
   | Thm

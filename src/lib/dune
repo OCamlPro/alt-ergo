@@ -58,7 +58,7 @@
     ; structures
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols
-    Expr Var Ty Typed Xliteral ModelMap Id Uid Objective Literal
+    Expr Var Ty Typed Xliteral ModelMap Uid Objective Literal
     ; util
     Emap Gc_debug Hconsing Hstring Heap Loc Numbers Uqueue
     Options Timers Util Vec Version Steps Printer

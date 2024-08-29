@@ -36,7 +36,7 @@ let src = Logs.Src.create ~doc:"Arith" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)
 
 let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
-let mod_symb = Sy.name ~ns:Internal "@mod"
+let mod_symb = Sy.name ~ns:Internal @@ Uid.of_string "@mod"
 
 let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   (* d must be integral and if we work on integer exponentation,
@@ -246,7 +246,8 @@ module Shostak
       then
         (* becomes uninterpreted *)
         let tau =
-          E.mk_term (Sy.name ~kind:Sy.Ac ~ns:Internal "@*") [t1; t2] ty
+          let sy = Sy.name ~kind:Sy.Ac ~ns:Internal @@ Uid.of_string "@*" in
+          E.mk_term sy [t1; t2] ty
         in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
@@ -260,7 +261,10 @@ module Shostak
          (P.is_const p2 == None ||
           (ty == Ty.Tint && P.is_const p1 == None)) then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~ns:Internal "@/") [t1; t2] ty in
+        let tau =
+          let sy = Sy.name ~ns:Internal @@ Uid.of_string "@/" in
+          E.mk_term sy [t1; t2] ty
+        in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else
@@ -287,7 +291,9 @@ module Shostak
          (P.is_const p1 == None || P.is_const p2 == None)
       then
         (* becomes uninterpreted *)
-        let tau = E.mk_term (Sy.name ~ns:Internal "@%") [t1; t2] ty in
+        let tau =
+          E.mk_term (Sy.name ~ns:Internal @@ Uid.of_string "@%") [t1; t2] ty
+        in
         let xtau, ctx' = X.make tau in
         P.add p (P.create [coef, xtau] Q.zero ty), List.rev_append ctx' ctx
       else

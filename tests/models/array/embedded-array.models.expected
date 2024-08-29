@@ -1,8 +1,8 @@
 
 unknown
 (
+  (define-fun s () S (as @a9 S))
   (define-fun x () Pair
-   (pair (store (as @a3 (Array Int S)) 0 s)
-         (store (as @a3 (Array Int S)) 0 s)))
-  (define-fun s () S (as @a2 S))
+   (pair (store (as @a10 (Array Int S)) 0 s)
+         (store (as @a10 (Array Int S)) 0 s)))
 )

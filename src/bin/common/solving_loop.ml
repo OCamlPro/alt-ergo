@@ -107,14 +107,14 @@ let cmd_on_modes st modes cmd =
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
 let add_if_named
-    ~(acc : DStd.Expr.term Util.MS.t)
+    ~(acc : DStd.Expr.term Uid.Term_map.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
-  | `Defs [`Term_def ({name = Simple n; _}, id, _, _, t)] ->
+  | `Defs [`Term_def (_, id, _, _, t)] ->
     begin
       match DStd.Expr.Id.get_tag id DStd.Expr.Tags.named with
       | None -> acc
-      | Some _ -> Util.MS.add n t acc
+      | Some _ -> Uid.Term_map.add (Uid.of_term_cst id) t acc
     end
   | _ -> (* Named terms are expected to be definitions with simple
             names. *)
@@ -347,7 +347,7 @@ let main () =
     State.create_key ~pipe:"" "sat_state"
   in
 
-  let named_terms: DStd.Expr.term Util.MS.t State.key =
+  let named_terms: DStd.Expr.term Uid.Term_map.t State.key =
     State.create_key ~pipe:"" "named_terms"
   in
 
@@ -501,7 +501,7 @@ let main () =
     State.empty
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
-    |> State.set named_terms Util.MS.empty
+    |> State.set named_terms Uid.Term_map.empty
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -793,15 +793,9 @@ let main () =
     | None -> "unknown"
   in
 
-  let print_terms_assignments =
-    Fmt.list
-      ~sep:Fmt.cut
-      (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
-  in
-
   let handle_get_assignment ~get_value st =
     let assignments =
-      Util.MS.fold
+      Uid.Term_map.fold
         (fun name term acc ->
            if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
              (name, evaluate_term get_value name term) :: acc
@@ -813,7 +807,7 @@ let main () =
     in
     Printer.print_std
       "(@[<v 0>%a@])@,"
-      print_terms_assignments
+      Fmt.(list ~sep:cut @@ parens @@ pair ~sep:sp Uid.pp string)
       assignments
   in
 
@@ -933,7 +927,7 @@ let main () =
         |> DO.StrictMode.clear
         |> DO.ProduceAssignment.clear
         |> DO.init
-        |> State.set named_terms Util.MS.empty
+        |> State.set named_terms Uid.Term_map.empty
 
       | {contents = `Exit; _} -> raise Exit
 

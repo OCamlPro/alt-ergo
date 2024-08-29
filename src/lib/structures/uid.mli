@@ -49,8 +49,11 @@ val show : 'a t -> string
 val equal : 'a t -> 'a t -> bool
 val compare : 'a t -> 'a t -> int
 
+val do_mangle : (string -> string option) -> term_cst -> term_cst
+
 val order_tag : int Dolmen.Std.Tag.t
 (** Tag used to attach the order of constructor. *)
 
 module Term_set : Set.S with type elt = term_cst
+module Term_map : Map.S with type key = term_cst
 module Ty_map : Map.S with type key = ty_cst

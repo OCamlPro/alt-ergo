@@ -97,7 +97,7 @@ type mode_error =
 
 (** Errors raised while using models. *)
 type model_error =
-  | Subst_type_clash of Id.t * Ty.t * Ty.t
+  | Subst_type_clash of Uid.term_cst * Ty.t * Ty.t
   | Subst_not_model_term of Expr.t
 
 (** All types of error that can be raised *)

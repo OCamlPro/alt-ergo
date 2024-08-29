@@ -729,3 +729,5 @@ let is_global_hyp s =
 
 (* Context reinitialization *)
 let reinit_decls () = Decls.reinit ()
+
+let id = Compat.Type.Id.make ()

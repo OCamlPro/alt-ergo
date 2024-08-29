@@ -21,7 +21,7 @@ module X = Shostak.Combine
 module E = Expr
 module MS = Map.Make(String)
 
-let constraints = ref MS.empty
+let constraints = ref Uid.Term_map.empty
 
 type t = {
   propositional : Expr.Set.t;
@@ -195,12 +195,12 @@ module Pp_smtlib_term = struct
 
     | Sy.Name { hs = n; _ }, l -> begin
         let constraint_name =
-          try let constraint_name,_,_ =
-                (MS.find (Hstring.view n) !constraints) in
+          try
+            let constraint_name, _, _ = Uid.Term_map.find n !constraints in
             constraint_name
           with _ ->
-            let constraint_name = "c_"^(Hstring.view n)  in
-            constraints := MS.add (Hstring.view n)
+            let constraint_name = "c_" ^ Uid.show n  in
+            constraints := Uid.Term_map.add n
                 (constraint_name,
                  to_string_type (E.type_info t),
                  List.map (fun e -> to_string_type (E.type_info e)) l
@@ -243,7 +243,7 @@ module Why3CounterExample = struct
         (Format.dprintf "%t(assert %a)@ " acc pp_term e)
       ) prop_model (Format.dprintf "") in
     Format.fprintf fmt "@ ; constraints@ ";
-    MS.iter (fun _ (name,ty,args_ty) ->
+    Uid.Term_map.iter (fun _ (name,ty,args_ty) ->
         match args_ty with
         | [] ->
           Format.fprintf fmt "(declare-const %s %s)@ "

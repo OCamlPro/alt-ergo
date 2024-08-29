@@ -1,10 +1,10 @@
 
 unknown
 (
-  (define-fun x () Real 2.0)
-  (define-fun y () Real (as @a0 Real))
   (define-fun p1 () Bool false)
   (define-fun p2 () Bool true)
+  (define-fun x () Real 2.0)
+  (define-fun y () Real (as @a0 Real))
 )
 (objectives 
   (x 2.0)

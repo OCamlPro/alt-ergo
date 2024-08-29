@@ -1112,14 +1112,14 @@ module MED = Map.Make
         else Expr.compare a b
     end)
 
-let is_suspicious_name hs =
-  match Hstring.view hs with
+let is_suspicious_id id =
+  match Uid.show id with
   | "@/" | "@%" | "@*" -> true
   | _ -> false
 
 (* The model generation is known to be imcomplete for FPA theory. *)
 let is_suspicious_symbol = function
-  | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
+  | Symbols.Name { hs; _ } when is_suspicious_id hs -> true
   | _ -> false
 
 let terms env =
@@ -1238,7 +1238,7 @@ let compute_concrete_model_of_val cache =
               get_abstract_for env t
             | _ -> ret_rep
           in
-          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
+          ModelMap.add (id, arg_tys, ty) arg_vals value mdl, mrepr
 
         | _ ->
           Printer.print_err
@@ -1261,7 +1261,6 @@ let extract_concrete_model cache =
           (* We produce a fresh identifiant for abstract value in order to
              prevent any capture. *)
           let abstract = get_abstract_for env t in
-          let ty = Expr.type_info t in
           let arr_val =
             E.Table.fold (fun i v arr_val ->
                 Expr.ArraysEx.store arr_val i v
@@ -1277,9 +1276,10 @@ let extract_concrete_model cache =
                  [array_selects]. *)
               assert false
           in
+          let p = id, [], Expr.type_info t in
           let mdl =
             if is_user then
-              ModelMap.add (id, [], ty) [] arr_val mdl
+              ModelMap.add p [] arr_val mdl
             else
               (* Internal identifiers can occur here if we need to generate
                  a model term for an embedded array but this array isn't itself
@@ -1291,7 +1291,7 @@ let extract_concrete_model cache =
              term. This cannot be performed while computing the model with
              `compute_concrete_model_of_val` because we need to first iterate
              on all the union-find environment to collect array values. *)
-          ModelMap.subst id arr_val mdl
+          ModelMap.subst p arr_val mdl
         ) cache.array_selects model
     in
     { Models.propositional = prop_model; model; term_values = mrepr }

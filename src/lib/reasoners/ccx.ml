@@ -88,7 +88,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
-    declared_ids:Id.typed list ->
+    declared_ids:ModelMap.profile list ->
     t -> Models.t
 
 end
@@ -249,7 +249,9 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make (Expr.mk_term (Sy.name ~ns:Internal "@bottom") [] Ty.Tint)
+  let one, _ =
+    let sy = Sy.name ~ns:Internal @@ Uid.of_string "@bottom" in
+    X.make (Expr.mk_term sy [] Ty.Tint)
 
   let concat_leaves uf l =
     let concat_rec acc t =
