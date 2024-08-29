@@ -1796,36 +1796,37 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       make_decision env atom
 
   and pick_branch_lit env =
-    match env.next_decisions with
-    | atom :: tl ->
-      env.next_decisions <- tl;
-      pick_branch_aux env atom
-    | [] ->
-      match env.next_split with
-      | Some atom ->
-        env.next_split <- None;
+    match env.next_optimized_split with
+    | Some (fn, value, atom) ->
+      env.next_optimized_split <- None;
+      let v = atom.var in
+      if v.level >= 0 then (
+        assert (v.pa.is_true || v.na.is_true);
+        if atom.is_true then
+          env.tenv <- Th.add_objective env.tenv fn value;
+        pick_branch_lit env
+      ) else (
+        make_decision env atom;
+        if atom.is_true then
+          env.tenv <- Th.add_objective env.tenv fn value
+      )
+    | None ->
+      match env.next_decisions with
+      | atom :: tl ->
+        env.next_decisions <- tl;
         pick_branch_aux env atom
-      | None ->
-        match Vheap.pop_min env.order with
-        | v -> pick_branch_aux env v.na
-        | exception Not_found ->
-          if Options.get_cdcl_tableaux_inst () then
-            assert (Matoms.is_empty env.lazy_cnf);
-          match env.next_optimized_split with
-          | Some (fn, value, atom) ->
-            env.next_optimized_split <- None;
-            let v = atom.var in
-            if v.level >= 0 then (
-              assert (v.pa.is_true || v.na.is_true);
-              if atom.is_true then
-                env.tenv <- Th.add_objective env.tenv fn value;
-              pick_branch_lit env
-            ) else (
-              make_decision env atom;
-              if atom.is_true then
-                env.tenv <- Th.add_objective env.tenv fn value
-            )
-          | None -> raise Sat
+      | [] ->
+        match env.next_split with
+        | Some atom ->
+          env.next_split <- None;
+          pick_branch_aux env atom
+        | None ->
+          match Vheap.pop_min env.order with
+          | v -> pick_branch_aux env v.na
+          | exception Not_found ->
+            if Options.get_cdcl_tableaux_inst () then
+              assert (Matoms.is_empty env.lazy_cnf);
+            raise_notrace Sat
 
   let pick_branch_lit env =
     if env.next_dec_guard < Vec.size env.increm_guards then
