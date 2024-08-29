@@ -47,11 +47,14 @@ type 'a simple_term = ('a simple_term_aux) alpha_term
 
 type 'a abstract = 'a simple_term list
 
+val extract : int -> int -> int -> 'a abstract -> 'a abstract
 (** [extract size i j x] extracts [i..j] from a composition of size [size].
 
     An element of size [sz] at the head of the composition contains the bits
     [size - 1 .. size - sz] inclusive. *)
-val extract : int -> int -> int -> 'a abstract -> 'a abstract
+
+val zero_extend : int -> 'a abstract -> 'a abstract
+(** [zero_extract sz bv] adds [sz] zeros to the front (high bits) of [bv]. *)
 
 val lognot : 'a abstract -> 'a abstract
 

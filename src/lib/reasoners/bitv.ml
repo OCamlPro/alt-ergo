@@ -355,6 +355,14 @@ let sign_extend n sts =
         (repeat n [ extract_st (sz - 1) (sz - 1) st ])
         (st :: sts)
 
+let zero_extend sz sts =
+  if sz < 0 then
+    Fmt.invalid_arg "zero_extend: got negative extension: %d" sz;
+  match sts with
+  | { bv = (Cte _ as bv) ; sz = sz' } :: sts' ->
+    { bv ; sz = sz + sz' } :: sts'
+  | _ -> { bv = Cte Z.zero ; sz } :: sts
+
 module type ALIEN = sig
   include Sig.X
   val embed : r abstract -> r
@@ -1322,8 +1330,17 @@ module Shostak(X : ALIEN) = struct
         let varsU = get_vars u in
         let varsV = get_vars v in
         if Compat.List.is_empty varsU && Compat.List.is_empty varsV
-        then raise Util.Unsolvable
-        else
+        then (
+          (* If either side is non-normalized (this is a bug!!), it would be
+             unsound to raise [Unsolvable] here. *)
+          Options.heavy_assert (fun () ->
+              not @@
+              equal_abstract X.equal
+                (Canon.normalize u) (Canon.normalize v)
+            );
+
+          raise Util.Unsolvable
+        ) else
           begin
             let st_sys = slice u v in
             if Options.get_debug_bitv () then

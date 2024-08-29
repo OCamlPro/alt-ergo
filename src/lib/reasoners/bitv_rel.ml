@@ -41,7 +41,7 @@ let bitwidth r =
 
 
 let const sz n =
-  Shostak.Bitv.is_mine [ { bv = Cte (Z.extract n 0 sz); sz } ]
+  Shostak.Bitv.is_mine @@ Bitv.int2bv_const sz n
 
 module BitvNormalForm = struct
   (** Normal form for bit-vector values.
@@ -167,19 +167,19 @@ module BV2Nat = struct
         Bitv.extract (bitwidth bv) ofs (ofs + len - 1) @@
         Shostak.Bitv.embed bv
 
-      let zero_extend sz r =
+      let zero_extend_to sz r =
         let r_sz = bitwidth r in
         if sz < r_sz then invalid_arg "zero_extend";
         if sz = r_sz then r
         else
           Shostak.Bitv.is_mine @@
-          { Bitv.bv = Bitv.Cte Z.zero ; sz = sz - r_sz } ::
+          Bitv.zero_extend (sz - r_sz) @@
           Shostak.Bitv.embed r
 
       let mkv_eq (r, ext) (r', ext') =
         let sz = max ext.len ext'.len in
         let r = extract r ext and r' = extract r' ext' in
-        Uf.LX.mkv_eq (zero_extend sz r) (zero_extend sz r')
+        Uf.LX.mkv_eq (zero_extend_to sz r) (zero_extend_to sz r')
     end
   end
 
@@ -391,9 +391,7 @@ module BV2Nat = struct
       let lit =
         Uf.LX.mkv_eq
           (T.BV.extract bv ext)
-          (Shostak.Bitv.is_mine [
-              { bv = Cte (Z.extract cte 0 ext.len) ; sz = ext.len }
-            ])
+          (const ext.len cte)
       in
       { t with eqs = (lit, ex) :: t.eqs }
     | None ->
@@ -503,7 +501,7 @@ module BV2Nat = struct
           (* bv_r is extension of bv' *)
           Uf.LX.mkv_eq
             bv_r
-            (T.BV.zero_extend sz @@ T.BV.extract bv' ext')
+            (T.BV.zero_extend_to sz @@ T.BV.extract bv' ext')
       in
       { t with eqs = (lit, Ex.union ex ex') :: t.eqs }
     | exception Not_found ->
