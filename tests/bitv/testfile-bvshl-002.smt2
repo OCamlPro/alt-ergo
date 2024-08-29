@@ -1,0 +1,6 @@
+(set-logic ALL)
+(declare-fun T1_7389 () (_ BitVec 8))
+(declare-fun T1_7390 () (_ BitVec 8))
+(assert (=> (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (xor (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (bvslt (bvsub (bvadd ((_ zero_extend 24) T1_7390) (bvshl ?v_0 (bvshl ?v_0 ?v_0))) (_ bv48 32)) (_ bv0 32)))) (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (bvslt (bvsub (bvadd ((_ zero_extend 24) T1_7390) (bvshl ?v_0 (bvshl ?v_0 ?v_0))) (_ bv48 32)) (_ bv0 32))))))) (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (xor (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (bvslt (bvsub (bvadd ((_ zero_extend 24) T1_7390) (bvshl ?v_0 (bvshl ?v_0 ?v_0))) (_ bv48 32)) (_ bv0 32)))) (let ((?v_0 (bvsub ((_ zero_extend 24) T1_7389) (_ bv48 32)))) (and true (bvslt (bvsub (bvadd ((_ zero_extend 24) T1_7390) (bvshl ?v_0 (bvshl ?v_0 ?v_0))) (_ bv48 32)) (_ bv0 32)))))))))
+(check-sat)
+(exit)
