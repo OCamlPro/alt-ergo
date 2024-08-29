@@ -530,8 +530,12 @@ struct
             D.intersect (D.unknown (X.type_info repr)) @@
             D.add_explanation ~ex (Entry.domain entry)
 
-        let set_domain { entry ; explanation = ex ; _ } d =
-          Entry.set_domain entry (D.add_explanation ~ex d)
+        let set_domain { repr ; entry ; explanation = ex } d =
+          if Explanation.is_empty ex then Entry.set_domain entry d
+          else
+            Entry.set_domain entry @@
+            D.intersect (D.unknown (X.type_info repr)) @@
+            D.add_explanation ~ex d
       end
 
       type nonrec t =
