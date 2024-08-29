@@ -140,9 +140,11 @@ module type EphemeralDomainMap = sig
     (** [set_domain e d] sets the domain of entry [e] to [d]. This overwrites
         any pre-existing domain associated with [e].
 
-        {b Note}: if you need to tighten an existing domain, this must be done
-        explicitely by accessing the current domain through [domain] before
-        calling [set_domain].  See {!MakEntryNotation}. *)
+        {b Note}: the caller is responsible for ensuring that the domain is
+        a subset of the possible domains for the entry (e.g. due to type
+        constraints). The recommended way to do so is by first intersecting
+        with the existing [domain]. See also the {!EntryNotation} functor
+        which does this for you. *)
   end
 
   val entry : t -> key -> Entry.t
