@@ -1015,9 +1015,7 @@ module Bitlist_domains =
 (** The ['c acts] type is used to register new facts and constraints in
     [Propagator.simplify]. *)
 type 'c acts =
-  { acts_add_lit_view : ex:Explanation.t -> X.r L.view -> unit
-  (** Assert a semantic literal. *)
-  ; acts_add_eq : ex:Explanation.t -> X.r -> X.r -> unit
+  { acts_add_eq : ex:Explanation.t -> X.r -> X.r -> unit
   (** Assert equality between two semantic values. *)
   ; acts_add_constraint : ex:Explanation.t -> 'c -> unit
   (** Assert a new constraint. *)
@@ -1918,8 +1916,7 @@ let simplify_all uf eqs touched (dom, idom) =
       HC.replace to_add c.value c.explanation
     in
     let acts =
-      { acts_add_lit_view
-      ; acts_add_eq
+      { acts_add_eq
       ; acts_add_constraint } in
     if Propagator.simplify uf c acts then
       let c = explained ~ex:c_ex c in
