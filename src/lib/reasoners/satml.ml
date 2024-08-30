@@ -1941,6 +1941,23 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       conflict_analyze_and_fix env (C_theory ex);
       compute_concrete_model ~declared_ids env
 
+  let compute_concrete_model ~declared_ids env =
+    assert (is_sat env);
+
+    (* Make sure all objectives are optimized before starting model
+       generation. This can cause us to backtrack some of the splits
+       done at the theory level, which is fine, because we don't care
+       about these at the SAT level. *)
+    let rec loop env =
+      let acts = theory_slice env in
+      Th.do_optimize ~acts env.tenv;
+      if not (is_sat env) then
+        try solve env; assert false
+        with Sat -> loop env
+      else
+        compute_concrete_model ~declared_ids env
+    in loop env
+
   exception Trivial
 
   let partition atoms init =

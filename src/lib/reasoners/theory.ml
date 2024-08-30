@@ -57,6 +57,8 @@ module type S = sig
   val extract_ground_terms : t -> Expr.Set.t
   val get_real_env : t -> Ccx.Main.t
   val get_case_split_env : t -> Ccx.Main.t
+  val do_optimize :
+    acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val do_case_split :
     ?acts:Shostak.Literal.t Th_util.acts ->
     t -> Util.case_split_policy -> t * Expr.Set.t
@@ -670,33 +672,28 @@ module Main_Default : S = struct
     else
       [], t
 
-  let do_optimize acts objectives t =
+  let do_optimize ~acts t =
+    let objectives = t.objectives in
     match Objective.Model.next_unknown objectives with
     | Some obj ->
       let add_objective = acts.Th_util.acts_add_objective in
-      optimize_obj ~for_model:false add_objective obj t;
+      optimize_obj ~for_model:false add_objective obj t
+    | None -> ()
+
+  let do_sat_splits acts t =
+    let splits, t = sat_splits t in
+    match splits with
+    | [] -> do_case_split_aux t ~for_model:false
+    | (lview, _, _) :: _ ->
+      let lit = Shostak.(Literal.make @@ LSem (L.make lview)) in
+      acts.Th_util.acts_add_split lit;
       t, SE.empty
-    | None ->
-      let splits, t = sat_splits t in
-      match splits with
-      | [] ->
-        do_case_split_aux t ~for_model:false
-      | (lview, _, _) :: _ ->
-        let lit = Shostak.(Literal.make @@ LSem (L.make lview)) in
-        acts.Th_util.acts_add_split lit;
-        t, SE.empty
-
-  let do_case_split_or_optimize ?acts t =
-    match acts with
-    | Some acts ->
-      do_optimize acts t.objectives t
-    | None ->
-      do_case_split_aux t ~for_model:false
-
 
   let do_case_split ?acts t origin =
     if Options.get_case_split_policy () == origin then
-      do_case_split_or_optimize ?acts t
+      match acts with
+      | Some acts -> do_sat_splits acts t
+      | None -> do_case_split_aux t ~for_model:false
     else
       t, SE.empty
 
@@ -965,6 +962,7 @@ module Main_Empty : S = struct
 
   let get_real_env _ = CC_X.empty
   let get_case_split_env _ = CC_X.empty
+  let do_optimize ~acts:_ _ = ()
   let do_case_split ?acts:_ env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model ~acts:_ _env = ()
