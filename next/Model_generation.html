@@ -23,7 +23,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API documentation" href="API/index.html" />
+    <link rel="next" title="Optimization" href="Optimization.html" />
     <link rel="prev" title="Syntax of declarations and expressions" href="Alt_ergo_native/07_syntax_of_declarations_and_expressions.html" /> 
 </head>
 
@@ -55,12 +55,10 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Model generation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#activation">Activation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#correctness-of-model-generation">Correctness of model generation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
 </ul>
 </li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="Optimization.html">Optimization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="API/index.html">API documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Plugins/index.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Dev/index.html">Developer's documentation</a></li>
@@ -150,11 +148,11 @@ the <code class="docutils literal notranslate"><span class="pre">--enable-theori
 <ul class="simple">
 <li><p>Using the native language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.ae</span></code>:</p></li>
 </ul>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="k">logic</span> <span class="n">a</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">c</span> <span class="o">:</span> <span class="kt">int</span>
-  <span class="k">axiom</span> <span class="n">A</span> <span class="o">:</span> <span class="n">a</span> <span class="o">&lt;&gt;</span> <span class="n">c</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="n">logic</span> <span class="n">a</span><span class="err">,</span> <span class="n">b</span><span class="err">,</span> <span class="n">c</span> <span class="err">:</span> <span class="n">int</span>
+  <span class="n">axiom</span> <span class="n">A</span> <span class="err">:</span> <span class="n">a</span> <span class="n">&lt;&gt;</span> <span class="n">c</span>
 
-  <span class="k">check_sat</span> <span class="n">c1</span><span class="o">:</span> <span class="n">a</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">c</span>
-  <span class="k">check_sat</span> <span class="n">c2</span><span class="o">:</span> <span class="n">a</span> <span class="o">&lt;&gt;</span> <span class="n">b</span>
+  <span class="n">check_sat</span> <span class="n">c1</span><span class="err">:</span> <span class="n">a</span> <span class="n n-Operator">=</span> <span class="n">b</span> <span class="n n-Operator">+</span> <span class="n">c</span>
+  <span class="n">check_sat</span> <span class="n">c2</span><span class="err">:</span> <span class="n">a</span> <span class="n">&lt;&gt;</span> <span class="n">b</span>
 </pre></div>
 </div>
 <p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--dump-models</span> <span class="pre">INPUT.ae</span></code>, Alt-Ergo produces the
@@ -185,26 +183,26 @@ the native language. The same goes for <code class="docutils literal notranslate
 <ul class="simple">
 <li><p>Using the SMT-LIB language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p></li>
 </ul>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="o">(</span><span class="n">set</span><span class="o">-</span><span class="k">logic</span> <span class="n">ALL</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
 
-  <span class="o">(</span><span class="n">assert</span> <span class="o">(=</span> <span class="n">a</span> <span class="o">(+</span> <span class="n">b</span> <span class="n">c</span><span class="o">)))</span>
-  <span class="o">(</span><span class="k">check</span><span class="o">-</span><span class="n">sat</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="o">)</span>
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="n">a</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+  <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
 
-  <span class="o">(</span><span class="n">assert</span> <span class="o">(</span><span class="k">distinct</span> <span class="n">a</span> <span class="n">b</span><span class="o">))</span>
-  <span class="o">(</span><span class="k">check</span><span class="o">-</span><span class="n">sat</span><span class="o">)</span>
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">distinct</span> <span class="n">a</span> <span class="n">b</span><span class="p">))</span>
+  <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--produce-models</span> <span class="pre">INPUT.smt2</span></code> produces the output</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="n">unknown</span>
-  <span class="o">(</span>
-    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-  <span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="n">unknown</span>
+  <span class="p">(</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
 
   <span class="n">unknown</span>
 </pre></div>
@@ -217,25 +215,25 @@ don’t demand it with the statement <code class="docutils literal notranslate">
 <ul class="simple">
 <li><p>Alternatively, using the statement <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code></p></li>
 </ul>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span> <span class="o">(</span><span class="n">set</span><span class="o">-</span><span class="k">logic</span> <span class="n">ALL</span><span class="o">)</span>
- <span class="o">(</span><span class="n">set</span><span class="o">-</span><span class="n">option</span> <span class="o">:</span><span class="n">produce</span><span class="o">-</span><span class="n">models</span> <span class="bp">true</span><span class="o">)</span>
- <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
- <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
- <span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span><span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span> <span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
 
- <span class="o">(</span><span class="n">assert</span> <span class="o">(=</span> <span class="n">a</span> <span class="o">(+</span> <span class="n">b</span> <span class="n">c</span><span class="o">)))</span>
- <span class="o">(</span><span class="k">check</span><span class="o">-</span><span class="n">sat</span><span class="o">)</span>
- <span class="o">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="o">)</span>
+ <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="n">a</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+ <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">INPUT.smt2</span></code> produces
 the output model</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
-<span class="o">(</span>
-  <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-  <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
-<span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -250,24 +248,24 @@ in the pseudocode below:</p></li>
 </pre></div>
 </div>
 <p>we got the SMT-LIB file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">(</span><span class="n">set</span><span class="o">-</span><span class="k">logic</span> <span class="n">ALL</span><span class="o">)</span>
-<span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">const</span> <span class="n">i</span> <span class="n">Int</span><span class="o">)</span>
-<span class="o">(</span><span class="n">assert</span> <span class="o">(</span><span class="ow">and</span> <span class="o">(&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="o">)</span> <span class="o">(</span><span class="k">not</span> <span class="o">(&lt;</span> <span class="o">(+</span> <span class="n">i</span> <span class="mi">1</span><span class="o">)</span> <span class="mi">5</span><span class="o">))))</span>
-<span class="o">(</span><span class="k">check</span><span class="o">-</span><span class="n">sat</span><span class="o">)</span>
-<span class="o">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">i</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">and</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="k k-Builtin">not</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Execute the command</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>alt-ergo<span class="w"> </span>--produce-models<span class="w"> </span>INPUT.smt2
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">alt-ergo --produce-models INPUT.smt2</span>
 </pre></div>
 </div>
 <p>We got the output</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">;</span> <span class="n">File</span> <span class="s2">&quot;INPUT.smt2&quot;</span><span class="o">,</span> <span class="n">line</span> <span class="mi">4</span><span class="o">,</span> <span class="n">characters</span> <span class="mi">1</span><span class="o">-</span><span class="mi">12</span><span class="o">:</span> <span class="n">I</span> <span class="n">don&#39;t</span> <span class="n">know</span> <span class="o">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">6689</span><span class="o">)</span> <span class="o">(</span><span class="mi">2</span> <span class="n">steps</span><span class="o">)</span> <span class="o">(</span><span class="k">goal</span> <span class="n">g_1</span><span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="c1">; File &quot;INPUT.smt2&quot;, line 4, characters 1-12: I don&#39;t know (0.6689) (2 steps) (goal g_1)</span>
 
 <span class="n">unknown</span>
-<span class="o">(</span>
-  <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">i</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">4</span><span class="o">)</span>
-<span class="o">)</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">i</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p>Alt-Ergo tells us that the <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> could succeed with <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">=</span> <span class="pre">4</span></code>. Indeed,
@@ -281,11 +279,11 @@ the context is satisfiable. Let’s fix our specification as follows:</p>
 </pre></div>
 </div>
 <p>and fix our SMT-LIB input accordingly:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">(</span><span class="n">set</span><span class="o">-</span><span class="k">logic</span> <span class="n">ALL</span><span class="o">)</span>
-<span class="o">(</span><span class="n">declare</span><span class="o">-</span><span class="n">const</span> <span class="n">i</span> <span class="n">Int</span><span class="o">)</span>
-<span class="o">(</span><span class="n">assert</span> <span class="o">(</span><span class="ow">and</span> <span class="o">(&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="o">)</span> <span class="o">(</span><span class="k">not</span> <span class="o">(&lt;=</span> <span class="o">(+</span> <span class="n">i</span> <span class="mi">1</span><span class="o">)</span> <span class="mi">5</span><span class="o">))))</span>
-<span class="o">(</span><span class="k">check</span><span class="o">-</span><span class="n">sat</span><span class="o">)</span>
-<span class="o">(</span><span class="n">get</span><span class="o">-</span><span class="n">model</span><span class="o">)</span>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">i</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">and</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="k k-Builtin">not</span> <span class="p">(</span><span class="n n-Operator">&lt;=</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Running the very same command, we got the expected output:</p>
@@ -296,23 +294,6 @@ the context is satisfiable. Let’s fix our specification as follows:</p>
 </pre></div>
 </div>
 <p>Our invariant is valid!</p>
-<section id="output">
-<h3>Output<a class="headerlink" href="#output" title="Permalink to this heading"></a></h3>
-<p>The results of an Alt-ergo’s execution have the following form :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">File</span> <span class="s2">&quot;&lt;path_to_file&gt;/&lt;filename&gt;&quot;</span><span class="o">,</span> <span class="n">line</span> <span class="o">&lt;</span><span class="n">l</span><span class="o">&gt;,</span> <span class="n">characters</span> <span class="o">&lt;</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="o">&gt;:</span> <span class="o">&lt;</span><span class="n">status</span><span class="o">&gt;</span> <span class="o">(&lt;</span><span class="n">time</span> <span class="ow">in</span> <span class="n">seconde</span><span class="o">&gt;)</span> <span class="o">(&lt;</span><span class="n">number</span> <span class="k">of</span> <span class="n">steps</span><span class="o">&gt;</span> <span class="n">steps</span><span class="o">)</span> <span class="o">(</span><span class="k">goal</span> <span class="o">&lt;</span><span class="n">name</span> <span class="k">of</span> <span class="n">the</span> <span class="k">goal</span><span class="o">&gt;)</span>
-</pre></div>
-</div>
-<p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in
-the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>.
-You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
-<div class="admonition-note admonition">
-<p class="admonition-title">Note</p>
-<p>When Alt-Ergo tries to prove a <code class="docutils literal notranslate"><span class="pre">goal</span></code> (with the native input language), it
-actually tries to prove the unsatisfiability of its negation. That is
-why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> answer as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
-goal. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
-</div>
-</section>
 </section>
 </section>
 
@@ -321,7 +302,7 @@ goal. The same goes for <code class="docutils literal notranslate"><span class="
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="Alt_ergo_native/07_syntax_of_declarations_and_expressions.html" class="btn btn-neutral float-left" title="Syntax of declarations and expressions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="API/index.html" class="btn btn-neutral float-right" title="API documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Optimization.html" class="btn btn-neutral float-right" title="Optimization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

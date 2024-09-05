@@ -76,6 +76,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
@@ -161,15 +162,15 @@ implementation of the three-tier strategy described in the paper (this is done
 automatically in Why3 when you use floats).</p>
 <p>The rounding function is available as a builtin function called <code class="docutils literal notranslate"><span class="pre">float</span></code>:</p>
 <div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">fpa_rounding_mode</span> <span class="o">=</span>
-  <span class="err">|</span> <span class="n">NearestTiesToEven</span>
+  <span class="o">|</span> <span class="n">NearestTiesToEven</span>
     <span class="c">(** To nearest, tie breaking to even mantissa *)</span>
-  <span class="err">|</span> <span class="n">ToZero</span>
+  <span class="o">|</span> <span class="n">ToZero</span>
     <span class="c">(** Round toward zero *)</span>
-  <span class="err">|</span> <span class="n">Up</span>
+  <span class="o">|</span> <span class="n">Up</span>
     <span class="c">(** Round toward plus infinity *)</span>
-  <span class="err">|</span> <span class="n">Down</span>
+  <span class="o">|</span> <span class="n">Down</span>
     <span class="c">(** Round toward minus infinity *)</span>
-  <span class="err">|</span> <span class="n">NearestTiesToAway</span>
+  <span class="o">|</span> <span class="n">NearestTiesToAway</span>
     <span class="c">(** To nearest, tie breaking away from zero *)</span>
 
 <span class="c">(** The first int [prec] is the mantissa&#39;s size, including the implicit bit.</span>
@@ -236,7 +237,7 @@ Those additional triggers are called semantic triggers.</p>
 <p>They correspond to the following constructs.</p>
 <section id="syntax">
 <h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h4>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">semantic_trigger</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="err">|</span> <span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">semantic_trigger</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>
 <span class="c">(* [COMMENT/TODO: seems to always be paired with &#39;interval triggers&#39;/filters *)</span>
 <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="ow">in</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span>
 <span class="c">(* [COMMENT/TODO: probably there to shorten axioms] *)</span>

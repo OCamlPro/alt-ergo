@@ -78,6 +78,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
@@ -112,7 +113,7 @@
 <section id="from-a-package-manager">
 <h2>From a package manager<a class="headerlink" href="#from-a-package-manager" title="Permalink to this heading"></a></h2>
 <p>Alt-ergo is available on <a class="reference external" href="https://opam.ocaml.org/">opam</a>, the ocaml package manager with the following command :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">opam install alt-ergo</span>
 </pre></div>
 </div>
 <p>This command will install the Alt-ergo library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the parsers <code class="docutils literal notranslate"><span class="pre">alt-ergo-parsers</span></code>, as well as other librairies detailled in <a class="reference internal" href="#dependencies">dependencies</a>.</p>
@@ -133,30 +134,33 @@ licensing restrictions as the source code.</p>
 <p><img alt="" src="../_images/deps.png" /></p>
 <p>To compile the sources of the library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the binary <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code>, you will need the
 following libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="o">.</span><span class="mi">08</span><span class="o">.</span><span class="mi">0</span>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="o">.</span><span class="mi">08</span><span class="o">.</span><span class="mi">1</span>
   <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="o">.</span><span class="mi">0</span>
   <span class="n">dune</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">info</span>
-  <span class="n">dolmen</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">9</span>
-  <span class="n">dolmen_loop</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">9</span>
-  <span class="n">ocplib</span><span class="o">-</span><span class="n">simplex</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">5</span>
-  <span class="n">zarith</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">4</span>
+  <span class="n">dune</span><span class="o">-</span><span class="n">site</span>
+  <span class="n">dolmen</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
+  <span class="n">dolmen_type</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
+  <span class="n">dolmen_loop</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
+  <span class="n">ocplib</span><span class="o">-</span><span class="n">simplex</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">5</span><span class="o">.</span><span class="mi">1</span>
+  <span class="n">zarith</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">11</span>
   <span class="n">seq</span>
-  <span class="n">fmt</span>
-  <span class="n">ppx_blob</span>
+  <span class="n">fmt</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">0</span>
+  <span class="n">ppx_blob</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">7</span><span class="o">.</span><span class="mi">2</span>
   <span class="n">camlzip</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">07</span>
   <span class="n">menhir</span>
   <span class="n">dune</span><span class="o">-</span><span class="n">site</span>
-  <span class="n">cmdliner</span>
+  <span class="n">cmdliner</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">0</span>
   <span class="n">psmt2</span><span class="o">-</span><span class="n">frontend</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">4</span>
   <span class="n">stdlib</span><span class="o">-</span><span class="n">shims</span>
+  <span class="n">ppx_deriving</span>
 </pre></div>
 </div>
 <p>You can install dependencies using:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="err">$</span> <span class="n">make</span> <span class="n">deps</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>deps
 </pre></div>
 </div>
 <p>and create a development switch with:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="err">$</span> <span class="n">make</span> <span class="n">dev</span><span class="o">-</span><span class="n">switch</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>dev-switch
 </pre></div>
 </div>
 </section>
@@ -204,8 +208,8 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 <li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-node</span></code></p></li>
 </ol>
 <p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="n">between</span> <span class="mi">4</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span> <span class="ow">and</span> <span class="mi">5</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span>
-<span class="n">zarith_stubs_js</span>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
+<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
 </pre></div>
 </div>
 </section>
@@ -215,9 +219,9 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 <li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-worker</span></code></p></li>
 </ol>
 <p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="n">between</span> <span class="mi">4</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span> <span class="ow">and</span> <span class="mi">5</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
 <span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
-<span class="n">zarith_stubs_js</span>
+<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
 <span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
 </pre></div>
 </div>
@@ -229,11 +233,11 @@ depending on whether ocamlopt is installed or only ocamlc is detected.</p>
 </ol>
 <p>This command create a <code class="docutils literal notranslate"><span class="pre">www/</span></code> directory in which you can find a small js example running in the <code class="docutils literal notranslate"><span class="pre">index.html</span></code> file</p>
 <p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="n">between</span> <span class="mi">4</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span> <span class="ow">and</span> <span class="mi">5</span><span class="o">.</span><span class="mi">0</span><span class="o">.</span><span class="mi">1</span>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
 <span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
 <span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">ppx</span>
 <span class="n">lwt_ppx</span>
-<span class="n">zarith_stubs_js</span>
+<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
 <span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
 </pre></div>
 </div>

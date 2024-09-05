@@ -25,7 +25,7 @@ prove the goals given in a file `b-why3-POs.ae` with the following
 command:
 
 
-```
+```console
  ./alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
 ```
 
@@ -37,7 +37,7 @@ theory for Alt-Ergo.
 For instance, using the following command to prove the goals in the
 file `examples/AB-Why3-plugin/p4_34.why.zip`:
 
-```
+```console
 ./alt-ergo examples/AB-Why3-plugin/p4_34.why.zip --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae  --timelimit-per-goal --timelimit 3 --no-locs-in-answers
 ```
 
@@ -57,7 +57,7 @@ Valid (0.0525) (215 steps) (goal g_5)
 If you have already installed this version of Alt-Ergo and this plugin, you should be able to simply use the command:
 
 
-```
+```console
  alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae
 ```
 

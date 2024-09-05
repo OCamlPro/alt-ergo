@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimization &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/js/versions.js?v=40211404"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API documentation" href="API/index.html" />
+    <link rel="prev" title="Model generation" href="Model_generation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Model_generation.html">Model generation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#maxsmt-syntax">MaxSMT syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activation">Activation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Optimization</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="optimization">
+<h1>Optimization<a class="headerlink" href="#optimization" title="Permalink to this heading"></a></h1>
+<p>Since version 2.6.0, Alt-Ergo supports optimization for LIA and Bitvector
+theories.</p>
+<section id="maxsmt-syntax">
+<h2>MaxSMT syntax<a class="headerlink" href="#maxsmt-syntax" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">(maximize</span> <span class="pre">...)</span></code> and <code class="docutils literal notranslate"><span class="pre">(minimize</span> <span class="pre">...)</span></code> statements to specify an objective function.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">(get-objectives)</span></code> after <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> to output the best values
+for each objective function.</p></li>
+</ul>
+</section>
+<section id="activation">
+<h2>Activation<a class="headerlink" href="#activation" title="Permalink to this heading"></a></h2>
+<p>You only need to <a class="reference internal" href="Model_generation.html#activation"><span class="std std-ref">enable model generation</span></a>.
+The identifiers <code class="docutils literal notranslate"><span class="pre">maximize</span></code>, <code class="docutils literal notranslate"><span class="pre">minimize</span></code> and <code class="docutils literal notranslate"><span class="pre">get-objectives</span></code> are reserved by
+default. If you want to disable the <code class="docutils literal notranslate"><span class="pre">MaxSMT</span></code> extension, use the
+<a class="reference internal" href="Usage/index.html#strict-mode"><span class="std std-ref">strict mode</span></a>.</p>
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>The optimization feature is only compatible with the SAT solver <code class="docutils literal notranslate"><span class="pre">CDCL-Tableaux</span></code>,
+which is the default.</p>
+</div>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<p>First, consider a classical linear programming problem:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+<span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">x</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">y</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">z</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="mi">5</span> <span class="n">x</span><span class="p">)</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="mi">2</span> <span class="n">y</span><span class="p">)</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="p">(</span><span class="n n-Operator">-</span> <span class="mi">0</span> <span class="mi">3</span><span class="p">)</span> <span class="n">z</span><span class="p">))</span> <span class="mi">25</span><span class="p">))</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="p">(</span><span class="n n-Operator">-</span> <span class="mi">0</span> <span class="mi">2</span><span class="p">)</span> <span class="n">x</span><span class="p">)</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="mi">4</span> <span class="n">y</span><span class="p">))</span> <span class="mi">8</span><span class="p">))</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">&lt;=</span> <span class="n">x</span> <span class="n">y</span><span class="p">))</span>
+<span class="p">(</span><span class="n">maximize</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+<span class="p">(</span><span class="n">get-objectives</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alt-Ergo outputs:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">x</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">4</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">y</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">4</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">z</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="p">(</span><span class="n">objectives</span>
+  <span class="p">(</span><span class="n">x</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The optimization also works with an expression in <code class="docutils literal notranslate"><span class="pre">maximize</span></code>:</p></li>
+</ul>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+<span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">x</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">y</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">&lt;=</span> <span class="n">x</span> <span class="mi">5</span><span class="p">))</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">&lt;=</span> <span class="mi">0</span> <span class="n">y</span><span class="p">))</span>
+<span class="p">(</span><span class="n">maximize</span> <span class="p">(</span><span class="n n-Operator">-</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="mi">5</span> <span class="n">x</span><span class="p">)</span> <span class="n">y</span><span class="p">))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="n">get-objectives</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alt-Ergo outputs:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">x</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">5</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">y</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="p">(</span><span class="n">objectives</span>
+  <span class="p">((</span><span class="n n-Operator">-</span> <span class="p">(</span><span class="n n-Operator">*</span> <span class="mi">5</span> <span class="n">x</span><span class="p">)</span> <span class="n">y</span><span class="p">)</span> <span class="mi">25</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Finally, an example with bitvectors:</p></li>
+</ul>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+<span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">x</span> <span class="p">(</span><span class="k">_</span> <span class="kt">BitVec</span> <span class="mi">32</span><span class="p">))</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">y</span> <span class="p">(</span><span class="k">_</span> <span class="kt">BitVec</span> <span class="mi">32</span><span class="p">))</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">bvult</span> <span class="n">x</span> <span class="p">(</span><span class="k">_</span> <span class="no">bv2</span> <span class="mi">32</span><span class="p">)))</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">bvule</span> <span class="n">y</span> <span class="p">(</span><span class="k">_</span> <span class="no">bv10</span> <span class="mi">32</span><span class="p">)))</span>
+<span class="p">(</span><span class="n">maximize</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">(</span><span class="n">maximize</span> <span class="n">y</span><span class="p">)</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+<span class="p">(</span><span class="n">get-objectives</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alt-Ergo outputs:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">x</span> <span class="p">()</span> <span class="p">(</span><span class="k">_</span> <span class="kt">BitVec</span> <span class="mi">32</span><span class="p">)</span> <span class="mi mi-Hex">#x00000001</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">y</span> <span class="p">()</span> <span class="p">(</span><span class="k">_</span> <span class="kt">BitVec</span> <span class="mi">32</span><span class="p">)</span> <span class="mi mi-Hex">#x0000000a</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="p">(</span><span class="n">objectives</span>
+  <span class="p">(</span><span class="n">x</span> <span class="mi mi-Hex">#x00000001</span><span class="p">)</span>
+  <span class="p">(</span><span class="n">y</span> <span class="mi mi-Hex">#x0000000a</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Model_generation.html" class="btn btn-neutral float-left" title="Model generation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="API/index.html" class="btn btn-neutral float-right" title="API documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "next"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -51,11 +51,14 @@
 <li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#command-line">Command-line</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#frontend-option">Frontend option</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#strict-mode">Strict mode</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#library">Library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#javascript">Javascript</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#js-node">Js-node</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#js-worker">Js-worker</a><ul>
@@ -66,12 +69,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#js-worker-example">Js-worker example</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#library">Library</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
@@ -106,14 +109,31 @@
 <section id="command-line">
 <h2>Command-line<a class="headerlink" href="#command-line" title="Permalink to this heading"></a></h2>
 <p>Alt-Ergo is executed with the following command:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] file.&lt;ext&gt;
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>alt-ergo<span class="w">   </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>file.&lt;ext&gt;
 </pre></div>
 </div>
 <p>The CDCL solver is now the default SAT engine. The command below
 allows to enable the old Tableaux-like SAT-solver:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo   [options] --sat-solver Tableaux file.&lt;ext&gt;
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>alt-ergo<span class="w">   </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>--sat-solver<span class="w"> </span>Tableaux<span class="w"> </span>file.&lt;ext&gt;
 </pre></div>
 </div>
+<section id="output">
+<h3>Output<a class="headerlink" href="#output" title="Permalink to this heading"></a></h3>
+<p>The results of an Alt-ergo’s execution have the following form :</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">File</span> <span class="s2">&quot;&lt;path_to_file&gt;/&lt;filename&gt;&quot;</span><span class="o">,</span> <span class="n">line</span> <span class="o">&lt;</span><span class="n">l</span><span class="o">&gt;,</span> <span class="n">characters</span> <span class="o">&lt;</span><span class="n">n</span><span class="o">-</span><span class="n">m</span><span class="o">&gt;:</span> <span class="o">&lt;</span><span class="n">status</span><span class="o">&gt;</span> <span class="o">(&lt;</span><span class="n">time</span> <span class="ow">in</span> <span class="n">seconde</span><span class="o">&gt;)</span> <span class="o">(&lt;</span><span class="n">number</span> <span class="k">of</span> <span class="n">steps</span><span class="o">&gt;</span> <span class="n">steps</span><span class="o">)</span> <span class="o">(</span><span class="k">goal</span> <span class="o">&lt;</span><span class="n">name</span> <span class="k">of</span> <span class="n">the</span> <span class="k">goal</span><span class="o">&gt;)</span>
+</pre></div>
+</div>
+<p>The status can be <code class="docutils literal notranslate"><span class="pre">Valid</span></code>, <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> or <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>. If the input file is in
+the SMT-LIB 2 format the status will be either <code class="docutils literal notranslate"><span class="pre">unsat</span></code>, <code class="docutils literal notranslate"><span class="pre">sat</span></code>, <code class="docutils literal notranslate"><span class="pre">unknown</span></code>.
+You can force the status to be print in the SMT-LIB 2 form with the option <code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">smtlib2</span></code>.</p>
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>When Alt-Ergo tries to prove a <code class="docutils literal notranslate"><span class="pre">goal</span></code> (with the native input language), it
+actually tries to prove the unsatisfiability of its negation. That is
+why you get <code class="docutils literal notranslate"><span class="pre">unsat</span></code> answer as an SMT-LIB 2 format output while proving a <code class="docutils literal notranslate"><span class="pre">Valid</span></code>
+goal. The same goes for <code class="docutils literal notranslate"><span class="pre">Invalid</span></code> and <code class="docutils literal notranslate"><span class="pre">sat</span></code>.</p>
+</div>
+</section>
 <section id="files-extensions">
 <h3>Files extensions<a class="headerlink" href="#files-extensions" title="Permalink to this heading"></a></h3>
 <p>Alt-Ergo supports file extensions:</p>
@@ -121,6 +141,7 @@ allows to enable the old Tableaux-like SAT-solver:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">.psmt2</span></code>, <code class="docutils literal notranslate"><span class="pre">.smt2</span></code> for (our polymorphic extension of) the SMT-LIB 2
 standard</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">.ae</span></code>, for its native input language (<code class="docutils literal notranslate"><span class="pre">.why</span></code> and <code class="docutils literal notranslate"><span class="pre">.mlw</span></code> are now deprecated although still accepted)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.psmt2.zip</span></code>, <code class="docutils literal notranslate"><span class="pre">.smt2.zip</span></code> and <code class="docutils literal notranslate"><span class="pre">.ae.zip</span></code> for compressed files</p></li>
 </ul>
 <p>See the <a class="reference internal" href="../SMT-LIB_language/index.html"><span class="doc std std-doc">SMT-LIB language</span></a> and <a class="reference internal" href="../Alt_ergo_native/index.html"><span class="doc std std-doc">Alt-ergo native language</span></a> sections for more information about the format of the input files.</p>
 </section>
@@ -146,7 +167,7 @@ SMT-LIB features will not work with the <code class="docutils literal notranslat
 <section id="preludes">
 <h3>Preludes<a class="headerlink" href="#preludes" title="Permalink to this heading"></a></h3>
 <p>Preludes can be passed to Alt-Ergo as follows:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ alt-ergo --prelude p.ae --prelude some-path/q.ae [other-options] file.ae
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>alt-ergo<span class="w"> </span>--prelude<span class="w"> </span>p.ae<span class="w"> </span>--prelude<span class="w"> </span>some-path/q.ae<span class="w"> </span><span class="o">[</span>other-options<span class="o">]</span><span class="w"> </span>file.ae
 </pre></div>
 </div>
 <p>Alt-Ergo will try to load a local prelude called “p.ae”. If this
@@ -155,6 +176,22 @@ directory (run <code class="docutils literal notranslate"><span class="pre">alt-
 path). You can also provide a relative or an absolute path as shown
 by “some-path/q.ae”.</p>
 </section>
+<section id="strict-mode">
+<h3>Strict mode<a class="headerlink" href="#strict-mode" title="Permalink to this heading"></a></h3>
+<p>Alt-Ergo supports extensions that are not part of the SMT-LIB standard. For
+convenience, some of these extensions are enabled by default. Since the
+version 2.6.0, the flag <code class="docutils literal notranslate"><span class="pre">--strict</span></code> disables the extensions:</p>
+<ul class="simple">
+<li><p>MaxSMT extension for the optimization</p></li>
+</ul>
+<p>We plan to disable more nonstandard extensions with this flag in future versions.</p>
+</section>
+</section>
+<section id="library">
+<h2>Library<a class="headerlink" href="#library" title="Permalink to this heading"></a></h2>
+<p>Since version 2.2.0, Alt-Ergo’s library is also compiled and installed. See the
+<a class="reference internal" href="../API/index.html"><span class="doc std std-doc">API documentation</span></a> (also available <a class="reference external" href="https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html">on ocaml.org</a>)
+for more information.</p>
 </section>
 <section id="javascript">
 <h2>Javascript<a class="headerlink" href="#javascript" title="Permalink to this heading"></a></h2>
@@ -162,7 +199,7 @@ by “some-path/q.ae”.</p>
 <section id="js-node">
 <h3>Js-node<a class="headerlink" href="#js-node" title="Permalink to this heading"></a></h3>
 <p>The Javascript version of Alt-Ergo compatible with node-js is executed with the following command:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    $ node alt-ergo.js  [options] file.&lt;ext&gt;
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>node<span class="w"> </span>alt-ergo.js<span class="w">  </span><span class="o">[</span>options<span class="o">]</span><span class="w"> </span>file.&lt;ext&gt;
 </pre></div>
 </div>
 <p>Note that timeout options and zip files are not supported with this version because of the lack of js primitives.</p>
@@ -206,12 +243,6 @@ Look at the <code class="docutils literal notranslate"><span class="pre">worker_
 <h3>Js-worker example<a class="headerlink" href="#js-worker-example" title="Permalink to this heading"></a></h3>
 <p>A small example of how to use the Alt-Ergo web worker can be build with the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-example</span></code>. This command also makes the web worker if it has not already been built. It produces a <code class="docutils literal notranslate"><span class="pre">www</span></code> directory with an html page where you can write a small example, run the worker, and see the results. You can also look at the console of your browser to look at the json file sent</p>
 </section>
-</section>
-<section id="library">
-<h2>Library<a class="headerlink" href="#library" title="Permalink to this heading"></a></h2>
-<p>Since version 2.2.0, Alt-Ergo’s library is also compiled and installed. See the
-<a class="reference internal" href="../API/index.html"><span class="doc std std-doc">API documentation</span></a> (also available <a class="reference external" href="https://ocaml.org/p/alt-ergo-lib/latest/doc/index.html">on ocaml.org</a>)
-for more information.</p>
 </section>
 </section>
 

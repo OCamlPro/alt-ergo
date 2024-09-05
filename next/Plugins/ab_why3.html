@@ -53,6 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Plugins</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="index.html#inequality-plugins">Inequality plugins</a></li>
@@ -115,7 +116,7 @@ written in Why3’s logic.</p>
 <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">AB-Why3</span></code> to compile Alt-Ergo and the AB-why3 plugin. You can ask Alt-Ergo to
 prove the goals given in a file <code class="docutils literal notranslate"><span class="pre">b-why3-POs.ae</span></code> with the following
 command:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span> <span class="o">./</span><span class="n">alt</span><span class="o">-</span><span class="n">ergo</span> <span class="n">b</span><span class="o">-</span><span class="n">why3</span><span class="o">-</span><span class="n">POs</span><span class="o">.</span><span class="n">why</span> <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">parser</span> <span class="n">ABWhy3Plugin</span><span class="o">.</span><span class="n">cmxs</span> <span class="o">--</span><span class="n">prelude</span> <span class="n">b</span><span class="o">-</span><span class="n">set</span><span class="o">-</span><span class="k">theory</span><span class="o">-</span><span class="n">prelude</span><span class="o">-</span><span class="mi">2020</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">28</span><span class="o">.</span><span class="n">ae</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go"> ./alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae</span>
 </pre></div>
 </div>
 <p>where <code class="docutils literal notranslate"><span class="pre">--add-parser</span> <span class="pre">ABWhy3Plugin.cmxs</span></code> allows to load this plugin and
@@ -123,7 +124,7 @@ register the parser it contains, and <code class="docutils literal notranslate">
 theory for Alt-Ergo.</p>
 <p>For instance, using the following command to prove the goals in the
 file <code class="docutils literal notranslate"><span class="pre">examples/AB-Why3-plugin/p4_34.why.zip</span></code>:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">alt</span><span class="o">-</span><span class="n">ergo</span> <span class="n">examples</span><span class="o">/</span><span class="n">AB</span><span class="o">-</span><span class="n">Why3</span><span class="o">-</span><span class="n">plugin</span><span class="o">/</span><span class="n">p4_34</span><span class="o">.</span><span class="n">why</span><span class="o">.</span><span class="n">zip</span> <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">parser</span> <span class="n">ABWhy3Plugin</span><span class="o">.</span><span class="n">cmxs</span> <span class="o">--</span><span class="n">prelude</span> <span class="n">b</span><span class="o">-</span><span class="n">set</span><span class="o">-</span><span class="k">theory</span><span class="o">-</span><span class="n">prelude</span><span class="o">-</span><span class="mi">2020</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">28</span><span class="o">.</span><span class="n">ae</span>  <span class="o">--</span><span class="n">timelimit</span><span class="o">-</span><span class="n">per</span><span class="o">-</span><span class="k">goal</span> <span class="o">--</span><span class="n">timelimit</span> <span class="mi">3</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">locs</span><span class="o">-</span><span class="ow">in</span><span class="o">-</span><span class="n">answers</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">./alt-ergo examples/AB-Why3-plugin/p4_34.why.zip --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae  --timelimit-per-goal --timelimit 3 --no-locs-in-answers</span>
 </pre></div>
 </div>
 <p>Alt-Ergo returns:</p>
@@ -138,7 +139,7 @@ file <code class="docutils literal notranslate"><span class="pre">examples/AB-Wh
 </pre></div>
 </div>
 <p>If you have already installed this version of Alt-Ergo and this plugin, you should be able to simply use the command:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span> <span class="n">b</span><span class="o">-</span><span class="n">why3</span><span class="o">-</span><span class="n">POs</span><span class="o">.</span><span class="n">why</span> <span class="o">--</span><span class="n">add</span><span class="o">-</span><span class="n">parser</span> <span class="n">ABWhy3Plugin</span><span class="o">.</span><span class="n">cmxs</span> <span class="o">--</span><span class="n">prelude</span> <span class="n">b</span><span class="o">-</span><span class="n">set</span><span class="o">-</span><span class="k">theory</span><span class="o">-</span><span class="n">prelude</span><span class="o">-</span><span class="mi">2020</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">28</span><span class="o">.</span><span class="n">ae</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go"> alt-ergo b-why3-POs.why --add-parser ABWhy3Plugin.cmxs --prelude b-set-theory-prelude-2020-02-28.ae</span>
 </pre></div>
 </div>
 </section>
