@@ -78,7 +78,7 @@ convenience, some of these extensions are enabled by default. Since the
 version 2.6.0, the flag `--strict` disables the extensions:
 - MaxSMT extension for the optimization
 
-We plan to disable more nonstandard extensions with this flag in futur versions.
+We plan to disable more nonstandard extensions with this flag in future versions.
 ## Library
 
 Since version 2.2.0, Alt-Ergo's library is also compiled and installed. See the
