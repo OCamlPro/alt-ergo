@@ -59,7 +59,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">About</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="license.html">Licenses</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-0">v2.6.0</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#command-line-interface">Command-line interface</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#smt-lib-support">SMT-LIB support</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model-generation">Model generation</a></li>
@@ -164,8 +164,8 @@
 <p>This is the changelog of all the Alt-Ergo releases. The PR numbers reference
 the <a class="reference external" href="https://github.com/OCamlPro/Alt-Ergo">official Alt-Ergo repository on
 GitHub</a>.</p>
-<section id="unreleased">
-<h2>unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading"></a></h2>
+<section id="v2-6-0">
+<h2>v2.6.0<a class="headerlink" href="#v2-6-0" title="Permalink to this heading"></a></h2>
 <section id="command-line-interface">
 <h3>Command-line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this heading"></a></h3>
 <ul class="simple">
@@ -181,6 +181,7 @@ compliant (#805)</p></li>
 <li><p>Add bare-bones support for interactive input in SMT-LIB format (#949)</p></li>
 <li><p>Less confusing behavior on timeout (#982, #984)</p></li>
 <li><p>Add <code class="docutils literal notranslate"><span class="pre">--strict</span></code> option for SMT-LIB compliant mode (#916, #1133)</p></li>
+<li><p>Deprecate <code class="docutils literal notranslate"><span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">typing</span></code> and <code class="docutils literal notranslate"><span class="pre">warnings</span></code> debug flags (#1204)</p></li>
 </ul>
 </section>
 <section id="smt-lib-support">
@@ -232,6 +233,13 @@ performance slightly (#1041)</p></li>
 <li><p>Rewrite the ADT theory to use domains and integrate the enum theory into the
 ADT theory (#1078, #1086, #1087, #1091, #1094, #1138)</p></li>
 <li><p>Rewrite the Intervals module entirely (#1108)</p></li>
+<li><p>Add maximize/minimize terms for matching (#1166)</p></li>
+<li><p>Internalize <code class="docutils literal notranslate"><span class="pre">sign_extend</span></code> and <code class="docutils literal notranslate"><span class="pre">repeat</span></code> (#1192)</p></li>
+<li><p>Run cross-propagators to completion (#1221)</p></li>
+<li><p>Support binary distinct on arbitrary bit-widths (#1222)</p></li>
+<li><p>Only perform optimization when building a model (#1224)</p></li>
+<li><p>Make sure domains do not overflow the default domain (#1225)</p></li>
+<li><p>Do not build unnormalized values in <code class="docutils literal notranslate"><span class="pre">zero_extend</span></code> (#1226)</p></li>
 </ul>
 </section>
 <section id="internal-library-changes">
@@ -259,6 +267,7 @@ during printing (#927)</p></li>
 <li><p>Preserve trigger order when parsing quantifiers with multiple trigger
 (#1046).</p></li>
 <li><p>Store domains inside the union-find module (#1119)</p></li>
+<li><p>Remove some polymorphic hashtables (#1219)</p></li>
 </ul>
 </section>
 <section id="build-and-integration">
@@ -269,6 +278,7 @@ during printing (#927)</p></li>
 registered through the dune-site plugin mechanism in the
 <code class="docutils literal notranslate"><span class="pre">(alt-ergo</span> <span class="pre">plugins)</span></code> site to be picked up by Alt-Ergo (#1049).</p></li>
 <li><p>Add a release workflow (#827)</p></li>
+<li><p>Add a Windows workflow (#1203)</p></li>
 <li><p>Mark the dune.inc file as linguist-generated to avoid huge diffs (#830)</p></li>
 <li><p>Use GitHub Actions badges in the README (#882)</p></li>
 <li><p>Use <code class="docutils literal notranslate"><span class="pre">dune</span> <span class="pre">build</span> <span class="pre">&#64;check</span></code> to build the project (#887)</p></li>
@@ -277,6 +287,9 @@ registered through the dune-site plugin mechanism in the
 <li><p>Use an efficient <code class="docutils literal notranslate"><span class="pre">String.starts_with</span></code> implementation (#912)</p></li>
 <li><p>Fix the Makefile (#914)</p></li>
 <li><p>Add <code class="docutils literal notranslate"><span class="pre">Logs</span></code> dependency (#1206)</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">dynamic_include</span></code> to include the generated file <code class="docutils literal notranslate"><span class="pre">dune.inc</span></code> (#1199)</p></li>
+<li><p>Support Windows (#1184,#1189,#1195,#1199,#1200)</p></li>
+<li><p>Wrap the library <code class="docutils literal notranslate"><span class="pre">Alt_ergo_prelude</span></code> (#1223)</p></li>
 </ul>
 </section>
 <section id="testing">
@@ -298,6 +311,9 @@ registered through the dune-site plugin mechanism in the
 <li><p>Documentation of the <code class="docutils literal notranslate"><span class="pre">Enum</span></code> theory (#871)</p></li>
 <li><p>Document <code class="docutils literal notranslate"><span class="pre">Th_util.lit_origin</span></code> (#915)</p></li>
 <li><p>Document the CDCL-Tableaux solver (#995)</p></li>
+<li><p>Document Windows support (#1216)</p></li>
+<li><p>Remove instructions to install Alt-Ergo on Debian (#1217)</p></li>
+<li><p>Document optimization feature (#1231)</p></li>
 </ul>
 </section>
 </section>
