@@ -63,7 +63,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
 
   - Using the native language in the input file `INPUT.ae`:
 
-  ```
+  ```smt-lib
     logic a, b, c : int
     axiom A : a <> c
 
@@ -101,7 +101,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
 
   - Using the SMT-LIB language in the input file `INPUT.smt2`:
 
-  ```
+  ```smt-lib
     (set-logic ALL)
     (declare-fun a () Int)
     (declare-fun b () Int)
@@ -116,7 +116,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
 
   ```
   and the command `alt-ergo --produce-models INPUT.smt2` produces the output
-  ```
+  ```smt-lib
     unknown
     (
       (define-fun a () Int 0)
@@ -135,7 +135,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
 
 
   - Alternatively, using the statement `(set-option :produce-models true)`
-  ```
+  ```smt-lib
    (set-logic ALL)
    (set-option :produce-models true)
    (declare-fun a () Int)
@@ -149,7 +149,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   ```
   and the command `alt-ergo INPUT.smt2` produces
   the output model
-  ```
+  ```smt-lib
   unknown
   (
     (define-fun a () Int 0)
@@ -168,7 +168,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   done
   ```
   we got the SMT-LIB file `INPUT.smt2`:
-  ```
+  ```smt-lib
   (set-logic ALL)
   (declare-const i Int)
   (assert (and (< i 5) (not (< (+ i 1) 5))))
@@ -176,11 +176,11 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   (get-model)
   ```
   Execute the command
-  ```sh
+  ```console
   alt-ergo --produce-models INPUT.smt2
   ```
   We got the output
-  ```
+  ```smt-lib
   ; File "INPUT.smt2", line 4, characters 1-12: I don't know (0.6689) (2 steps) (goal g_1)
 
   unknown
@@ -199,7 +199,7 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   end
   ```
   and fix our SMT-LIB input accordingly:
-  ```
+  ```smt-lib
   (set-logic ALL)
   (declare-const i Int)
   (assert (and (< i 5) (not (<= (+ i 1) 5))))
@@ -214,20 +214,3 @@ Model generation is known to be sometimes incomplete in the presence of arrays.
   (error "No model produced.")
   ```
   Our invariant is valid!
-
-### Output
-The results of an Alt-ergo's execution have the following form :
-```
-File "<path_to_file>/<filename>", line <l>, characters <n-m>: <status> (<time in seconde>) (<number of steps> steps) (goal <name of the goal>)
-```
-The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in
-the SMT-LIB 2 format the status will be either `unsat`, `sat`, `unknown`.
-You can force the status to be print in the SMT-LIB 2 form with the option `--output smtlib2`.
-
-```{admonition} Note
-When Alt-Ergo tries to prove a `goal` (with the native input language), it
-actually tries to prove the unsatisfiability of its negation. That is
-why you get `unsat` answer as an SMT-LIB 2 format output while proving a `Valid`
-goal. The same goes for `Invalid` and `sat`.
-```
-
