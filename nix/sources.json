@@ -62,5 +62,13 @@
         "url": "https://github.com/Armael/pp_loc/archive/d8162fd289849ea2f4125054ab88540416bdaa25.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "2.1.0"
+    },
+    "zarith_stubs_js": {
+        "branch": "v0.17.0",
+        "sha256": "07anr6r4chbpgd7c5ixfqgqr99kb202bd7q350hdqynrn7v6rn20",
+        "type": "tarball",
+        "url": "https://github.com/janestreet/zarith_stubs_js/archive/refs/tags/v0.17.0.tar.gz",
+        "url_template": "https://github.com/janestreet/zarith_stubs_js/archive/refs/tags/v0.17.0.tar.gz",
+        "version": "0.17.0"
     }
 }

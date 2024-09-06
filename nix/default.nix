@@ -12,6 +12,7 @@ import sources.nixpkgs {
         dolmen_loop = pkgs.callPackage ./dolmen_loop.nix { };
         landmarks = pkgs.callPackage ./landmarks.nix { };
         landmarks-ppx = pkgs.callPackage ./landmarks-ppx.nix { };
+        zarith_stubs_js = pkgs.callPackage ./zarith_stubs_js.nix { };
       });
     })
   ];
