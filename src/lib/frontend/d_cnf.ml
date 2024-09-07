@@ -164,6 +164,7 @@ type _ DStd.Builtin.t +=
   | Sqrt_real_excess
   | Ceiling_to_int of [ `Real ]
   | Max_real
+  | Min_real
   | Max_int
   | Min_int
   | Integer_log2
@@ -359,6 +360,9 @@ let ae_fpa_builtins =
 
     (* maximum of two reals *)
     |> op "max_real" Max_real ([real; real] ->. real)
+
+    (* minimum of two reals *)
+    |> op "min_real" Min_real ([real; real] ->. real)
 
     (* maximum of two ints *)
     |> op "max_int" Max_int ([int; int] ->. int)
@@ -1349,6 +1353,7 @@ let rec mk_expr
           | B.Is_int `Real, _ -> op Real_is_int
           | Ceiling_to_int `Real, _ -> op Int_ceil
           | Max_real, _ -> op Max_real
+          | Min_real, _ -> op Min_real
           | Max_int, _ -> op Max_int
           | Min_int, _ -> op Min_int
           | Integer_log2, _ -> op Integer_log2
