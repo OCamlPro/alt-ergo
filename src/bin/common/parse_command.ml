@@ -1509,21 +1509,22 @@ let parse_theory_opt =
       Term.(const mk_disable_theories $ disable_theories $ disable_adts $ no_ac)
     in
     let preludes enable_theories disable_theories =
-      let theories = Theories.default in
+      let theories = Theories.Set.of_list Theories.default in
       let rec aux th en dis =
         match en, dis with
-        | _ :: _, [] -> aux (List.rev_append en th) [] []
+        | _ :: _, [] ->
+          aux (List.fold_left (fun th en -> Theories.Set.add en th) th en) [] []
         | e :: _, d :: _ when e = d ->
           Fmt.error_msg "theory prelude '%a' cannot be both enabled and
           disabled" Theories.pp e
-        | e :: en, d :: _ when e < d -> aux (e :: th) en dis
-        | _ , d :: dis -> aux (List.filter ((<>) d) th) en dis
-        | [], [] -> Ok th
+        | e :: en, d :: _ when e < d -> aux (Theories.Set.add e th) en dis
+        | _ , d :: dis -> aux (Theories.Set.filter ((<>) d) th) en dis
+        | [], [] -> Ok (Theories.Set.elements th)
       in
       aux
         theories
-        (List.fast_sort compare enable_theories)
-        (List.fast_sort compare disable_theories)
+        (List.fast_sort Theories.compare enable_theories)
+        (List.fast_sort Theories.compare disable_theories)
     in
     Term.(
       cli_parse_result (
