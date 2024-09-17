@@ -126,22 +126,23 @@ following constructs:</p>
 <li><p>Boolean connectives;</p></li>
 <li><p>Algebraic data types (including records and enumerated types in the native
 language)</p></li>
-<li><p>Integer and real primitives (addition, subtraction, multiplication,
-division, modulo, exponentiation, and comparisons), but not conversion
-operators between reals and integers</p></li>
+<li><p>The following integer and real primitives: addition, subtraction,
+multiplication, division, modulo, comparisons, and exponentiations <em>with an
+integer exponent</em></p></li>
 <li><p>Bit-vector primitives (concatenation, extraction, <code class="docutils literal notranslate"><span class="pre">bvadd</span></code>, <code class="docutils literal notranslate"><span class="pre">bvand</span></code>, <code class="docutils literal notranslate"><span class="pre">bvule</span></code>,
 etc.), including <code class="docutils literal notranslate"><span class="pre">bv2nat</span></code> and <code class="docutils literal notranslate"><span class="pre">int2bv</span></code></p></li>
 </ul>
 <p>Completeness for the following constructs is only guaranteed with certain
 command-line flags:</p>
 <ul class="simple">
-<li><p>Conversions operators between integers and reals require the
-<code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code> flag</p></li>
+<li><p>Conversions operators from integers to reals <code class="docutils literal notranslate"><span class="pre">real_of_int</span></code> and <code class="docutils literal notranslate"><span class="pre">real_is_int</span></code>
+require the <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code> flag</p></li>
 <li><p>Floating-point primitives (<code class="docutils literal notranslate"><span class="pre">ae.round</span></code>, <code class="docutils literal notranslate"><span class="pre">ae.float32</span></code> etc. in the SMT-LIB
 language; <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">float32</span></code> and <code class="docutils literal notranslate"><span class="pre">float64</span></code> in the native language) require
 the <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">fpa</span></code> flag</p></li>
 </ul>
-<p>Model generation is known to be sometimes incomplete in the presence of arrays.</p>
+<p>Model generation is known to be sometimes incomplete in the presence of arrays,
+and is incomplete for the <code class="docutils literal notranslate"><span class="pre">integer_round</span></code> function.</p>
 </section>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
