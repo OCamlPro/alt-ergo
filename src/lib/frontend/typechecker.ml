@@ -404,6 +404,9 @@ module Env = struct
       (* maximum of two reals *)
       |> op "max_real" Max_real ([real; real] ->. real)
 
+      (* minimum of two reals *)
+      |> op "min_real" Min_real ([real; real] ->. real)
+
       (* maximum of two ints *)
       |> op "max_int" Max_int ([int; int] ->. int)
 
