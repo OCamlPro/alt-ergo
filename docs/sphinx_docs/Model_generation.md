@@ -40,9 +40,9 @@ following constructs:
  - Algebraic data types (including records and enumerated types in the native
    language)
 
- - Integer and real primitives (addition, subtraction, multiplication,
-   division, modulo, exponentiation, and comparisons), but not conversion
-   operators between reals and integers
+ - The following integer and real primitives: addition, subtraction,
+   multiplication, division, modulo, comparisons, and exponentiations *with an
+   integer exponent*
 
  - Bit-vector primitives (concatenation, extraction, `bvadd`, `bvand`, `bvule`,
    etc.), including `bv2nat` and `int2bv`
@@ -50,14 +50,15 @@ following constructs:
 Completeness for the following constructs is only guaranteed with certain
 command-line flags:
 
- - Conversions operators between integers and reals require the
-   `--enable-theories ria` flag
+ - Conversions operators from integers to reals `real_of_int` and `real_is_int`
+   require the `--enable-theories ria` flag
 
  - Floating-point primitives (`ae.round`, `ae.float32` etc. in the SMT-LIB
    language; `float`, `float32` and `float64` in the native language) require
    the `--enable-theories fpa` flag
 
-Model generation is known to be sometimes incomplete in the presence of arrays.
+Model generation is known to be sometimes incomplete in the presence of arrays,
+and is incomplete for the `integer_round` function.
 
 ## Examples
 

@@ -2958,7 +2958,6 @@ let int_view t =
   | _ ->
     Fmt.failwith "The given term %a is not an integer" print t
 
-
 let rounding_mode_view t =
   match const_view t with
   | RoundingMode m -> m
