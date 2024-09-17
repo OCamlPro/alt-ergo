@@ -16,18 +16,42 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type prelude = Fpa | Ria | Nra [@@deriving eq]
+type prelude = Nra | Ria | Fpa [@@deriving eq]
 
 let pp_prelude ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
   | Ria -> Format.fprintf ppf "ria"
   | Nra -> Format.fprintf ppf "nra"
 
+let compare_prelude p1 p2 =
+  match p1, p2 with
+  | Nra, Nra -> 0
+  | Nra, _ -> -1
+  | _, Nra -> 1
+
+  | Ria, Ria -> 0
+  | Ria, _ -> -1
+  | _, Ria -> 1
+
+  | Fpa, Fpa -> 0
+
 type t =
   | Prelude of prelude
   | ADT
   | AC
 [@@deriving eq]
+
+let compare t1 t2 =
+  match t1, t2 with
+  | Prelude p1, Prelude p2 -> compare_prelude p1 p2
+  | Prelude _, _ -> -1
+  | _, Prelude _ -> 1
+
+  | ADT, ADT -> 0
+  | ADT, _ -> -1
+  | _, ADT -> 1
+
+  | AC, AC -> 0
 
 let pp ppf = function
   | Prelude p -> pp_prelude ppf p
@@ -52,3 +76,5 @@ let default = all
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)
+
+module Set = Set.Make(struct type nonrec t = t let compare = compare end)
