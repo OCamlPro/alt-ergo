@@ -676,11 +676,51 @@ let delayed_pow uf _op = function
   | [ a; b ] -> calc_pow a b (E.type_info a) uf
   | _ -> assert false
 
+let delayed_op1 ~ty fn uf _op = function
+  | [ x ] ->
+    let rx, exx = Uf.find uf x in
+    Option.bind (P.is_const (poly_of rx)) @@ fun cx ->
+    Some (alien_of (P.create [] (fn cx) ty), exx)
+  | _ -> assert false
+
+let delayed_op2 ~ty fn uf _op = function
+  | [ x; y ] ->
+    let rx, exx = Uf.find uf x in
+    let ry, exy = Uf.find uf y in
+    Option.bind (P.is_const (poly_of rx)) @@ fun cx ->
+    Option.bind (P.is_const (poly_of ry)) @@ fun cy ->
+    Some (alien_of (P.create [] (fn cx cy) ty), Ex.union exx exy)
+  | _ -> assert false
+
+let delayed_integer_log2 uf _op = function
+  | [ x ] -> (
+      let rx, exx = Uf.find uf x in
+      let px = poly_of rx in
+      match P.is_const px with
+      | None -> None
+      | Some cb ->
+        if Q.compare cb Q.zero <= 0 then None
+        else
+          let res =
+            alien_of @@
+            P.create [] (Q.from_int (Fpa_rounding.integer_log_2 cb)) Treal
+          in
+          Some (res, exx)
+    )
+  | _ -> assert false
+
 (* These are the partially interpreted functions that we know how to compute.
    They will be computed immediately if possible, or as soon as we learn the
    value of their arguments. *)
 let dispatch = function
   | Symbols.Pow -> Some delayed_pow
+  | Symbols.Integer_log2 -> Some delayed_integer_log2
+  | Symbols.Int_floor -> Some (delayed_op1 ~ty:Tint Numbers.Q.floor)
+  | Symbols.Int_ceil -> Some (delayed_op1 ~ty:Tint Numbers.Q.ceiling)
+  | Symbols.Min_int -> Some (delayed_op2 ~ty:Tint Q.min)
+  | Symbols.Max_int -> Some (delayed_op2 ~ty:Tint Q.max)
+  | Symbols.Min_real -> Some (delayed_op2 ~ty:Treal Q.min)
+  | Symbols.Max_real -> Some (delayed_op2 ~ty:Treal Q.max)
   | _ -> None
 
 let empty uf = {
