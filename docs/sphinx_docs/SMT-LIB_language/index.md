@@ -53,11 +53,6 @@ the FloatingPoint SMT-LIB theory.
 ((_ ae.round prec exp) RoundingMode Real Real)
 ```
 
-*Note*: While Alt-Ergo has built-in support for **computing** with `ae.round`
-on known arguments, reasoning capabilities involving `ae.round` on non-constant
-arguments are disabled by default and currently requires to use the flag
-`--enable-theories fpa`.
-
 `prec` defines the number of bits in the significand, including the hidden bit,
 and is equivalent to the `sb` parameter of the `(_ FloatingPoint eb sb)` sort
 in the FloatingPoint SMT-LIB theory.
@@ -70,7 +65,7 @@ of the `(_ FloatingPoint eb sb)` sort as `exp = 2^(eb - 1) + sb - 3`.
 
 The result of `(_ ae.round prec exp)` is always of the form `(-1)^s * c * 2^q`
 where `s` is a sign (`0` or `1`), `c` is an integer with at most `prec - 1`
-binary digits (i.e. `0 <= c < 2^(prec - 1)`) and `q >= exp` is an integer.
+binary digits (i.e. `0 <= c < 2^(prec - 1)`) and `q >= -exp` is an integer.
 
 The following function symbols are provided as short synonyms for common
 floating point representations:
@@ -79,3 +74,28 @@ floating point representations:
  - `ae.float32` is a synonym for `(_ ae.round 24 149)`
  - `ae.float64` is a synonym for `(_ ae.round 53 1074)`
  - `ae.float128` is a synonym for `(_ ae.round 113 16494)`
+
+### Examples
+
+Input:
+
+```smt-lib
+(set-option :produce-models true)
+(set-logic ALL)
+(declare-const |0.3f32| Real)
+(assert (= (ae.float32 RNE 0.3) |0.3f32|))
+(declare-const |0.3f16| Real)
+(assert (= (ae.float16 RNE 0.3) |0.3f16|))
+(check-sat)
+(get-model)
+```
+
+Output:
+
+```smt-lib
+unknown
+(
+  (define-fun |0.3f32| () Real (/ 5033165 16777216))
+  (define-fun |0.3f16| () Real (/ 1229 4096))
+)
+```
