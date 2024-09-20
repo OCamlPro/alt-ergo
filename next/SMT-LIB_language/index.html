@@ -52,7 +52,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">SMT-LIB language</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#bit-vectors">Bit-vectors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#floating-point-arithmetic">Floating-Point Arithmetic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#floating-point-arithmetic">Floating-Point Arithmetic</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
@@ -132,10 +135,6 @@ the FloatingPoint SMT-LIB theory.</p>
 <div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">((</span><span class="k">_</span> <span class="k k-Builtin">ae.round</span> <span class="n">prec</span> <span class="n">exp</span><span class="p">)</span> <span class="kt">RoundingMode</span> <span class="kt">Real</span> <span class="kt">Real</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><em>Note</em>: While Alt-Ergo has built-in support for <strong>computing</strong> with <code class="docutils literal notranslate"><span class="pre">ae.round</span></code>
-on known arguments, reasoning capabilities involving <code class="docutils literal notranslate"><span class="pre">ae.round</span></code> on non-constant
-arguments are disabled by default and currently requires to use the flag
-<code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">fpa</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">prec</span></code> defines the number of bits in the significand, including the hidden bit,
 and is equivalent to the <code class="docutils literal notranslate"><span class="pre">sb</span></code> parameter of the <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">FloatingPoint</span> <span class="pre">eb</span> <span class="pre">sb)</span></code> sort
 in the FloatingPoint SMT-LIB theory.</p>
@@ -146,7 +145,7 @@ appropriate value for <code class="docutils literal notranslate"><span class="pr
 of the <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">FloatingPoint</span> <span class="pre">eb</span> <span class="pre">sb)</span></code> sort as <code class="docutils literal notranslate"><span class="pre">exp</span> <span class="pre">=</span> <span class="pre">2^(eb</span> <span class="pre">-</span> <span class="pre">1)</span> <span class="pre">+</span> <span class="pre">sb</span> <span class="pre">-</span> <span class="pre">3</span></code>.</p>
 <p>The result of <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">prec</span> <span class="pre">exp)</span></code> is always of the form <code class="docutils literal notranslate"><span class="pre">(-1)^s</span> <span class="pre">*</span> <span class="pre">c</span> <span class="pre">*</span> <span class="pre">2^q</span></code>
 where <code class="docutils literal notranslate"><span class="pre">s</span></code> is a sign (<code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>), <code class="docutils literal notranslate"><span class="pre">c</span></code> is an integer with at most <code class="docutils literal notranslate"><span class="pre">prec</span> <span class="pre">-</span> <span class="pre">1</span></code>
-binary digits (i.e. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">c</span> <span class="pre">&lt;</span> <span class="pre">2^(prec</span> <span class="pre">-</span> <span class="pre">1)</span></code>) and <code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">&gt;=</span> <span class="pre">exp</span></code> is an integer.</p>
+binary digits (i.e. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">c</span> <span class="pre">&lt;</span> <span class="pre">2^(prec</span> <span class="pre">-</span> <span class="pre">1)</span></code>) and <code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">&gt;=</span> <span class="pre">-exp</span></code> is an integer.</p>
 <p>The following function symbols are provided as short synonyms for common
 floating point representations:</p>
 <ul class="simple">
@@ -155,6 +154,27 @@ floating point representations:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">ae.float64</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">53</span> <span class="pre">1074)</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ae.float128</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">113</span> <span class="pre">16494)</span></code></p></li>
 </ul>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
+<p>Input:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+<span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">|0.3f32|</span> <span class="kt">Real</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="k k-Builtin">ae.float32</span> <span class="n">RNE</span> <span class="mi">0</span><span class="n">.3</span><span class="p">)</span> <span class="n">|0.3f32|</span><span class="p">))</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">|0.3f16|</span> <span class="kt">Real</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="k k-Builtin">ae.float16</span> <span class="n">RNE</span> <span class="mi">0</span><span class="n">.3</span><span class="p">)</span> <span class="n">|0.3f16|</span><span class="p">))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">|0.3f32|</span> <span class="p">()</span> <span class="kt">Real</span> <span class="p">(</span><span class="n n-Operator">/</span> <span class="mi">5033165</span> <span class="mi">16777216</span><span class="p">))</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">|0.3f16|</span> <span class="p">()</span> <span class="kt">Real</span> <span class="p">(</span><span class="n n-Operator">/</span> <span class="mi">1229</span> <span class="mi">4096</span><span class="p">))</span>
+<span class="p">)</span>
+</pre></div>
+</div>
 <hr class="footnotes docutils" />
 <aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id3" role="doc-footnote">
@@ -167,6 +187,7 @@ floating point representations:</p>
 the flag <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code>.</p>
 </aside>
 </aside>
+</section>
 </section>
 </section>
 
