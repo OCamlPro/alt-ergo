@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User-defined types &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/js/versions.js?v=40211404"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Declaration of axioms" href="../03_declaration_of_axioms.html" />
+    <link rel="prev" title="Built-in types" href="02_01_builtin.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Alt-Ergo's native language</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../00_summary.html"> Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../01_declaration_of_symbols.html"> Declaration of symbols</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html"> Types</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html">Built-in types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#built-in-operators">Built-in operators</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#"> User-defined</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#abstract-types">Abstract types</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#syntax">Syntax</a></li>
+<li class="toctree-l5"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="#records">Records</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#id1">Syntax</a></li>
+<li class="toctree-l5"><a class="reference internal" href="#id2">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="#enums-and-algebraic-datatypes">Enums and Algebraic datatypes</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#id3">Examples</a></li>
+<li class="toctree-l5"><a class="reference internal" href="#id4">Syntax</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../03_declaration_of_axioms.html"> Declaration of axioms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../04_setting_goals.html"> Setting goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../05_theories.html"> Theories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../06_control_flow.html"> Control Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../07_syntax_of_declarations_and_expressions.html"> Syntax of declarations and expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Alt-Ergo’s native language</a></li>
+          <li class="breadcrumb-item"><a href="index.html">Types</a></li>
+      <li class="breadcrumb-item active">User-defined types</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="user-defined-types">
+<h1>User-defined types<a class="headerlink" href="#user-defined-types" title="Permalink to this heading"></a></h1>
+<p>By using the command <code class="docutils literal notranslate"><span class="pre">type</span></code>, the user can declare its own types.</p>
+<section id="abstract-types">
+<h2>Abstract types<a class="headerlink" href="#abstract-types" title="Permalink to this heading"></a></h2>
+<p>It is possible to create new uninterpreted types.
+They may be parametrized by one or several type variables, or be left non-parametrized.</p>
+<section id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">abstract_type_declaration</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="k">&#39;type&#39;</span> <span class="o">(</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">)</span><span class="err">?</span> <span class="o">&lt;</span><span class="n">type_id</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="k">&#39;</span><span class="o">(</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">)</span><span class="k">&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* New non-parametrized uninterpreted type *)</span>
+<span class="k">type</span> <span class="n">person</span>
+<span class="k">logic</span> <span class="n">Alice</span><span class="o">,</span> <span class="n">Bob</span><span class="o">:</span> <span class="n">person</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* New type parametrized by one type variable *)</span>
+<span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">list</span>
+
+<span class="k">logic</span> <span class="n">integer_lst</span><span class="o">:</span> <span class="kt">int</span> <span class="n">list</span>
+<span class="k">logic</span> <span class="n">boolean_lst</span><span class="o">:</span> <span class="kt">bool</span> <span class="n">list</span>
+<span class="k">logic</span> <span class="n">polymorphic_lst</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">list</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* New type parametrized by several type variables *)</span>
+<span class="k">type</span> <span class="o">(</span><span class="k">&#39;</span><span class="n">a</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">b</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">c</span><span class="o">)</span> <span class="n">t</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Axioms may be used to put constraints on user-defined types *)</span>
+<span class="k">type</span> <span class="n">t</span>
+<span class="k">type</span> <span class="n">list</span>
+
+<span class="k">logic</span> <span class="n">nil</span><span class="o">:</span> <span class="n">list</span>
+<span class="k">logic</span> <span class="n">cons</span><span class="o">:</span> <span class="n">t</span><span class="o">,</span> <span class="n">list</span> <span class="o">-&gt;</span> <span class="n">list</span>
+
+<span class="k">logic</span> <span class="n">hd</span><span class="o">:</span> <span class="n">list</span> <span class="o">-&gt;</span> <span class="n">t</span>
+<span class="k">logic</span> <span class="n">tl</span><span class="o">:</span> <span class="n">list</span> <span class="o">-&gt;</span> <span class="n">list</span>
+
+<span class="k">axiom</span> <span class="n">hd_cons</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="n">t</span><span class="o">.</span> <span class="k">forall</span> <span class="n">l</span><span class="o">:</span><span class="n">list</span><span class="o">.</span> <span class="n">hd</span> <span class="o">(</span><span class="n">cons</span><span class="o">(</span><span class="n">x</span><span class="o">,</span><span class="n">l</span><span class="o">))</span> <span class="o">=</span> <span class="n">x</span>
+<span class="k">axiom</span> <span class="n">tl_cons</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="n">t</span><span class="o">.</span> <span class="k">forall</span> <span class="n">l</span><span class="o">:</span><span class="n">list</span><span class="o">.</span> <span class="n">tl</span> <span class="o">(</span><span class="n">cons</span><span class="o">(</span><span class="n">x</span><span class="o">,</span><span class="n">l</span><span class="o">))</span> <span class="o">=</span> <span class="n">l</span>
+
+<span class="k">goal</span> <span class="n">g</span><span class="o">:</span>
+    <span class="k">forall</span> <span class="n">x</span><span class="o">,</span><span class="n">y</span><span class="o">:</span><span class="n">t</span><span class="o">.</span> <span class="n">hd</span><span class="o">(</span><span class="n">tl</span><span class="o">(</span><span class="n">cons</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="n">cons</span><span class="o">(</span><span class="n">y</span><span class="o">,</span> <span class="n">nil</span><span class="o">))))</span> <span class="o">=</span> <span class="n">y</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Another example on constraints on user-defined types, this time using polymorphism *)</span>
+<span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span>
+
+<span class="k">logic</span> <span class="n">empty</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span>
+<span class="k">logic</span> <span class="n">add</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span> <span class="o">-&gt;</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span>
+<span class="k">logic</span> <span class="n">mem</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span><span class="o">,</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span> <span class="o">-&gt;</span> <span class="k">prop</span>
+
+<span class="k">axiom</span> <span class="n">mem_empty</span><span class="o">:</span>
+    <span class="k">forall</span> <span class="n">x</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span><span class="o">.</span>
+    <span class="k">not</span> <span class="n">mem</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="n">empty</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span><span class="o">)</span>
+
+<span class="k">axiom</span> <span class="n">mem_add</span><span class="o">:</span>
+    <span class="k">forall</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span><span class="o">.</span> <span class="k">forall</span> <span class="n">s</span><span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">set</span><span class="o">.</span>
+    <span class="n">mem</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="n">add</span><span class="o">(</span><span class="n">y</span><span class="o">,</span> <span class="n">s</span><span class="o">))</span> <span class="o">&lt;-&gt;</span> <span class="o">(</span><span class="n">x</span> <span class="o">=</span> <span class="n">y</span> <span class="ow">or</span> <span class="n">mem</span><span class="o">(</span><span class="n">x</span><span class="o">,</span> <span class="n">s</span><span class="o">))</span>
+
+<span class="k">logic</span> <span class="n">is1</span><span class="o">,</span> <span class="n">is2</span><span class="o">:</span> <span class="kt">int</span> <span class="n">set</span>
+<span class="k">logic</span> <span class="n">iss</span><span class="o">:</span> <span class="kt">int</span> <span class="n">set</span> <span class="n">set</span>
+
+<span class="k">goal</span> <span class="n">g</span><span class="o">:</span>
+    <span class="n">is1</span> <span class="o">=</span> <span class="n">is2</span> <span class="o">-&gt;</span>
+    <span class="o">(</span><span class="k">not</span> <span class="n">mem</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="n">add</span><span class="o">(</span><span class="mi">2</span><span class="o">+</span><span class="mi">3</span><span class="o">,</span> <span class="n">empty</span> <span class="o">:</span> <span class="kt">int</span> <span class="n">set</span><span class="o">)))</span> <span class="ow">and</span>
+    <span class="n">mem</span> <span class="o">(</span><span class="n">is1</span><span class="o">,</span> <span class="n">add</span> <span class="o">(</span><span class="n">is2</span><span class="o">,</span> <span class="n">iss</span><span class="o">))</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="records">
+<h2>Records<a class="headerlink" href="#records" title="Permalink to this heading"></a></h2>
+<p>One way to create new types with structure is to create records.
+They hold several fields, which be accessed.</p>
+<section id="id1">
+<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Declaration of records *)</span>
+<span class="o">&lt;</span><span class="n">record_type_declaration</span><span class="o">&gt;</span>      <span class="o">::=</span> <span class="k">&#39;type&#39;</span> <span class="o">(</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">)</span><span class="err">?</span> <span class="o">&lt;</span><span class="n">type_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">=</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">record_type</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="k">&#39;</span><span class="o">(</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">;</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">)</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">record_type</span><span class="o">&gt;</span>                  <span class="o">::=</span> <span class="k">&#39;</span><span class="o">{</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_def</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_def</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">}</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">field_def</span><span class="o">&gt;</span>                    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">field_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">:</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_type</span><span class="o">&gt;</span>
+
+<span class="c">(* Access *)</span>
+<span class="o">&lt;</span><span class="n">record_access_expr</span><span class="o">&gt;</span>           <span class="o">::=</span> <span class="o">&lt;</span><span class="n">record_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">.</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_id</span><span class="o">&gt;</span>
+
+<span class="c">(* Inline record declaration *)</span>
+<span class="o">&lt;</span><span class="n">record_value</span><span class="o">&gt;</span>                 <span class="o">::=</span> <span class="k">&#39;</span><span class="o">{</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_value</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_value</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">}</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">field_value</span><span class="o">&gt;</span>                    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">field_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">=</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">value</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">sa_family_t</span>
+
+<span class="k">type</span> <span class="n">sockaddr</span> <span class="o">=</span> <span class="o">{</span>
+    <span class="n">sa_len</span><span class="o">:</span>    <span class="kt">int</span><span class="o">;</span>
+    <span class="n">sa_family</span><span class="o">:</span> <span class="n">sa_family_t</span><span class="o">;</span>
+    <span class="n">sa_data</span><span class="o">:</span>   <span class="k">bitv</span><span class="o">[</span><span class="mi">112</span><span class="o">]</span>
+<span class="o">}</span>
+
+<span class="k">logic</span> <span class="n">sa</span><span class="o">:</span>     <span class="n">sockaddr</span>
+<span class="k">axiom</span> <span class="n">sa_len</span><span class="o">:</span> <span class="n">sa</span><span class="o">.</span><span class="n">sa_len</span> <span class="o">=</span> <span class="mi">8</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">pair</span> <span class="o">=</span> <span class="o">{</span><span class="n">fst</span> <span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span> <span class="o">;</span> <span class="n">snd</span> <span class="o">:</span> <span class="k">&#39;</span><span class="n">a</span><span class="o">}</span>
+<span class="k">type</span> <span class="n">elt</span>
+  
+<span class="k">goal</span> <span class="n">g7</span><span class="o">:</span>
+    <span class="k">forall</span> <span class="n">x</span><span class="o">,</span><span class="n">y</span><span class="o">:</span><span class="kt">int</span><span class="o">.</span> <span class="o">{</span><span class="n">fst</span><span class="o">=</span><span class="n">x</span><span class="o">;</span> <span class="n">snd</span><span class="o">=</span><span class="n">y</span><span class="o">}.</span>
+    <span class="n">fst</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="enums-and-algebraic-datatypes">
+<h2>Enums and Algebraic datatypes<a class="headerlink" href="#enums-and-algebraic-datatypes" title="Permalink to this heading"></a></h2>
+<p>Algebraic datatypes (ADT) are a very powerful tool which allows Alt-Ergo to reason about generic, recursive data structures.</p>
+<p>It is possible to create enumerations, and to use records in order to construct (mutually) recursive structures and to add additionnal structures.</p>
+<section id="id3">
+<h3>Examples<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<ul>
+<li><p>When no recursion is involved, we usually talk of <em>enumerations</em>, or simply <em>enums</em>, which are the simplest examples of ADT.</p>
+<p><em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">poker_suit</span> <span class="o">=</span> <span class="n">diamond</span> <span class="o">|</span> <span class="n">club</span> <span class="o">|</span> <span class="n">heart</span> <span class="o">|</span> <span class="n">spade</span>
+</pre></div>
+</div>
+</li>
+<li><p>Records may be used in ADT to give additionnal structure.</p>
+<p><em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">and_infty</span> <span class="o">=</span> <span class="n">infty</span> <span class="o">|</span> <span class="n">number</span> <span class="k">of</span> <span class="o">{</span> <span class="n">x</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="o">}</span>
+</pre></div>
+</div>
+</li>
+<li><p>More complex examples involve recursion.</p>
+<p><em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">nat</span> <span class="o">=</span> <span class="n">zero</span> <span class="o">|</span> <span class="n">succ</span> <span class="k">of</span> <span class="o">{</span> <span class="n">x</span><span class="o">:</span><span class="n">nat</span> <span class="o">}</span>
+
+<span class="k">logic</span> <span class="n">one</span><span class="o">,</span><span class="n">two</span><span class="o">,</span><span class="n">three</span><span class="o">:</span><span class="n">nat</span>
+<span class="k">axiom</span> <span class="n">a</span><span class="o">:</span> <span class="n">one</span> <span class="o">=</span> <span class="n">succ</span><span class="o">(</span><span class="n">zero</span><span class="o">)</span> <span class="ow">and</span> <span class="n">two</span> <span class="o">=</span> <span class="n">succ</span><span class="o">(</span><span class="n">one</span><span class="o">)</span> <span class="ow">and</span> <span class="n">three</span> <span class="o">=</span> <span class="n">succ</span><span class="o">(</span><span class="n">two</span><span class="o">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>ADT may be parametrized.</p>
+<p><em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="o">=</span> <span class="n">NIL</span> <span class="o">|</span> <span class="n">Node</span> <span class="k">of</span> <span class="o">{</span> <span class="n">left</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="o">;</span> <span class="n">val</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span><span class="o">;</span> <span class="n">right</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="o">}</span>
+</pre></div>
+</div>
+</li>
+<li><p>It is possible to define mutually recursive structures by using the keyword <code class="docutils literal notranslate"><span class="pre">and</span></code>.</p>
+<p><em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span>  <span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span>   <span class="o">=</span> <span class="n">Empty</span> <span class="o">|</span> <span class="n">Node</span> <span class="k">of</span> <span class="o">{</span> <span class="n">val</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span><span class="o">;</span> <span class="n">children</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">forest</span> <span class="o">}</span>
+<span class="ow">and</span>   <span class="k">&#39;</span><span class="n">a</span> <span class="n">forest</span> <span class="o">=</span> <span class="n">Nil</span>   <span class="o">|</span> <span class="n">Cons</span> <span class="k">of</span> <span class="o">{</span> <span class="n">head</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="o">;</span> <span class="n">tail</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">forest</span> <span class="o">}</span>
+</pre></div>
+</div>
+</li>
+<li><p>ADT can be used like any type. Constructors can be called just as functions (if they are defined as records) or as constants (otherwise).
+<em>Example:</em></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="o">=</span> <span class="n">NIL</span> <span class="o">|</span> <span class="n">Node</span> <span class="k">of</span> <span class="o">{</span> <span class="n">left</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span><span class="o">;</span> <span class="n">val</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span><span class="o">;</span> <span class="n">right</span><span class="o">:</span><span class="k">&#39;</span><span class="n">a</span> <span class="n">tree</span> <span class="o">}</span>
+<span class="k">logic</span> <span class="n">t</span><span class="o">:</span><span class="kt">int</span> <span class="n">tree</span>
+<span class="k">axiom</span> <span class="n">a</span><span class="o">:</span> <span class="n">t</span><span class="o">=</span> <span class="n">Node</span><span class="o">(</span><span class="n">Node</span><span class="o">(</span><span class="n">NIL</span><span class="o">,</span><span class="mi">2</span><span class="o">,</span><span class="n">Node</span><span class="o">(</span><span class="n">NIL</span><span class="o">,</span><span class="mi">3</span><span class="o">,</span><span class="n">NIL</span><span class="o">)),</span><span class="mi">1</span><span class="o">,</span><span class="n">NIL</span><span class="o">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="id4">
+<h3>Syntax<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Declaration of ADT *)</span>
+<span class="o">&lt;</span><span class="n">algebraic_type_declaration</span><span class="o">&gt;</span>   <span class="o">::=</span> <span class="k">&#39;type&#39;</span> <span class="o">&lt;</span><span class="n">algebraic_type_definition</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="ow">and</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">algebraic_type_definition</span><span class="o">&gt;</span> <span class="o">)*</span>
+<span class="o">&lt;</span><span class="n">algebraic_type_definition</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="o">(</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">)</span><span class="err">?</span> <span class="o">&lt;</span><span class="n">type_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">=</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">abstract_type</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">type_variable_list_sep_comma</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="k">&#39;</span><span class="o">(</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">;</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">type_variable</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">)</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">abstract_type</span><span class="o">&gt;</span>                <span class="o">::=</span> <span class="o">&lt;</span><span class="n">constr</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">|</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">constr</span><span class="o">&gt;</span> <span class="o">)*</span>
+<span class="o">&lt;</span><span class="n">constr</span><span class="o">&gt;</span>                       <span class="o">::=</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;of&#39;</span> <span class="o">&lt;</span><span class="n">record_type</span><span class="o">&gt;</span> <span class="o">)</span><span class="err">?</span>
+<span class="o">&lt;</span><span class="n">record_type</span><span class="o">&gt;</span>                  <span class="o">::=</span> <span class="k">&#39;</span><span class="o">{</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">}</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">field</span><span class="o">&gt;</span>                        <span class="o">::=</span> <span class="o">&lt;</span><span class="n">field_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">:</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">field_type</span><span class="o">&gt;</span>
+
+<span class="c">(* ADT usage *)</span>
+<span class="c">(* TODO *)</span>
+</pre></div>
+</div>
+<p>Values of ADT can be created through the ADT’s constructors, with the same syntax as functions.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="02_01_builtin.html" class="btn btn-neutral float-left" title="Built-in types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../03_declaration_of_axioms.html" class="btn btn-neutral float-right" title="Declaration of axioms" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

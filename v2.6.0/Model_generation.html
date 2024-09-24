@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model generation &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/js/versions.js?v=40211404"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Optimization" href="Optimization.html" />
+    <link rel="prev" title="Syntax of declarations and expressions" href="Alt_ergo_native/07_syntax_of_declarations_and_expressions.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model generation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#activation">Activation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#correctness-of-model-generation">Correctness of model generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Model generation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="model-generation">
+<h1>Model generation<a class="headerlink" href="#model-generation" title="Permalink to this heading"></a></h1>
+<p>Alt-Ergo can generate best-effort models (also known as counter-examples in
+the program verification community) in the case it cannot conclude the
+unsatisfiability of the context.</p>
+<p>Model generation is supported in all input languages, but more functionality is
+available when using the SMT-LIB input language.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Generated models are always displayed using SMT-LIB syntax, even when using the
+native input language.</p>
+</div>
+<section id="activation">
+<h2>Activation<a class="headerlink" href="#activation" title="Permalink to this heading"></a></h2>
+<p>Model generation is disabled by default and needs to be enabled before being
+used. There are multiple ways to enable model generation:</p>
+<ul class="simple">
+<li><p>With the SMT-LIB language, using either <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code>
+in a script, or with the <code class="docutils literal notranslate"><span class="pre">--produce-model</span></code> option. This enables the use of
+the <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> command defined in the SMT-LIB standard.</p></li>
+<li><p>With the native language, using the <code class="docutils literal notranslate"><span class="pre">--dump-models</span></code> option. This will cause
+Alt-Ergo to automatically (try to) produce a model after each <code class="docutils literal notranslate"><span class="pre">check_sat</span></code>
+statement that returns <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">don't</span> <span class="pre">know</span></code>, and a counter-example after each
+<code class="docutils literal notranslate"><span class="pre">goal</span></code> statement that cannot be proven <code class="docutils literal notranslate"><span class="pre">Valid</span></code>.</p></li>
+</ul>
+</section>
+<section id="correctness-of-model-generation">
+<h2>Correctness of model generation<a class="headerlink" href="#correctness-of-model-generation" title="Permalink to this heading"></a></h2>
+<p>Alt-ergo’s model generation procedure is incomplete in the presence of
+quantifiers, and hence Alt-ergo only ever produces candidate models that are
+not guaranteed to satisfy all the assertions in the problem. <em>Ground</em>
+assertions (i.e. assertions that do not involve quantifiers) are guaranteed to
+hold in the models generated by Alt-ergo as long as they only include the
+following constructs:</p>
+<ul class="simple">
+<li><p>Boolean connectives;</p></li>
+<li><p>Algebraic data types (including records and enumerated types in the native
+language)</p></li>
+<li><p>The following integer and real primitives: addition, subtraction,
+multiplication, division, modulo, comparisons, and exponentiations <em>with an
+integer exponent</em></p></li>
+<li><p>Bit-vector primitives (concatenation, extraction, <code class="docutils literal notranslate"><span class="pre">bvadd</span></code>, <code class="docutils literal notranslate"><span class="pre">bvand</span></code>, <code class="docutils literal notranslate"><span class="pre">bvule</span></code>,
+etc.), including <code class="docutils literal notranslate"><span class="pre">bv2nat</span></code> and <code class="docutils literal notranslate"><span class="pre">int2bv</span></code></p></li>
+</ul>
+<p>Completeness for the following constructs is only guaranteed with certain
+command-line flags:</p>
+<ul class="simple">
+<li><p>Conversions operators from integers to reals <code class="docutils literal notranslate"><span class="pre">real_of_int</span></code> and <code class="docutils literal notranslate"><span class="pre">real_is_int</span></code>
+require the <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code> flag</p></li>
+<li><p>Floating-point primitives (<code class="docutils literal notranslate"><span class="pre">ae.round</span></code>, <code class="docutils literal notranslate"><span class="pre">ae.float32</span></code> etc. in the SMT-LIB
+language; <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">float32</span></code> and <code class="docutils literal notranslate"><span class="pre">float64</span></code> in the native language) require
+the <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">fpa</span></code> flag</p></li>
+</ul>
+<p>Model generation is known to be sometimes incomplete in the presence of arrays,
+and is incomplete for the <code class="docutils literal notranslate"><span class="pre">integer_round</span></code> function.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Using the native language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.ae</span></code>:</p></li>
+</ul>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="n">logic</span> <span class="n">a</span><span class="err">,</span> <span class="n">b</span><span class="err">,</span> <span class="n">c</span> <span class="err">:</span> <span class="n">int</span>
+  <span class="n">axiom</span> <span class="n">A</span> <span class="err">:</span> <span class="n">a</span> <span class="n">&lt;&gt;</span> <span class="n">c</span>
+
+  <span class="n">check_sat</span> <span class="n">c1</span><span class="err">:</span> <span class="n">a</span> <span class="n n-Operator">=</span> <span class="n">b</span> <span class="n n-Operator">+</span> <span class="n">c</span>
+  <span class="n">check_sat</span> <span class="n">c2</span><span class="err">:</span> <span class="n">a</span> <span class="n">&lt;&gt;</span> <span class="n">b</span>
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--dump-models</span> <span class="pre">INPUT.ae</span></code>, Alt-Ergo produces the
+output models:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="o">;</span> <span class="n">Model</span> <span class="n">for</span> <span class="n">c1</span>
+  <span class="o">(</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
+  <span class="o">)</span>
+  <span class="n">I</span> <span class="n">don&#39;t</span> <span class="n">known</span>
+
+  <span class="o">;</span> <span class="n">Model</span> <span class="n">for</span> <span class="n">c2</span>
+  <span class="o">(</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">a</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">2</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">b</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
+    <span class="o">(</span><span class="n">define</span><span class="o">-</span><span class="n">fun</span> <span class="n">c</span> <span class="o">()</span> <span class="n">Int</span> <span class="mi">0</span><span class="o">)</span>
+  <span class="o">)</span>
+  <span class="n">I</span> <span class="n">don&#39;t</span> <span class="n">known</span>
+</pre></div>
+</div>
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>In this example the model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c2</span></code> is not a
+model for the statement <code class="docutils literal notranslate"><span class="pre">check_sat</span> <span class="pre">c1</span></code> since <code class="docutils literal notranslate"><span class="pre">check_sat</span></code> are independent in
+the native language. The same goes for <code class="docutils literal notranslate"><span class="pre">goals</span></code>.</p>
+</div>
+<ul class="simple">
+<li><p>Using the SMT-LIB language in the input file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p></li>
+</ul>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">declare-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="n">a</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+  <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+
+  <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">distinct</span> <span class="n">a</span> <span class="n">b</span><span class="p">))</span>
+  <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">--produce-models</span> <span class="pre">INPUT.smt2</span></code> produces the output</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span>  <span class="n">unknown</span>
+  <span class="p">(</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">define-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">unknown</span>
+</pre></div>
+</div>
+<div class="admonition-note admonition">
+<p class="admonition-title">Note</p>
+<p>There is no model printed after the second <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> since we
+don’t demand it with the statement <code class="docutils literal notranslate"><span class="pre">(get-model)</span></code>.</p>
+</div>
+<ul class="simple">
+<li><p>Alternatively, using the statement <code class="docutils literal notranslate"><span class="pre">(set-option</span> <span class="pre">:produce-models</span> <span class="pre">true)</span></code></p></li>
+</ul>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span> <span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">declare-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span><span class="p">)</span>
+
+ <span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="n">a</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">b</span> <span class="n">c</span><span class="p">)))</span>
+ <span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+ <span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and the command <code class="docutils literal notranslate"><span class="pre">alt-ergo</span> <span class="pre">INPUT.smt2</span></code> produces
+the output model</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">a</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">b</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">c</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>As a more didactic example, let us imagine while checking the loop invariant
+in the pseudocode below:</p></li>
+</ul>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+  <span class="n">invariant</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+<span class="n">do</span>
+  <span class="n">i</span> <span class="o">:=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">done</span>
+</pre></div>
+</div>
+<p>we got the SMT-LIB file <code class="docutils literal notranslate"><span class="pre">INPUT.smt2</span></code>:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">i</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">and</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="k k-Builtin">not</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Execute the command</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">alt-ergo --produce-models INPUT.smt2</span>
+</pre></div>
+</div>
+<p>We got the output</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="c1">; File &quot;INPUT.smt2&quot;, line 4, characters 1-12: I don&#39;t know (0.6689) (2 steps) (goal g_1)</span>
+
+<span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">i</span> <span class="p">()</span> <span class="kt">Int</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Alt-Ergo tells us that the <code class="docutils literal notranslate"><span class="pre">(check-sat)</span></code> could succeed with <code class="docutils literal notranslate"><span class="pre">i</span> <span class="pre">=</span> <span class="pre">4</span></code>. Indeed,
+the loop invariant isn’t preserved during the last iteration of the loop and
+the context is satisfiable. Let’s fix our specification as follows:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">5</span>
+    <span class="n">invariant</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">i</span> <span class="o">&lt;=</span> <span class="mi">5</span>
+<span class="n">do</span>
+    <span class="n">i</span> <span class="o">:=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="k">end</span>
+</pre></div>
+</div>
+<p>and fix our SMT-LIB input accordingly:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">i</span> <span class="kt">Int</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="k k-Builtin">and</span> <span class="p">(</span><span class="n n-Operator">&lt;</span> <span class="n">i</span> <span class="mi">5</span><span class="p">)</span> <span class="p">(</span><span class="k k-Builtin">not</span> <span class="p">(</span><span class="n n-Operator">&lt;=</span> <span class="p">(</span><span class="n n-Operator">+</span> <span class="n">i</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">5</span><span class="p">))))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Running the very same command, we got the expected output:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">;</span> <span class="n">File</span> <span class="s2">&quot;INPUT.smt2&quot;</span><span class="o">,</span> <span class="n">line</span> <span class="mi">4</span><span class="o">,</span> <span class="n">characters</span> <span class="mi">1</span><span class="o">-</span><span class="mi">12</span><span class="o">:</span> <span class="n">Valid</span> <span class="o">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">5347</span><span class="o">)</span> <span class="o">(</span><span class="mi">1</span> <span class="n">steps</span><span class="o">)</span> <span class="o">(</span><span class="k">goal</span> <span class="n">g_1</span><span class="o">)</span>
+
+<span class="n">unsat</span>
+<span class="o">(</span><span class="n">error</span> <span class="s2">&quot;No model produced.&quot;</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>Our invariant is valid!</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Alt_ergo_native/07_syntax_of_declarations_and_expressions.html" class="btn btn-neutral float-left" title="Syntax of declarations and expressions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Optimization.html" class="btn btn-neutral float-right" title="Optimization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

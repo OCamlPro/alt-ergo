@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Declaration of axioms &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/js/versions.js?v=40211404"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Setting goals" href="04_setting_goals.html" />
+    <link rel="prev" title="User-defined types" href="02_types/02_02_user_defined.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alt-Ergo's native language</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_summary.html"> Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_declaration_of_symbols.html"> Declaration of symbols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_types/index.html"> Types</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"> Declaration of axioms</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#axiom"><code class="docutils literal notranslate"><span class="pre">axiom</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#syntax">Syntax</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#triggers">Triggers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Syntax</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#rewriting"><code class="docutils literal notranslate"><span class="pre">rewriting</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Syntax</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="04_setting_goals.html"> Setting goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_theories.html"> Theories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_control_flow.html"> Control Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_syntax_of_declarations_and_expressions.html"> Syntax of declarations and expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alt-Ergo’s native language</a></li>
+      <li class="breadcrumb-item active">Declaration of axioms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="declaration-of-axioms">
+<h1>Declaration of axioms<a class="headerlink" href="#declaration-of-axioms" title="Permalink to this heading"></a></h1>
+<p>Axioms may be used to state facts which can be used by the solver.</p>
+<p>Alt-Ergo handles universal formula through an instantiation mechanism. In other words, any formula containing <code class="docutils literal notranslate"><span class="pre">forall</span> <span class="pre">x:t.</span></code> must be instantiated for a specific <code class="docutils literal notranslate"><span class="pre">x</span></code> before it can be used.
+The heuristic for choosing new instances is based on <em>triggers</em>. By default, triggers are automatically chosen by Alt-Ergo, but it is also possible for the user to specify its own triggers (for improved efficiency in using those axioms).</p>
+<section id="axiom">
+<h2><code class="docutils literal notranslate"><span class="pre">axiom</span></code><a class="headerlink" href="#axiom" title="Permalink to this heading"></a></h2>
+<p>In order to declare an axiom, the user can use the following construct.
+Note that axioms must always be named.</p>
+<section id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">axiom_declaration</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="k">&#39;axiom&#39;</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">:</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">axiom_body</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Here, <code class="docutils literal notranslate"><span class="pre">&lt;axiom_body&gt;</span></code> is an expression which may contain quantifiers, and where user-specified triggers may be added to universal quantifiers.</p>
+</section>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Axioms can be used without quantifiers *)</span>
+<span class="k">logic</span> <span class="n">x</span><span class="o">:</span><span class="k">bitv</span><span class="o">[</span><span class="mi">4</span><span class="o">]</span>
+<span class="k">logic</span> <span class="n">y</span><span class="o">,</span><span class="n">z</span><span class="o">:</span><span class="kt">int</span>
+
+<span class="k">axiom</span> <span class="n">a1</span><span class="o">:</span> <span class="n">x</span><span class="o">^{</span><span class="mi">0</span><span class="o">,</span><span class="mi">1</span><span class="o">}=[|</span><span class="mi">11</span><span class="o">|]</span>
+<span class="k">axiom</span> <span class="n">a2</span><span class="o">:</span> <span class="n">y</span><span class="o">=</span><span class="mi">3</span> <span class="ow">and</span> <span class="n">z</span><span class="o">&lt;</span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Simple example with an universal quantifier *)</span>
+<span class="k">logic</span> <span class="n">f</span><span class="o">:</span><span class="kt">int</span><span class="o">-&gt;</span><span class="kt">int</span>
+<span class="k">axiom</span> <span class="n">f_pos</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="kt">int</span><span class="o">.</span> <span class="n">f</span><span class="o">(</span><span class="n">x</span><span class="o">)&gt;=</span><span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="triggers">
+<h2>Triggers<a class="headerlink" href="#triggers" title="Permalink to this heading"></a></h2>
+<p>The heuristic used by Alt-Ergo to partially handle quantified formula relies on triggers.</p>
+<p>A  trigger  is  a  list  of patterns that restrict instantiation to known (ground) terms that have a given form. For instance, if <code class="docutils literal notranslate"><span class="pre">P(x)</span></code> is used as an instantiation pattern for the following axiom <code class="docutils literal notranslate"><span class="pre">ax1</span></code></p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">logic</span> <span class="n">P</span><span class="o">,</span><span class="n">Q</span><span class="o">,</span><span class="n">R</span> <span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="k">prop</span>
+<span class="k">axiom</span> <span class="n">ax1</span> <span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="kt">int</span><span class="o">.</span> <span class="o">(</span><span class="n">P</span><span class="o">(</span><span class="n">x</span><span class="o">)</span> <span class="ow">or</span> <span class="n">Q</span><span class="o">(</span><span class="n">x</span><span class="o">))</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="n">x</span><span class="o">)</span>
+<span class="k">goal</span> <span class="n">g1</span> <span class="o">:</span> <span class="n">P</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+<span class="k">goal</span> <span class="n">g2</span> <span class="o">:</span> <span class="n">Q</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>then,  among  the  set <code class="docutils literal notranslate"><span class="pre">{P(1),</span> <span class="pre">R(1),</span> <span class="pre">Q(2),</span> <span class="pre">R(2)}</span></code> of  known  terms, only <code class="docutils literal notranslate"><span class="pre">P(1)</span></code> can be used by the matching algorithm to create the instance <code class="docutils literal notranslate"><span class="pre">((P(1)</span> <span class="pre">or</span> <span class="pre">Q(1))</span> <span class="pre">-&gt;</span> <span class="pre">R(1)</span></code> of <code class="docutils literal notranslate"><span class="pre">ax1</span></code> , which implies that only <code class="docutils literal notranslate"><span class="pre">g1</span></code> is proved.</p>
+<p>A good choice of triggers is crucial. With too few triggers, or with irrelevant triggers, true things won’t be proven. With too many triggers, too many instances will be created, and Alt-Ergo will spend its time in irrelevant branches of the search space.</p>
+<p>Triggers are automatically generated by Alt-Ergo, but Alt-Ergo’s native language also allows the user to specify its own triggers.</p>
+<p>Triggers are separated in ‘syntactic triggers’ (or simply ‘triggers’) and ‘interval triggers’ (or ‘filters’).
+Syntactic triggers are matched <em>modulo equality</em>: an instance of the axiom will be created whenever a known term matches this pattern <em>modulo equality</em>.
+Interval triggers further restrict instantiation of axioms, and check that variables are within intervals.</p>
+<p>Multiple patterns can be used in syntactic triggers. They are separated by <code class="docutils literal notranslate"><span class="pre">|</span></code> which means ‘or’ and by <code class="docutils literal notranslate"><span class="pre">,</span></code> which means ‘and’. <code class="docutils literal notranslate"><span class="pre">|</span></code> has an higher precedence than <code class="docutils literal notranslate"><span class="pre">,</span></code>.</p>
+<section id="id1">
+<h3>Syntax<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">quantified_formula</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">quantifier</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">var_id_list_sep_comma</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">:</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">var_type</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">syntactic_triggers</span><span class="o">&gt;</span><span class="err">?</span> <span class="o">&lt;</span><span class="n">interval_triggers</span><span class="o">&gt;</span><span class="err">?</span> <span class="k">&#39;</span><span class="o">.</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">quantifier</span><span class="o">&gt;</span>            <span class="o">::=</span> <span class="k">&#39;exists&#39;</span> <span class="o">|</span> <span class="k">&#39;forall&#39;</span>
+<span class="o">&lt;</span><span class="n">var_id_list_sep_comma</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="o">)*</span>
+<span class="o">&lt;</span><span class="n">syntactic_triggers</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="k">&#39;</span><span class="o">[</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">trigger</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">|</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">trigger</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">]</span><span class="k">&#39;</span>
+<span class="o">&lt;</span><span class="n">trigger</span><span class="o">&gt;</span>               <span class="o">::=</span> <span class="o">&lt;</span><span class="n">pattern</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">pattern</span><span class="o">&gt;</span> <span class="o">)*</span>
+</pre></div>
+</div>
+<p>Interval triggers also exists. [TODO: add more explanations]</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">interval_triggers</span><span class="o">&gt;</span>     <span class="o">::=</span> <span class="k">&#39;</span><span class="o">[</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">filter</span><span class="o">&gt;</span> <span class="o">(</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">filter</span><span class="o">&gt;</span> <span class="o">)*</span> <span class="k">&#39;</span><span class="o">]</span><span class="k">&#39;</span>
+<span class="c">(* According to p.12 of https://hal.inria.fr/hal-01522770/document. This doesn&#39;t seem to work *)</span>
+<span class="o">&lt;</span><span class="n">filter</span><span class="o">&gt;</span>                <span class="o">::=</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">rel</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">term</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">rel</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span>                 <span class="o">::=</span> <span class="o">&lt;</span><span class="n">numerical_constant</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">quantified</span> <span class="n">variable</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">rel</span><span class="o">&gt;</span>                   <span class="o">::=</span> <span class="k">&#39;</span><span class="o">&lt;</span><span class="k">&#39;</span> <span class="o">|</span> <span class="k">&#39;</span><span class="o">&lt;=</span><span class="k">&#39;</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="05_theories.html#semantic-triggers"><span class="std std-ref">Semantic triggers</span></a> are only available in theories</p>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* P(x) used as the only trigger *)</span>
+<span class="k">logic</span> <span class="n">P</span><span class="o">,</span><span class="n">Q</span><span class="o">,</span><span class="n">R</span><span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="k">prop</span>
+<span class="k">axiom</span> <span class="n">ax1</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="kt">int</span> <span class="o">[</span><span class="n">P</span><span class="o">(</span><span class="n">x</span><span class="o">)].</span> <span class="o">(</span><span class="n">P</span><span class="o">(</span><span class="n">x</span><span class="o">)</span> <span class="ow">or</span> <span class="n">Q</span><span class="o">(</span><span class="n">x</span><span class="o">))</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="n">x</span><span class="o">)</span>
+<span class="k">goal</span> <span class="n">g1</span><span class="o">:</span> <span class="n">P</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span>
+<span class="k">goal</span> <span class="n">g2</span><span class="o">:</span> <span class="n">Q</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+</pre></div>
+</div>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Several triggers available *)</span>
+<span class="k">logic</span> <span class="n">P</span><span class="o">,</span> <span class="n">Q</span><span class="o">,</span> <span class="n">R</span><span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="k">prop</span>
+<span class="k">logic</span> <span class="n">f</span><span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="kt">int</span>
+<span class="k">axiom</span> <span class="n">ax2</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">,</span><span class="n">y</span><span class="o">:</span><span class="kt">int</span> <span class="o">[</span><span class="n">f</span><span class="o">(</span><span class="n">x</span><span class="o">),</span> <span class="n">Q</span><span class="o">(</span><span class="n">y</span><span class="o">)].</span> <span class="n">P</span><span class="o">(</span><span class="n">f</span><span class="o">(</span><span class="n">x</span><span class="o">))</span> <span class="ow">and</span> <span class="n">Q</span><span class="o">(</span><span class="n">y</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="n">x</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>In the following example, no ground term match <code class="docutils literal notranslate"><span class="pre">P(f(x))</span></code>, but the instance <code class="docutils literal notranslate"><span class="pre">P(f(2))</span></code> of axiom <code class="docutils literal notranslate"><span class="pre">ax</span></code> is generated by combining the ground equality <code class="docutils literal notranslate"><span class="pre">a=f(2)</span></code> and the ground term <code class="docutils literal notranslate"><span class="pre">P(a)</span></code>.</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="c">(* Matching occurs modulo equality *)</span>
+<span class="k">logic</span> <span class="n">P</span><span class="o">,</span> <span class="n">R</span><span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="k">prop</span>
+<span class="k">logic</span> <span class="n">f</span><span class="o">:</span> <span class="kt">int</span> <span class="o">-&gt;</span> <span class="kt">int</span>
+<span class="k">axiom</span> <span class="n">ax</span><span class="o">:</span> <span class="k">forall</span> <span class="n">x</span><span class="o">:</span><span class="kt">int</span> <span class="o">[</span><span class="n">P</span><span class="o">(</span><span class="n">f</span><span class="o">(</span><span class="n">x</span><span class="o">))].</span> <span class="n">P</span><span class="o">(</span><span class="n">f</span><span class="o">(</span><span class="n">x</span><span class="o">))</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="n">x</span><span class="o">)</span>
+<span class="k">goal</span> <span class="n">g1</span><span class="o">:</span> <span class="k">forall</span> <span class="n">a</span><span class="o">:</span><span class="kt">int</span><span class="o">.</span> <span class="n">P</span><span class="o">(</span><span class="n">a</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">f</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="rewriting">
+<h2><code class="docutils literal notranslate"><span class="pre">rewriting</span></code><a class="headerlink" href="#rewriting" title="Permalink to this heading"></a></h2>
+<p>The decision procedures at the heart of Alt-Ergo are mainly based on rewriting techniques.</p>
+<p>To add a new axiom directly in the form of a rewriting technique, the keyword <code class="docutils literal notranslate"><span class="pre">rewriting</span></code> can be used.</p>
+<p>[TODO: complete]</p>
+<section id="id2">
+<h3>Syntax<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">rewriting_declaraction</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="k">&#39;rewriting&#39;</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">:</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">predicate_list_sep_pv</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">predicate_list_sep_pv</span><span class="o">&gt;</span>  <span class="o">::=</span> <span class="o">&lt;</span><span class="k">predicate</span><span class="o">&gt;</span> <span class="o">(</span><span class="k">&#39;</span><span class="o">;</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">predicate_list_sep_pv</span><span class="o">&gt;</span><span class="err">?</span> <span class="o">)</span><span class="err">?</span> 
+<span class="c">(* pre-written objects of type predicate can be used, as well as expressions that can be interpreted as predicates *)</span> 
+<span class="o">&lt;</span><span class="k">predicate</span><span class="o">&gt;</span>              <span class="o">::=</span> <span class="o">&lt;</span><span class="n">predicate_expr</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">predicate_id</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>Example<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<p>[TODO: find relevant examples]</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="02_types/02_02_user_defined.html" class="btn btn-neutral float-left" title="User-defined types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="04_setting_goals.html" class="btn btn-neutral float-right" title="Setting goals" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

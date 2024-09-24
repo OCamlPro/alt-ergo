@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMT-LIB language &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/js/versions.js?v=40211404"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Alt-Ergo’s native language" href="../Alt_ergo_native/index.html" />
+    <link rel="prev" title="Usage" href="../Usage/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SMT-LIB language</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bit-vectors">Bit-vectors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#floating-point-arithmetic">Floating-Point Arithmetic</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SMT-LIB language</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="smt-lib-language">
+<h1>SMT-LIB language<a class="headerlink" href="#smt-lib-language" title="Permalink to this heading"></a></h1>
+<p>Since version 2.5.0, Alt-Ergo supports the
+<a class="reference external" href="https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf">SMT-LIB</a>
+language from the SMT community. This support is enabled by the
+<a class="reference external" href="http://gbury.github.io/dolmen/">Dolmen</a> library.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In version 2.5.x, the <code class="docutils literal notranslate"><span class="pre">--frontend</span> <span class="pre">dolmen</span></code> option is required to get full
+SMT-LIB support. Starting from version 2.6.0, this option became the default
+and is no longer necessary.</p>
+</div>
+<p>Alt-Ergo supports the following SMT-LIB <a class="reference external" href="https://smt-lib.org/theories.shtml">theories</a>:</p>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://smt-lib.org/theories-Core.shtml">Core</a> theory of booleans.</p></li>
+<li><p>The <a class="reference external" href="https://smt-lib.org/theories-ArraysEx.shtml">ArraysEx</a> theory of
+functional arrays with extensionality.</p></li>
+<li><p>The
+<a class="reference external" href="https://smt-lib.org/theories-FixedSizeBitVectors.shtml">FixedSizeBitVectors</a>
+theory of bit-vectors (since version 2.5.0).</p></li>
+<li><p>The <a class="reference external" href="https://smt-lib.org/theories-Ints.shtml">Ints</a> theory of integers<a class="footnote-reference brackets" href="#id3" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p></li>
+<li><p>The <a class="reference external" href="https://smt-lib.org/theories-Reals.shtml">Reals</a> theory of real numbers.</p></li>
+<li><p>The <a class="reference external" href="https://smt-lib.org/theories-Reals_Ints.shtml">Reals_Ints</a> theory of
+real and integer numbers<a class="footnote-reference brackets" href="#id4" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p></li>
+</ul>
+<section id="bit-vectors">
+<h2>Bit-vectors<a class="headerlink" href="#bit-vectors" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo supports the <code class="docutils literal notranslate"><span class="pre">FixedSizeBitVectors</span></code> theory, as well as the additional
+symbols from the <code class="docutils literal notranslate"><span class="pre">QF_BV</span></code> and <code class="docutils literal notranslate"><span class="pre">BV</span></code> logics.</p>
+<p>The non-standard symbols <code class="docutils literal notranslate"><span class="pre">bv2nat</span></code> and <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">int2bv</span> <span class="pre">n)</span></code> (where <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">&gt;</span> <span class="pre">0</span></code> is a natural number representing the target bit-vector size) for conversion
+between integers and bit-vectors are supported.</p>
+</section>
+<section id="floating-point-arithmetic">
+<h2>Floating-Point Arithmetic<a class="headerlink" href="#floating-point-arithmetic" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo does not currently support the <code class="docutils literal notranslate"><span class="pre">FloatingPoint</span></code> SMT-LIB theory.
+Instead, Alt-Ergo implements the second and third layers described in the paper
+“<a class="reference external" href="https://inria.hal.science/hal-01522770">A Three-tier Strategy for Reasoning about Floating-Point Numbers in
+SMT</a>” by Conchon et al.</p>
+<p>Alt-Ergo provides the rounding function described in the paper by making
+available all functions symbols with declarations of the form below, where
+<code class="docutils literal notranslate"><span class="pre">prec</span></code> and <code class="docutils literal notranslate"><span class="pre">exp</span></code> are numerals greater than 1 and <code class="docutils literal notranslate"><span class="pre">RoundingMode</span></code> is defined in
+the FloatingPoint SMT-LIB theory.</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">((</span><span class="k">_</span> <span class="k k-Builtin">ae.round</span> <span class="n">prec</span> <span class="n">exp</span><span class="p">)</span> <span class="kt">RoundingMode</span> <span class="kt">Real</span> <span class="kt">Real</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">prec</span></code> defines the number of bits in the significand, including the hidden bit,
+and is equivalent to the <code class="docutils literal notranslate"><span class="pre">sb</span></code> parameter of the <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">FloatingPoint</span> <span class="pre">eb</span> <span class="pre">sb)</span></code> sort
+in the FloatingPoint SMT-LIB theory.</p>
+<p><code class="docutils literal notranslate"><span class="pre">exp</span></code> defines the absolute value of the exponent of the smallest representable
+positive number (this is not the same as the <code class="docutils literal notranslate"><span class="pre">emin</span></code> value defined in IEEE-754,
+which is the minimum exponent of the smallest <em>normal</em> positive number). An
+appropriate value for <code class="docutils literal notranslate"><span class="pre">exp</span></code> can be computed from the <code class="docutils literal notranslate"><span class="pre">eb</span></code> and <code class="docutils literal notranslate"><span class="pre">sb</span></code> parameters
+of the <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">FloatingPoint</span> <span class="pre">eb</span> <span class="pre">sb)</span></code> sort as <code class="docutils literal notranslate"><span class="pre">exp</span> <span class="pre">=</span> <span class="pre">2^(eb</span> <span class="pre">-</span> <span class="pre">1)</span> <span class="pre">+</span> <span class="pre">sb</span> <span class="pre">-</span> <span class="pre">3</span></code>.</p>
+<p>The result of <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">prec</span> <span class="pre">exp)</span></code> is always of the form <code class="docutils literal notranslate"><span class="pre">(-1)^s</span> <span class="pre">*</span> <span class="pre">c</span> <span class="pre">*</span> <span class="pre">2^q</span></code>
+where <code class="docutils literal notranslate"><span class="pre">s</span></code> is a sign (<code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>), <code class="docutils literal notranslate"><span class="pre">c</span></code> is an integer with at most <code class="docutils literal notranslate"><span class="pre">prec</span> <span class="pre">-</span> <span class="pre">1</span></code>
+binary digits (i.e. <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">&lt;=</span> <span class="pre">c</span> <span class="pre">&lt;</span> <span class="pre">2^(prec</span> <span class="pre">-</span> <span class="pre">1)</span></code>) and <code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">&gt;=</span> <span class="pre">-exp</span></code> is an integer.</p>
+<p>The following function symbols are provided as short synonyms for common
+floating point representations:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ae.float16</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">11</span> <span class="pre">24)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ae.float32</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">24</span> <span class="pre">149)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ae.float64</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">53</span> <span class="pre">1074)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ae.float128</span></code> is a synonym for <code class="docutils literal notranslate"><span class="pre">(_</span> <span class="pre">ae.round</span> <span class="pre">113</span> <span class="pre">16494)</span></code></p></li>
+</ul>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h3>
+<p>Input:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="k">set-option</span> <span class="ss">:produce-models</span> <span class="no">true</span><span class="p">)</span>
+<span class="p">(</span><span class="k">set-logic</span> <span class="n">ALL</span><span class="p">)</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">|0.3f32|</span> <span class="kt">Real</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="k k-Builtin">ae.float32</span> <span class="n">RNE</span> <span class="mi">0</span><span class="n">.3</span><span class="p">)</span> <span class="n">|0.3f32|</span><span class="p">))</span>
+<span class="p">(</span><span class="k">declare-const</span> <span class="n">|0.3f16|</span> <span class="kt">Real</span><span class="p">)</span>
+<span class="p">(</span><span class="k">assert</span> <span class="p">(</span><span class="n n-Operator">=</span> <span class="p">(</span><span class="k k-Builtin">ae.float16</span> <span class="n">RNE</span> <span class="mi">0</span><span class="n">.3</span><span class="p">)</span> <span class="n">|0.3f16|</span><span class="p">))</span>
+<span class="p">(</span><span class="k">check-sat</span><span class="p">)</span>
+<span class="p">(</span><span class="k">get-model</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-smt-lib notranslate"><div class="highlight"><pre><span></span><span class="n">unknown</span>
+<span class="p">(</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">|0.3f32|</span> <span class="p">()</span> <span class="kt">Real</span> <span class="p">(</span><span class="n n-Operator">/</span> <span class="mi">5033165</span> <span class="mi">16777216</span><span class="p">))</span>
+  <span class="p">(</span><span class="k">define-fun</span> <span class="n">|0.3f16|</span> <span class="p">()</span> <span class="kt">Real</span> <span class="p">(</span><span class="n n-Operator">/</span> <span class="mi">1229</span> <span class="mi">4096</span><span class="p">))</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<hr class="footnotes docutils" />
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>The <code class="docutils literal notranslate"><span class="pre">abs</span></code> primitive is incomplete without the flag <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code>.</p>
+</aside>
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>The <code class="docutils literal notranslate"><span class="pre">to_real</span></code>, <code class="docutils literal notranslate"><span class="pre">to_int</span></code>, <code class="docutils literal notranslate"><span class="pre">is_int</span></code> and <code class="docutils literal notranslate"><span class="pre">abs</span></code> primitives are incomplete without
+the flag <code class="docutils literal notranslate"><span class="pre">--enable-theories</span> <span class="pre">ria</span></code>.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../Usage/index.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../Alt_ergo_native/index.html" class="btn btn-neutral float-right" title="Alt-Ergo’s native language" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

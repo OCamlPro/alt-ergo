@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contributing &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/js/versions.js?v=40211404"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="About" href="../About/index.html" />
+    <link rel="prev" title="Project Architecture" href="architecture.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Developer's documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="architecture.html">Project Architecture</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Contributing guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#foreword">Foreword</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#legal-guidelines">Legal Guidelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#develop-with-nix">Develop with Nix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#release-process">Release Process</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#make-a-pr-for-the-release">Make a PR for the release</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#update-documentation">Update documentation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#run-benchmarks">Run benchmarks</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#prepare-an-announcement">Prepare an announcement</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#make-the-release">Make the release</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Developer’s documentation</a></li>
+      <li class="breadcrumb-item active">Contributing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="contributing">
+<h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading"></a></h1>
+<section id="foreword">
+<h2>Foreword<a class="headerlink" href="#foreword" title="Permalink to this heading"></a></h2>
+<p>This guide is intended to as best as possible reflect the current state of the processes and tools used in the development of Alt-Ergo. It may get stale or outdated from time to time: if you notice anything incorrect or that otherwise no longer applies in this guide, please signal it in an issue or fix it in a pull request. If you find it unclear or imprecise on certain points, please open an issue as well so that we can try to make it better.</p>
+</section>
+<section id="pull-request-guidelines">
+<h2>Pull Request Guidelines<a class="headerlink" href="#pull-request-guidelines" title="Permalink to this heading"></a></h2>
+<p>External contributions to Alt-Ergo may be proposed using git’s standard pull request mechanism from your <code class="docutils literal notranslate"><span class="pre">base</span></code> branch to our <code class="docutils literal notranslate"><span class="pre">target</span></code> one ( <code class="docutils literal notranslate"><span class="pre">next</span></code> by default).
+The following terms apply to all such contributions:</p>
+<ul>
+<li><p>We require all pull requests to pass :</p>
+<ul class="simple">
+<li><p>Our non regression suite, you can run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">runtest</span></code> to check if your changes affect the performance and answers of Alt-Ergo.</p></li>
+<li><p>Our style checking, every lines should length 80 columns maximum and should be indent with ocp-indent.
+We strongly recommand to use the following command line so the indent and style checking will be done automatically when commiting.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">rsc/extra/pre-commit-git-hook</span> <span class="pre">.git/hooks/pre-commit</span></code></p>
+</li>
+<li><p>Pull request should be rebased and up to date from the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch to be merged.</p></li>
+<li><p>All commits will be squashed into one when merged into the <code class="docutils literal notranslate"><span class="pre">base</span></code> branch. A PR with only one commit is appreciated if the modification are minimal. Else, we ask for a clean commit history with relevant messages since it facilitates the review.</p></li>
+</ul>
+</section>
+<section id="legal-guidelines">
+<h2>Legal Guidelines<a class="headerlink" href="#legal-guidelines" title="Permalink to this heading"></a></h2>
+<p>In addition to agreeing to the terms of the Alt-Ergo’s <a class="reference internal" href="../About/license.html"><span class="doc std std-doc">License</span></a>, we ask our contributors to sign the <a class="reference external" href="https://www.ocamlpro.com/files/CLA-OCamlPro-corporate.txt">Contributor License Agreement (CLA)</a>.</p>
+</section>
+<section id="develop-with-nix">
+<h2>Develop with Nix<a class="headerlink" href="#develop-with-nix" title="Permalink to this heading"></a></h2>
+<p>If you are using nix, you can get a development shell for Alt-Ergo using:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix-shell
+</pre></div>
+</div>
+<p>To build and run a development version of alt-ergo you can use (this requires
+the <a class="reference external" href="https://nixos.wiki/wiki/Nix_command">experimental <code class="docutils literal notranslate"><span class="pre">nix</span></code> command</a>):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>.<span class="w"> </span>alt-ergo
+</pre></div>
+</div>
+<p>Or directly from GitHub:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>nix<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>https://github.com/OCamlPro/alt-ergo/archive/master.tar.gz#alt-ergo<span class="w"> </span>alt-ergo
+</pre></div>
+</div>
+</section>
+<section id="release-process">
+<h2>Release Process<a class="headerlink" href="#release-process" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo releases do not have a fixed schedule and are made based on features. We try to maintain the main branch (<code class="docutils literal notranslate"><span class="pre">next</span></code>) of the repository as stable as possible, and cut a release from there when an important feature is complete. We also make point release to fix important bugs.</p>
+<p>Once we decide to make a release, a release manager (RM) is nominated amongst the core developers. The release manager creates a new <code class="docutils literal notranslate"><span class="pre">X.Y.Z</span></code> branch for the release from the current <code class="docutils literal notranslate"><span class="pre">next</span></code>, marking the beginning of a feature freeze for the release: new features may continue to get merged on <code class="docutils literal notranslate"><span class="pre">next</span></code>, but will not be included in that release. <strong>The RM is the only person allowed to merge PRs or otherwise make changes on the release branch.</strong></p>
+<p>Changes are never introduced directly into the release branch (with some exceptions below): after branching, any change that goes into the release branch must be backported from a corresponding change on <code class="docutils literal notranslate"><span class="pre">next</span></code>. It must be mentioned in the pull request that there is a desire to backport the change to the current release. It is then up to the RM to decide whether to include that change in the release or not, and they must only do so <em>after the original change has been merged into <code class="docutils literal notranslate"><span class="pre">next</span></code></em>. This ensures that there are never features that make it to a release branch but not to <code class="docutils literal notranslate"><span class="pre">next</span></code>.</p>
+<p>Specific changes that are only relevant for a specific release can result in a PR targeting the release branch directly. In this case, only the RM is allowed to merge the PR onto the release branch, even if they are the PR’s author. Such PRs are typically either bug fixes for features that are removed or significantly changed on <code class="docutils literal notranslate"><span class="pre">next</span></code> (very rare!), and PRs to change the version number in preparation for the release.</p>
+<p>The rest of this section is intended for the release manager, and describes the tasks associated with a release.</p>
+<section id="make-a-pr-for-the-release">
+<h3>Make a PR for the release<a class="headerlink" href="#make-a-pr-for-the-release" title="Permalink to this heading"></a></h3>
+<p>This is the first step, and should be taken only once <code class="docutils literal notranslate"><span class="pre">next</span></code> is feature complete for the release to minimise churn. The RM makes a PR on <code class="docutils literal notranslate"><span class="pre">next</span></code> to initiate the release. The PR must introduce a new section in <code class="docutils literal notranslate"><span class="pre">CHANGES.md</span></code> with the new version number.</p>
+<p>This PR should ideally only modify <code class="docutils literal notranslate"><span class="pre">CHANGES.md</span></code>, and involves moving items from the <code class="docutils literal notranslate"><span class="pre">unreleased</span></code> section to a new section including the new release number (but no release date yet).</p>
+<p>Once the PR is merged, the RM creates a new branch called <code class="docutils literal notranslate"><span class="pre">X.Y.x</span></code>; for instance, the release branch for version <code class="docutils literal notranslate"><span class="pre">2.5.0</span></code> will be called <code class="docutils literal notranslate"><span class="pre">v2.5.x</span></code>. The branch must target the merge commit.</p>
+</section>
+<section id="update-documentation">
+<h3>Update documentation<a class="headerlink" href="#update-documentation" title="Permalink to this heading"></a></h3>
+<p>The merging of the release PR marks the definitive set of features that are included in the release. The RM makes sure that the relevant features are properly documented; changes to the documentation must be done on the <code class="docutils literal notranslate"><span class="pre">next</span></code> branch then backported to the release branch (the RM is encouraged to collaborate with the developer of a specific feature for help in documenting it). This includes updating the release notes appropriately.</p>
+</section>
+<section id="run-benchmarks">
+<h3>Run benchmarks<a class="headerlink" href="#run-benchmarks" title="Permalink to this heading"></a></h3>
+<p>Once the release branch has been confirmed, the RM runs some benchmarks to compare the state of the release branch against the last released version. These benchmarks are stored on an internal OCamlPro machine. The following benchmarks should be run (note: the Zulip bot can help):</p>
+<ul class="simple">
+<li><p>ae-format benchmarks (internal dataset in the native format)</p></li>
+<li><p>ae-format-fpa benchmarks (internal dataset in the native format, using the floating-point theories)</p></li>
+<li><p>benchtop-tests benchmarks (smtcomp subset)</p></li>
+</ul>
+<p>If regressions are found, they must be first confirmed by checking that they are still present in a different environment, to ensure they are not spurious regressions due to the weak table. The simplest way to do it is to compile with a different version of OCaml (this is what the Zulip bot does). See https://github.com/OCamlPro/alt-ergo/issues/563 for details on the weak table issue.</p>
+<p>Confirmed regressions must be investigated to understand their cause. For each cause of regressions, an issue (the granularity of the issues are at the discretion of the RM) must be created to document the cause of the regression. The RM then decides whether the regression must be fixed for the release or not (this is a case-by-case process, but as a general guideline, regressions should be fixed unless the source of the regression is also the source of at least a comparable amount of improvements).</p>
+<p>Fixes for the regressions must be made in PRs to the <code class="docutils literal notranslate"><span class="pre">next</span></code> branch that are then back-ported to the release branch, as described above.</p>
+</section>
+<section id="prepare-an-announcement">
+<h3>Prepare an announcement<a class="headerlink" href="#prepare-an-announcement" title="Permalink to this heading"></a></h3>
+<p>Once the release is ready and all the tests and benchmarks pass, the last step before making the release proper is to write an announcement for the release. The announcement will be posted on the OCamlPro blog, on the mailing list, and on the OCaml Discourse. It should highlight the new features and major bug fixes in the release, and is written by the RM in collaboration with the other developers.</p>
+</section>
+<section id="make-the-release">
+<h3>Make the release<a class="headerlink" href="#make-the-release" title="Permalink to this heading"></a></h3>
+<p>The release is made using <code class="docutils literal notranslate"><span class="pre">dune-release</span></code>, and follows standard procedure for the tool. Check the output of <code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">help</span> <span class="pre">release</span></code>, but essentially:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">check</span></code> (performs basic check)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">tag</span> <span class="pre">vX.Y.Z</span></code> (replace <code class="docutils literal notranslate"><span class="pre">X</span></code>, <code class="docutils literal notranslate"><span class="pre">Y</span></code> and <code class="docutils literal notranslate"><span class="pre">Z</span></code> as appropriate; this creates a git tag – you may add alphas, betas, or rc)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">distrib</span></code> (this creates the distribution archive)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">publish</span> <span class="pre">distrib</span></code> (this is irreversible: it publishes the release on GitHub)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">opam</span> <span class="pre">pkg</span></code> (this an archive with the opam stuff)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dune-release</span> <span class="pre">opam</span> <span class="pre">submit</span></code> (this opens a MR on the opam repository)</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="architecture.html" class="btn btn-neutral float-left" title="Project Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../About/index.html" class="btn btn-neutral float-right" title="About" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

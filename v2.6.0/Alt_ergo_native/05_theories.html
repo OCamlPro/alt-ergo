@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theories &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/js/versions.js?v=40211404"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Control flow" href="06_control_flow.html" />
+    <link rel="prev" title="Setting goals" href="04_setting_goals.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Alt-Ergo's native language</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_summary.html"> Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_declaration_of_symbols.html"> Declaration of symbols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_types/index.html"> Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_declaration_of_axioms.html"> Declaration of axioms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_setting_goals.html"> Setting goals</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"> Theories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#native-theories">Native theories</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#floating-point-arithmetic">Floating-point Arithmetic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#user-defined-extensions-of-theories">User-defined extensions of theories</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#theory-extends-end"><code class="docutils literal notranslate"><span class="pre">theory</span> <span class="pre">[...]</span> <span class="pre">extends</span> <span class="pre">[...]</span> <span class="pre">=</span> <span class="pre">[...]</span> <span class="pre">end</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#case-split"><code class="docutils literal notranslate"><span class="pre">case_split</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#semantic-triggers">Semantic triggers</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#syntax">Syntax</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="06_control_flow.html"> Control Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_syntax_of_declarations_and_expressions.html"> Syntax of declarations and expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Alt-Ergo’s native language</a></li>
+      <li class="breadcrumb-item active">Theories</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="theories">
+<h1>Theories<a class="headerlink" href="#theories" title="Permalink to this heading"></a></h1>
+<p>Alt-Ergo has built-in support for many different theories.</p>
+<p>Those theories allow to reason about values of various types. To learn more about the syntax and semantic of those types, as well as operators defined on them, please refer to section <a class="reference internal" href="02_types/index.html"><span class="doc std std-doc">Types</span></a>.</p>
+<section id="native-theories">
+<h2>Native theories<a class="headerlink" href="#native-theories" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo works using a polymorphic first-order logic.
+A precise definition of what is meant here by ‘theory’ can be found in the second chapter of <a class="reference external" href="https://tel.archives-ouvertes.fr/file/index/docid/842555/filename/VD2_IGUERNELALA_MOHAMED_10062013.pdf">this thesis</a>.</p>
+<p>Alt-Ergo currently provides built-in support for the following theories.</p>
+<ul class="simple">
+<li><p>The free theory of equality with uninterpreted symbols</p></li>
+<li><p>Associative and commutative (AC) symbols</p></li>
+<li><p>Linear arithmetic over integers and rationals</p></li>
+<li><p>(Fragment of) non-linear arithmetic</p></li>
+<li><p>Floating-point arithmetic (as an extension)</p></li>
+<li><p>Enumerated datatypes</p></li>
+<li><p>Record datatypes</p></li>
+<li><p>Polymorphic functional arrays</p></li>
+<li><p>Fixed-size bitvectors</p></li>
+</ul>
+<p>Theories that can be built upon in user-defined extensions are named in the following way.
+All theories are always considered <em>modulo equality</em>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">SUM</span></code>: Enumerated datatypes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Adt</span></code>: Algebraic datatypes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Arrays</span></code>: Polymorphic functional arrays</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Records</span></code>: Record datatypes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Bitv</span></code>: Fixed-size bitvectors</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LIA</span></code>: Linear arithmetic over integers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LRA</span></code>: Linear arithmetic over rationals</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NIA</span></code>: Non-linear arithmetic over integers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NRA</span></code>: Non-linear arithmetic over rationals</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">FPA</span></code>: Floating-point arithmetic</p></li>
+</ul>
+</section>
+<section id="floating-point-arithmetic">
+<h2>Floating-point Arithmetic<a class="headerlink" href="#floating-point-arithmetic" title="Permalink to this heading"></a></h2>
+<p>Alt-Ergo implements partial support for floating-point arithmetic. More
+precisely, Alt-Ergo implements the second and third layers from the paper “<a class="reference external" href="https://inria.hal.science/hal-01522770">A
+Three-tier Strategy for Reasoning about Floating-Point Numbers in
+SMT</a>” by Conchon et al.</p>
+<p><em>Note</em>: Support for floating-point arithmetic is enabled by default in Alt-Ergo since version 2.6.0.</p>
+<p>Versions 2.5.x required to use the command line flag <code class="docutils literal notranslate"><span class="pre">--enable-theory</span> <span class="pre">fpa</span></code> and previous versions used the external prelude mechanism and required command line flags <code class="docutils literal notranslate"><span class="pre">--use-fpa</span></code> and <code class="docutils literal notranslate"><span class="pre">--prelude</span> <span class="pre">fpa-theory-2019-10-08-19h00.ae</span></code>.</p>
+<p>This means that Alt-Ergo doesn’t actually support a floating-point type (that
+may come in a future release); instead, it supports a rounding function, as
+described in the paper.  The rounding function transforms a real into the
+nearest representable float, according to the standard floating-point rounding
+modes. Unlike actual floats, there are no NaNs or infinites, and there is no
+overflow (but there is underflow): one way to think about the underlying data
+type is as floats with a potentially infinite exponent.</p>
+<p>NaNs, infinites, and overflows must be handled outside of Alt-Ergo by an
+implementation of the three-tier strategy described in the paper (this is done
+automatically in Why3 when you use floats).</p>
+<p>The rounding function is available as a builtin function called <code class="docutils literal notranslate"><span class="pre">float</span></code>:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">type</span> <span class="n">fpa_rounding_mode</span> <span class="o">=</span>
+  <span class="o">|</span> <span class="n">NearestTiesToEven</span>
+    <span class="c">(** To nearest, tie breaking to even mantissa *)</span>
+  <span class="o">|</span> <span class="n">ToZero</span>
+    <span class="c">(** Round toward zero *)</span>
+  <span class="o">|</span> <span class="n">Up</span>
+    <span class="c">(** Round toward plus infinity *)</span>
+  <span class="o">|</span> <span class="n">Down</span>
+    <span class="c">(** Round toward minus infinity *)</span>
+  <span class="o">|</span> <span class="n">NearestTiesToAway</span>
+    <span class="c">(** To nearest, tie breaking away from zero *)</span>
+
+<span class="c">(** The first int [prec] is the mantissa&#39;s size, including the implicit bit.</span>
+
+<span class="c">    The second int [exp] is the absolute value of the exponent of the smallest</span>
+<span class="c">    representable positive number. Note that this is not the `emin` value</span>
+<span class="c">    defined in IEEE-754, which represents the minimum exponent of the smallest</span>
+<span class="c">    normal positive number.</span>
+
+<span class="c">    The result of a call to [float(prec, exp, rm, x)] is always of the form:</span>
+
+<span class="c">      (-1)^s * c * 2^q</span>
+
+<span class="c">    where [s] is [0] or [1], [c] is an integer with at most [prec - 1] binary</span>
+<span class="c">    digits (that is, [0 &lt;= c &lt; 2^(prec - 1)]), and [q &gt;= exp] is an integer.</span>
+
+<span class="c">    Given `eb` the number of bits of the exponent and `sb` the number of bits</span>
+<span class="c">    of the significand (including the hidden bit), `prec` and `exp` are</span>
+<span class="c">    computed as follows:</span>
+
+<span class="c">      prec = sb</span>
+<span class="c">      exp = (1 lsl (eb - 1)) + sb - 3 *)</span>
+<span class="k">logic</span> <span class="n">float</span><span class="o">:</span> <span class="kt">int</span><span class="o">,</span> <span class="kt">int</span><span class="o">,</span> <span class="n">fpa_rounding_mode</span><span class="o">,</span> <span class="kt">real</span> <span class="o">-&gt;</span> <span class="kt">real</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">float</span></code> function <em>must</em> be called with concrete values for its first 3
+arguments, using other symbolic expressions is not supported and will result in
+an error (defining functions that call <code class="docutils literal notranslate"><span class="pre">float</span></code> is also possible, as long as the
+corresponding arguments of the wrapping function are only called with concrete
+values).</p>
+<p>Alt-Ergo also exposes convenience functions specialized for standard
+floating-point types:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">function</span> <span class="n">float32</span><span class="o">(</span><span class="n">m</span><span class="o">:</span> <span class="n">fpa_rounding_mode</span><span class="o">,</span> <span class="n">x</span><span class="o">:</span> <span class="kt">real</span><span class="o">):</span> <span class="kt">real</span> <span class="o">=</span> <span class="n">float</span><span class="o">(</span><span class="mi">24</span><span class="o">,</span> <span class="mi">149</span><span class="o">,</span> <span class="n">m</span><span class="o">,</span> <span class="n">x</span><span class="o">)</span>
+<span class="k">function</span> <span class="n">float32d</span><span class="o">(</span><span class="n">x</span><span class="o">:</span> <span class="kt">real</span><span class="o">):</span> <span class="kt">real</span> <span class="o">=</span> <span class="n">float32</span><span class="o">(</span><span class="n">NearestTiesToEven</span><span class="o">,</span> <span class="n">x</span><span class="o">)</span>
+<span class="k">function</span> <span class="n">float64</span><span class="o">(</span><span class="n">m</span><span class="o">:</span> <span class="n">fpa_rounding_mode</span><span class="o">,</span> <span class="n">x</span><span class="o">:</span> <span class="kt">real</span><span class="o">):</span> <span class="kt">real</span> <span class="o">=</span> <span class="n">float</span><span class="o">(</span><span class="mi">53</span><span class="o">,</span> <span class="mi">1074</span><span class="o">,</span> <span class="n">m</span><span class="o">,</span> <span class="n">x</span><span class="o">)</span>
+<span class="k">function</span> <span class="n">float64d</span><span class="o">(</span><span class="n">x</span><span class="o">:</span> <span class="kt">real</span><span class="o">):</span> <span class="kt">real</span> <span class="o">=</span> <span class="n">float64</span><span class="o">(</span><span class="n">NearestTiesToEven</span><span class="o">,</span> <span class="n">x</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>These functions are currently only available when using the native language;
+they are not available when using the smtlib2 input format.</p>
+<p>Finally, the <code class="docutils literal notranslate"><span class="pre">integer_round</span></code> function allows rounding a real to an integer
+using the aforementioned rounding modes:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">logic</span> <span class="n">integer_round</span> <span class="o">:</span> <span class="n">fpa_rounding_mode</span><span class="o">,</span> <span class="kt">real</span> <span class="o">-&gt;</span> <span class="kt">int</span>
+</pre></div>
+</div>
+<p>Here is an example:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="k">goal</span> <span class="n">g</span><span class="o">:</span> <span class="n">integer_round</span><span class="o">(</span><span class="n">ToZero</span><span class="o">,</span> <span class="mi">2</span><span class="o">.</span><span class="mi">1</span><span class="o">)</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</section>
+<section id="user-defined-extensions-of-theories">
+<h2>User-defined extensions of theories<a class="headerlink" href="#user-defined-extensions-of-theories" title="Permalink to this heading"></a></h2>
+<p>[TODO: document]</p>
+<section id="theory-extends-end">
+<h3><code class="docutils literal notranslate"><span class="pre">theory</span> <span class="pre">[...]</span> <span class="pre">extends</span> <span class="pre">[...]</span> <span class="pre">=</span> <span class="pre">[...]</span> <span class="pre">end</span></code><a class="headerlink" href="#theory-extends-end" title="Permalink to this heading"></a></h3>
+</section>
+<section id="case-split">
+<h3><code class="docutils literal notranslate"><span class="pre">case_split</span></code><a class="headerlink" href="#case-split" title="Permalink to this heading"></a></h3>
+</section>
+<section id="semantic-triggers">
+<h3>Semantic triggers<a class="headerlink" href="#semantic-triggers" title="Permalink to this heading"></a></h3>
+<p>In addition to syntactic triggers (or triggers) and interval triggers (or filters) defined in <a class="reference internal" href="03_declaration_of_axioms.html"><span class="std std-doc">axioms</span></a>, additional triggers are available inside theories.
+Those additional triggers are called semantic triggers.</p>
+<p>They correspond to the following constructs.</p>
+<section id="syntax">
+<h4>Syntax<a class="headerlink" href="#syntax" title="Permalink to this heading"></a></h4>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">semantic_trigger</span><span class="o">&gt;</span>    <span class="o">::=</span> <span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">|</span> <span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>
+<span class="c">(* [COMMENT/TODO: seems to always be paired with &#39;interval triggers&#39;/filters *)</span>
+<span class="o">&lt;</span><span class="n">in_interval_trigger</span><span class="o">&gt;</span> <span class="o">::=</span> <span class="o">&lt;</span><span class="n">id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="ow">in</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">,</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">bound</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">square_bracket</span><span class="o">&gt;</span>
+<span class="c">(* [COMMENT/TODO: probably there to shorten axioms] *)</span>
+<span class="o">&lt;</span><span class="n">maps_to_trigger</span><span class="o">&gt;</span>     <span class="o">::=</span> <span class="o">&lt;</span><span class="n">alias_id</span><span class="o">&gt;</span> <span class="k">&#39;</span><span class="o">|-&gt;</span><span class="k">&#39;</span> <span class="o">&lt;</span><span class="n">expr</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>[TODO: complete this explanation]</p>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="04_setting_goals.html" class="btn btn-neutral float-left" title="Setting goals" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="06_control_flow.html" class="btn btn-neutral float-right" title="Control flow" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

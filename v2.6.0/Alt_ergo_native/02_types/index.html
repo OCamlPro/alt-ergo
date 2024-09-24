@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Types &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/versions.css?v=21adeb6f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/js/versions.js?v=40211404"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Built-in types" href="02_01_builtin.html" />
+    <link rel="prev" title="Declaration of symbols" href="../01_declaration_of_symbols.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Alt-Ergo's native language</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../00_summary.html"> Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../01_declaration_of_symbols.html"> Declaration of symbols</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"> Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html">Built-in types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#built-in-operators">Built-in operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html"> User-defined</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../03_declaration_of_axioms.html"> Declaration of axioms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../04_setting_goals.html"> Setting goals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../05_theories.html"> Theories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../06_control_flow.html"> Control Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../07_syntax_of_declarations_and_expressions.html"> Syntax of declarations and expressions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Alt-Ergo’s native language</a></li>
+      <li class="breadcrumb-item active">Types</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="types">
+<h1>Types<a class="headerlink" href="#types" title="Permalink to this heading"></a></h1>
+<p>Alt-Ergo has built-in support for a number of built-in types, associated with theories for which it has decision procedures.
+It also natively supports prenex polymorphism.</p>
+<p>This may be used to create used-defined types, through abstract types, algebraic datatypes, enums and records.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="02_01_builtin.html">Built-in types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#boolean-types">Boolean types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#numeric-types">Numeric types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#unit-type">Unit type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#bitvectors">Bitvectors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#type-variables">Type variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#polymorphic-functional-arrays">Polymorphic functional arrays</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="02_01_builtin.html#built-in-operators">Built-in operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#logical-operators">Logical operators</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#the-bool-prop-conflict">The <code class="docutils literal notranslate"><span class="pre">bool</span></code>/<code class="docutils literal notranslate"><span class="pre">prop</span></code> conflict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#numeric-operators">Numeric operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#comparisons">Comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#additional-numeric-primitives">Additional numeric primitives</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#conversion-between-integers-and-reals">Conversion between integers and reals</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#square-root">Square root</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#internal-primitives">Internal primitives</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#id2">Bitvectors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#id3">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#id4">Type variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_01_builtin.html#id5">Polymorphic functional arrays</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#syntax">Syntax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_01_builtin.html#id6">Examples</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="02_02_user_defined.html"> User-defined</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="02_02_user_defined.html#abstract-types">Abstract types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#syntax">Syntax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_02_user_defined.html#records">Records</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#id1">Syntax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#id2">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="02_02_user_defined.html#enums-and-algebraic-datatypes">Enums and Algebraic datatypes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#id3">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="02_02_user_defined.html#id4">Syntax</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../01_declaration_of_symbols.html" class="btn btn-neutral float-left" title="Declaration of symbols" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="02_01_builtin.html" class="btn btn-neutral float-right" title="Built-in types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "v2.6.0"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
