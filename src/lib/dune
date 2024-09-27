@@ -54,7 +54,8 @@
     Instances IntervalCalculus Intervals_intf Intervals_core Intervals
     Ite_rel Matching Matching_types Polynome Records Records_rel
     Satml_frontend_hybrid Satml_frontend Satml Sat_solver Sat_solver_sig
-    Sig Sig_rel Theory Uf Use Domains Domains_intf Rel_utils Bitlist
+    Sig Sat_solver_util Sig_rel Theory Uf Use Domains Domains_intf
+    Rel_utils Bitlist
     ; structures
     Commands Errors Explanation Fpa_rounding
     Parsed Profiling Satml_types Symbols

@@ -178,9 +178,9 @@ module Make (Th : Theory.S) = struct
     last_saved_model : Models.t Lazy.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
 
-    declare_top : Id.typed list ref;
-    declare_tail : Id.typed list Stack.t;
-    (** Stack of the declared symbols by the user. The field [declare_top]
+    declare_top : Symbols.typed_name list ref;
+    declare_tail : Symbols.typed_name list Stack.t;
+    (** Stack of the declared names by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
   }
@@ -1131,8 +1131,10 @@ module Make (Th : Theory.S) = struct
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = !(env.declare_top) in
-        let model, _ = Th.extract_concrete_model ~declared_ids env.tbox in
+        let declared_names = !(env.declare_top) in
+        let model, _ =
+          Th.extract_concrete_model ~declared_names env.tbox
+        in
         env.last_saved_model := Some model;
         env
       with Ex.Inconsistent (expl, classes) ->
@@ -1616,8 +1618,8 @@ module Make (Th : Theory.S) = struct
           "solved with backward!";
       raise e
 
-  let declare env id =
-    env.declare_top := id :: !(env.declare_top);
+  let declare env name =
+    env.declare_top := name :: !(env.declare_top);
     env
 
   let push env to_push =
@@ -1852,20 +1854,8 @@ module Make (Th : Theory.S) = struct
 
   let get_unknown_reason env = env.unknown_reason
 
-  let get_value env t =
-    match E.type_info t with
-    | Ty.Tbool ->
-      begin
-        match ME.find_opt t env.gamma with
-        | None ->
-          begin
-            match ME.find_opt (E.neg t) env.gamma with
-            | None -> None
-            | Some _ -> Some E.faux
-          end
-        | Some _ -> Some E.vrai
-      end
-    | _ -> None
+  let get_boolean_model env =
+    ME.fold (fun e _ acc -> e :: acc) env.gamma []
 
   let reinit_ctx () =
     (* all_models_sat_env := None; *)

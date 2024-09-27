@@ -31,6 +31,7 @@ let src = Logs.Src.create ~doc:"Sat" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
+  open Sat_solver_sig
   module SAT = Satml.Make(Th)
   module Inst = Instances.Make(Th)
   module Ex = Explanation
@@ -68,11 +69,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
 
-    mutable declare_top : Id.typed list;
-    declare_tail : Id.typed list Stack.t;
-    (** Stack of the declared symbols by the user. The field [declare_top]
-        is the top of the stack and [declare_tail] is tail. In particular, this
-        stack is never empty. *)
+    mutable declare_top : Symbols.typed_name list;
+    declare_tail : Symbols.typed_name list Stack.t;
+    (** Stack of the declared names by the user. The field [declare_top]
+        is the top of the stack and [declare_tail] is tail. In particular,
+        this stack is never empty. *)
   }
 
   let empty_guards () = {
@@ -89,7 +90,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let ff_hcons_env = FF.empty_hcons_env () in
     { gamma = ME.empty;
       satml = SAT.create (FF.atom_hcons_env ff_hcons_env);
-      ff_hcons_env ;
+      ff_hcons_env = FF.empty_hcons_env ();
       nb_mrounds = 0;
       last_forced_normal = 0;
       last_forced_greedy = 0;
@@ -107,10 +108,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       declare_top = [];
       declare_tail = Stack.create ();
     }
-
-  exception Sat
-  exception Unsat of Explanation.t
-  exception I_dont_know
 
   let i_dont_know env ur =
     env.unknown_reason <- Some ur;
@@ -1008,9 +1005,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if compute then begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = env.declare_top in
+        let declared_names = env.declare_top in
         let model, objectives =
-          SAT.compute_concrete_model ~declared_ids env.satml
+          SAT.compute_concrete_model ~declared_names env.satml
         in
         env.last_saved_model <- Some model;
         env.last_saved_objectives <- Some objectives;
@@ -1168,7 +1165,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Satml.Sat ->
       try
         do_case_split env Util.BeforeMatching;
-        may_update_last_saved_model env (Options.get_every_interpretation ());
+        may_update_last_saved_model env
+          (Options.get_every_interpretation ());
         let () =
           env.nb_mrounds <- env.nb_mrounds + 1
                             [@ocaml.ppwarning
@@ -1380,29 +1378,17 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let optimize env fn = SAT.optimize env.satml fn
 
+  let get_boolean_model env =
+    List.filter_map (fun Atom.{ lit; _ } ->
+        match Shostak.Literal.view lit with
+        | Literal.LTerm e -> Some e
+        | LSem _ -> None
+      ) (SAT.boolean_model env.satml)
+
   let get_model env =
     Option.map Lazy.force env.last_saved_model
 
   let get_unknown_reason env = env.unknown_reason
-
-  let get_value env t =
-    match E.type_info t with
-    | Ty.Tbool ->
-      begin
-        let bmodel = SAT.boolean_model env.satml in
-        Compat.List.find_map
-          (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
-             let tlit = Shostak.Literal.make (LTerm t) in
-             if Shostak.Literal.equal tlit lit then
-               Some E.vrai
-             else if Shostak.Literal.equal tlit neglit then
-               Some E.faux
-             else
-               None
-          )
-          bmodel
-      end
-    | _ -> None
 
   let get_objectives env = env.last_saved_objectives
 
@@ -1423,6 +1409,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();
     Uf.reinit_cache ()
+
+  let reset_decisions env = SAT.cancel_until env.satml 0
 
   let () =
     Steps.save_steps ();

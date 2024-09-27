@@ -91,9 +91,10 @@ module type SAT_ML = sig
   type t
 
   val solve : t -> unit
+
   val compute_concrete_model :
-    declared_ids:Id.typed list ->
     t ->
+    declared_names:Symbols.typed_name list ->
     Models.t Lazy.t * Objective.Model.t
 
   val set_new_proxies : t -> FF.proxies -> unit
@@ -1925,21 +1926,21 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (* check_unsat_core cl; *)
       raise e
 
-  let rec compute_concrete_model ~declared_ids env =
+  let rec compute_concrete_model env ~declared_names =
     let acts = theory_slice env in
     match Th.compute_concrete_model ~acts env.tenv with
     | () -> (
         if is_sat env then
-          Th.extract_concrete_model ~declared_ids env.tenv
+          Th.extract_concrete_model env.tenv ~declared_names
         else
           try
             solve env; assert false
           with Sat ->
-            compute_concrete_model ~declared_ids env
+            compute_concrete_model env ~declared_names
       )
     | exception Ex.Inconsistent (ex, _) ->
       conflict_analyze_and_fix env (C_theory ex);
-      compute_concrete_model ~declared_ids env
+      compute_concrete_model env ~declared_names
 
   let compute_concrete_model ~declared_ids env =
     assert (is_sat env);

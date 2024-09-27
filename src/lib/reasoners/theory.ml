@@ -67,8 +67,8 @@ module type S = sig
   val compute_concrete_model :
     acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val extract_concrete_model :
-    declared_ids:Id.typed list ->
     t ->
+    declared_names:Symbols.typed_name list ->
     Models.t Lazy.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
@@ -904,14 +904,14 @@ module Main_Default : S = struct
     | None ->
       ()
 
-  let extract_concrete_model ~declared_ids env =
+  let extract_concrete_model env ~declared_names =
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
     in
     lazy (
       CC_X.extract_concrete_model
         ~prop_model:assumed_set
-        ~declared_ids
+        ~declared_names
         gamma_finite
     ), objectives
 
@@ -966,7 +966,7 @@ module Main_Empty : S = struct
   let do_case_split ?acts:_ env _ = env, E.Set.empty
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model ~acts:_ _env = ()
-  let extract_concrete_model ~declared_ids:_ _env =
+  let extract_concrete_model _env ~declared_names:_ =
     lazy Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e

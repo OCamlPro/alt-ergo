@@ -23,7 +23,6 @@ module SE = E.Set
 
 module C = Commands
 module Sy = Symbols
-module SM = Sy.Map
 
 module DE = DStd.Expr
 module DT = DE.Ty
@@ -634,13 +633,13 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     in the cache as well as the symbol associated to the term. *)
 let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   let name = get_basename path in
-  let sy =
+  let name =
     begin match DStd.Tag.get tags DE.Tags.ac with
-      | Some () -> Sy.name ~kind:Sy.Ac name
-      | _ -> Sy.name name
+      | Some () -> Sy.Name.mk ~kind:Sy.Ac name
+      | _ -> Sy.Name.mk name
     end
   in
-  Cache.store_sy tcst sy;
+  Cache.store_sy tcst (Sy.Name name);
   (* Adding polymorphic types to the cache. *)
   Cache.store_ty_vars id_ty;
   let arg_tys, ret_ty =
@@ -649,7 +648,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       List.map dty_to_ty arg_tys, dty_to_ty ret_ty
     | _ -> [], dty_to_ty id_ty
   in
-  (Hstring.make name, arg_tys, ret_ty)
+  (name, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are

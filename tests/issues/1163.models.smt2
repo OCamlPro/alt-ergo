@@ -1,5 +1,6 @@
-(set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models false)
+(set-logic ALL)
 (declare-const x Int)
 (define-fun myabs ((x Int)) Int (ite (< x 0) (- x) x))
 (maximize (myabs x))

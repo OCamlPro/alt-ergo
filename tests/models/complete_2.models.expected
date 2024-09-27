@@ -1,6 +1,6 @@
 
 unknown
 (
-  (define-fun x () Int (as @a1 Int))
-  (define-fun f ((_arg_0 Int)) Int (as @a0 Int))
+  (define-fun x () Int (as @a4 Int))
+  (define-fun f ((_arg_0 Int)) Int (as @a3 Int))
 )

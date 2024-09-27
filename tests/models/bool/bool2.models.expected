@@ -2,7 +2,7 @@
 unknown
 (
   (define-fun x () Bool false)
-  (define-fun y () Bool (as @a0 Bool))
+  (define-fun y () Bool (as @a3 Bool))
 )
 ((notx true))
 

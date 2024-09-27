@@ -1,6 +1,7 @@
 ; This test checks if the optimization doesn't stop after trying to
 ; optimize a strict bound.
 (set-option :produce-models true)
+(set-option :verify-models false)
 (set-logic ALL)
 (declare-const x Real)
 (declare-const y Real)

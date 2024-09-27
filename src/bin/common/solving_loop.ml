@@ -42,15 +42,11 @@ let is_solver_ctx_empty = function
     { ctx = []; local = []; global = [] } -> true
   | _ -> false
 
-type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
-
-type any_sat_module = (module Sat_solver_sig.S)
-
 (* Internal state while iterating over input statements *)
 type 'a state = {
   env : 'a;
   solver_ctx: solver_ctx;
-  sat_solver : any_sat_module;
+  sat_solver : Sat_solver_util.any_sat_module;
 }
 
 let empty_solver_ctx = {
@@ -103,6 +99,24 @@ let cmd_on_modes st modes cmd =
       Errors.forbidden_command curr_mode cmd
   | _ -> ()
 
+let verify_model ~get_value () =
+  match get_value [Expr.vrai] with
+  | Some [e] when Expr.equal e Expr.vrai -> ()
+
+  | Some [_]
+  | exception Sat_solver_util.Wrong_model _
+  | exception Sat_solver_util.No_model ->
+    recoverable_error "The model is wrong"
+
+  | None ->
+    (* The model generation is not enabled. *)
+    ()
+
+  | Some _ ->
+    (* The length of the output list is the same as the length of the
+       input list. *)
+    assert false
+
 (* Dolmen util *)
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
@@ -121,7 +135,7 @@ let add_if_named
     acc
 
 (* We currently use the full state of the solver as model. *)
-type model = Model : 'a sat_module * 'a -> model
+type model = Model : 'a Sat_solver_util.sat_module * 'a -> model
 
 type solve_res =
   | Sat of model
@@ -183,6 +197,12 @@ let main () =
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
+          if Options.get_verify_models () then begin
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            verify_model ~get_value ()
+          end;
           Sat mdl
         end
       | `Unknown ->
@@ -195,6 +215,12 @@ let main () =
               Sat_solver_sig.pp_ae_unknown_reason_opt ur;
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
+          end;
+          if Options.get_verify_models () then begin
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            verify_model ~get_value ()
           end;
           Unknown (Some mdl)
         end
@@ -344,7 +370,7 @@ let main () =
   in
 
   let partial_model_key: model option State.key =
-    State.create_key ~pipe:"" "sat_state"
+    State.create_key ~pipe:"" "partial_model"
   in
 
   let named_terms: DStd.Expr.term Util.MS.t State.key =
@@ -655,6 +681,12 @@ let main () =
         | None -> print_wrn_opt ~name st_loc "integer" value; st
         | Some i -> set_steps_bound i st
       end
+    | ":verify-models", Symbol { name = Simple "true"; _ } ->
+      Options.set_verify_models true;
+      st
+    | ":verify-models", Symbol { name = Simple "false"; _ } ->
+      Options.set_verify_models false;
+      st
     | _ ->
       unsupported_opt name; st
   in
@@ -776,45 +808,45 @@ let main () =
       unsupported_opt name
   in
 
-  (* Fetches the term value in the current model. *)
-  let evaluate_term get_value name term =
-    (* There are two ways to evaluate a term:
-       - if its name is registered in the environment, get its value;
-       - if not, check if the formula is in the environment.
-    *)
-    let simple_form =
-      Expr.mk_term
-        (Sy.name name)
-        []
-        (D_cnf.dty_to_ty term.DStd.Expr.term_ty)
-    in
-    match get_value simple_form with
-    | Some v -> Fmt.to_to_string Expr.print v
-    | None -> "unknown"
+  let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
+    DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
   in
 
-  let print_terms_assignments =
-    Fmt.list
-      ~sep:Fmt.cut
-      (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
+  let handle_get_value loc ~get_value l =
+    let l =
+      List.map (D_cnf.mk_expr ~loc ~toplevel:false
+                  ~decl_kind:Daxiom) l
+    in
+    match get_value l with
+    | Some values ->
+      Printer.print_std
+        "(@[<v 0>%a@])@,"
+        Fmt.(iter ~sep:cut My_list.iter_pair
+               ((pair ~sep:sp Expr.pp_smtlib Expr.pp_smtlib) |> parens))
+        (l, values)
+    | None ->
+      recoverable_error "No model produced, cannot execute get-value."
+    | exception Sat_solver_util.Wrong_model _ ->
+      recoverable_error "The model is wrong, cannot execute get-value."
+    | exception Sat_solver_util.No_model ->
+      recoverable_error "No model produced but it should, cannot execute get-value."
   in
 
-  let handle_get_assignment ~get_value st =
-    let assignments =
-      Util.MS.fold
-        (fun name term acc ->
-           if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
-             (name, evaluate_term get_value name term) :: acc
-           else
-             acc
-        )
-        (State.get named_terms st)
-        []
+  let handle_get_assignment ~get_assignment st =
+    let names, l =
+      Util.MS.fold (fun name term (names, acc) ->
+          assert (DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool);
+          name :: names,
+          Expr.mk_term (Sy.name name) []
+            (D_cnf.dty_to_ty term.DStd.Expr.term_ty) :: acc
+        ) (State.get named_terms st) ([], [])
     in
+    let values = get_assignment l in
     Printer.print_std
       "(@[<v 0>%a@])@,"
-      print_terms_assignments
-      assignments
+      Fmt.(iter ~sep:cut My_list.iter_pair
+             ((pair ~sep:sp string Sat_solver_util.pp_lbool) |> parens))
+      (names, values)
   in
 
   let handle_stmt :
@@ -907,11 +939,12 @@ let main () =
       | {contents = `Get_model; _ } ->
         cmd_on_modes st [Sat] "get-model";
         if Options.get_interpretation () then
-          let () = match State.get partial_model_key st with
-            | Some (Model ((module SAT), env)) ->
+          let () =
+            match State.get partial_model_key st with
+            | Some Model ((module SAT), partial_model) ->
               let module FE = Frontend.Make (SAT) in
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
-                FE.print_model env
+                FE.print_model partial_model
             | None ->
               (* TODO: add the location of the statement. *)
               recoverable_error "No model produced."
@@ -955,9 +988,10 @@ let main () =
           match State.get partial_model_key st with
           | Some Model ((module SAT), partial_model) ->
             if DO.ProduceAssignment.get st then
-              handle_get_assignment
-                ~get_value:(SAT.get_value partial_model)
-                st
+              let get_assignment =
+                Sat_solver_util.get_assignment (module SAT) partial_model
+              in
+              handle_get_assignment ~get_assignment st
             else
               recoverable_error
                 "Produce assignments disabled; \
@@ -967,6 +1001,24 @@ let main () =
             (* TODO: add the location of the statement. *)
             recoverable_error
               "No model produced, cannot execute get-assignment.";
+            st
+        end
+
+      | {contents = `Get_value l; loc; _} ->
+        begin
+          cmd_on_modes st [Sat] "get-value";
+          match State.get partial_model_key st with
+          | Some Model ((module SAT), partial_model) ->
+            let file = (State.get State.logic_file st).loc in
+            let loc = dl_to_ael file loc in
+            let get_value =
+              Sat_solver_util.get_value (module SAT) partial_model
+            in
+            handle_get_value loc ~get_value l;
+            st
+          | None ->
+            (* TODO: add the location of the statement. *)
+            recoverable_error "No model produced, cannot execute get-value.";
             st
         end
 

@@ -46,8 +46,8 @@ module type SAT_ML = sig
 
   val solve : t -> unit
   val compute_concrete_model :
-    declared_ids:Id.typed list ->
     t ->
+    declared_names:Symbols.typed_name list ->
     Models.t Lazy.t * Objective.Model.t
 
   val set_new_proxies : t -> Flat_Formula.proxies -> unit
