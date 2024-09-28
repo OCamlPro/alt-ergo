@@ -88,7 +88,7 @@ type mode_error =
   | Forbidden_command of string
 
 type model_error =
-  | Subst_type_clash of Id.t * Ty.t * Ty.t
+  | Subst_type_clash of Uid.term_cst * Ty.t * Ty.t
   | Subst_not_model_term of Expr.t
 
 type error =
@@ -262,7 +262,7 @@ let report_model_error ppf = function
     Fmt.pf ppf
       "Cannot substitute the identifier %a of type %a by an expression of \
        type %a"
-      Id.pp id
+      Uid.pp id
       Ty.pp_smtlib ty1
       Ty.pp_smtlib ty2
 

@@ -475,13 +475,13 @@ module SmtPrinter = struct
     | Sy.False, [] -> Fmt.pf ppf "false"
 
     | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
-      Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
+      Fmt.pf ppf "(as %a %a)" Uid.pp n Ty.pp_smtlib ty
 
-    | Sy.Name { hs = n; _ }, [] -> Id.pp ppf n
+    | Sy.Name { hs = n; _ }, [] -> Uid.pp ppf n
 
     | Sy.Name { hs = n; _ }, _ :: _ ->
       Fmt.pf ppf "@[<2>(%a %a@])"
-        Id.pp n
+        Uid.pp n
         Fmt.(list ~sep:sp pp |> box) xs
 
     | Sy.Var v, [] -> Var.print ppf v
@@ -982,13 +982,22 @@ let vrai =
 let faux = neg (vrai)
 
 let fresh_name ty =
-  mk_term (Sy.name ~ns:Fresh @@ Id.Namespace.Internal.fresh ()) [] ty
+  let name =
+    Sy.name ~ns:Fresh @@ Uid.of_string @@ Sy.Namespace.Internal.fresh ()
+  in
+  mk_term name [] ty
 
 let mk_abstract ty =
-  mk_term (Sy.name ~ns:Abstract @@ Id.Namespace.Abstract.fresh ()) [] ty
+  let name =
+    Sy.name ~ns:Abstract @@ Uid.of_string @@ Sy.Namespace.Internal.fresh ()
+  in
+  mk_term name [] ty
 
 let fresh_ac_name ty =
-  mk_term (Sy.name ~ns:Fresh_ac @@ Id.Namespace.Internal.fresh ()) [] ty
+  let name =
+    Sy.name ~ns:Fresh_ac @@ Uid.of_string @@ Sy.Namespace.Internal.fresh ()
+  in
+  mk_term name [] ty
 
 let is_fresh_ac_name t =
   match t with
@@ -1800,7 +1809,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     Fmt.kstr
-      (fun str -> Sy.name ~ns:Skolem str)
+      (fun str -> Sy.name ~ns:Skolem @@ Uid.of_string str)
       "%s%s!%d"
       s
       tyvars

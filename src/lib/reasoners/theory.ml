@@ -67,7 +67,7 @@ module type S = sig
   val compute_concrete_model :
     acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val extract_concrete_model :
-    declared_ids:Id.typed list ->
+    declared_ids:ModelMap.profile list ->
     t ->
     Models.t Lazy.t * Objective.Model.t
 
@@ -139,7 +139,7 @@ module Main_Default : S = struct
              let xs = List.map E.type_info xs in
              let xs, ty =
                try
-                 let xs', ty', is_ac' = Hstring.Map.find hs mp in
+                 let xs', ty', is_ac' = Uid.Term_map.find hs mp in
                  assert (is_ac == is_ac');
                  let ty = generalize_types ty ty' in
                  let xs =
@@ -148,10 +148,10 @@ module Main_Default : S = struct
                  xs, ty
                with Not_found -> xs, ty
              in
-             Hstring.Map.add hs (xs, ty, is_ac) mp
+             Uid.Term_map.add hs (xs, ty, is_ac) mp
 
            | _ -> mp
-        ) st Hstring.Map.empty
+        ) st Uid.Term_map.empty
 
     let types_of_assumed sty =
       let open Ty in
@@ -215,12 +215,12 @@ module Main_Default : S = struct
 
     let print_logics ?(header=true) logics =
       print_dbg ~header "@[<v 2>(* logics: *)@ ";
-      Hstring.Map.iter
+      Uid.Term_map.iter
         (fun hs (xs, ty, is_ac) ->
            print_dbg ~flushed:false ~header:false
-             "logic %s%s : %a%a@ "
+             "logic %s%a : %a%a@ "
              (if is_ac == Sy.Ac then "ac " else "")
-             (Hstring.view hs)
+             Uid.pp hs
              print_arrow_type xs
              Ty.print ty
         )logics;

@@ -68,9 +68,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
 
-    mutable declare_top : Id.typed list;
-    declare_tail : Id.typed list Stack.t;
-    (** Stack of the declared symbols by the user. The field [declare_top]
+    mutable declare_top : ModelMap.profile list;
+    declare_tail : ModelMap.profile list Stack.t;
+    (** Stack of the identifiers declared by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
   }
@@ -1411,8 +1411,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let reinit_ctx () =
     Steps.reinit_steps ();
     Th.reinit_cpt ();
-    Id.Namespace.reinit ();
     Symbols.clear_labels ();
+    Symbols.Namespace.reinit ();
     Var.reinit_cnt ();
     Objective.Function.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();

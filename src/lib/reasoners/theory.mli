@@ -59,7 +59,7 @@ module type S = sig
   val compute_concrete_model :
     acts:Shostak.Literal.t Th_util.acts -> t -> unit
   val extract_concrete_model :
-    declared_ids:Id.typed list ->
+    declared_ids:ModelMap.profile list ->
     t ->
     Models.t Lazy.t * Objective.Model.t
 

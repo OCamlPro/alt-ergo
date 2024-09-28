@@ -1,7 +1,7 @@
 (**************************************************************************)
 (*                                                                        *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                 *)
-(*     Copyright (C) 2022-2024 --- OCamlPro SAS                           *)
+(*     Copyright (C) --- OCamlPro SAS                                     *)
 (*                                                                        *)
 (*     This file is distributed under the terms of OCamlPro               *)
 (*     Non-Commercial Purpose License, version 1.                         *)
@@ -27,6 +27,8 @@
 
 module DStd = Dolmen.Std
 module DE = Dolmen.Std.Expr
+module DT = DE.Ty
+module B = DStd.Builtin
 
 type _ t =
   | Hstring : Hstring.t -> 'a t
@@ -37,6 +39,29 @@ type _ t =
 type term_cst = DE.term_cst t
 type ty_cst = DE.ty_cst t
 type ty_var = DE.ty_var t
+
+let (let*) = Option.bind
+
+let rename_path f (path : DStd.Path.t) =
+  match path with
+  | Local { name; } ->
+    let* n = f name in
+    Some (DStd.Path.local n)
+  | Absolute { path; name; } ->
+    let* n = f name in
+    Some (DStd.Path.absolute path n)
+
+let do_mangle mangler (id : term_cst) =
+  match id with
+  | Hstring hs ->
+    let* s = mangler @@ Hstring.view hs in
+    Some (Hstring (Hstring.make s))
+  | Term_cst { id_ty; path; builtin; tags; _ } ->
+    let* p = rename_path mangler path in
+    Some (Term_cst (DE.Id.mk ~builtin ~tags p id_ty))
+
+let do_mangle mangler id =
+  Option.value (do_mangle mangler id) ~default:id
 
 let order_tag : int DStd.Tag.t = DStd.Tag.create ()
 
@@ -71,10 +96,21 @@ let hash (type a) (u : a t) =
   | Ty_cst id -> DE.Id.hash id
   | Ty_var id -> DE.Id.hash id
 
+let pp_name ppf (_ns, s) =
+  (* Names are pre-mangled *)
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
+
+let pp_quoted_id ppf DE.{ path; _ } =
+  let (Absolute { name; _ } | Local { name }) = path in
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf @@ DStd.Name.simple name
+
+let pp_quoted_hstring ppf hs =
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf @@ DStd.Name.simple @@ Hstring.view hs
+
 let pp (type a) ppf (u : a t) =
   match u with
-  | Hstring hs -> Hstring.print ppf hs
-  | Term_cst id -> DE.Id.print ppf id
+  | Hstring hs -> pp_quoted_hstring ppf hs
+  | Term_cst id -> pp_quoted_id ppf id
   | Ty_cst id -> DE.Id.print ppf id
   | Ty_var id -> DE.Id.print ppf id
 
@@ -98,12 +134,18 @@ let compare (type a b) (u1 : a t) (u2 : b t) =
 
 module Term_set = Set.Make
     (struct
-      type nonrec t = term_cst
+      type t = term_cst
+      let compare = compare
+    end)
+
+module Term_map = Map.Make
+    (struct
+      type t = term_cst
       let compare = compare
     end)
 
 module Ty_map = Map.Make
     (struct
-      type nonrec t = ty_cst
+      type t = ty_cst
       let compare = compare
     end)

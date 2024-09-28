@@ -75,10 +75,10 @@ module type S = sig
       The optional argument [selector] is used to filter ground facts
       discovered by the instantiation engine. *)
 
-  val declare : t -> Id.typed -> unit
+  val declare : t -> ModelMap.profile -> unit
   (** [declare env id] declares a new identifier [id].
 
-      If the environment [env] isn't unsatisfiable and the model generation
+      If the environment [env] is not unsatisfiable and the model generation
       is enabled, the solver produces a model term for [id] which can be
       retrieved with [get_model]. *)
 

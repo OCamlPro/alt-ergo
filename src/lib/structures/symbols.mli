@@ -150,7 +150,7 @@ type t =
   | True
   | False
   | Name of
-      { hs : Id.t
+      { hs : Uid.term_cst
       (** Note: [hs] is prefixed according to [ns]. *)
       ; kind : name_kind
       ; defined : bool
@@ -166,6 +166,20 @@ type t =
   | MapsTo of Var.t
   | Let
 
+module Namespace : sig
+  module type S = sig
+    val fresh : ?base:string -> unit -> string
+  end
+
+  module Internal : S
+  module Skolem : S
+  module Abstract : S
+
+  val reinit : unit -> unit
+  (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]
+      counters. *)
+end
+
 (** Create a new symbol with the given name.
 
     By default, names are created in the [User] name space.
@@ -174,7 +188,8 @@ type t =
     not be exactly the name that was passed to this function (however, calling
     `name` with the same string but two different name spaces is guaranteed to
     return two [Name]s with distinct [hs] fields). *)
-val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
+val name :
+  ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> Uid.term_cst -> t
 
 val var : Var.t -> t
 val int : string -> t
@@ -204,8 +219,6 @@ val print : t Fmt.t
 
 val to_string_clean : t -> string
 val print_clean : t Fmt.t
-
-val pp_name : (name_space * string) Fmt.t
 
 val pp_ae_operator : operator Fmt.t
 (* [pp_ae_operator ppf op] prints the operator symbol [op] on the

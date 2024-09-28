@@ -25,6 +25,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DE = Dolmen.Std.Expr
+module DStd = Dolmen.Std
+
 type builtin =
     LE | LT (* arithmetic *)
   | IsConstr of Uid.term_cst (* ADT tester *)
@@ -77,6 +80,37 @@ type form =
 
 type name_kind = Ac | Other
 
+module Namespace = struct
+  module type S = sig
+    val fresh : ?base:string -> unit -> string
+  end
+
+  module Make () = struct
+    let fresh, reset_fresh_cpt =
+      let cpt = ref 0 in
+      let fresh_string ?(base = "") () =
+        let res = base ^ (string_of_int !cpt) in
+        incr cpt;
+        res
+      in
+      let reset_fresh_string_cpt () =
+        cpt := 0
+      in
+      fresh_string, reset_fresh_string_cpt
+  end
+
+  module Internal = Make ()
+
+  module Skolem = Make ()
+
+  module Abstract = Make ()
+
+  let reinit () =
+    Internal.reset_fresh_cpt ();
+    Skolem.reset_fresh_cpt ();
+    Abstract.reset_fresh_cpt ()
+end
+
 type name_space = User | Internal | Fresh | Fresh_ac | Skolem | Abstract
 
 let compare_name_space ns1 ns2 =
@@ -112,7 +146,7 @@ type t =
   | True
   | False
   | Name of
-      { hs : Id.t
+      { hs : Uid.term_cst
       ; kind : name_kind
       ; defined : bool
       ; ns : name_space }
@@ -129,19 +163,21 @@ type t =
 
 let mangle ns s =
   match ns with
-  | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
-  | User when String.length s > 0 && Char.equal '@' s.[0] -> ".@" ^ s
-  | User -> s
-  | Internal -> ".!" ^ s
-  | Fresh -> ".k" ^ s
-  | Fresh_ac -> ".K" ^ s
-  | Skolem -> ".?__" ^ s
-  | Abstract -> "@a" ^ s
+  (* These two cases should not occur because Dolmen refuses these
+     identifiers since the version 0.10. *)
+  | User when String.length s > 0 && Char.equal '.' s.[0] -> Some (".." ^ s)
+  | User when String.length s > 0 && Char.equal '@' s.[0] -> Some (".@" ^ s)
+  | User -> None
+  | Internal -> Some (".!" ^ s)
+  | Fresh -> Some (".k" ^ s)
+  | Fresh_ac -> Some (".K" ^ s)
+  | Skolem -> Some (".?__" ^ s)
+  | Abstract -> Some ("@a" ^ s)
 
 (* NB: names are pre-mangled, which means that we don't need to take the
    namespace into consideration when hashing or comparing. *)
-let name ?(kind=Other) ?(defined=false) ?(ns = User) s =
-  Name { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
+let name ?(kind=Other) ?(defined=false) ?(ns = User) id =
+  Name { hs = Uid.do_mangle (mangle ns) id ; kind ; defined ; ns }
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -263,7 +299,7 @@ let compare s1 s2 =
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
       | Name { ns = ns1; hs = h1; kind = k1; _ },
         Name { ns = ns2; hs = h2; kind = k2; _ } ->
-        let c = Hstring.compare h1 h2 in
+        let c = Uid.compare h1 h2 in
         if c <> 0 then c else
           let c = compare_kinds k1 k2 in
           if c <> 0 then c else compare_name_space ns1 ns2
@@ -293,8 +329,8 @@ let hash x =
   | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   (* NB: No need to hash the namespace because names are pre-mangled *)
-  | Name { hs = n; kind = Ac; _ } -> 19 * Hstring.hash n + 5
-  | Name { hs = n; kind = Other; _ } -> 19 * Hstring.hash n + 6
+  | Name { hs = n; kind = Ac; _ } -> 19 * Uid.hash n + 5
+  | Name { hs = n; kind = Other; _ } -> 19 * Uid.hash n + 6
   | Int z -> 19 * Z.hash z + 7
   | Real n -> 19 * Hashtbl.hash n + 7
   | Var v -> 19 * Var.hash v + 8
@@ -316,10 +352,6 @@ let string_of_bound b =
     Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
-
-let pp_name ppf (_ns, s) =
-  (* Names are pre-mangled *)
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
 
 module AEPrinter = struct
   let pp_operator ppf op =
@@ -425,7 +457,7 @@ module AEPrinter = struct
     (* Core theory *)
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
-    | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
+    | Name { hs; _ } -> Uid.pp ppf hs
     | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
     | Var v -> Fmt.string ppf (Var.to_string v)
 
@@ -524,8 +556,10 @@ let to_string_clean sy =
 let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
-let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
-let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
+let fresh_skolem_string base = Namespace.Skolem.fresh ~base ()
+let fresh_skolem_name base =
+  name ~ns:Skolem @@ Uid.of_string @@ fresh_skolem_string base
+
 let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
 
 let is_get f = equal f (Op Get)

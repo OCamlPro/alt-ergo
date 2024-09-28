@@ -122,11 +122,10 @@ module Cache = struct
     List.map (store_tyv_ret ~is_var) tyvl
 
   let store_sy_vl_names (tvl: DE.term_var list) =
-    List.iter (
-      fun ({ DE.path; _ } as tv) ->
-        let name = get_basename path in
-        store_sy tv (Sy.name name)
-    ) tvl
+    List.iter
+      (fun tv ->
+         store_sy tv @@ Sy.name @@ Uid.of_term_cst tv
+      ) tvl
 
   let store_ty_vars ?(is_var = true) ty =
     match DT.view ty with
@@ -632,12 +631,11 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
 
 (** Handles term declaration by storing the eventual present type variables
     in the cache as well as the symbol associated to the term. *)
-let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
-  let name = get_basename path in
+let mk_term_decl ({ id_ty; tags; _ } as tcst: DE.term_cst) =
   let sy =
     begin match DStd.Tag.get tags DE.Tags.ac with
-      | Some () -> Sy.name ~kind:Sy.Ac name
-      | _ -> Sy.name name
+      | Some () -> Sy.name ~kind:Sy.Ac @@ Uid.of_term_cst tcst
+      | _ -> Sy.name @@ Uid.of_term_cst tcst
     end
   in
   Cache.store_sy tcst sy;
@@ -649,7 +647,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       List.map dty_to_ty arg_tys, dty_to_ty ret_ty
     | _ -> [], dty_to_ty id_ty
   in
-  (Hstring.make name, arg_tys, ret_ty)
+  Uid.of_term_cst tcst, arg_tys, ret_ty
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -1894,9 +1892,8 @@ let make dloc_file acc stmt =
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
           match def with
-          | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
-            let name_base = get_basename path in
-            let sy = Sy.name ~defined:true name_base in
+          | `Term_def (_, tcst, _, _, _) ->
+            let sy = Sy.name ~defined:true @@ Uid.of_term_cst tcst in
             Cache.store_sy tcst sy
           | `Type_alias _ -> ()
           | `Instanceof _ ->

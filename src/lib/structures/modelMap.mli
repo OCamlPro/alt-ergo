@@ -19,16 +19,22 @@
 type t
 (** Type of model. *)
 
-val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
+type profile = Uid.term_cst * Ty.t list * Ty.t
+(** Typed identifier of function. In order:
+    - The identifier.
+    - Types of its arguments.
+    - The returned type. *)
+
+val add : profile -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
 
-val empty : suspicious:bool -> Id.typed list -> t
+val empty : suspicious:bool -> profile list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
 
-val subst : Id.t -> Expr.t -> t -> t
+val subst : profile -> Expr.t -> t -> t
 (** [subst id e mdl] substitutes all the occurrences of the identifier [id]
     in the model [mdl] by the model term [e].
 

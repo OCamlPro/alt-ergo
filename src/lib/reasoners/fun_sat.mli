@@ -37,7 +37,7 @@ module Make (_ : Theory.S) : sig
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
-  val declare : t -> Id.typed -> t
+  val declare : t -> ModelMap.profile -> t
 
   val push : t -> int -> t
 

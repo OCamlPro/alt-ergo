@@ -178,8 +178,8 @@ module Make (Th : Theory.S) = struct
     last_saved_model : Models.t Lazy.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
 
-    declare_top : Id.typed list ref;
-    declare_tail : Id.typed list Stack.t;
+    declare_top : ModelMap.profile list ref;
+    declare_tail : ModelMap.profile list Stack.t;
     (** Stack of the declared symbols by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
@@ -1875,7 +1875,7 @@ module Make (Th : Theory.S) = struct
     clear_instances_cache ();
     Th.reinit_cpt ();
     Symbols.clear_labels ();
-    Id.Namespace.reinit ();
+    Symbols.Namespace.reinit ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();

@@ -46,7 +46,7 @@ module type SAT_ML = sig
 
   val solve : t -> unit
   val compute_concrete_model :
-    declared_ids:Id.typed list ->
+    declared_ids:ModelMap.profile list ->
     t ->
     Models.t Lazy.t * Objective.Model.t
 

@@ -104,11 +104,13 @@ module Constraints = struct
     aux ppf (Expr.Map.to_seq c)
 end
 
+type profile = Uid.term_cst * Ty.t list * Ty.t
+
 module P = Map.Make
     (struct
-      type t = Id.typed
+      type t = profile
 
-      let compare = Id.compare_typed
+      let compare (id1, _, _) (id2, _, _) = Uid.compare id1 id2
     end)
 
 type graph =
@@ -123,25 +125,25 @@ type t = {
   suspicious : bool;
 }
 
-let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
+let add ((id, arg_tys, _) as p) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
-                     arguments" Id.pp id;
+                     arguments" Uid.pp id;
   let constraints =
-    match P.find sy values with
+    match P.find p values with
     | C g -> g
     | Free _ | exception Not_found -> Constraints.empty
   in
   let values =
-    P.add sy (C (Constraints.add arg_vals ret_val constraints)) values
+    P.add p (C (Constraints.add arg_vals ret_val constraints)) values
   in
   { values; suspicious }
 
 let empty ~suspicious declared_ids =
   let values =
     List.fold_left
-      (fun values ((_, _, ret_ty) as sy) ->
-         P.add sy (Free (Expr.mk_abstract ret_ty)) values
+      (fun values ((_, _, ret_ty) as p) ->
+         P.add p (Free (Expr.mk_abstract ret_ty)) values
       )
       P.empty declared_ids
   in
@@ -150,7 +152,7 @@ let empty ~suspicious declared_ids =
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
-  | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
+  | Sy.Name { hs = id'; _ }, [] when Uid.equal id id' ->
     let ty = Expr.type_info e in
     if not @@ Ty.equal ty ty' then
       Errors.error (Model_error (Subst_type_clash (id, ty', ty)));
@@ -161,7 +163,7 @@ let rec subst_in_term id e c =
       Expr.mk_term f xs ty'
     end
 
-let subst id e { values; suspicious } =
+let subst (id, _, _) e { values; suspicious } =
   if not @@ Expr.is_model_term e then
     Errors.error (Model_error (Subst_not_model_term e));
 
@@ -181,7 +183,7 @@ let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
 let pp_define_fun ~is_constant pp ppf ((id, arg_tys, ret_ty), a) =
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
-    Id.pp id
+    Uid.pp id
     Fmt.(list ~sep:sp (pp_named_arg_ty ~unused:is_constant)) named_arg_tys
     Ty.pp_smtlib ret_ty
     pp a

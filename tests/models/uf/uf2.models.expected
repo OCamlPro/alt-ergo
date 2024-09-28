@@ -1,7 +1,7 @@
 
 unknown
 (
+  (define-fun f ((arg_0 Int)) Int (ite (= arg_0 0) 1 0))
   (define-fun a () Int 0)
   (define-fun b () Int (- 1))
-  (define-fun f ((arg_0 Int)) Int (ite (= arg_0 0) 1 0))
 )
