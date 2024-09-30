@@ -8,7 +8,6 @@
  (name alt_ergo_common)
  (libraries
    alt-ergo-lib
-   alt-ergo-parsers
    stdlib-shims
    cmdliner
    dune-site
@@ -19,7 +18,6 @@
    MyDynlink
    AltErgoSites
    Parse_command
-   Input_frontend
    Signals_profiling
    Solving_loop)
   (preprocess

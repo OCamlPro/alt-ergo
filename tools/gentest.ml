@@ -21,8 +21,8 @@ type 'a printer = Format.formatter -> 'a -> unit
 let (//) = Filename.concat
 
 let mangle_regexp =
-  if Sys.win32 then Str.regexp {|\|}
-  else Str.regexp {|/|}
+  if Sys.win32 then Str.regexp {|\\\|\.|}
+  else Str.regexp {|/\|\.|}
 
 let mangle_path = Str.global_replace mangle_regexp "__"
 
@@ -170,10 +170,9 @@ end = struct
     Format.fprintf fmt "%s" filename
 
   let pp_output fmt tst =
-    let filename = Filename.chop_extension tst.pb_file in
-    let name = Cmd.name tst.cmd in
-    let basename = Format.asprintf "%s_%s.output" filename name in
-    Format.fprintf fmt "%s" ((tst.path // basename) |> mangle_path)
+    Format.fprintf fmt "%s_%s.output"
+      (tst.path // tst.pb_file |> mangle_path)
+      (Cmd.name tst.cmd)
 
   let pp_expected_output fmt tst =
     let filename =
@@ -261,23 +260,11 @@ end = struct
                 {acc with compare_should_succeed = false}
               | "err" ->
                 {acc with accepted_exit_codes = [1]}
+              | "cdcl" ->
+                {acc with
+                 exclude = "tableaux" :: "tableaux_cdcl" :: acc.exclude}
               | "timeout" ->
                 {acc with accepted_exit_codes = [142]}
-              | "dolmen" -> {
-                  acc with
-                  exclude = "legacy" :: acc.exclude;
-                  filters = Some ["dolmen"]
-                }
-              | "smt2" -> {
-                  acc with
-                  exclude = "legacy" :: acc.exclude;
-                }
-              | "models" -> {
-                  acc with
-                  exclude =
-                    "legacy" :: acc.exclude;
-                  filters = Some ["dolmen"]
-                }
               | _ -> acc
           )
             Test.base_params
@@ -365,57 +352,43 @@ let () =
     ]
   in
   let solvers = [
-    ("runtest-quick", "dolmen",
-     [ "--output=smtlib2"
-     ; "--frontend dolmen" ])
-  ; ("runtest-quick", "legacy",
-     [ "--output=smtlib2"
-     ; "--frontend legacy"
-     ])
+    ("runtest-quick", "default",
+     [ "--output=smtlib2"])
   ; ("runtest-quick", "tableaux",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver Tableaux" ])
   ; ("runtest-quick", "tableaux_cdcl",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver Tableaux-CDCL" ])
   ; ("runtest-quick", "cdcl",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL" ])
   ; ("runtest-ci", "ci_tableaux_cdcl_no_minimal_bj",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-minimal-bj" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-theories" ])
   ; ("runtest-ci", "ci_no_tableaux_cdcl_in_instantiation",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-theories"
      ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_tableaux_no_minimal_bj_no_tableaux_cdcl_in_theories\
                     _and_instantiation",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-minimal-bj"
      ; "--no-tableaux-cdcl-in-theories"
      ; "--no-tableaux-cdcl-in-instantiation" ])
   ; ("runtest-ci", "ci_cdcl_no_minimal_bj",
      [ "--output=smtlib2"
-     ; "--frontend dolmen"
      ; "--sat-solver CDCL"
      ; "--no-minimal-bj" ])]
   in

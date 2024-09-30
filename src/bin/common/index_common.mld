@@ -10,12 +10,6 @@ The solving loop is done in the {!Alt_ergo_common.Solving_loop} module. This mod
 
 The command line parsing is done with {{:https://erratique.ch/software/cmdliner}[cmdliner]} in the module {!module:Alt_ergo_common.Parse_command}. This module initialises options of the Alt-Ergo-Lib library.
 
-{2:input Input Frontend }
-
-The {!module:Alt_ergo_common.Input_frontend} module register an input method capable of parsing and typechecking the input files
-
-The legacy frontend is used to parse and typecheck file with the native Alt-Ergo syntaxe and also the smtlib2 and psmt2 syntaxe.
-
 {2:signals Signals and profiling }
 
 The {!module:Alt_ergo_common.Signals_profiling} module initialise handlers for system signals and profiling informations and timers.

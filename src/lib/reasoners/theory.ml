@@ -619,7 +619,7 @@ module Main_Default : S = struct
     | Unknown ->
       (* In the current implementation of optimization, the function
          [CC_X.optimizing_objective] cannot fail to optimize the objective
-         function [obj]. First of all, the legacy parser only accepts
+         function [obj]. First of all, the parser only accepts
          optimization clauses on expressions of type [Real] or [Int].
          For the [Real] or [Int] expressions, we have two cases:
          - If the objective function is a linear functions of variables, the

@@ -81,12 +81,6 @@ let get_no_decisions_on = function
         Util.SS.add d acc
       ) Util.SS.empty l)
 
-let get_frontend = function
-    None -> None
-  | Some f -> match f with
-    | Legacy -> Some "legacy"
-    | Unknown f -> Some f
-
 let get_numbers = function
     None -> None
   | Some i -> Some (Numbers.Q.from_int i)
@@ -96,7 +90,6 @@ let set_options_opt f = function
   | Some v -> f v
 
 let set_options r =
-  set_options_opt Options.set_frontend (get_frontend r.frontend);
   set_options_opt Options.set_debug r.debug;
   set_options_opt Options.set_debug_ac r.debug_ac ;
   set_options_opt Options.set_debug_adt r.debug_adt ;

@@ -283,7 +283,6 @@ let output_with_colors = ref false
 let output_with_headers = ref true
 let output_with_formatting = ref true
 let output_with_forced_flush = ref true
-let frontend = ref "dolmen"
 let input_format = ref None
 let parse_only = ref false
 let preludes = ref []
@@ -296,7 +295,6 @@ let set_output_with_colors b = output_with_colors := b
 let set_output_with_headers b = output_with_headers := b
 let set_output_with_formatting b = output_with_formatting := b
 let set_output_with_forced_flush b = output_with_forced_flush := b
-let set_frontend f = frontend := f
 let set_input_format f = input_format := f
 let set_parse_only b = parse_only := b
 let set_preludes p = preludes := p
@@ -310,7 +308,6 @@ let get_output_with_colors () = !output_with_colors
 let get_output_with_headers () = !output_with_headers
 let get_output_with_formatting () = !output_with_formatting
 let get_output_with_forced_flush () = !output_with_forced_flush
-let get_frontend () = !frontend
 let get_input_format () = !input_format
 let get_parse_only () = !parse_only
 let get_preludes () = !preludes

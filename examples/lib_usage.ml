@@ -55,37 +55,37 @@
 
  ****)
 
-Format.eprintf
-  "\n(* This minimal example shows how to use Alt-Ergo's lib *)\n@."
+(* Format.eprintf
+   "\n(* This minimal example shows how to use Alt-Ergo's lib *)\n@."
 
-open AltErgoLib
+   open AltErgoLib *)
 
-module PA = Parsed_interface
+(* module PA = Parsed_interface
 
-let _x = PA.mk_var_type Loc.dummy "'a"
+   let _x = PA.mk_var_type Loc.dummy "'a"
 
-let one = PA.mk_int_const Loc.dummy "1"
-let two = PA.mk_int_const Loc.dummy "2"
-let three = PA.mk_int_const Loc.dummy "3"
-let one_two = PA.mk_add Loc.dummy one two
-let eq1 = PA.mk_pred_eq Loc.dummy one_two three
-let eq2 = PA.mk_pred_eq Loc.dummy one three
+   let one = PA.mk_int_const Loc.dummy "1"
+   let two = PA.mk_int_const Loc.dummy "2"
+   let three = PA.mk_int_const Loc.dummy "3"
+   let one_two = PA.mk_add Loc.dummy one two
+   let eq1 = PA.mk_pred_eq Loc.dummy one_two three
+   let eq2 = PA.mk_pred_eq Loc.dummy one three
 
-let goal_1 = PA.mk_goal Loc.dummy "toy_1" eq1
-let goal_2 = PA.mk_goal Loc.dummy "toy_2" eq2
-let goal_3 = PA.mk_goal Loc.dummy "toy_3" (PA.mk_not Loc.dummy eq1)
+   let goal_1 = PA.mk_goal Loc.dummy "toy_1" eq1
+   let goal_2 = PA.mk_goal Loc.dummy "toy_2" eq2
+   let goal_3 = PA.mk_goal Loc.dummy "toy_3" (PA.mk_not Loc.dummy eq1)
 
-let parsed = [goal_1; goal_2; goal_3]
+   let parsed = [goal_1; goal_2; goal_3]
 
-let typed, _env = Typechecker.type_file parsed
+   let typed, _env = Typechecker.type_file parsed
 
-let pbs = Typechecker.split_goals_and_cnf typed
+   let pbs = Typechecker.split_goals_and_cnf typed
 
-module SAT = Fun_sat_frontend.Make(Theory.Main_Default)
-module FE = Frontend.Make(SAT)
+   module SAT = Fun_sat_frontend.Make(Theory.Main_Default)
+   module FE = Frontend.Make(SAT)
 
-let () =
-  List.iter
+   let () =
+   List.iter
     (fun (pb, _goal_name) ->
        let ctxt = Frontend.init_all_used_context () in
        let env = FE.init_env ctxt in
@@ -95,4 +95,4 @@ let () =
          Format.printf "unknown@."
        | `Unsat ->
          Format.printf "unsat@."
-    ) pbs
+    ) pbs *)

@@ -44,15 +44,6 @@ let is_solver_ctx_empty = function
 
 type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
 
-type any_sat_module = (module Sat_solver_sig.S)
-
-(* Internal state while iterating over input statements *)
-type 'a state = {
-  env : 'a;
-  solver_ctx: solver_ctx;
-  sat_solver : any_sat_module;
-}
-
 let empty_solver_ctx = {
   ctx = [];
   local = [];
@@ -208,139 +199,6 @@ let process_source ?selector_inst ~print_status src =
       Unknown None
   in
 
-  let typed_loop all_context state td =
-    if O.get_type_only () then state else begin
-      match td.Typed.c with
-      | Typed.TGoal (_, kind, name, _) ->
-        let l =
-          state.solver_ctx.local @
-          state.solver_ctx.global @
-          state.solver_ctx.ctx
-        in
-        let cnf = List.rev @@ Cnf.make l td in
-        let _ = solve state.sat_solver all_context (cnf, name) in
-        begin match kind with
-          | Ty.Check
-          | Ty.Cut ->
-            { state with solver_ctx =
-                           { state.solver_ctx with local = []}}
-          | Ty.Thm | Ty.Sat ->
-            { state with solver_ctx = {
-                  state.solver_ctx with global = []; local = []}}
-        end
-      | Typed.TAxiom (_, s, _, _) when Ty.is_global_hyp s ->
-        let cnf = Cnf.make state.solver_ctx.global td in
-        { state with solver_ctx = { state.solver_ctx with global = cnf; }}
-      | Typed.TAxiom (_, s, _, _) when Ty.is_local_hyp s ->
-        let cnf = Cnf.make state.solver_ctx.local td in
-        { state with solver_ctx = { state.solver_ctx with local = cnf; }}
-      | Typed.TReset _ ->
-        { state with solver_ctx = {ctx = []; local = []; global = []}}
-      | Typed.TExit _ -> raise Exit
-      | _ ->
-        let cnf = Cnf.make state.solver_ctx.ctx td in
-        { state with solver_ctx = { state.solver_ctx with ctx = cnf; }}
-    end
-  in
-
-  let ae_fe filename frontend =
-    let (module I : Input.S) = Input.find frontend in
-
-    let parsed () =
-      try
-        Options.Time.start ();
-        if not (Options.get_timelimit_per_goal()) then
-          Options.Time.set_timeout (Options.get_timelimit ());
-
-        Signals_profiling.init_profiling ();
-
-        let with_opt (get, set) v f =
-          let v' = get () in
-          set v;
-          Fun.protect
-            ~finally:(fun () -> set v')
-            f
-        in
-        let with_infer_output_format =
-          with_opt Options.(get_infer_output_format, set_infer_output_format)
-        in
-        let with_input_format =
-          with_opt Options.(get_input_format, set_input_format)
-        in
-        let theory_preludes =
-          Options.get_theory_preludes ()
-          |> List.to_seq
-          |> Seq.flat_map (fun theory ->
-              let filename = Theories.filename theory in
-              let content = Theories.content theory in
-              with_input_format None @@ fun () ->
-              with_infer_output_format false @@ fun () ->
-              I.parse_file
-                ~content
-                ~format:(Some (Filename.extension filename)))
-        in
-        let preludes = Options.get_preludes () in
-        Compat.Seq.append theory_preludes @@
-        I.parse_files ~filename ~preludes
-      with
-      | Util.Timeout ->
-        Frontend.print_status (Timeout None) 0;
-        exit_as_timeout ()
-      | Parsing.Parse_error ->
-        (* TODO(Steven): displaying a dummy value is a bad idea.
-           This should only be executed with the legacy frontend, which should
-           be deprecated in a near future, so this code will be removed (or at
-           least, its behavior unspecified). *)
-        fatal_error
-          "%a"
-          Errors.report
-          (Syntax_error ((Lexing.dummy_pos,Lexing.dummy_pos),""))
-      | Errors.Error e ->
-        fatal_error "%a" Errors.report e
-    in
-
-    let all_used_context = Frontend.init_all_used_context () in
-    if Options.get_timelimit_per_goal() then
-      Frontend.print_status Preprocess 0;
-    let assertion_stack = Stack.create () in
-    let typing_loop state p =
-      if O.get_parse_only () then state else begin
-        try
-          let l, env = I.type_parsed state.env assertion_stack p in
-          List.fold_left (typed_loop all_used_context) { state with env; } l
-        with
-        | Errors.Error e ->
-          let () =
-            if e != Warning_as_error then
-              recoverable_error "%a" Errors.report e
-            else
-              recoverable_error ""
-          in
-          state
-        | Exit -> exit 0
-      end
-    in
-    let sat_solver =
-      let module SatCont =
-        (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
-      in
-      let module TH = (val Sat_solver.get_theory ~no_th:(O.get_no_theory ())) in
-      (module SatCont.Make(TH) : Sat_solver_sig.S)
-    in
-    let state = {
-      env = I.empty_env;
-      solver_ctx = empty_solver_ctx;
-      sat_solver;
-    } in
-    try
-      let parsed_seq = parsed () in
-      let _ : _ state = Seq.fold_left typing_loop state parsed_seq in
-      Options.Time.unset_timeout ();
-    with Util.Timeout ->
-      Frontend.print_status (Timeout None) 0;
-      exit_as_timeout ()
-  in
-
   let solver_ctx_key: solver_ctx State.key =
     State.create_key ~pipe:"" "solving_state"
   in
@@ -491,7 +349,7 @@ let process_source ?selector_inst ~print_status src =
       ~size_limit ~response_file
     |> Parser.init
     |> Typer.init
-      ~additional_builtins:D_cnf.builtins
+      ~additional_builtins:Cnf.builtins
       ~extension_builtins:[Typer.Ext.bv2nat]
     |> Typer_Pipe.init ~type_check
   in
@@ -654,7 +512,7 @@ let process_source ?selector_inst ~print_status src =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
       in
       let cnf =
-        D_cnf.make (State.get State.logic_file st).loc
+        Cnf.make (State.get State.logic_file st).loc
           (State.get solver_ctx_key st).ctx stmt
       in
       State.set solver_ctx_key (
@@ -770,7 +628,7 @@ let process_source ?selector_inst ~print_status src =
       Expr.mk_term
         (Sy.name name)
         []
-        (D_cnf.dty_to_ty term.DStd.Expr.term_ty)
+        (Cnf.dty_to_ty term.DStd.Expr.term_ty)
     in
     match get_value simple_form with
     | Some v -> Fmt.to_to_string Expr.print v
@@ -847,7 +705,7 @@ let process_source ?selector_inst ~print_status src =
         in
         let stmt = { Typer_Pipe.id; contents; loc ; attrs; implicit } in
         let cnf, is_thm =
-          match D_cnf.make (State.get State.logic_file st).loc l stmt with
+          match Cnf.make (State.get State.logic_file st).loc l stmt with
           | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
             let is_thm =
               match kind with Ty.Thm | Sat -> true | _ -> false
@@ -969,7 +827,7 @@ let process_source ?selector_inst ~print_status src =
              unsupported statement is encountered.
         *)
         let cnf =
-          D_cnf.make (State.get State.logic_file st).loc
+          Cnf.make (State.get State.logic_file st).loc
             (State.get solver_ctx_key st).ctx td
         in
         State.set solver_ctx_key (
@@ -1030,9 +888,7 @@ let process_source ?selector_inst ~print_status src =
       let bt = Printexc.get_raw_backtrace () in
       ignore (handle_exn st bt exn)
   in
-  match O.get_frontend () with
-  | "dolmen" -> d_fe src
-  | frontend -> ae_fe (O.get_file ()) frontend
+  d_fe src
 
 let main () =
   let path = Options.get_file () in

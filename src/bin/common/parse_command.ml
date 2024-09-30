@@ -976,13 +976,10 @@ let parse_output_opt =
     let frontend =
       let doc =
         "Select the parsing and typing frontend. Support for non-default \
-         frontends is deprecated and will be removed in the next release."
+         frontends is deprecated."
       in
       let docv = "FTD" in
-      let deprecated =
-        "this option is deprecated and will be ignored in the \
-         next version"
-      in
+      let deprecated = "this option is deprecated and is ignored." in
       Arg.(value & opt string "dolmen" &
            info ["frontend"] ~docv ~docs:s_execution ~doc ~deprecated)
     in
@@ -1187,6 +1184,8 @@ let parse_output_opt =
   let set_dump_models_on =
     Term.(const Output.set_dump_models $ dump_models_on)
   in
+
+  let set_frontend _ = () in
 
   let set_frontend =
     Term.(const set_frontend $ frontend)

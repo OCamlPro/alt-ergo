@@ -202,9 +202,6 @@ val set_bottom_classes : bool -> unit
 (** Set [fm_cross_limit] accessible with {!val:get_fm_cross_limit} *)
 val set_fm_cross_limit : Numbers.Q.t -> unit
 
-(** Set [frontend] accessible with {!val:get_frontend} *)
-val set_frontend : string -> unit
-
 (** Set [instantiation_heuristic ] accessible with
     {!val:get_instantiation_heuristic} *)
 val set_instantiation_heuristic : instantiation_heuristic -> unit
@@ -626,10 +623,6 @@ val get_output_with_formatting  : unit -> bool
 (** [true] if the outputs are flushed at the end of every print *)
 val get_output_with_forced_flush  : unit -> bool
 (** Default to [true] *)
-
-(** Valuget_e of the currently selected parsing and typing frontend. *)
-val get_frontend : unit -> string
-(** Default to [legacy] *)
 
 (** Value specifying the default input format. Useful when the extension
     does not allow to automatically select a parser (eg. JS mode, GUI

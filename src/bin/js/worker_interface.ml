@@ -111,24 +111,6 @@ let sat_solver_encoding =
       (fun () -> CDCL_Tableaux);
   ]
 
-type frontend =
-  | Legacy
-  | Unknown of string
-
-let frontend_encoding =
-  union [
-    case(Tag 1)
-      ~title:"Legacy"
-      (constant "Legacy")
-      (function Legacy -> Some () | _ -> None)
-      (fun () -> Legacy);
-    case(Tag 2)
-      ~title:"Unknown"
-      (obj1 (req "Unknown" string))
-      (function Unknown s -> Some s | _ -> None)
-      (fun s -> Unknown(s));
-  ]
-
 type instantiation_heuristic =  INormal | IAuto | IGreedy
 type interpretation = INone | IFirst | IEvery | ILast
 
@@ -212,7 +194,6 @@ type options = {
   save_used_context : bool option;
 
   answers_with_loc : bool option;
-  frontend : frontend option;
   input_format : input_format option;
   parse_only : bool option;
   preludes : (string list) option;
@@ -313,7 +294,6 @@ let init_options () = {
   save_used_context = None;
 
   answers_with_loc = None;
-  frontend = None;
   input_format = None;
   parse_only = None;
   preludes = None;
@@ -442,9 +422,8 @@ let opt2_encoding =
   conv
     (fun opt2 -> opt2)
     (fun opt2 -> opt2)
-    (obj7
+    (obj6
        (opt "answers_with_loc" bool)
-       (opt "frontend" frontend_encoding)
        (opt "input_format" format_encoding)
        (opt "parse_only" bool)
        (opt "preludes" (list string))
@@ -587,7 +566,6 @@ let options_to_json opt =
   in
   let all_opt2 =
     (opt.answers_with_loc,
-     opt.frontend,
      opt.input_format,
      opt.parse_only,
      opt.preludes,
@@ -710,7 +688,6 @@ let options_from_json options =
          replay_used_context,
          save_used_context) = all_opt1 in
     let (answers_with_loc,
-         frontend,
          input_format,
          parse_only,
          preludes,
@@ -795,7 +772,6 @@ let options_from_json options =
       replay_used_context;
       save_used_context;
       answers_with_loc;
-      frontend;
       input_format;
       parse_only;
       preludes;

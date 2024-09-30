@@ -40,24 +40,6 @@ Alt-Ergo supports file extensions:
 
 See the [SMT-LIB language] and [Alt-ergo native language] sections for more information about the format of the input files.
 
-### Frontend option
-
-The `--frontend` option lets you select the frontend used to parse and type the input file. Since version 2.5.0,
-Alt-Ergo integrates two frontends:
-- The `dolmen` frontend is the default frontend, powered by the
-  [Dolmen](https://github.com/Gbury/dolmen) library.  The native and SMT-LIB
-  languages are both supported by this frontend.
-- The `legacy` frontend is the historical frontend of Alt-Ergo supporting the
-  native language. You can select it with the `--frontend legacy` option. The
-  legacy frontend is deprecated, and will be removed in a future release.
-
-```{admonition} Note
-
-The `legacy` frontend has limited support for the SMT-LIB language, but many
-SMT-LIB features will not work with the `legacy` frontend. Use the (default)
-`dolmen` frontend for SMT-LIB inputs.
-```
-
 ### Preludes
 
 Preludes can be passed to Alt-Ergo as follows:

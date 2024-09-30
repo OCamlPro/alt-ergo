@@ -1,3 +1,9 @@
+## unreleased
+
+### SMT-LIB support
+
+  - Remove the legacy frontend and AB-Why3 plugin
+
 ## v2.6.0
 
 ### Command-line interface
