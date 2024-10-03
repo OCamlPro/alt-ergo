@@ -1165,6 +1165,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     with
     | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
     | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+    | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
     | Satml.Sat ->
       try
         do_case_split env Util.BeforeMatching;
@@ -1205,6 +1206,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
       with
       | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+      | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
         begin
@@ -1214,6 +1216,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           with
           | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
           | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+          | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
         end
 
   let rec unsat_rec_prem env ~first_call : unit =
