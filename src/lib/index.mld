@@ -154,7 +154,6 @@ AltErgoLib.Timers
 AltErgoLib.Hconsing
 AltErgoLib.Vec
 AltErgoLib.Loc
-AltErgoLib.My_unix
 AltErgoLib.My_list
 AltErgoLib.Numbers
 }
