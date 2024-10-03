@@ -10,9 +10,7 @@
  (release ;; The release profile has optimizations enabled.
   (flags
    (:standard -bin-annot -w -22))
-  (ocamlopt_flags -O3 -unbox-closures))
-  (js_of_ocaml (flags --no-source-map))
-)
+  (ocamlopt_flags -O3 -unbox-closures)))
 
 (library
  (name alt_ergo_prelude)
