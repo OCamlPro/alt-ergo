@@ -32,6 +32,9 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
+let src = Logs.Src.create ~doc:"Solving_loop" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
   local  : Commands.sat_tdecl list;
@@ -1048,6 +1051,9 @@ let main () =
   in
 
   let filename = O.get_file () in
-  match O.get_frontend () with
-  | "dolmen" -> d_fe filename
-  | frontend -> ae_fe filename frontend
+  try
+    match O.get_frontend () with
+    | "dolmen" -> d_fe filename
+    | frontend -> ae_fe filename frontend
+  with Errors.Error e ->
+    Log.err (fun k -> k "%a" Errors.report e)
