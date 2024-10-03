@@ -630,17 +630,27 @@ module Time = struct
 
   let u = ref 0.0
 
-  let start () =
-    u := My_unix.cur_time()
+  let current () = (Unix.times ()).tms_utime
 
-  let value () =
-    My_unix.cur_time () -. !u
+  let start () = u := current ()
 
-  let set_timeout tm = My_unix.set_timeout tm
+  let value () = current () -. !u
+
+  let set_timeout timelimit =
+    if Stdlib.(<>) timelimit 0. then
+      let _ : Unix.interval_timer_status =
+        Unix.setitimer Unix.ITIMER_VIRTUAL
+          Unix.{ it_value = timelimit; it_interval = 0. }
+      in
+      ()
 
   let unset_timeout () =
     if Float.compare (get_timelimit ()) 0. <> 0 then
-      My_unix.unset_timeout ()
+      let _ : Unix.interval_timer_status =
+        Unix.setitimer Unix.ITIMER_VIRTUAL
+          Unix.{ it_value = 0.; it_interval = 0. }
+      in
+      ()
 
   let with_timeout tm f =
     Fun.protect

@@ -1058,10 +1058,9 @@ val exec_timeout : unit -> unit
 (** {2 Simple Timer module} *)
 
 module Time : sig
-
-
   val start : unit -> unit
   val value : unit -> float
+  val current : unit -> float
 
   val set_timeout : float -> unit
   val unset_timeout : unit -> unit

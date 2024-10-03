@@ -266,7 +266,7 @@ let accumulate_cumulative_mode name env m f cur =
 
 (** save the current timer and start the timer m x f **)
 let start env m f =
-  let cur = My_unix.cur_time() in
+  let cur = Options.Time.current () in
   accumulate_cumulative_mode "start" env m f cur;
   begin
     match env.cur_t with
@@ -280,7 +280,7 @@ let start env m f =
 
 (** pause the timer "m x f" and restore the former timer **)
 let pause env m f =
-  let cur = My_unix.cur_time() in
+  let cur = Options.Time.current () in
   accumulate_cumulative_mode "pause" env m f cur;
   accumulate env cur m f;
   env.cur_u <- cur;
@@ -293,7 +293,7 @@ let pause env m f =
 
 (** update the value of the current timer **)
 let update env =
-  let cur = My_unix.cur_time() in
+  let cur = Options.Time.current () in
   let m, f, _ = env.cur_t in
   accumulate_cumulative_mode "update" env m f cur;
   accumulate env cur m f;
