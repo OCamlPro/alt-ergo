@@ -523,6 +523,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          or to increase your timeouts. \
          Returned unknown reason = %a@]"
         Sat_solver_sig.pp_ae_unknown_reason_opt ur;
+      Fmt.pf ppf "()"
 
     | Some model ->
       Models.pp ppf model
