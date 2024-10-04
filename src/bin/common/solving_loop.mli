@@ -25,5 +25,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Main function solve the input problem *)
 val main : unit -> unit
+(** Main function solve the input problem. The processed source is given
+    by the file located at [Options.get_file ()]. *)
+
+val process_source :
+  ?selector_inst:(AltErgoLib.Expr.t -> bool) ->
+  print_status:(AltErgoLib.Frontend.status -> int -> unit) ->
+  Dolmen_loop.State.source ->
+  unit
+(** [process_source ?selector_inst ~print_status src] processes the
+    input source [src] and call [print_status] on each answers.
+    The hook [selector_inst] allows to track generated instantiations. *)

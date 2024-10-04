@@ -39,11 +39,11 @@ let unused_context name context =
   | None -> false
   | Some s -> not (Util.SS.mem name s)
 
-type 'a status =
+type status =
   | Unsat of Commands.sat_tdecl * Ex.t
   | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * 'a
-  | Unknown of Commands.sat_tdecl * 'a
+  | Sat of Commands.sat_tdecl
+  | Unknown of Commands.sat_tdecl
   | Timeout of Commands.sat_tdecl option
   | Preprocess
 
@@ -97,13 +97,13 @@ let print_status status steps =
     Printer.print_status_inconsistent ~validity_mode
       (Some loc) (Some time) (Some steps) (get_goal_name d);
 
-  | Sat (d, _) ->
+  | Sat d ->
     let loc = d.st_loc in
     Printer.print_status_sat ~validity_mode
       (Some loc) (Some time) (Some steps) (get_goal_name d);
     check_status_consistency status;
 
-  | Unknown (d, _) ->
+  | Unknown d ->
     let loc = d.st_loc in
     Printer.print_status_unknown ~validity_mode
       (Some loc) (Some time) (Some steps) (get_goal_name d);
@@ -141,7 +141,7 @@ module type S = sig
 
   type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
-  val init_env : ?sat_env:sat_env -> used_context -> env
+  val init_env : ?selector_inst:(Expr.t -> bool) -> used_context -> env
 
   val push : int process
 
@@ -158,7 +158,7 @@ module type S = sig
   val optimize : Objective.Function.t process
 
   val process_decl:
-    ?hook_on_status: (sat_env status -> int -> unit) ->
+    ?hook_on_status: (status -> int -> unit) ->
     env ->
     sat_tdecl ->
     unit
@@ -227,23 +227,21 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
-  let init_env ?(sat_env=SAT.empty ()) used_context =
+  let init_env ?selector_inst used_context =
     {
       used_context;
       consistent_dep_stack = Stack.create ();
-      sat_env;
+      sat_env = SAT.empty ?selector:selector_inst ();
       res = `Unknown;
       expl = Explanation.empty
     }
 
   let output_used_context g_name dep =
-    if not (Options.get_js_mode ()) then begin
-      let f = Options.get_used_context_file () in
-      let cout = open_out (sprintf "%s.%s.used" f g_name) in
-      let cfmt = Format.formatter_of_out_channel cout in
-      Ex.print_unsat_core cfmt dep;
-      close_out cout
-    end
+    let f = Options.get_used_context_file () in
+    let cout = open_out (sprintf "%s.%s.used" f g_name) in
+    let cfmt = Format.formatter_of_out_channel cout in
+    Ex.print_unsat_core cfmt dep;
+    close_out cout
 
   let check_produced_unsat_core dep =
     if get_verbose () then
@@ -481,7 +479,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result,
          so we want to print the status in this case. *)
-      hook_on_status (Sat (d, env.sat_env)) (Steps.get_steps ());
+      hook_on_status (Sat d) (Steps.get_steps ());
       env.res <- `Sat
 
     | SAT.Unsat expl' ->
@@ -500,7 +498,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       let status =
         match ur with
         | Some (Sat_solver_sig.Timeout _) -> Timeout (Some d)
-        | _ -> Unknown (d, env.sat_env)
+        | _ -> Unknown d
       in
       hook_on_status status (Steps.get_steps ());
       (* TODO: Is it an appropriate behaviour? *)

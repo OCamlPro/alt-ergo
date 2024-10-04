@@ -30,15 +30,15 @@ type used_context
 val init_all_used_context : unit -> used_context
 val choose_used_context : used_context -> goal_name:string -> used_context
 
-type 'a status =
+type status =
   | Unsat of Commands.sat_tdecl * Explanation.t
   | Inconsistent of Commands.sat_tdecl
-  | Sat of Commands.sat_tdecl * 'a
-  | Unknown of Commands.sat_tdecl * 'a
+  | Sat of Commands.sat_tdecl
+  | Unknown of Commands.sat_tdecl
   | Timeout of Commands.sat_tdecl option
   | Preprocess
 
-val print_status : 'a status -> int -> unit
+val print_status : status -> int -> unit
 
 module type S = sig
 
@@ -59,7 +59,7 @@ module type S = sig
     mutable expl : Explanation.t
   }
 
-  val init_env : ?sat_env:sat_env -> used_context -> env
+  val init_env : ?selector_inst:(Expr.t -> bool) -> used_context -> env
 
   (** Process are wrappers of calls to the SAT solver.
       They catch the [Sat], [Unsat] and [I_dont_know] exceptions to update the
@@ -82,7 +82,7 @@ module type S = sig
   val optimize : Objective.Function.t process
 
   val process_decl:
-    ?hook_on_status:(sat_env status -> int -> unit) ->
+    ?hook_on_status:(status -> int -> unit) ->
     env ->
     Commands.sat_tdecl ->
     unit
