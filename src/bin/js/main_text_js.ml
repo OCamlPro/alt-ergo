@@ -38,7 +38,11 @@ let parse_cmdline () =
   with Parse_command.Exit_parse_command i -> exit i
 
 let () =
-  Options.set_exit_on_error false;
+  (* Currently, the main function of [Solving_loop] calls the [exit] function in
+     case of recoverable error, which is not supported in Javascript. We
+     turn off this feature as we do not support it correctly. See issue
+     https://github.com/OCamlPro/alt-ergo/issues/1250 *)
+  AltErgoLib.Options.set_exit_on_error false;
   register_input ();
   parse_cmdline ();
   AltErgoLib.Printer.init_colors ();

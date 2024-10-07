@@ -64,7 +64,7 @@ let exec worker file options =
 let solve () =
   let options =
     {(Worker_interface.init_options ()) with
-     input_format=Some Native;
+     input_format = None;
      file = Some "try-alt-ergo";
      debug = Some true;
      verbose = Some true;
@@ -82,7 +82,10 @@ let solve () =
                    diagnostic = Some ["Timeout"]});
       (
         let file = String.split_on_char '\n' !file in
-        let json_file = Worker_interface.file_to_json None (Some 42) file in
+        let json_file =
+          Worker_interface.file_to_json
+            (Some ("dummy" ^ !extension)) (Some 42) file
+        in
         Firebug.console##log json_file;
         let json_options = Worker_interface.options_to_json options in
         Firebug.console##log json_options;

@@ -54,7 +54,6 @@ let create_buffer () =
   buf, output
 
 let main worker_id filename filecontent =
-  let filename = match filename with | Some f -> f | None -> "<worker>" in
   try
     (* Create buffer for each formatter
        The content of this buffers are then retrieved and send as results *)
@@ -163,7 +162,7 @@ let () =
   at_exit Options.Output.close_all;
   Worker.set_onmessage (fun (json_file, json_options) ->
       Lwt_js_events.async (fun () ->
-          let filename, worker_id, filecontent =
+          let filename_opt, worker_id, filecontent =
             Worker_interface.file_from_json json_file
           in
           let filecontent = String.concat "\n" filecontent in
@@ -174,6 +173,7 @@ let () =
           Options.set_exit_on_error false;
 
           (* Run the worker on the input file (filecontent) *)
+          let filename = Option.get filename_opt in
           let results = main worker_id filename filecontent in
 
           (* Convert results and returns them *)
