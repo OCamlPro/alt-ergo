@@ -89,6 +89,7 @@ type run_error =
   | Unsupported_feature of string
   | Dynlink_error of string
   | Stack_underflow
+  | Invalid_zip of string
 
 (** Errors raised when performing actions forbidden in some modes. *)
 type mode_error =
@@ -144,6 +145,8 @@ val invalid_set_option : Util.mode -> string -> 'a
 (** Raise [Mode_error (Forbidden_command str)] as {!Error} if a command is
     being used in a mode where it should not be available. *)
 val forbidden_command : Util.mode -> string -> 'a
+
+val unsupported_feature : ('a, Format.formatter, unit, 'b) format4 -> 'a
 
 (** {2 Printing } *)
 

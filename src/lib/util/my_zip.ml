@@ -25,54 +25,31 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A wrapper of the Zip module of CamlZip: we use Zip except when we want to
-    generate the.js file for try-Alt-Ergo. *)
+[@@@ocaml.warning "-32-33"]
+(** A wrapper of the Zip module of CamlZip *)
 
-module ZipWrapper = struct
-  include Zip
-  let filename e = e.Zip.filename
-  let is_directory e = e.Zip.is_directory
-end
+let src = Logs.Src.create ~doc:"My_zip" __MODULE__
+module Log = (val Logs.src_log src : Logs.LOG)
 
-include ZipWrapper
+open Zip
+
+let filename e = e.Zip.filename
+let is_directory e = e.Zip.is_directory
 
 let extract_zip_file f =
+  if Stdlib.(Sys.backend_type = Bytecode) then
+    Errors.unsupported_feature "Zip format in javascript mode";
+
   let cin = open_in f in
-  try
-    match entries cin with
-    | [e] when not @@ is_directory e ->
-      if Options.get_verbose () then
-        Printer.print_dbg
-          ~module_name:"My_zip" ~function_name:"extract_zip_file"
-          "I'll read the content of '%s' in the given zip"
-          (filename e);
-      let content = read_entry cin e in
-      close_in cin;
-      content
-    | _ ->
-      close_in cin;
-      raise (Arg.Bad
-               (Format.sprintf "%s '%s' %s@?"
-                  "The zipped file" f
-                  "should contain exactly one file."))
-  with e ->
-    close_in cin;
-    raise e
+  Fun.protect ~finally:(fun () -> close_in cin) @@ fun () ->
+  match entries cin with
+  | [e] when not @@ is_directory e ->
+    if Options.get_verbose () then
+      Log.debug
+        (fun k -> k "Extract the content of '%s' in the given zip"
+            (filename e));
+    read_entry cin e
+  | _ ->
+    Errors.run_error (Invalid_zip f)
 
-(* !! This commented code is used when compiling to javascript !!
-   module DummyZip = struct
-   type entry = unit
-   type in_file = unit
-
-   let s = "Zip module not available for your setting or has been disabled !"
-
-   let open_in  _  =  failwith s
-   let close_in _ = failwith s
-   let entries  _  =  failwith s
-   let read_entry  _ _  =  failwith s
-   let filename  _  =  failwith s
-   let is_directory  _  =  failwith s
-   end
-
-   include DummyZip
-*)
+include Zip

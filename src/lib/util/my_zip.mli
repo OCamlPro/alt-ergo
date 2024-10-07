@@ -25,8 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** A wrapper of the Zip module of CamlZip: we use Zip except when we want to
-    generate the.js file for try-Alt-Ergo **)
+(** A wrapper of the Zip module of CamlZip. **)
 
 type in_file
 type entry

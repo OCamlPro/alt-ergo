@@ -82,6 +82,7 @@ type run_error =
   | Unsupported_feature of string
   | Dynlink_error of string
   | Stack_underflow
+  | Invalid_zip of string
 
 type mode_error =
   | Invalid_set_option of string
@@ -121,6 +122,9 @@ let invalid_set_option mode opt_key =
 
 let forbidden_command mode cmd_name =
   error (Mode_error (mode, Forbidden_command cmd_name))
+
+let unsupported_feature msg =
+  Format.kasprintf (fun s -> run_error (Unsupported_feature s)) msg
 
 let report_typing_error fmt = function
   | BitvExtract(i,j) ->
@@ -250,6 +254,8 @@ let report_run_error fmt = function
     fprintf fmt "[Dynlink] %s" s
   | Stack_underflow ->
     fprintf fmt "The stack of the assertion levels is empty"
+  | Invalid_zip filename ->
+    Fmt.pf fmt "The zipped file '%s' should contain exactly one file." filename
 
 let report_mode_error fmt = function
   | Invalid_set_option s ->
