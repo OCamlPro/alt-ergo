@@ -122,22 +122,22 @@ no errors expected.
 Now we check that we have a proper error message when optimizing with the
 Tableaux solver.
 
-  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo --sat-solver Tableaux 2>/dev/null
+  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --sat-solver Tableaux 2>/dev/null
   (error "the selected solver does not support optimization")
   [1]
 
-  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo --sat-solver Tableaux 2>/dev/null
+  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo -i smtlib2 -o smtlib2 --sat-solver Tableaux 2>/dev/null
   
   unknown
   (error "the selected solver does not support optimization")
   [1]
 
-  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo --continue-on-error --sat-solver Tableaux 2>/dev/null
+  $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error --sat-solver Tableaux 2>/dev/null
   (error "the selected solver does not support optimization")
   
   unknown
 
-  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo --continue-on-error --sat-solver Tableaux 2>/dev/null
+  $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error --sat-solver Tableaux 2>/dev/null
   
   unknown
   (error "the selected solver does not support optimization")

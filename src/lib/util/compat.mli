@@ -168,11 +168,3 @@ module Type : sig
         to [i1] and [None] otherwise. *)
   end
 end
-
-module In_channel : sig
-  val input_all : in_channel -> string
-  (** [input_all ic] reads all remaining data from ic.
-      If the same channel is read concurrently by multiple threads,
-      the returned string is not guaranteed to contain contiguous characters
-      from the input. *)
-end

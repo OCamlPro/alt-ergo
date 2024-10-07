@@ -402,17 +402,6 @@ let process_source ?selector_inst ~print_status src =
     | Some (bt, exn) -> handle_exn st bt exn
     | _ -> st
   in
-  let set_output_format fmt =
-    if Options.get_infer_output_format () then
-      match fmt with
-      | ".ae" -> Options.set_output_format Native
-      | ".smt2" -> Options.set_output_format (Smtlib2 `Latest)
-      | ".psmt2" -> Options.set_output_format (Smtlib2 `Poly)
-      | s ->
-        warning
-          "The output format %s is not supported by the Dolmen frontend."
-          s
-  in
   let set_mode ?model mode st =
     let st = DO.Mode.set mode st in
     match mode with
@@ -431,6 +420,28 @@ let process_source ?selector_inst ~print_status src =
     | Sat model ->
       set_mode Sat ~model st
   in
+  let set_output_format fmt =
+    match fmt with
+    | Dl.Logic.Alt_ergo ->
+      Options.set_output_format Native
+    | Dl.Logic.(Smtlib2 version) ->
+      Options.set_output_format (Smtlib2 version)
+    | _ -> ()
+  in
+  let infer_output_format src =
+    if Options.get_infer_output_format () then
+      match src with
+      | `File filename
+      | `Raw (filename, _) ->
+        begin match Filename.extension filename with
+          | ".ae" -> set_output_format Dl.Logic.Alt_ergo
+          | ".smt2" -> set_output_format Dl.Logic.(Smtlib2 `Latest)
+          | ".psmt2" -> set_output_format Dl.Logic.(Smtlib2 `Poly)
+          | ext ->
+            warning "cannot infer output format from the extension '%s'" ext
+        end
+      | `Stdin -> ()
+  in
   (* Prepare the input source for Dolmen from an input source for Alt-Ergo. *)
   let mk_files src =
     let lang =
@@ -439,40 +450,16 @@ let process_source ?selector_inst ~print_status src =
       | Some Smtlib2 version -> Some (Dl.Logic.Smtlib2 version)
       | Some (Why3 | Unknown _) | None -> None
     in
-    let filename, dir, path =
-      match src with
-      | `Stdin -> "<stdin>", "", ""
-      | `File path -> Filename.basename path, Filename.dirname path, path
-      | `Raw (filename, _) -> filename, "", ""
-    in
-    let is_incremental =
-      match lang with
-      | Some (Dl.Logic.Smtlib2 _) | None -> true
-      | _ -> false
-    in
     let src =
       match src with
-      | `Stdin when is_incremental ->
-        set_output_format ".smt2";
-        `Stdin
-      | `Stdin ->
-        `Raw (filename, Compat.In_channel.input_all stdin)
       | `File path when Filename.check_suffix path ".zip" ->
-        Filename.(chop_extension path |> extension) |> set_output_format;
         let content = AltErgoLib.My_zip.extract_zip_file path in
-        `Raw (Filename.chop_extension filename, content)
-      | `File path ->
-        Filename.extension path |> set_output_format;
-        let cin = open_in path in
-        let content = Compat.In_channel.input_all cin in
-        close_in cin;
-        `Raw (filename, content)
-      | `Raw _ -> src
+        `Raw (Filename.(chop_extension path |> basename), content)
+      | `File _ | `Raw _ | `Stdin -> src
     in
-    let input_file =
-      State.mk_file ?lang ~loc:(Dolmen.Std.Loc.mk_file path) dir src
-    in
-    let response_file = State.mk_file dir (`Raw ("", "")) in
+    infer_output_format src;
+    let input_file = State.mk_file ?lang "" src in
+    let response_file = State.mk_file "" (`Raw ("", "")) in
     input_file, response_file
   in
   let mk_state ?(debug = false) ?(report_style = State.Contextual)
