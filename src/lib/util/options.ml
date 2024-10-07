@@ -591,21 +591,18 @@ let file = ref ""
 let status = ref Status_Unknown
 let session_file = ref ""
 let used_context_file = ref ""
-let js_mode = ref false
 
 let set_timers b = timers := b
 let set_status s = status := match_known_status s
 let set_file f = file := f
 let set_session_file f = session_file := f
 let set_used_context_file f = used_context_file := f
-let set_js_mode b = js_mode := b
 
 let get_timers () = !timers || !profiling
 let get_file () = !file
 let get_status () = !status
 let get_session_file () = !session_file
 let get_used_context_file () = !used_context_file
-let get_js_mode () = !js_mode
 
 (** particular getters : functions that are immediately executed **************)
 
@@ -667,12 +664,6 @@ let with_timelimit_if cond f =
     f ()
 
 (** globals **)
-
-(* extra **)
-
-let set_file_for_js filename =
-  set_file filename;
-  set_js_mode true
 
 (* Printer **)
 let pp_comment fmt msg =

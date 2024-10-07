@@ -316,9 +316,6 @@ val set_status : string -> unit
 (** Set [file] accessible with {!val:get_file} *)
 val set_file : string -> unit
 
-(** Updates the filename to be parsed and sets a js_mode flag *)
-val set_file_for_js : string -> unit
-
 (** Setters used by parse_command *)
 
 (** Set [case_split_policy] accessible with {!val:get_case_split_policy}  *)
@@ -1031,10 +1028,6 @@ val get_rule : unit -> int
 (** Value specifying the status of the file given to Alt-Ergo *)
 val get_status : unit -> known_status
 (** Default to [Status_Unknown] *)
-
-(** [true] if the JavaScript mode is activated *)
-val get_js_mode : unit -> bool
-(** Default to [false] *)
 
 (** Value specifying the file given to Alt-Ergo *)
 val get_file : unit -> string
