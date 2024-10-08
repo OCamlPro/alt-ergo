@@ -48,10 +48,6 @@ type sat_solver =
   | CDCL
   | CDCL_Tableaux
 
-type frontend =
-  | Legacy
-  | Unknown of string
-
 type instantiation_heuristic =  INormal | IAuto | IGreedy
 
 type interpretation = INone | IFirst | IEvery | ILast
@@ -95,7 +91,6 @@ type options = {
   save_used_context : bool option;
 
   answers_with_loc : bool option;
-  frontend : frontend option;
   input_format : input_format option;
   parse_only : bool option;
   preludes : (string list) option;

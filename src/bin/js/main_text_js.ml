@@ -27,10 +27,6 @@
 
 open Alt_ergo_common
 
-(* Register input method and parsers *)
-let register_input () =
-  Input_frontend.register_legacy ()
-
 (* done here to initialize options,
    before the instantiations of functors *)
 let parse_cmdline () =
@@ -43,7 +39,6 @@ let () =
      turn off this feature as we do not support it correctly. See issue
      https://github.com/OCamlPro/alt-ergo/issues/1250 *)
   AltErgoLib.Options.set_exit_on_error false;
-  register_input ();
   parse_cmdline ();
   AltErgoLib.Printer.init_colors ();
   AltErgoLib.Printer.init_output_format ();

@@ -2346,7 +2346,7 @@ module Triggers = struct
           let content = TMap.fold (fun t _ acc -> t :: acc) res [] in
           let content = List.stable_sort pat_weight content in
           if Options.get_verbose () then
-            Printer.print_dbg ~module_name:"Cnf"
+            Printer.print_dbg ~module_name:"Translate"
               ~function_name:"clean_trigger"
               "AXIOM: %s@ \
                from multi-trig of sz %d : %a@ \

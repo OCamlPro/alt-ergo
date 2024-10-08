@@ -617,25 +617,8 @@ module Main_Default : S = struct
     in
     match opt_split.value with
     | Unknown ->
-      (* In the current implementation of optimization, the function
-         [CC_X.optimizing_objective] cannot fail to optimize the objective
-         function [obj]. First of all, the legacy parser only accepts
-         optimization clauses on expressions of type [Real] or [Int].
-         For the [Real] or [Int] expressions, we have two cases:
-         - If the objective function is a linear functions of variables, the
-           decision procedure implemented in Ocplib-simplex cannot fail to
-           optimize the split. For instance, if we try to maximize the
-           expression:
-             5 * x + 2 * y + 3 where x and y are real variables,
-           the procedure will success to produce the upper bound of [x] and
-           [y] modulo the other constraints on it.
-         - If the objective function isn't linear, the nonlinear part of the
-           expression is seen as uninterpreted term of the arithmetic theory.
-           Let's imagine we try to maximize the expression:
-             5 * x * x + 2 * y + 3,
-           The objective function given to Ocplib-simplex looks like:
-             5 * U + 2 * y + 3 where U = x * x
-           and the procedure will optimize the problem in terms of U and y. *)
+      (* Cannot happen as [Rel.optimizing_objective] never returns an
+         unknown value. *)
       assert false
 
     | Pinfinity | Minfinity | Limit _ when not for_model ->

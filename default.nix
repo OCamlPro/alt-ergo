@@ -27,19 +27,6 @@ let
     ];
   };
 
-  alt-ergo-parsers = ocamlPackages.buildDunePackage rec {
-    pname = "alt-ergo-parsers";
-    inherit version src;
-
-    minimalOCamlVersion = "4.08";
-    duneVersion = "3";
-
-    nativeBuildInputs = [ ocamlPackages.menhir ];
-    propagatedBuildInputs = [ alt-ergo-lib ] ++ (with ocamlPackages; [
-      psmt2-frontend
-    ]);
-  };
-
   alt-ergo = ocamlPackages.buildDunePackage {
     pname = "alt-ergo";
     inherit version src;
@@ -47,7 +34,7 @@ let
     minimalOCamlVersion = "4.08";
     duneVersion = "3";
 
-    buildInputs = [ alt-ergo-parsers ] ++ (with ocamlPackages; [
+    buildInputs = (with ocamlPackages; [
       cmdliner
       dune-site
     ]);

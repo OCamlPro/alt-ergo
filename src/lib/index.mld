@@ -78,11 +78,8 @@ Finally, the native input method is defined in the {!module:AltErgoLib.Parsed_in
 and {!module:AltErgoLib.Typechecker} modules.
 
 {!modules:
-AltErgoLib.Cnf
+AltErgoLib.Translate
 AltErgoLib.Frontend
-AltErgoLib.Input
-AltErgoLib.Parsed_interface
-AltErgoLib.Typechecker
 }
 
 
@@ -117,10 +114,7 @@ AltErgoLib.Matching_types
 AltErgoLib.Shostak
 AltErgoLib.Ac
 AltErgoLib.Arith
-AltErgoLib.Arrays
 AltErgoLib.Bitv
-AltErgoLib.Enum
-AltErgoLib.Ite
 AltErgoLib.Polynome
 AltErgoLib.Records
 AltErgoLib.Sig
