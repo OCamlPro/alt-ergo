@@ -25,7 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
+module DStd = Dolmen.Std
+module DE = DStd.Expr
 module Hs = Hstring
 module Q = Numbers.Q
 module Z = Numbers.Z
@@ -83,22 +84,50 @@ let hstring_ae_reprs =
     (fun c -> Hs.make (to_ae_string c))
     constrs
 
+let get_basename = function
+  | DStd.Path.Local { name; }
+  | Absolute { name; path = []; } -> name
+  | Absolute { name; path; } ->
+    Fmt.failwith
+      "Expected an empty path to the basename: \"%s\" but got: [%a]."
+      name (fun fmt l ->
+          match l with
+          | h :: t ->
+            Format.fprintf fmt "%s" h;
+            List.iter (Format.fprintf fmt "; %s") t
+          | _ -> ()
+        ) path
+
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
-let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode =
+let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
   let module DStd = Dolmen.Std in
   (* We may use the builtin type `DStd.Expr.Ty.roundingMode` here. *)
   let ty_cst = DE.Ty.Const.mk (DStd.Path.global "RoundingMode") 0 in
   let constrs =
     List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) constrs
   in
-  let def, d_constrs = DE.Term.define_adt ty_cst [] constrs in
-  Nest.attach_orders [def];
-  let body =
-    List.map (fun (c, _) -> Uid.of_term_cst c, []) d_constrs
+  let def, d_constrs =
+    let def, l = DE.Term.define_adt ty_cst [] constrs in
+    let constrs = List.map (fun (c, _) -> c) l in
+    def, constrs
   in
+  Nest.attach_orders [def];
+  let body = List.map (fun c -> Uid.of_term_cst c, []) d_constrs in
   let ty = Ty.t_adt ~body:(Some body) (Uid.of_ty_cst ty_cst) [] in
-  DE.Ty.apply ty_cst [], d_constrs, ty
+  let tcst_of_rounding_mode m =
+    let name = string_of_rounding_mode m in
+    let opt =
+      List.find_map
+        (fun (DE.{ path; _ } as tcst) ->
+           let n = get_basename path in
+           if String.equal name n then Some tcst
+           else None
+        ) d_constrs
+    in
+    match opt with Some o -> o | None -> assert false
+  in
+  DE.Ty.apply ty_cst [], d_constrs, ty, tcst_of_rounding_mode
 
 let rounding_mode_of_smt_hs =
   let table = Hashtbl.create 5 in

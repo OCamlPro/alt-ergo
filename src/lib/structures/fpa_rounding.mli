@@ -51,8 +51,7 @@ val fpa_rounding_mode_ae_type_name : string
 val fpa_rounding_mode_dty : Dolmen.Std.Expr.Ty.t
 
 (** The Dolmen constructors of [rounding_mode]. *)
-val d_constrs :
-  (Uid.DE.term_cst * (Uid.DE.ty * Uid.DE.term_cst option) list) list
+val d_constrs : Uid.DE.term_cst list
 
 (** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t
@@ -70,6 +69,8 @@ val translate_smt_rounding_mode : Hstring.t -> Hstring.t option
 
 (** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
 val string_of_rounding_mode : rounding_mode -> string
+
+val tcst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int

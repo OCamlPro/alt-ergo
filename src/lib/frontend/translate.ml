@@ -187,7 +187,7 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
   | `App ((`Generic ty_cst), []) ->
     let constrs = Fpa_rounding.d_constrs in
     let add_constrs map =
-      List.fold_left (fun map ((c : DE.term_cst), _) ->
+      List.fold_left (fun map (c : DE.term_cst) ->
           let name = get_basename c.path in
           DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term }
             (fun env _ ->
@@ -273,8 +273,8 @@ let ae_fpa_builtins =
     DE.Term.apply_cst float_cst [] [prec; exp; mode; x]
   in
   let mode m =
-    let cst, _ =
-      List.find (fun (cst, _args) ->
+    let cst =
+      List.find (fun cst ->
           match cst.DE.path with
           | Absolute { name; _ } -> String.equal name m
           | Local _ -> false)
@@ -924,10 +924,9 @@ let mk_add translate sy ty l =
   E.mk_term sy args ty
 
 let mk_rounding fpar =
-  let name = Hstring.make @@ Fpa_rounding.string_of_rounding_mode fpar in
+  let tcst = Uid.of_term_cst @@ Fpa_rounding.tcst_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
-  let sy = Sy.Op (Sy.Constr (Uid.of_hstring name)) in
-  E.mk_term sy [] ty
+  E.mk_constr tcst [] ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
