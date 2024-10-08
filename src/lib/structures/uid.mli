@@ -28,7 +28,6 @@
 module DE = Dolmen.Std.Expr
 
 type _ t = private
-  | Hstring : Hstring.t -> 'a t
   | Term_cst : DE.term_cst -> DE.term_cst t
   | Ty_cst : DE.ty_cst -> DE.ty_cst t
   | Ty_var : DE.ty_var -> DE.ty_var t
@@ -40,8 +39,6 @@ type ty_var = DE.ty_var t
 val of_term_cst : DE.term_cst -> term_cst
 val of_ty_cst : DE.ty_cst -> ty_cst
 val of_ty_var : DE.ty_var -> ty_var
-val of_string : string -> 'a t
-val of_hstring : Hstring.t -> 'a t
 
 val hash : 'a t -> int
 val pp : 'a t Fmt.t

@@ -29,7 +29,6 @@ module DStd = Dolmen.Std
 module DE = Dolmen.Std.Expr
 
 type _ t =
-  | Hstring : Hstring.t -> 'a t
   | Term_cst : DE.term_cst -> DE.term_cst t
   | Ty_cst : DE.ty_cst -> DE.ty_cst t
   | Ty_var : DE.ty_var -> DE.ty_var t
@@ -61,19 +60,15 @@ let[@inline always] of_term_cst id =
 
 let[@inline always] of_ty_cst id = Ty_cst id
 let[@inline always] of_ty_var id = Ty_var id
-let[@inline always] of_hstring hs = Hstring hs
-let[@inline always] of_string s = of_hstring @@ Hstring.make s
 
 let hash (type a) (u : a t) =
   match u with
-  | Hstring hs -> Hstring.hash hs
   | Term_cst id -> DE.Id.hash id
   | Ty_cst id -> DE.Id.hash id
   | Ty_var id -> DE.Id.hash id
 
 let pp (type a) ppf (u : a t) =
   match u with
-  | Hstring hs -> Hstring.print ppf hs
   | Term_cst id -> DE.Id.print ppf id
   | Ty_cst id -> DE.Id.print ppf id
   | Ty_var id -> DE.Id.print ppf id
@@ -82,7 +77,6 @@ let show (type a) (u : a t) = Fmt.to_to_string pp u
 
 let equal (type a b) (u1 : a t) (u2 : b t) =
   match u1, u2 with
-  | Hstring hs1, Hstring hs2 -> Hstring.equal hs1 hs2
   | Term_cst id1, Term_cst id2 -> DE.Id.equal id1 id2
   | Ty_cst id1, Ty_cst id2 -> DE.Id.equal id1 id2
   | Ty_var id1, Ty_var id2 -> DE.Id.equal id1 id2
@@ -90,7 +84,6 @@ let equal (type a b) (u1 : a t) (u2 : b t) =
 
 let compare (type a b) (u1 : a t) (u2 : b t) =
   match u1, u2 with
-  | Hstring hs1, Hstring hs2 -> Hstring.compare hs1 hs2
   | Term_cst id1, Term_cst id2 -> DE.Id.compare id1 id2
   | Ty_cst id1, Ty_cst id2 -> DE.Id.compare id1 id2
   | Ty_var id1, Ty_var id2 -> DE.Id.compare id1 id2

@@ -185,6 +185,4 @@ let perfect_hash id =
         assert false
     end
   | Term_cst _ -> invalid_arg "Nest.perfect_hash"
-  | Hstring hs ->
-    Hstring.hash hs
   | _ -> .
