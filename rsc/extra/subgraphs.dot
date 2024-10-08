@@ -202,10 +202,7 @@ subgraph cluster_lib {
                 style=filled;
                 color=lightblue;
                 "Frontend";
-                "Cnf";
-                "Typechecker";
-                "Parsed_interface";
-                "Input";
+                "Translate";
                 "Parse_command"
         }
 

@@ -349,7 +349,7 @@ let process_source ?selector_inst ~print_status src =
       ~size_limit ~response_file
     |> Parser.init
     |> Typer.init
-      ~additional_builtins:Cnf.builtins
+      ~additional_builtins:Translate.builtins
       ~extension_builtins:[Typer.Ext.bv2nat]
     |> Typer_Pipe.init ~type_check
   in
@@ -512,7 +512,7 @@ let process_source ?selector_inst ~print_status src =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
       in
       let cnf =
-        Cnf.make (State.get State.logic_file st).loc
+        Translate.make (State.get State.logic_file st).loc
           (State.get solver_ctx_key st).ctx stmt
       in
       State.set solver_ctx_key (
@@ -628,7 +628,7 @@ let process_source ?selector_inst ~print_status src =
       Expr.mk_term
         (Sy.name name)
         []
-        (Cnf.dty_to_ty term.DStd.Expr.term_ty)
+        (Translate.dty_to_ty term.DStd.Expr.term_ty)
     in
     match get_value simple_form with
     | Some v -> Fmt.to_to_string Expr.print v
@@ -705,7 +705,7 @@ let process_source ?selector_inst ~print_status src =
         in
         let stmt = { Typer_Pipe.id; contents; loc ; attrs; implicit } in
         let cnf, is_thm =
-          match Cnf.make (State.get State.logic_file st).loc l stmt with
+          match Translate.make (State.get State.logic_file st).loc l stmt with
           | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
             let is_thm =
               match kind with Ty.Thm | Sat -> true | _ -> false
@@ -827,7 +827,7 @@ let process_source ?selector_inst ~print_status src =
              unsupported statement is encountered.
         *)
         let cnf =
-          Cnf.make (State.get State.logic_file st).loc
+          Translate.make (State.get State.logic_file st).loc
             (State.get solver_ctx_key st).ctx td
         in
         State.set solver_ctx_key (
