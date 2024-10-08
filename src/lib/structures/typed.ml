@@ -27,6 +27,8 @@
 
 (** Anotations (used by the GUI). *)
 
+module DE = Dolmen.Std.Expr
+
 type ('a, 'b) annoted =
   { c : 'a;
     annot : 'b }
@@ -52,7 +54,7 @@ type oplogic =
 
 (** type of pattern in match construct of ADTs *)
 type pattern =
-  | Constr of { name : Uid.term_cst ; args : (Var.t * Uid.term_cst * Ty.t) list}
+  | Constr of { name : DE.term_cst ; args : (Var.t * DE.term_cst * Ty.t) list}
   (** A pattern case which is a constructor. [name] is the name of
       constructor. [args] contains the variables bound by this pattern
       with their correponsing destructors and types *)
@@ -264,7 +266,7 @@ let rec print_term =
         (fun (p, v) ->
            match p with
            | Constr {name = n; args = l} ->
-             fprintf fmt "| %a %a -> %a\n" Uid.pp n pp_vars l
+             fprintf fmt "| %a %a -> %a\n" DE.Term.Const.print n pp_vars l
                print_term v
            | Var x ->
              fprintf fmt "| %a -> %a\n" Var.print x print_term v;

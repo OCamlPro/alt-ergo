@@ -25,24 +25,26 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DE = Dolmen.Std.Expr
+
 type t =
   | Tint
   | Treal
   | Tbool
   | Tvar of tvar
   | Tbitv of int
-  | Text of t list * Uid.ty_cst
+  | Text of t list * DE.ty_cst
   | Tfarray of t * t
-  | Tadt of Uid.ty_cst * t list
+  | Tadt of DE.ty_cst * t list
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
 
 and trecord = {
   mutable args : t list;
-  name : Uid.ty_cst;
-  mutable lbs :  (Uid.term_cst * t) list;
-  record_constr : Uid.term_cst;
+  name : DE.ty_cst;
+  mutable lbs :  (DE.term_cst * t) list;
+  record_constr : DE.term_cst;
   (* for ADTs that become records. default is "{" *)
 }
 
@@ -55,10 +57,11 @@ module Smtlib = struct
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
     | Text ([], name)
-    | Trecord { args = []; name; _ } | Tadt (name, []) -> Uid.pp ppf name
+    | Trecord { args = []; name; _ } | Tadt (name, []) ->
+      DE.Ty.Const.print ppf name
     | Text (args, name)
     | Trecord { args; name; _ } | Tadt (name, args) ->
-      Fmt.(pf ppf "(@[%a %a@])" Uid.pp name (list ~sep:sp pp) args)
+      Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
     | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
     | Tvar { value = Some t; _ } -> pp ppf t
 end
@@ -69,8 +72,8 @@ exception TypeClash of t*t
 exception Shorten of t
 
 type adt_constr =
-  { constr : Uid.term_cst ;
-    destrs : (Uid.term_cst * t) list }
+  { constr : DE.term_cst ;
+    destrs : (DE.term_cst * t) list }
 
 type type_body = adt_constr list
 
@@ -79,7 +82,7 @@ let assoc_destrs hs cases =
   try
     List.iter
       (fun {constr = s ; destrs = t} ->
-         if Uid.equal hs s then begin
+         if DE.Term.Const.equal hs s then begin
            res := Some t;
            raise Exit
          end
@@ -104,7 +107,7 @@ let print_generic body_of =
       | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
       | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
         if Hashtbl.mem h v then
-          fprintf fmt "%a %a" print_list l Uid.pp n
+          fprintf fmt "%a %a" print_list l DE.Ty.Const.print n
         else
           (Hashtbl.add h v ();
            (*fprintf fmt "('a_%d->%a)" v print t *)
@@ -113,28 +116,28 @@ let print_generic body_of =
         (*fprintf fmt "('a_%d->%a)" v print t *)
         print body_of fmt t
       | Text(l, s) when l == [] ->
-        fprintf fmt "<ext>%a" Uid.pp s
+        fprintf fmt "<ext>%a" DE.Ty.Const.print s
       | Text(l,s) ->
-        fprintf fmt "%a <ext>%a" print_list l Uid.pp s
+        fprintf fmt "%a <ext>%a" print_list l DE.Ty.Const.print s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
       | Trecord { args = lv; name = n; lbs = lbls; _ } ->
         begin
-          fprintf fmt "%a <record>%a" print_list lv Uid.pp n;
+          fprintf fmt "%a <record>%a" print_list lv DE.Ty.Const.print n;
           if body_of != None then begin
             fprintf fmt " = {";
             let first = ref true in
             List.iter
               (fun (s, t) ->
                  fprintf fmt "%s%a : %a" (if !first then "" else "; ")
-                   Uid.pp s (print body_of) t;
+                   DE.Term.Const.print s (print body_of) t;
                  first := false
               ) lbls;
             fprintf fmt "}"
           end
         end
       | Tadt (n, lv) ->
-        fprintf fmt "%a <adt>%a" print_list lv Uid.pp n;
+        fprintf fmt "%a <adt>%a" print_list lv DE.Ty.Const.print n;
         begin match body_of with
           | None -> ()
           | Some type_body ->
@@ -144,7 +147,7 @@ let print_generic body_of =
             List.iter
               (fun {constr = s ; destrs = t} ->
                  fprintf fmt "%s%a%a" (if !first then "" else " | ")
-                   Uid.pp s print_adt_tuple t;
+                   DE.Term.Const.print s print_adt_tuple t;
                  first := false
               ) cases;
             fprintf fmt "}"
@@ -153,10 +156,10 @@ let print_generic body_of =
   and print_adt_tuple fmt = function
     | [] -> ()
     | (d, e)::l ->
-      Format.fprintf fmt " of { %a : %a " Uid.pp d (print None) e;
+      Format.fprintf fmt " of { %a : %a " DE.Term.Const.print d (print None) e;
       List.iter
         (fun (d, e) ->
-           Format.fprintf fmt "; %a : %a " Uid.pp d (print None) e
+           Format.fprintf fmt "; %a : %a " DE.Term.Const.print d (print None) e
         ) l;
       Format.fprintf fmt "}"
 
@@ -231,7 +234,7 @@ let rec compare t1 t2 =
   | Tvar{ v = v1; _ } , Tvar{ v = v2; _ } -> Int.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
-    let c = Uid.compare s1 s2 in
+    let c = DE.Ty.Const.compare s1 s2 in
     if c<>0 then c
     else compare_list l1 l2
   | Text _, _ -> -1 | _ , Text _ -> 1
@@ -242,7 +245,7 @@ let rec compare t1 t2 =
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
   | Trecord { args = a1; name = s1; lbs = l1; _ },
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
-    let c = Uid.compare s1 s2 in
+    let c = DE.Ty.Const.compare s1 s2 in
     if c <> 0 then c else
       let c = compare_list a1 a2 in
       if c <> 0 then c else
@@ -251,7 +254,7 @@ let rec compare t1 t2 =
   | Trecord _, _ -> -1 | _ , Trecord _ -> 1
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
-    let c = Uid.compare s1 s2 in
+    let c = DE.Ty.Const.compare s1 s2 in
     if c <> 0 then c
     else compare_list pars1 pars2
   (* no need to compare bodies *)
@@ -282,7 +285,7 @@ let rec equal t1 t2 =
   match shorten t1 , shorten t2 with
   | Tvar{ v = v1; _ }, Tvar{ v = v2; _ } -> v1 = v2
   | Text(l1, s1), Text(l2, s2) ->
-    (try Uid.equal s1 s2 && List.for_all2 equal l1 l2
+    (try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
   | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     equal ta1 tb1 && equal ta2 tb2
@@ -290,10 +293,10 @@ let rec equal t1 t2 =
     Trecord { args = a2; name = s2; lbs = l2; _ } ->
     begin
       try
-        Uid.equal s1 s2 && List.for_all2 equal a1 a2 &&
+        DE.Ty.Const.equal s1 s2 && List.for_all2 equal a1 a2 &&
         List.for_all2
           (fun (l1, ty1) (l2, ty2) ->
-             Uid.equal l1 l2 && equal ty1 ty2) l1 l2
+             DE.Term.Const.equal l1 l2 && equal ty1 ty2) l1 l2
       with Invalid_argument _ -> false
     end
   | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
@@ -301,7 +304,7 @@ let rec equal t1 t2 =
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
     begin
-      try Uid.equal s1 s2 && List.for_all2 equal pars1 pars2
+      try DE.Ty.Const.equal s1 s2 && List.for_all2 equal pars1 pars2
       with Invalid_argument _ -> false
       (* no need to compare bodies *)
     end
@@ -320,17 +323,17 @@ let rec matching s pat t =
     (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
      with Not_found -> M.add n t s)
   | Tvar { value = _; _ }, _ -> raise (Shorten pat)
-  | Text (l1,s1) , Text (l2,s2) when Uid.equal s1 s2 ->
+  | Text (l1,s1) , Text (l2,s2) when DE.Ty.Const.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
     matching (matching s ta1 tb1) ta2 tb2
-  | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
+  | Trecord r1, Trecord r2 when DE.Ty.Const.equal r1.name r2.name ->
     let s = List.fold_left2 matching s r1.args r2.args in
     List.fold_left2
       (fun s (_, p) (_, ty) -> matching s p ty) s r1.lbs r2.lbs
   | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
-  | Tadt(n1, args1), Tadt(n2, args2) when Uid.equal n1 n2 ->
+  | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->
     raise (TypeClash(pat,t))
@@ -418,7 +421,7 @@ let fresh_list lty subst = fresh_list (List.map shorten lty) subst
 
 module Decls = struct
 
-  module MH = Uid.Ty_map
+  module MH = Map.Make (DE.Ty.Const)
 
   module MTY = Map.Make(struct
       type ty = t
@@ -501,7 +504,7 @@ module Decls = struct
         add name params cases;
         cases
     with Not_found ->
-      Printer.print_err "%a not found" Uid.pp name;
+      Printer.print_err "%a not found" DE.Ty.Const.print name;
       assert false
 
   let reinit () = decls := MH.empty
@@ -523,7 +526,7 @@ let fresh_empty_text =
       let path = DStd.Path.global @@ Fmt.str "'_c%d" !cpt in
       DStd.Expr.Ty.Const.mk path 0
     in
-    text [] (Uid.of_ty_cst id)
+    text [] id
 
 let t_adt ?(body=None) s ty_vars =
   let ty = Tadt (s, ty_vars) in
@@ -546,49 +549,36 @@ let t_adt ?(body=None) s ty_vars =
   end;
   ty
 
-module DE = Dolmen.Std.Expr
-
 let tunit =
   let () =
     match Dolmen.Std.Expr.Ty.definition DE.Ty.Const.unit with
     | Some def -> Nest.attach_orders [def]
     | None -> assert false
   in
-  let void = Uid.of_term_cst DE.Term.Cstr.void in
-  let body = Some [void, []] in
-  let ty = t_adt ~body (Uid.of_ty_cst DE.Ty.Const.unit) [] in
+  let body = Some [DE.Term.Cstr.void, []] in
+  let ty = t_adt ~body DE.Ty.Const.unit [] in
   ty
 
-let trecord ?(sort_fields = false) ~record_constr lv name lbs =
-  let lbs =
-    if sort_fields then
-      List.sort (fun (l1, _) (l2, _) -> Uid.compare l1 l2) lbs
-    else
-      lbs
-  in
+let trecord ~record_constr lv name lbs =
   Trecord { record_constr; args = lv; name; lbs = lbs}
 
 let rec hash t =
   match t with
   | Tvar{ v; _ } -> v
   | Text(l,s) ->
-    abs (List.fold_left (fun acc x-> acc*19 + hash x) (Uid.hash s) l)
+    abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
-  | Trecord { args; name = s; lbs; _ } ->
+  | Trecord { args; name = s; _ } ->
+    (* We do not hash constructors. *)
     let h =
-      List.fold_left (fun h ty -> 27 * h + hash ty) (Uid.hash s) args
-    in
-    let h =
-      List.fold_left
-        (fun h (lb, ty) -> 23 * h + 19 * (Uid.hash lb) + hash ty)
-        (abs h) lbs
+      List.fold_left (fun h ty -> 27 * h + hash ty) (DE.Ty.Const.hash s) args
     in
     abs h
 
-  | Tadt (s, args) ->
+  | Tadt (ty, args) ->
     (* We do not hash constructors. *)
     let h =
-      List.fold_left (fun h ty -> 31 * h + hash ty) (Uid.hash s) args
+      List.fold_left (fun h ty -> 31 * h + hash ty) (DE.Ty.Const.hash ty) args
     in
     abs h
 

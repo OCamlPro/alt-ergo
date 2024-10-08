@@ -27,7 +27,7 @@
 
 type builtin =
     LE | LT (* arithmetic *)
-  | IsConstr of Uid.term_cst (* ADT tester *)
+  | IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type operator =
@@ -35,9 +35,9 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Uid.term_cst | Record
-  | Constr of Uid.term_cst (* enums, adts *)
-  | Destruct of Uid.term_cst
+  | Access of Dolmen.Std.Expr.term_cst | Record
+  | Constr of Dolmen.Std.Expr.term_cst (* enums, adts *)
+  | Destruct of Dolmen.Std.Expr.term_cst
   (* Arrays *)
   | Get | Set
   (* BV *)
@@ -180,8 +180,8 @@ val var : Var.t -> t
 val int : string -> t
 val bitv : string -> t
 val real : string -> t
-val constr : Uid.term_cst -> t
-val destruct : Uid.term_cst -> t
+val constr : Dolmen.Std.Expr.term_cst -> t
+val destruct : Dolmen.Std.Expr.term_cst -> t
 val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
 val mk_in : bound -> bound -> t
 val mk_maps_to : Var.t -> t

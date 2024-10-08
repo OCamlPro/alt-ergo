@@ -25,9 +25,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DE = Dolmen.Std.Expr
+
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
-    IsConstr of Uid.term_cst (* ADT tester *)
+    IsConstr of DE.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type 'a view =
@@ -126,9 +128,9 @@ let print_view ?(lbl="") pr_elt fmt vw =
   | Builtin (_, BVULE, _) ->
     assert false (* not reachable *)
 
-  | Builtin (pos, IsConstr hs, [e]) ->
+  | Builtin (pos, IsConstr tcst, [e]) ->
     Format.fprintf fmt "%s(%a ? %a)"
-      (if pos then "" else "not ") pr_elt e Uid.pp hs
+      (if pos then "" else "not ") pr_elt e DE.Term.Const.print tcst
 
   | Builtin (_, IsConstr _, _) ->
     assert false (* not reachable *)
@@ -193,7 +195,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   let equal_builtins n1 n2 =
     match n1, n2 with
     | LT, LT | LE, LE -> true
-    | IsConstr h1, IsConstr h2 -> Uid.equal h1 h2
+    | IsConstr tcst1, IsConstr tcst2 -> DE.Term.Const.equal tcst1 tcst2
     | _ -> false
 
   module V = struct

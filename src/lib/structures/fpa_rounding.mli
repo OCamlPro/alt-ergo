@@ -51,21 +51,21 @@ val fpa_rounding_mode_ae_type_name : string
 val fpa_rounding_mode_dty : Dolmen.Std.Expr.Ty.t
 
 (** The Dolmen constructors of [rounding_mode]. *)
-val d_constrs : Uid.DE.term_cst list
+val d_constrs : DE.term_cst list
 
 (** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t
 
-(** Transforms the Hstring corresponding to a RoundingMode element into
+(** Transforms the string corresponding to a RoundingMode element into
     the [rounding_mode] equivalent. Raises 'Failure' if the string does not
     correspond to a valid rounding mode. *)
-val rounding_mode_of_smt_hs : Hstring.t -> rounding_mode
+val rounding_mode_of_smt : string -> rounding_mode
 
 (** Same, but for legacy's [rounding_mode] equivalent. *)
-val rounding_mode_of_ae_hs : Hstring.t -> rounding_mode
+val rounding_mode_of_ae : string -> rounding_mode
 
 (** Same, but from AE modes to SMT2 modes. *)
-val translate_smt_rounding_mode : Hstring.t -> Hstring.t option
+val translate_smt_rounding_mode : string -> string option
 
 (** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
 val string_of_rounding_mode : rounding_mode -> string

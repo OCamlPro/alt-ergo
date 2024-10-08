@@ -284,8 +284,8 @@ val mk_ite : t -> t -> t -> t
 
 (** smart constructor for datatypes. *)
 
-val mk_constr : Uid.term_cst -> t list -> Ty.t -> t
-val mk_tester : Uid.term_cst -> t -> t
+val mk_constr : Dolmen.Std.Expr.term_cst -> t list -> Ty.t -> t
+val mk_tester : Dolmen.Std.Expr.term_cst -> t -> t
 val mk_record : t list -> Ty.t -> t
 
 (** Substitutions *)

@@ -27,10 +27,11 @@
 
 module E = Expr
 module Sy = Symbols
+module DE = Dolmen.Std.Expr
 
 type 'a abstract =
-  | Record of (Uid.term_cst * 'a abstract) list * Ty.t
-  | Access of Uid.term_cst * 'a abstract * Ty.t
+  | Record of (DE.term_cst * 'a abstract) list * Ty.t
+  | Access of DE.term_cst * 'a abstract * Ty.t
   | Other of 'a * Ty.t
 
 module type ALIEN = sig
@@ -59,12 +60,12 @@ module Shostak (X : ALIEN) = struct
         let _ = List.fold_left
             (fun first (lb, e) ->
                Format.fprintf fmt "%s%a = %a"
-                 (if first then "" else "; ") Uid.pp lb print e;
+                 (if first then "" else "; ") DE.Term.Const.print lb print e;
                false
             ) true lbs in
         Format.fprintf fmt "}"
       | Access(a, e, _) ->
-        Format.fprintf fmt "%a.%a" print e Uid.pp a
+        Format.fprintf fmt "%a.%a" print e DE.Term.Const.print a
       | Other(t, _) -> X.print fmt t
 
   end
@@ -79,11 +80,11 @@ module Shostak (X : ALIEN) = struct
       if c <> 0 then c else X.str_cmp u1 u2
     | Other _, _ -> -1
     | _, Other _ -> 1
-    | Access (s1, u1, ty1), Access (s2, u2, ty2) ->
+    | Access (tcst1, u1, ty1), Access (tcst2, u2, ty2) ->
       let c = Ty.compare ty1 ty2 in
       if c <> 0 then c
       else
-        let c = Uid.compare s1 s2 in
+        let c = DE.Term.Const.compare tcst1 tcst2 in
         if c <> 0 then c
         else raw_compare u1 u2
     | Access _, _ -> -1
@@ -107,11 +108,11 @@ module Shostak (X : ALIEN) = struct
       begin
         let lbs_n = List.map (fun (lb, x) -> lb, normalize x) lbs in
         match lbs_n with
-        | (lb1, Access(lb2, x, _)) :: l when Uid.equal lb1 lb2 ->
+        | (lb1, Access(lb2, x, _)) :: l when DE.Term.Const.equal lb1 lb2 ->
           if List.for_all
               (function
                 | (lb1, Access(lb2, y, _)) ->
-                  Uid.equal lb1 lb2 && raw_compare x y = 0
+                  DE.Term.Const.equal lb1 lb2 && raw_compare x y = 0
                 | _ -> false) l
           then x
           else Record (lbs_n, ty)
@@ -120,7 +121,7 @@ module Shostak (X : ALIEN) = struct
     | Access (a, x, ty) ->
       begin
         match normalize x with
-        | Record (lbs, _) -> My_list.assoc Uid.equal a lbs
+        | Record (lbs, _) -> My_list.assoc DE.Term.Const.equal a lbs
         | x_n -> Access (a, x_n, ty)
       end
     | Other _ -> v
@@ -140,7 +141,7 @@ module Shostak (X : ALIEN) = struct
       Ty.equal ty1 ty2 && X.equal u1 u2
 
     | Access (s1, u1, ty1), Access (s2, u2, ty2) ->
-      Uid.equal s1 s2 && Ty.equal ty1 ty2 && equal u1 u2
+      DE.Term.Const.equal s1 s2 && Ty.equal ty1 ty2 && equal u1 u2
 
     | Record (lbs1, ty1), Record (lbs2, ty2) ->
       Ty.equal ty1 ty2 && equal_list lbs1 lbs2
@@ -225,10 +226,10 @@ module Shostak (X : ALIEN) = struct
   let rec hash  = function
     | Record (lbs, ty) ->
       List.fold_left
-        (fun h (lb, x) -> 17 * hash x + 13 * Uid.hash lb + h)
+        (fun h (lb, x) -> 17 * hash x + 13 * DE.Term.Const.hash lb + h)
         (Ty.hash ty) lbs
     | Access (a, x, ty) ->
-      19 * hash x + 17 * Uid.hash a + Ty.hash ty
+      19 * hash x + 17 * DE.Term.Const.hash a + Ty.hash ty
     | Other (x, ty) ->
       Ty.hash ty + 23 * X.hash x
 
@@ -367,10 +368,10 @@ module Shostak (X : ALIEN) = struct
     | Record (l1, _), Record (l2, _) ->
       let eqs =
         List.fold_left2
-          (fun eqs (a,b) (x,y) ->
-             assert (Uid.compare a x = 0);
+          (fun eqs (a, b) (x, y) ->
+             assert (DE.Term.Const.compare a x = 0);
              (is_mine y, is_mine b) :: eqs
-          )pb.eqs l1 l2
+          ) pb.eqs l1 l2
       in
       {pb with eqs=eqs}
 

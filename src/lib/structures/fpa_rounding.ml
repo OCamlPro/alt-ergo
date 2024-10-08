@@ -27,7 +27,6 @@
 
 module DStd = Dolmen.Std
 module DE = DStd.Expr
-module Hs = Hstring
 module Q = Numbers.Q
 module Z = Numbers.Z
 
@@ -66,7 +65,6 @@ let to_ae_string = function
   | Down -> "Down"
   | NearestTiesToAway -> "NearestTiesToAway"
 
-
 let fpa_rounding_mode_ae_type_name = "fpa_rounding_mode"
 
 let fpa_rounding_mode_type_name = "RoundingMode"
@@ -74,14 +72,14 @@ let fpa_rounding_mode_type_name = "RoundingMode"
 (* The exported 'to string' function is the SMT one. *)
 let string_of_rounding_mode = to_smt_string
 
-let hstring_smt_reprs =
+let string_smt_reprs =
   List.map
     (fun c -> to_smt_string c, [])
     constrs
 
-let hstring_ae_reprs =
+let string_ae_reprs =
   List.map
-    (fun c -> Hs.make (to_ae_string c))
+    (fun c -> to_ae_string c)
     constrs
 
 let get_basename = function
@@ -113,8 +111,8 @@ let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
     def, constrs
   in
   Nest.attach_orders [def];
-  let body = List.map (fun c -> Uid.of_term_cst c, []) d_constrs in
-  let ty = Ty.t_adt ~body:(Some body) (Uid.of_ty_cst ty_cst) [] in
+  let body = List.map (fun c -> c, []) d_constrs in
+  let ty = Ty.t_adt ~body:(Some body) ty_cst [] in
   let tcst_of_rounding_mode m =
     let name = string_of_rounding_mode m in
     let opt =
@@ -129,37 +127,37 @@ let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
   in
   DE.Ty.apply ty_cst [], d_constrs, ty, tcst_of_rounding_mode
 
-let rounding_mode_of_smt_hs =
+let rounding_mode_of_smt =
   let table = Hashtbl.create 5 in
   List.iter2 (
     fun (key, _) bnd ->
       Hashtbl.add table key bnd
-  ) hstring_smt_reprs constrs;
-  fun key ->
-    try Hashtbl.find table (Hstring.view key) with
-    | Not_found ->
-      Fmt.failwith
-        "Error while searching for SMT2 FPA value %a."
-        Hstring.print key
-        fpa_rounding_mode_type_name
-
-let rounding_mode_of_ae_hs =
-  let table = Hashtbl.create 5 in
-  List.iter2 (
-    fun key bnd ->
-      Hashtbl.add table key bnd
-  ) hstring_ae_reprs constrs;
+  ) string_smt_reprs constrs;
   fun key ->
     try Hashtbl.find table key with
     | Not_found ->
       Fmt.failwith
-        "Error while searching for Legacy FPA value %a."
-        Hstring.print key
+        "Error while searching for SMT2 FPA value %s."
+        key
+        fpa_rounding_mode_type_name
+
+let rounding_mode_of_ae =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) string_ae_reprs constrs;
+  fun (key : string) ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for Legacy FPA value %s."
+        key
         fpa_rounding_mode_type_name
 
 let translate_smt_rounding_mode hs =
-  match rounding_mode_of_smt_hs hs with
-  | res -> Some (Hstring.make (to_ae_string res))
+  match rounding_mode_of_smt hs with
+  | res -> Some (to_ae_string res)
   | exception (Failure _) -> None
 
 (** Helper functions **)

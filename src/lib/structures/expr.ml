@@ -26,6 +26,7 @@
 (**************************************************************************)
 
 module Sy = Symbols
+module DE = Dolmen.Std.Expr
 
 (** Data structures *)
 
@@ -416,11 +417,11 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>(not@ %a@])" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" Uid.pp hs pp e
+      Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" DE.Term.Const.print hs pp e
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))"
-        Uid.pp hs pp e
+        DE.Term.Const.print hs pp e
 
     | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
       | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
@@ -449,7 +450,7 @@ module SmtPrinter = struct
         | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
           assert (List.compare_lengths xs lbs = 0);
           Fmt.pf ppf "@[<2>(%a %a@])"
-            Uid.pp record_constr
+            DE.Term.Const.print record_constr
             Fmt.(list ~sep:sp pp |> box) xs
 
         | _ ->
@@ -605,10 +606,10 @@ module AEPrinter = struct
       Fmt.pf ppf "(not %a)" pp a
 
     | Sy.L_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "(%a ? %a)" pp e Uid.pp hs
+      Fmt.pf ppf "(%a ? %a)" pp e DE.Term.Const.print hs
 
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
-      Fmt.pf ppf "not (%a ? %a)" pp e Uid.pp hs
+      Fmt.pf ppf "not (%a ? %a)" pp e DE.Term.Const.print hs
 
     | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
       | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
@@ -646,7 +647,7 @@ module AEPrinter = struct
       Fmt.pf ppf "%a^{%d, %d}" pp e i j
 
     | Sy.(Op (Access field)), [e] ->
-      Fmt.pf ppf "%a.%a" pp e Uid.pp field
+      Fmt.pf ppf "%a.%a" pp e DE.Term.Const.print field
 
     | Sy.(Op Record), _ ->
       begin match ty with
@@ -655,7 +656,7 @@ module AEPrinter = struct
           Fmt.pf ppf "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               Fmt.pf ppf "%s%a = %a"  (if first then "" else "; ")
-                Uid.pp field pp e;
+                DE.Term.Const.print field pp e;
               false
             ) true lbs xs);
           Fmt.pf ppf "}";
@@ -673,7 +674,7 @@ module AEPrinter = struct
 
     | Sy.(Op Destruct hs), [e] ->
       Fmt.pf ppf "%a#%a"
-        pp e Uid.pp hs
+        pp e DE.Term.Const.print hs
 
     | Sy.Op op, [e1; e2] ->
       Fmt.pf ppf "(%a %a %a)" pp e1 Symbols.pp_ae_operator op pp e2
@@ -1305,9 +1306,7 @@ let mk_tester cons t =
 
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
-let void =
-  let constr = Uid.of_term_cst Dolmen.Std.Expr.Term.Cstr.void in
-  mk_constr constr [] Ty.tunit
+let void = mk_constr Dolmen.Std.Expr.Term.Cstr.void [] Ty.tunit
 
 (** Substitutions *)
 
@@ -2033,7 +2032,7 @@ module Triggers = struct
 
     | { f = Op (Access a1) ; xs=[t1]; _ },
       { f = Op (Access a2) ; xs=[t2]; _ } ->
-      let c = Uid.compare a1 a2 in
+      let c = DE.Term.Const.compare a1 a2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Access _); _ }, _ -> -1
@@ -2041,7 +2040,7 @@ module Triggers = struct
 
     | { f = Op (Destruct a1) ; xs = [t1]; _ },
       { f = Op (Destruct a2) ; xs = [t2]; _ } ->
-      let c = Uid.compare a1 a2 in
+      let c = DE.Term.Const.compare a1 a2 in
       if c<>0 then c else cmp_trig_term t1 t2
 
     | { f = Op (Destruct _); _ }, _ -> -1
@@ -2645,7 +2644,7 @@ let debug_compile_match e cases res =
          | Typed.Constr {name; args} ->
            Printer.print_dbg  ~flushed:false ~header:false
              "| %a %a -> %a@ "
-             Uid.pp name
+             DE.Term.Const.print name
              p_list_vars args
              print v;
          | Typed.Var x ->
@@ -2948,8 +2947,8 @@ let const_view t =
     end
   | { f = Op (Constr c); ty; _ }
     when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
-    let c = Uid.show c |> Hstring.make in
-    RoundingMode (Fpa_rounding.rounding_mode_of_smt_hs c)
+    let c = Fmt.str "%a" DE.Term.Const.print c in
+    RoundingMode (Fpa_rounding.rounding_mode_of_smt c)
   | _ -> Fmt.failwith "unsupported constant: %a" print t
 
 let int_view t =

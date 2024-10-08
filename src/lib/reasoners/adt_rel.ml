@@ -46,7 +46,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module TSet =
   Set.Make
     (struct
-      type t = Uid.term_cst
+      type t = DE.term_cst
 
       (* We use a dedicated total order on the constructors to ensure
          the termination of model generation. *)
@@ -113,7 +113,7 @@ module Domain = struct
 
   let pp ppf d =
     Fmt.(braces @@
-         iter ~sep:comma TSet.iter Uid.pp) ppf d.constrs;
+         iter ~sep:comma TSet.iter DE.Term.Const.print) ppf d.constrs;
     if Options.(get_verbose () || get_unsat_core ()) then
       Fmt.pf ppf " %a" (Fmt.box Ex.print) d.ex
 
@@ -173,7 +173,7 @@ module Domains = struct
      destructors of the constructor [c] by searching in the list [cases].
 
      A better predicate will be easy to implement after getting rid of
-     the legacy frontend and switching from [Uid.t] to
+     the legacy frontend and switching from [DE.t] to
      [Dolmen.Std.Expr.term_cst] to store the constructors. Indeed, [term_cst]
      contains the type of constructor and in particular its arity. *)
   let is_enum_constr r c =
@@ -270,7 +270,7 @@ let calc_destructor d e uf =
   let r, ex = Uf.find uf e in
   match Th.embed r with
   | Constr { c_args; _ } ->
-    begin match My_list.assoc Uid.equal d c_args with
+    begin match My_list.assoc DE.Term.Const.equal d c_args with
       | v -> Some (v, ex)
       | exception Not_found -> None
     end
@@ -559,7 +559,7 @@ let constr_of_destr ty d =
         let r =
           List.find
             (fun Ty.{ destrs; _ } ->
-               List.exists (fun (d', _) -> Uid.equal d d') destrs
+               List.exists (fun (d', _) -> DE.Term.Const.equal d d') destrs
             ) cases
         in
         r.constr
@@ -568,7 +568,7 @@ let constr_of_destr ty d =
 
   | _ -> assert false
 
-exception Found of X.r * Uid.term_cst
+exception Found of X.r * DE.term_cst
 
 let can_split env n =
   let m = Options.get_max_split () in

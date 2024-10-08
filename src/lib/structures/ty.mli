@@ -42,7 +42,7 @@ type t =
   (** Type variables *)
   | Tbitv of int
   (** Bitvectors of a given length *)
-  | Text of t list * Uid.ty_cst
+  | Text of t list * Dolmen.Std.Expr.ty_cst
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
@@ -51,7 +51,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Uid.ty_cst * t list
+  | Tadt of Dolmen.Std.Expr.ty_cst * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -77,22 +77,22 @@ and tvar = {
 and trecord = {
   mutable args : t list;
   (** Arguments passed to the record constructor *)
-  name : Uid.ty_cst;
+  name : Dolmen.Std.Expr.ty_cst;
   (** Name of the record type *)
-  mutable lbs :  (Uid.term_cst * t) list;
+  mutable lbs :  (Dolmen.Std.Expr.term_cst * t) list;
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
-  record_constr : Uid.term_cst;
+  record_constr : Dolmen.Std.Expr.term_cst;
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 
 type adt_constr =
-  { constr : Uid.term_cst ;
+  { constr : Dolmen.Std.Expr.term_cst ;
     (** constructor of an ADT type *)
 
-    destrs : (Uid.term_cst * t) list
+    destrs : (Dolmen.Std.Expr.term_cst * t) list
     (** the list of destructors associated with the constructor and
         their respective types *)
   }
@@ -109,12 +109,12 @@ module Set : Set.S with type elt = t
 (** Sets of types *)
 
 
-val assoc_destrs : Uid.term_cst -> adt_constr list -> (Uid.term_cst * t) list
+val assoc_destrs : Dolmen.Std.Expr.term_cst -> adt_constr list -> (Dolmen.Std.Expr.term_cst * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
     @raises Not_found if the constructor is not in the given list. *)
 
-val type_body : Uid.ty_cst -> t list -> type_body
+val type_body : Dolmen.Std.Expr.ty_cst -> t list -> type_body
 
 (** {2 Type inspection} *)
 
@@ -160,13 +160,13 @@ val fresh_tvar : unit -> t
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
-val text : t list -> Uid.ty_cst -> t
+val text : t list -> Dolmen.Std.Expr.ty_cst -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
 val t_adt :
-  ?body:((Uid.term_cst * (Uid.term_cst * t) list) list) option ->
-  Uid.ty_cst -> t list -> t
+  ?body:((Dolmen.Std.Expr.term_cst * (Dolmen.Std.Expr.term_cst * t) list) list) option ->
+  Dolmen.Std.Expr.ty_cst -> t list -> t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
@@ -175,9 +175,8 @@ val t_adt :
     of arguments. *)
 
 val trecord :
-  ?sort_fields:bool ->
-  record_constr:Uid.term_cst ->
-  t list -> Uid.ty_cst -> (Uid.term_cst * t) list -> t
+  record_constr:Dolmen.Std.Expr.term_cst ->
+  t list -> Dolmen.Std.Expr.ty_cst -> (Dolmen.Std.Expr.term_cst * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs].
 
