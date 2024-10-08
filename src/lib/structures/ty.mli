@@ -109,7 +109,10 @@ module Set : Set.S with type elt = t
 (** Sets of types *)
 
 
-val assoc_destrs : Dolmen.Std.Expr.term_cst -> adt_constr list -> (Dolmen.Std.Expr.term_cst * t) list
+val assoc_destrs :
+  Dolmen.Std.Expr.term_cst ->
+  adt_constr list ->
+  (Dolmen.Std.Expr.term_cst * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
     @raises Not_found if the constructor is not in the given list. *)
@@ -165,8 +168,11 @@ val text : t list -> Dolmen.Std.Expr.ty_cst -> t
     given. *)
 
 val t_adt :
-  ?body:((Dolmen.Std.Expr.term_cst * (Dolmen.Std.Expr.term_cst * t) list) list) option ->
-  Dolmen.Std.Expr.ty_cst -> t list -> t
+  ?body:((Dolmen.Std.Expr.term_cst *
+          (Dolmen.Std.Expr.term_cst * t) list) list) option ->
+  Dolmen.Std.Expr.ty_cst ->
+  t list ->
+  t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
