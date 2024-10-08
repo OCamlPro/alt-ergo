@@ -1,6 +1,0 @@
-(set-logic ALL)
-(declare-const x (_ BitVec 2))
-(assert (= x (concat ((_ extract 0 0) x) ((_ extract 1 1) x))))
-(declare-fun f ((_ BitVec 2)) Int)
-(assert (distinct (f x) (f (concat ((_ extract 0 0) x) ((_ extract 1 1) x)))))
-(check-sat)

@@ -1,6 +1,0 @@
-(set-logic ALL)
-(declare-const x Int)
-(assert (= ((_ int2bv 2) x) #b11))
-(assert (<= x 0))
-(assert (<= 0 x))
-(check-sat)

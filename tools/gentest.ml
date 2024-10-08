@@ -21,8 +21,8 @@ type 'a printer = Format.formatter -> 'a -> unit
 let (//) = Filename.concat
 
 let mangle_regexp =
-  if Sys.win32 then Str.regexp {|\\\|\.|}
-  else Str.regexp {|/\|\.|}
+  if Sys.win32 then Str.regexp {|\|}
+  else Str.regexp {|/|}
 
 let mangle_path = Str.global_replace mangle_regexp "__"
 
@@ -260,11 +260,10 @@ end = struct
                 {acc with compare_should_succeed = false}
               | "err" ->
                 {acc with accepted_exit_codes = [1]}
-              | "cdcl" ->
-                {acc with
-                 exclude = "tableaux" :: "tableaux_cdcl" :: acc.exclude}
               | "timeout" ->
                 {acc with accepted_exit_codes = [142]}
+              | "default" ->
+                {acc with filters = Some ["default"]}
               | _ -> acc
           )
             Test.base_params
