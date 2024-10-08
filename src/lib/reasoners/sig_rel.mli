@@ -86,7 +86,20 @@ module type RELATION = sig
   val optimizing_objective :
     t -> Uf.t -> Objective.Function.t -> Th_util.optimized_split option
   (** [optimizing_split env uf o] tries to optimize objective [o].
-      Returns [None] if the theory cannot optimize the objective. *)
+      Returns [None] if no theory knows how to optimize the objective.
+
+      If the function returns [Some o] then the value of the optimized split
+      [o] is never [Unknown] because all the theories that support
+      optimization will always produce an answer even if this answer is not
+      the best value.
+
+      For instance, if the objective is a nonlinear arithmetical
+      expressions of the form:
+        5 * x * x + 2 * y + 3,
+      the arithmetic theory will translate this function into the linear
+      objective function:
+        5 * U + 2 * y + 3 where U = x * x
+      and send it to Ocplib-simplex. *)
 
   val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
     t * Uf.GlobalDomains.t *
