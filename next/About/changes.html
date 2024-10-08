@@ -57,9 +57,13 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">About</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="license.html">Licenses</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#smt-lib-support">SMT-LIB support</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-6-0">v2.6.0</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#command-line-interface">Command-line interface</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#smt-lib-support">SMT-LIB support</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id1">SMT-LIB support</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model-generation">Model generation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#theory-reasoning">Theory reasoning</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#internal-library-changes">Internal/library changes</a></li>
@@ -77,22 +81,22 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-2">v2.5.2</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id1">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-1">v2.5.1</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id2">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-0">v2.5.0</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#new-features">New features</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id3">Build</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id4">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-4-3-2023-04-14">v2.4.3 (2023-04-14)</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id5">Build</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id6">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Bug fixes</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#regression-fixes">Regression fixes</a></li>
 </ul>
 </li>
@@ -162,6 +166,15 @@
 <p>This is the changelog of all the Alt-Ergo releases. The PR numbers reference
 the <a class="reference external" href="https://github.com/OCamlPro/Alt-Ergo">official Alt-Ergo repository on
 GitHub</a>.</p>
+<section id="unreleased">
+<h2>unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading"></a></h2>
+<section id="smt-lib-support">
+<h3>SMT-LIB support<a class="headerlink" href="#smt-lib-support" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Remove the legacy frontend and AB-Why3 plugin</p></li>
+</ul>
+</section>
+</section>
 <section id="v2-6-0">
 <h2>v2.6.0<a class="headerlink" href="#v2-6-0" title="Permalink to this heading"></a></h2>
 <section id="command-line-interface">
@@ -182,8 +195,8 @@ compliant (#805)</p></li>
 <li><p>Deprecate <code class="docutils literal notranslate"><span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">typing</span></code> and <code class="docutils literal notranslate"><span class="pre">warnings</span></code> debug flags (#1204)</p></li>
 </ul>
 </section>
-<section id="smt-lib-support">
-<h3>SMT-LIB support<a class="headerlink" href="#smt-lib-support" title="Permalink to this heading"></a></h3>
+<section id="id1">
+<h3>SMT-LIB support<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Add support for the many new SMT-LIB commands (#837, #848, #852, #863, #911,
 #942, #945, #961, #975, #1069)</p></li>
@@ -339,8 +352,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-5-2">
 <h2>v2.5.2<a class="headerlink" href="#v2-5-2" title="Permalink to this heading"></a></h2>
-<section id="id1">
-<h3>Bug fixes<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<section id="id2">
+<h3>Bug fixes<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Hot fix for a soundness bug related with the <code class="docutils literal notranslate"><span class="pre">distinct</span></code> statement (#890)</p></li>
 <li><p>Treat missing values in models as abstract (#860)</p></li>
@@ -349,8 +362,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-5-1">
 <h2>v2.5.1<a class="headerlink" href="#v2-5-1" title="Permalink to this heading"></a></h2>
-<section id="id2">
-<h3>Bug fixes<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<section id="id3">
+<h3>Bug fixes<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>fix a critical soundness bug with bvnot primitive (#819)</p></li>
 </ul>
@@ -371,16 +384,16 @@ extensions (#1122)</p></li>
 <li><p>improve the ite preprocessing (simplification of some ites) (PR #731)</p></li>
 </ul>
 </section>
-<section id="id3">
-<h3>Build<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<section id="id4">
+<h3>Build<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>update to the new version of ocplib-simplex (0.5)</p></li>
 <li><p>remove the support of the deprecated library num. Alt-Ergo only uses Zarith (PR #600)</p></li>
 <li><p>remove the deprecated graphical interface (PR #601)</p></li>
 </ul>
 </section>
-<section id="id4">
-<h3>Bug fixes<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<section id="id5">
+<h3>Bug fixes<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>issue 475 – Catch the exception I_dont_known in instantiation pass of SatML (PR #478)</p></li>
 <li><p>fix a memory leak in the vector module (PR #606)</p></li>
@@ -389,8 +402,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-4-3-2023-04-14">
 <h2>v2.4.3 (2023-04-14)<a class="headerlink" href="#v2-4-3-2023-04-14" title="Permalink to this heading"></a></h2>
-<section id="id5">
-<h3>Build<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
+<section id="id6">
+<h3>Build<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Restrict the requirement version of Ocplib-simplex (PR #573)</p></li>
 <li><p>Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)</p></li>
@@ -400,8 +413,8 @@ extensions (#1122)</p></li>
 <li><p>Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)</p></li>
 </ul>
 </section>
-<section id="id6">
-<h3>Bug fixes<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h3>
+<section id="id7">
+<h3>Bug fixes<a class="headerlink" href="#id7" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Fix soundness issues in the arithmetic reasoner #476, #477, #479 (PR #573)</p></li>
 </ul>

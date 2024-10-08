@@ -51,7 +51,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#command-line">Command-line</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#files-extensions">Files extensions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#frontend-option">Frontend option</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preludes">Preludes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#strict-mode">Strict mode</a></li>
 </ul>
@@ -142,25 +141,6 @@ standard</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">.psmt2.zip</span></code>, <code class="docutils literal notranslate"><span class="pre">.smt2.zip</span></code> and <code class="docutils literal notranslate"><span class="pre">.ae.zip</span></code> for compressed files</p></li>
 </ul>
 <p>See the <a class="reference internal" href="../SMT-LIB_language/index.html"><span class="doc std std-doc">SMT-LIB language</span></a> and <a class="reference internal" href="../Alt_ergo_native/index.html"><span class="doc std std-doc">Alt-ergo native language</span></a> sections for more information about the format of the input files.</p>
-</section>
-<section id="frontend-option">
-<h3>Frontend option<a class="headerlink" href="#frontend-option" title="Permalink to this heading"></a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">--frontend</span></code> option lets you select the frontend used to parse and type the input file. Since version 2.5.0,
-Alt-Ergo integrates two frontends:</p>
-<ul class="simple">
-<li><p>The <code class="docutils literal notranslate"><span class="pre">dolmen</span></code> frontend is the default frontend, powered by the
-<a class="reference external" href="https://github.com/Gbury/dolmen">Dolmen</a> library.  The native and SMT-LIB
-languages are both supported by this frontend.</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">legacy</span></code> frontend is the historical frontend of Alt-Ergo supporting the
-native language. You can select it with the <code class="docutils literal notranslate"><span class="pre">--frontend</span> <span class="pre">legacy</span></code> option. The
-legacy frontend is deprecated, and will be removed in a future release.</p></li>
-</ul>
-<div class="admonition-note admonition">
-<p class="admonition-title">Note</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">legacy</span></code> frontend has limited support for the SMT-LIB language, but many
-SMT-LIB features will not work with the <code class="docutils literal notranslate"><span class="pre">legacy</span></code> frontend. Use the (default)
-<code class="docutils literal notranslate"><span class="pre">dolmen</span></code> frontend for SMT-LIB inputs.</p>
-</div>
 </section>
 <section id="preludes">
 <h3>Preludes<a class="headerlink" href="#preludes" title="Permalink to this heading"></a></h3>

@@ -7,7 +7,7 @@ Alt-ergo is available on [opam], the ocaml package manager with the following co
 opam install alt-ergo
 ```
 
-This command will install the Alt-ergo library `alt-ergo-lib` and the parsers `alt-ergo-parsers`, as well as other librairies detailled in [dependencies](#dependencies).
+This command will install the Alt-ergo library `alt-ergo-lib`, as well as other librairies detailled in [dependencies](#dependencies).
 
 Since version 2.6.0, Alt-Ergo is compatible with opam 2.2 installations using both Cygwin and MSYS2 on Windows. To setup opam on Windows, please follow the instructions [here](https://ocamlpro.com/blog/2024_07_01_opam_2_2_0_releases/).
 
@@ -82,12 +82,6 @@ Note: these are somewhat obsolete; nowadays you can just use `dune`
   1. Compile with `make alt-ergo-lib`
 
   2. Install with `make install-lib`
-
-#### Alt-Ergo parsers
-
-  1. Compile with `make alt-ergo-parsers`
-
-  2. Install with `make install-parsers`
 
 #### Alt-Ergo binary
 

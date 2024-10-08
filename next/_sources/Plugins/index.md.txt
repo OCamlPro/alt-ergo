@@ -24,16 +24,6 @@ be registered in the `(alt-ergo plugins)` site using
 to be available as an option to `--inequalities-plugin`.
 ```
 
-## AB why3 plugin (**deprecated**)
-
-```{warning}
-The AB Why3 plugin requires the use of the `--frontend legacy` option, which is
-deprecated and will be removed in the next version of Alt-Ergo.
-
-If you are using this plugin and would like it to be available in new versions
-of Alt-Ergo, please contact [the Alt-Ergo developers](mailto:alt-ergo@ocamlpro.com).
-```
-
 ```{toctree}
 :maxdepth: 2
 
