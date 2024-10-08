@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-const x (_ BitVec 32))
+(assert (= x #b00000000000000000000000000000010))
+(assert (distinct (bv2nat x) 2))
+(check-sat)

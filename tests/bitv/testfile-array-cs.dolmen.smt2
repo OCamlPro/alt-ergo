@@ -1,0 +1,10 @@
+(set-logic ALL)
+; We need produce-models to propagate `int2bv` when learning `0 = y`
+(set-option :produce-models true)
+(declare-const a (Array Int Int))
+(declare-const x Int)
+(declare-const y Int)
+(assert (= (select a 4) 1))
+(assert (= (select (store a y 0) 4) 0))
+(assert (= ((_ int2bv 2) y) #b11))
+(check-sat)

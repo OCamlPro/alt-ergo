@@ -1,0 +1,7 @@
+
+unknown
+(
+  (define-fun a () Int 0)
+  (define-fun intrefqtmk ((_arg_0 Int)) intref (as @a3 intref))
+  (define-fun a1 () Int 0)
+)

@@ -1,0 +1,6 @@
+
+unknown
+(
+  (define-fun x () Int 0)
+)
+(error "Produce assignments disabled; add (set-option :produce-assignments true)")

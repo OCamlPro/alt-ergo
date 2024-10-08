@@ -1,0 +1,6 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-const |fail))| Int)
+(assert (= |fail))| 0))
+(check-sat)
+(get-model)

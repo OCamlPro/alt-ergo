@@ -1,0 +1,6 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-const x (_ BitVec 8))
+(assert (= x (bvor #b10100101 #b01010101)))
+(check-sat)
+(get-model)

@@ -1,0 +1,18 @@
+
+unknown
+(
+  (define-fun p () Bool true)
+  (define-fun q () Bool true)
+)
+((notp false)
+ (notnq false))
+
+
+unknown
+(
+  (define-fun p () Bool true)
+  (define-fun q () Bool true)
+)
+((notp false)
+ (notnq false))
+

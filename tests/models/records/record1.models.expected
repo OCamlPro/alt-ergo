@@ -1,0 +1,5 @@
+
+unknown
+(
+  (define-fun a () Pair (pair 5 0))
+)
