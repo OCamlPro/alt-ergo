@@ -1,8 +1,0 @@
-
-unknown
-(
-  (define-fun a () List empty)
-  (define-fun b () List empty)
-  (define-fun c () List (cons 0 empty))
-  (define-fun d () List empty)
-)

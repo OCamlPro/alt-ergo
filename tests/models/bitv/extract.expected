@@ -1,8 +1,0 @@
-
-unknown
-(
-  (define-fun a () (_ BitVec 2) #b11)
-  (define-fun b () (_ BitVec 3) #b111)
-  (define-fun c () (_ BitVec 6) #b111011)
-  (define-fun z () (_ BitVec 1) #b0)
-)

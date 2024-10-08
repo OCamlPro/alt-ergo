@@ -1,7 +1,0 @@
-(set-logic ALL)
-(set-option :produce-models true)
-(declare-const i Int)
-(define-fun C ((j Int)) Bool (> j 0))
-(assert (C i))
-(check-sat)
-(get-model)

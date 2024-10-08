@@ -1,8 +1,0 @@
-logic x : int
-
-axiom x_gt_0 : x > 0
-
-check_sat cs_x_lt_0: x < 0
-check_sat cs_x_gt_0: x > 0
-goal g_x_lt_0: x < 0
-goal g_x_gt_0: x > 0

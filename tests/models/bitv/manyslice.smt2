@@ -1,8 +1,0 @@
-(set-logic ALL)
-(set-option :produce-models true)
-(declare-const x (_ BitVec 1))
-(declare-const y (_ BitVec 1))
-(declare-const xy (_ BitVec 2))
-(assert (= (concat (concat x y) (concat xy xy)) (concat #b1010 (concat x y))))
-(check-sat)
-(get-model)

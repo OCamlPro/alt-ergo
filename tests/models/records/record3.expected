@@ -1,7 +1,0 @@
-
-unknown
-(
-  (define-fun x () Int 0)
-  (define-fun y () Int 5)
-  (define-fun f ((_arg_0 Int)) Pair (pair 5 0))
-)

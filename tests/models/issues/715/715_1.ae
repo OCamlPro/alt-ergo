@@ -1,6 +1,0 @@
-logic f: int
-
-(* This function is user-defined and shouldn't appear in the output model. *)
-function g(x: int, y: int) : int = x + y
-
-check_sat t: f = 0

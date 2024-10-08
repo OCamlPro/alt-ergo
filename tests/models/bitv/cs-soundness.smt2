@@ -1,7 +1,0 @@
-(set-logic QF_BV)
-(set-option :produce-models true)
-(set-info :status sat)
-(declare-fun a () (_ BitVec 2))
-(assert (not (bvslt a #b01)))
-(check-sat)
-(get-model)
