@@ -1185,10 +1185,8 @@ let parse_output_opt =
     Term.(const Output.set_dump_models $ dump_models_on)
   in
 
-  let set_frontend _ = () in
-
   let set_frontend =
-    Term.(const set_frontend $ frontend)
+    Term.(const ignore $ frontend)
   in
 
   Term.(ret (const mk_output_opt $
