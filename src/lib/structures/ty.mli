@@ -210,64 +210,18 @@ val esubst : subst
 val apply_subst : subst -> t -> t
 (** Substitution application. *)
 
-val union_subst : subst -> subst -> subst
-(** [union_subst u v] applies [v] to [u], resulting in [u'].
-    It then computes the union of [u'] and [v], prioritizing
-    bindings from [u'] in case of conflict. *)
-
-
-(** {2 Unification/Matching} *)
+(** {2 Matching} *)
 
 exception TypeClash of t * t
-(** Exception raised during matching or unification.
+(** Exception raised during matching.
     [TypeClash (u, v)] is raised when [u] and [v] could not be
     matched or unified ([u] and [v] may be sub-types of the
     types being actually unified or matched). *)
-
-val unify : t -> t -> unit
-(** Destructive unification. Mutates the [value] fields of
-    type variables.
-    @raise TypeClash when unification is impossible. In this
-      case, the [value] fields of already mutated type variables
-      are left modified, which may prevent future unifications. *)
 
 val matching : subst -> t -> t -> subst
 (** Matching of types (non-destructive). [matching pat t] returns a
     substitution [subst] such that [apply_subst subst pat] is
     equal to [t]. *)
-
-val shorten : t -> t
-(** Shorten paths in type variables values.
-    Unification in particular can create chains where the [value]
-    field of one type variable points to another and so on...
-    This function short-circuits such chains so that the value
-    of a type variable can be accessed directly. *)
-
-
-(** {2 Manipulations on types} *)
-
-val fresh : t -> subst -> t * subst
-(** Apply the given substitution, all while generating fresh variables
-    for the variables not already bound in the substitution. Returns
-    a substitution containing bindings from old variable to their
-    fresh counterpart. *)
-
-val fresh_list : t list -> subst -> t list * subst
-(** Same as {!val:fresh} but on lists of types. *)
-
-val instantiate : t list -> t list -> t -> t
-(** [instantiate vars args t] builds the substitutions mapping
-    each type variable in [vars] to the corresponding term in [args],
-    then apply that substitution to [t].
-    @raise Invalid_argument if the lists [vars] and [args]
-      do not have the same length
-    @raise Assertion_failure if one type in [vars] is not
-      a type variable.
-*)
-
-val monomorphize: t -> t
-(** Return a monomorphized variant of the given type, where
-    type variable without values have been replaced by abstract types. *)
 
 type goal_sort =
   | Cut

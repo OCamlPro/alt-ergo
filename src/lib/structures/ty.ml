@@ -594,56 +594,6 @@ let rec hash t =
 
   | _ -> Hashtbl.hash t
 
-let occurs { v = n; _ } t =
-  let rec occursrec = function
-    | Tvar { v = m; _ } -> n=m
-    | Text(l,_) -> List.exists occursrec l
-    | Tfarray (t1,t2) -> occursrec t1 || occursrec t2
-    | Trecord { args ; _ } | Tadt (_, args) -> List.exists occursrec args
-    | Tint | Treal | Tbool | Tbitv _ -> false
-  in occursrec t
-
-(*** destructive unification ***)
-let rec unify t1 t2 =
-  let t1 = shorten t1 in
-  let t2 = shorten t2 in
-  match t1 , t2 with
-    Tvar ({v=n;value=None} as tv1), Tvar {v=m;value=None} ->
-    if n<>m then tv1.value <- Some t2
-  | _ ,  Tvar ({ value = None; _ } as tv) ->
-    if (occurs tv t1) then raise (TypeClash(t1,t2));
-    tv.value <- Some t1
-  | Tvar ({ value = None; _ } as tv) , _ ->
-    if (occurs tv t2) then raise (TypeClash(t1,t2));
-    tv.value <- Some t2
-  | Text(l1,s1) , Text(l2,s2) when Uid.equal s1 s2 ->
-    List.iter2 unify l1 l2
-  | Tfarray (ta1,ta2), Tfarray (tb1,tb2) -> unify ta1 tb1;unify ta2 tb2
-  | Trecord r1, Trecord r2 when Uid.equal r1.name r2.name ->
-    List.iter2 unify r1.args r2.args
-  | Tint, Tint | Tbool, Tbool | Treal, Treal -> ()
-  | Tbitv n , Tbitv m when m=n -> ()
-
-  | Tadt(n1, p1), Tadt (n2, p2) when Uid.equal n1 n2 ->
-    List.iter2 unify p1 p2
-
-  | _ , _ [@ocaml.ppwarning "TODO: remove fragile pattern "] ->
-    raise (TypeClash(t1,t2))
-
-let instantiate lvar lty ty =
-  let s =
-    List.fold_left2
-      (fun s x t ->
-         match x with
-         | Tvar { v = n; _ } ->
-           M.add n t s
-         | _ -> assert false) M.empty lvar lty
-  in
-  apply_subst s ty
-
-let union_subst s1 s2 =
-  M.fold (fun k x s2 -> M.add k x s2) (M.map (apply_subst s2)  s1) s2
-
 let compare_subst = M.compare compare
 
 let equal_subst = M.equal equal
@@ -675,25 +625,6 @@ let vty_of t =
       acc
   in
   vty_of_rec Svty.empty t
-
-
-  [@ocaml.ppwarning "TODO: detect when there are no changes "]
-let rec monomorphize ty =
-  match ty with
-  | Tint | Treal | Tbool | Tbitv _  -> ty
-  | Text (tyl,hs) -> Text (List.map monomorphize tyl, hs)
-  | Trecord ({ args = tylv; name = n; lbs = tylb; _ } as r) ->
-    let m_tylv = List.map monomorphize tylv in
-    let m_tylb =
-      List.map (fun (lb, ty_lb) -> lb, monomorphize ty_lb) tylb
-    in
-    Trecord {r with args = m_tylv; name = n; lbs = m_tylb}
-  | Tfarray (ty1,ty2)    -> Tfarray (monomorphize ty1,monomorphize ty2)
-  | Tvar {v=v; value=None} -> text [] (Uid.of_string ("'_c"^(string_of_int v)))
-  | Tvar ({ value = Some ty1; _ } as r) ->
-    Tvar { r with value = Some (monomorphize ty1)}
-  | Tadt(name, params) ->
-    Tadt(name, List.map monomorphize params)
 
 let print_subst =
   let sep ppf () = Fmt.pf ppf " -> " in
