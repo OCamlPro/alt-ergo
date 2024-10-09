@@ -294,6 +294,10 @@ val mk_constr : Dolmen.Std.Expr.term_cst -> t list -> Ty.t -> t
            [Nest.attach_orders]. *)
 
 val mk_tester : Dolmen.Std.Expr.term_cst -> t -> t
+(** [mk_tester c e] produces the tester expression ((_ is c) e).
+
+    @raise Invalid_argument if [c] is not a Dolmen constructor. *)
+
 val mk_record : t list -> Ty.t -> t
 
 (** Substitutions *)
@@ -395,8 +399,6 @@ val mk_exists :
   t
 
 val mk_let : Var.t -> t -> t -> t
-
-val mk_match : t -> (Typed.pattern * t) list -> t
 
 val skolemize : quantified -> t
 

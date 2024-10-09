@@ -1300,26 +1300,27 @@ let mk_builtin ~is_pos n l =
 
 (** smart constructors for datatypes. *)
 
-let is_constr DE.{ builtin; _ } =
-  match builtin with
-  | DStd.Builtin.Constructor _ -> true
-  | _ -> false
-
 let has_attached_order id =
   DE.Term.Const.get_tag id Nest.order_tag |> Option.is_some
 
 let mk_constr c xs ty =
-  if not @@ is_constr c then
-    Fmt.invalid_arg "expected a constructor, got %a" DE.Id.print c;
-  (* This assertion ensures that the API of the [Nest] module have been
-     correctly used, that is [Nest.attach_orders] have been called on
-     the nest of [id] if [id] is a constructor of ADT. *)
-  if not @@ has_attached_order c then
-    Fmt.invalid_arg "no order on constructor %a" DE.Id.print c;
-  mk_term (Sy.Op (Constr c)) xs ty
+  match c.DE.builtin with
+  | DStd.Builtin.Constructor _ ->
+    (* This assertion ensures that the API of the [Nest] module have been
+       correctly used, that is [Nest.attach_orders] have been called on
+       the nest of [id] if [id] is a constructor of ADT. *)
+    if not @@ has_attached_order c then
+      Fmt.invalid_arg "no order on constructor %a" DE.Id.print c;
+    mk_term (Sy.Op (Constr c)) xs ty
+  | _ ->
+    Fmt.invalid_arg "expected a constructor, got %a" DE.Id.print c
 
-let mk_tester cons t =
-  mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
+let mk_tester c t =
+  match c.DE.builtin with
+  | DStd.Builtin.Constructor _ ->
+    mk_builtin ~is_pos:true (Sy.IsConstr c) [t]
+  | _ ->
+    Fmt.invalid_arg "expected a constructor, got %a" DE.Id.print c
 
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
@@ -2616,88 +2617,6 @@ let mk_exists name loc binders trs f ~toplevel ~decl_kind =
       neg (mk_forall nm loc binders trs (neg f) ~toplevel:false ~decl_kind)
     in
     mk_forall name loc Var.Map.empty trs tmp ~toplevel ~decl_kind
-
-
-let rec compile_match mk_destr mker e cases accu =
-  match cases with
-  | [] -> accu
-
-  | (Typed.Var x, p) :: _ ->
-    apply_subst ((Var.Map.singleton x e), Ty.esubst) p
-
-  | (Typed.Constr {name; args}, p) :: l ->
-    let _then =
-      List.fold_left
-        (fun acc (var, destr, ty) ->
-           let destr = mk_destr destr in
-           let d = mk_term destr [e] ty in
-           mk_let var d acc
-        )p args
-    in
-    match l with
-      [] -> _then
-    | _ ->
-      let _else = compile_match mk_destr mker e l accu in
-      let cond = mker e name in
-      mk_ite cond _then _else
-
-(* TO BE REMOVED *)
-let debug_compile_match e cases res =
-  if Options.get_debug_adt () then begin
-    Printer.print_dbg  ~flushed:false ~module_name:"Expr"
-      "compilation of: match %a with@ " print e;
-    let p_list_vars fmt l =
-      match l with
-        [] -> ()
-      | [e,_,_] -> Var.print fmt e
-      | (e,_,_) :: l ->
-        Format.fprintf fmt "(%a" Var.print e;
-        List.iter (fun (e,_,_) -> Format.fprintf fmt ", %a" Var.print e) l;
-        Format.fprintf fmt ")"
-    in
-    List.iter
-      (fun (p, v) ->
-         match p with
-         | Typed.Constr {name; args} ->
-           Printer.print_dbg  ~flushed:false ~header:false
-             "| %a %a -> %a@ "
-             DE.Term.Const.print name
-             p_list_vars args
-             print v;
-         | Typed.Var x ->
-           Printer.print_dbg  ~flushed:false ~header:false
-             "| %a -> %a@ " Var.print x print v;
-      )cases;
-    Printer.print_dbg ~header:false
-      "end@ result is: %a" print res;
-  end
-
-let mk_match e cases =
-  let ty = type_info e in
-  let mk_destr =
-    match ty with
-    | Ty.Tadt _ -> (fun hs -> Sy.destruct hs)
-    | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
-    | _ -> assert false
-  in
-  let mker =
-    match ty with
-    | Ty.Tadt _ ->
-      (fun e name ->
-         mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
-
-    | Ty.Trecord _ ->
-      (fun _e _name -> assert false) (* no need to test for records *)
-
-    | _ -> assert false
-  in
-  let res = compile_match mk_destr mker e cases e in
-  debug_compile_match e cases res;
-  res
-  [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
-  [@ocaml.ppwarning "TODO: add other elim schemes"]
-  [@ocaml.ppwarning "TODO: add a match construct in expr"]
-
 
 let is_pure e = e.pure
 
