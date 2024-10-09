@@ -28,6 +28,8 @@ module DE = Dolmen.Std.Expr
     number of constructors. The total order on ADT constructors is given by
     the hash function. *)
 
+val order_tag : int Dolmen.Std.Tag.t
+
 val attach_orders : DE.ty_def list -> unit
 (** [attach_orders defs] generate and attach orders on the constructors for
     each ADT of [defs].

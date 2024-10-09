@@ -220,8 +220,8 @@ val apply_subst : subst -> t -> t
 exception TypeClash of t * t
 (** Exception raised during matching.
     [TypeClash (u, v)] is raised when [u] and [v] could not be
-    matched or unified ([u] and [v] may be sub-types of the
-    types being actually unified or matched). *)
+    matched ([u] and [v] may be sub-types of the types being actually
+    matched). *)
 
 val matching : subst -> t -> t -> subst
 (** Matching of types (non-destructive). [matching pat t] returns a

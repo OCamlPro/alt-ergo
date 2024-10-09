@@ -173,7 +173,7 @@ module Domains = struct
      destructors of the constructor [c] by searching in the list [cases].
 
      A better predicate will be easy to implement after getting rid of
-     the legacy frontend and switching from [DE.t] to
+     the legacy frontend and switching from [Uid.t] to
      [Dolmen.Std.Expr.term_cst] to store the constructors. Indeed, [term_cst]
      contains the type of constructor and in particular its arity. *)
   let is_enum_constr r c =

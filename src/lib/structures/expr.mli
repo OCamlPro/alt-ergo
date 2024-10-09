@@ -285,6 +285,14 @@ val mk_ite : t -> t -> t -> t
 (** smart constructor for datatypes. *)
 
 val mk_constr : Dolmen.Std.Expr.term_cst -> t list -> Ty.t -> t
+(** [mk_constr c args ty] converts the Dolmen constructor [c] into
+    an expression with arguments [args].
+
+    @raise Invalid_argument if [c] is not a Dolmen constructor.
+
+    @raise Invalid_argument if no order have been attached to [c] with
+           [Nest.attach_orders]. *)
+
 val mk_tester : Dolmen.Std.Expr.term_cst -> t -> t
 val mk_record : t list -> Ty.t -> t
 

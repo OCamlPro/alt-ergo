@@ -27,6 +27,7 @@
 
 module Sy = Symbols
 module DE = Dolmen.Std.Expr
+module DStd = Dolmen.Std
 
 (** Data structures *)
 
@@ -1299,7 +1300,23 @@ let mk_builtin ~is_pos n l =
 
 (** smart constructors for datatypes. *)
 
-let mk_constr cons xs ty = mk_term (Sy.Op (Constr cons)) xs ty
+let is_constr DE.{ builtin; _ } =
+  match builtin with
+  | DStd.Builtin.Constructor _ -> true
+  | _ -> false
+
+let has_attached_order id =
+  DE.Term.Const.get_tag id Nest.order_tag |> Option.is_some
+
+let mk_constr c xs ty =
+  if not @@ is_constr c then
+    Fmt.invalid_arg "expected a constructor, got %a" DE.Id.print c;
+  (* This assertion ensures that the API of the [Nest] module have been
+     correctly used, that is [Nest.attach_orders] have been called on
+     the nest of [id] if [id] is a constructor of ADT. *)
+  if not @@ has_attached_order c then
+    Fmt.invalid_arg "no order on constructor %a" DE.Id.print c;
+  mk_term (Sy.Op (Constr c)) xs ty
 
 let mk_tester cons t =
   mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
