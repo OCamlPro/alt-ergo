@@ -452,7 +452,6 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         check_if_over (internal_assume ~loc:d.st_loc (n, f, mf)) env
       | PredDef (f, name) ->
         check_if_over (internal_pred_def ~loc:d.st_loc (name, f)) env
-      | RwtDef _ -> assert false
       | Query (n, f, sort) ->
         begin
           (* If we have reached an unknown state, we can return it right

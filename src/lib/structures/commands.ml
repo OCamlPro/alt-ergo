@@ -34,7 +34,6 @@ type sat_decl_aux =
   | Decl of Id.typed
   | Assume of string * Expr.t * bool
   | PredDef of Expr.t * string (*name of the predicate*)
-  | RwtDef of (Expr.t Typed.rwt_rule) list
   | Optimize of Objective.Function.t
   | Query of string *  Expr.t * Ty.goal_sort
   | ThAssume of Expr.th_elt
@@ -57,12 +56,6 @@ let print_aux fmt = function
     Format.fprintf fmt "assume %s(%b): @[<hov>%a@]" name b Expr.print e
   | PredDef (e, name) ->
     Format.fprintf fmt "pred-def %s: @[<hov>%a@]" name Expr.print e
-  | RwtDef l ->
-    Format.fprintf fmt "rwrts: @[<v>%a@]"
-      (Util.print_list_pp
-         ~sep:Format.pp_print_space
-         ~pp:(Typed.print_rwt Expr.print)
-      ) l
   | Query (name, e, sort) ->
     Format.fprintf fmt "query %s(%a): @[<hov>%a@]"
       name Ty.print_goal_sort sort Expr.print e
