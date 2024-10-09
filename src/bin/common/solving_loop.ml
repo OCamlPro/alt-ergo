@@ -32,6 +32,8 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
+exception Exit_on_error of int
+
 type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
   local  : Commands.sat_tdecl list;
@@ -58,10 +60,13 @@ let recoverable_error ?(code = 1) =
           | Smtlib2 _ -> Printer.print_smtlib_err "%s" msg
           | _ -> Printer.print_err "%s" msg
       in
-      if Options.get_exit_on_error () then exit code)
+      if Options.get_exit_on_error () then raise (Exit_on_error code))
 
 let fatal_error ?(code = 1) =
-  Format.kasprintf (fun msg -> recoverable_error ~code "%s" msg; exit code)
+  Format.kasprintf
+    (fun msg ->
+       recoverable_error ~code "%s" msg;
+       raise (Exit_on_error code))
 
 let exit_as_timeout () = fatal_error ~code:142 "timeout"
 
@@ -252,7 +257,7 @@ let process_source ?selector_inst ~print_status src =
     | Errors.Error e ->
       recoverable_error "%a" Errors.report e;
       st
-    | Exit -> exit 0
+    | Exit -> raise (Exit_on_error 0)
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
@@ -892,7 +897,9 @@ let process_source ?selector_inst ~print_status src =
 
 let main () =
   let path = Options.get_file () in
-  if String.equal path "" then
-    process_source ~print_status:Frontend.print_status `Stdin
-  else
-    process_source ~print_status:Frontend.print_status @@ (`File path)
+  try
+    if String.equal path "" then
+      process_source ~print_status:Frontend.print_status `Stdin
+    else
+      process_source ~print_status:Frontend.print_status @@ (`File path)
+  with Exit_on_error code -> exit code

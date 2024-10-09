@@ -89,6 +89,7 @@ type run_error =
   | Unsupported_feature of string
   | Dynlink_error of string
   | Stack_underflow
+  | Exit_on_error of int
 
 (** Errors raised when performing actions forbidden in some modes. *)
 type mode_error =

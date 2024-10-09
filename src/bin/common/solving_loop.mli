@@ -25,6 +25,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+exception Exit_on_error of int
+(** Exception raised to notify that [process_source] cannot continue.
+    The integer corresponds to an error code. *)
+
 val main : unit -> unit
 (** Main function solve the input problem. The processed source is given
     by the file located at [Options.get_file ()]. *)
@@ -36,4 +40,7 @@ val process_source :
   unit
 (** [process_source ?selector_inst ~print_status src] processes the
     input source [src] and call [print_status] on each answers.
-    The hook [selector_inst] allows to track generated instantiations. *)
+    The hook [selector_inst] allows to track generated instantiations.
+
+    @raise Exit_on_error if a fatal error occurs. Recovarable errors
+           raise this exception if [Options.get_exit_on_error ()] is [true]. *)
