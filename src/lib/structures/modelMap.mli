@@ -16,6 +16,15 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module M: Map.S with type key = Expr.t list
+
+type graph =
+  | Free of Expr.t
+  (* Represents a graph without any constraint. The expression is
+     an abstract value. *)
+
+  | C of Expr.t M.t
+
 type t
 (** Type of model. *)
 
@@ -27,6 +36,14 @@ val empty : suspicious:bool -> Id.typed list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
+
+val find : Id.typed -> t -> graph
+(** [find sy mdl] returns the graph associated with the symbol [sy] in the model
+    [mdl], raises [Not_found] if it doesn't exist. *)
+
+val fold: (Id.typed -> graph -> 'a -> 'a) -> t -> 'a -> 'a
+(** [fold f mdl init] folds over the bindings in the model [mdl] with the
+    function [f] and with [init] as a initial value for the accumulator. *)
 
 val subst : Id.t -> Expr.t -> t -> t
 (** [subst id e mdl] substitutes all the occurrences of the identifier [id]
