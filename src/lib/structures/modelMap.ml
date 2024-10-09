@@ -20,9 +20,9 @@ module X = Shostak.Combine
 module Sy = Symbols
 
 module M: Map.S with type key = Expr.t list = Map.Make
-  (struct
-    type t = Expr.t list [@@deriving ord]
-  end)
+    (struct
+      type t = Expr.t list [@@deriving ord]
+    end)
 
 (* The type of this module represents a model value for a function [f] by a
    finite set of constraints of the form:
