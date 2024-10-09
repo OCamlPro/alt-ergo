@@ -169,23 +169,23 @@ module Domains = struct
 
   let filter_ty = is_adt_ty
 
-  (* TODO: This test is slow because we have to retrieve the list of
-     destructors of the constructor [c] by searching in the list [cases].
-
-     A better predicate will be easy to implement after getting rid of
-     the legacy frontend and switching from [Uid.t] to
-     [Dolmen.Std.Expr.term_cst] to store the constructors. Indeed, [term_cst]
-     contains the type of constructor and in particular its arity. *)
-  let is_enum_constr r c =
-    match X.type_info r with
-    | Tadt (name, args) ->
-      let cases = Ty.type_body name args in
-      Compat.List.is_empty @@ Ty.assoc_destrs c cases
-    | _ -> assert false
+  let is_enum_constr DE.{ id_ty; _ } =
+    let monomorphic_case id_ty =
+      match DE.Ty.view id_ty with
+      | `Arrow (l, _) -> Compat.List.is_empty l
+      | `App _ -> true
+      | _ ->
+        (* This case cannot occur as [id_ty] denotes the type of a monomorphic
+           ADT constructor. *)
+        assert false
+    in
+    match DE.Ty.view id_ty with
+    | `Pi (_, ty) -> monomorphic_case ty
+    | _ -> monomorphic_case id_ty
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
-    let is_enum_domain = Domain.for_all (is_enum_constr r) nd in
+    let is_enum_domain = Domain.for_all is_enum_constr nd in
     let enums = if is_enum_domain then SX.add r t.enums else t.enums in
     let changed = SX.add r t.changed in
     { domains; enums; changed }
