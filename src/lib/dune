@@ -46,7 +46,7 @@
   ; modules that make up the lib
   (modules
     ; frontend
-    Translate D_loop D_state_option Frontend Parsed_interface Models
+    Translate D_loop D_state_option Frontend Models
     ; reasoners
     Ac Arith Arrays_rel Bitv Ccx Shostak Relation
     Fun_sat Fun_sat_frontend Inequalities Bitv_rel Th_util Adt Adt_rel
@@ -56,7 +56,7 @@
     Sig Sig_rel Theory Uf Use Domains Domains_intf Rel_utils Bitlist
     ; structures
     Commands Errors Explanation Fpa_rounding
-    Parsed Profiling Satml_types Symbols
+    Profiling Satml_types Symbols
     Expr Var Ty Typed Xliteral ModelMap Id Objective Literal
     ; util
     Emap Gc_debug Hconsing Hstring Heap Loc Numbers Uqueue
