@@ -169,19 +169,15 @@ module Domains = struct
 
   let filter_ty = is_adt_ty
 
-  let is_enum_constr DE.{ id_ty; _ } =
-    let monomorphic_case id_ty =
-      match DE.Ty.view id_ty with
-      | `Arrow (l, _) -> Compat.List.is_empty l
-      | `App _ -> true
-      | _ ->
-        (* This case cannot occur as [id_ty] denotes the type of a monomorphic
-           ADT constructor. *)
-        assert false
-    in
-    match DE.Ty.view id_ty with
-    | `Pi (_, ty) -> monomorphic_case ty
-    | _ -> monomorphic_case id_ty
+  let is_enum_constr DE.{ builtin; _ } =
+    match builtin with
+    | B.Constructor { adt ; case } ->
+      begin match DE.Ty.definition adt with
+        | Some Adt { cases; _ } ->
+          Array.length cases.(case).dstrs = 0
+        | _ -> assert false
+      end
+    | _ -> false
 
   let internal_update r nd t =
     let domains = MX.add r nd t.domains in
