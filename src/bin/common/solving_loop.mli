@@ -25,7 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-exception Exit_on_error of int
+exception Exit_with_code of int
 (** Exception raised to notify that [process_source] cannot continue.
     The integer corresponds to an error code. *)
 
@@ -42,5 +42,6 @@ val process_source :
     input source [src] and call [print_status] on each answers.
     The hook [selector_inst] allows to track generated instantiations.
 
-    @raise Exit_on_error if a fatal error occurs. Recovarable errors
-           raise this exception if [Options.get_exit_on_error ()] is [true]. *)
+    @raise Exit_with_code c with c <> 0 if a fatal error occurs.
+           Recovarable errors raise this exception if
+           [Options.get_exit_on_error ()] is [true]. *)

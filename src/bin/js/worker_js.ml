@@ -146,7 +146,7 @@ let main worker_id filename filecontent =
       Worker_interface.diagnostic =
         Some [Format.asprintf "%a" Errors.report e]
     }
-  | Solving_loop.Exit_on_error code ->
+  | Solving_loop.Exit_with_code code ->
     let res = Worker_interface.init_results () in
     let msg = Fmt.str "exit code %d" code in
     { res with
