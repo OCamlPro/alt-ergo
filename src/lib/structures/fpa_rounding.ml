@@ -116,7 +116,7 @@ let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
   let tcst_of_rounding_mode m =
     let name = string_of_rounding_mode m in
     let opt =
-      List.find_map
+      Compat.List.find_map
         (fun (DE.{ path; _ } as tcst) ->
            let n = get_basename path in
            if String.equal name n then Some tcst
