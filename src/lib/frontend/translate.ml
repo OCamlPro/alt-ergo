@@ -744,14 +744,14 @@ let handle_patt_var id (DE.{ term_descr; _ } as term)  =
   match term_descr with
   | Cst ({ builtin = B.Base; id_ty; _ } as ty_c) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Fmt.str "%a" DE.Term.Const.print id in
+    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
     let sy = Sy.Var v in
     Cache.store_sy ty_c sy;
     v, id, ty
 
   | Var ({ builtin = B.Base; id_ty; _ } as ty_v) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Fmt.str "%a" DE.Term.Const.print id in
+    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
     let sy = Sy.Var v in
     Cache.store_sy ty_v sy;
     v, id, ty
@@ -920,7 +920,7 @@ let mk_add translate sy ty l =
   E.mk_term sy args ty
 
 let mk_rounding fpar =
-  let tcst = Fpa_rounding.tcst_of_rounding_mode fpar in
+  let tcst = Fpa_rounding.term_cst_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
   E.mk_constr tcst [] ty
 

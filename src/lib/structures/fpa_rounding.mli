@@ -71,7 +71,7 @@ val translate_smt_rounding_mode : string -> string option
 val string_of_rounding_mode : rounding_mode -> string
 
 (** Returns the Dolmen constructor associated with the rounding mode. *)
-val tcst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
+val term_cst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 val integer_log_2 : Numbers.Q.t -> int

@@ -102,7 +102,7 @@ let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode =
   let ty = Ty.t_adt ~body:(Some body) ty_cst [] in
   DE.Ty.apply ty_cst [], d_constrs, ty
 
-let tcst_of_rounding_mode =
+let term_cst_of_rounding_mode =
   let table = Hashtbl.create 5 in
   List.iter2 (
     fun key bnd ->
