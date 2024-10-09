@@ -58,6 +58,8 @@ let to_smt_string =
   | Down -> "RTN"
   | NearestTiesToAway -> "RNA"
 
+let pp_rounding_mode = Fmt.of_to_string to_smt_string
+
 let to_ae_string = function
   | NearestTiesToEven -> "NearestTiesToEven"
   | ToZero -> "ToZero"
@@ -82,24 +84,9 @@ let string_ae_reprs =
     (fun c -> to_ae_string c)
     constrs
 
-let get_basename = function
-  | DStd.Path.Local { name; }
-  | Absolute { name; path = []; } -> name
-  | Absolute { name; path; } ->
-    Fmt.failwith
-      "Expected an empty path to the basename: \"%s\" but got: [%a]."
-      name (fun fmt l ->
-          match l with
-          | h :: t ->
-            Format.fprintf fmt "%s" h;
-            List.iter (Format.fprintf fmt "; %s") t
-          | _ -> ()
-        ) path
-
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
-let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
-  let module DStd = Dolmen.Std in
+let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode =
   (* We may use the builtin type `DStd.Expr.Ty.roundingMode` here. *)
   let ty_cst = DE.Ty.Const.mk (DStd.Path.global "RoundingMode") 0 in
   let constrs =
@@ -113,19 +100,20 @@ let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode, tcst_of_rounding_mode =
   Nest.attach_orders [def];
   let body = List.map (fun c -> c, []) d_constrs in
   let ty = Ty.t_adt ~body:(Some body) ty_cst [] in
-  let tcst_of_rounding_mode m =
-    let name = string_of_rounding_mode m in
-    let opt =
-      Compat.List.find_map
-        (fun (DE.{ path; _ } as tcst) ->
-           let n = get_basename path in
-           if String.equal name n then Some tcst
-           else None
-        ) d_constrs
-    in
-    match opt with Some o -> o | None -> assert false
-  in
-  DE.Ty.apply ty_cst [], d_constrs, ty, tcst_of_rounding_mode
+  DE.Ty.apply ty_cst [], d_constrs, ty
+
+let tcst_of_rounding_mode =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) constrs d_constrs;
+  fun key ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for mode %a."
+        pp_rounding_mode key
 
 let rounding_mode_of_smt =
   let table = Hashtbl.create 5 in

@@ -70,6 +70,7 @@ val translate_smt_rounding_mode : string -> string option
 (** Returns the string representation of the [rounding_mode] (SMT2 standard) *)
 val string_of_rounding_mode : rounding_mode -> string
 
+(** Returns the Dolmen constructor associated with the rounding mode. *)
 val tcst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
 
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
