@@ -1,3 +1,12 @@
+(env
+  (dev
+    (js_of_ocaml
+      (flags (:standard --debug-info --no-inline --source-map))
+      (link_flags (:standard --pretty --debug-info --no-inline --source-map))))
+  (release
+    (js_of_ocaml
+      (flags (:standard --no-source-map)))))
+
 (subdir runtest
   (dynamic_include ../gentest/dune.inc))
 

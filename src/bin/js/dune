@@ -7,7 +7,7 @@
  )
  (modules main_text_js)
  (modes byte js)
- (js_of_ocaml (flags --no-source-map +toplevel.js +dynlink.js))
+ (js_of_ocaml (flags (:standard +toplevel.js +dynlink.js)))
 )
 
 (library
@@ -31,7 +31,7 @@
  )
  (modules worker_js options_interface)
  (modes byte js)
- (js_of_ocaml (flags --no-source-map +toplevel.js +dynlink.js))
+ (js_of_ocaml (flags (:standard +toplevel.js +dynlink.js)))
 )
 
 ; Rule to build a small js example running the Alt-Ergo web worker
