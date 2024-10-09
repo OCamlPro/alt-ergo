@@ -16,47 +16,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-open Alias.Dolmen
-
-type t = Hstring.t [@@deriving ord]
-
-type typed = t * Ty.t list * Ty.t [@@deriving ord]
-
-let equal = Hstring.equal
-
-let pp ppf id =
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf
-    (DStd.Name.simple (Hstring.view id))
-
-let show id = Fmt.str "%a" pp id
-
-module Namespace = struct
-  module type S = sig
-    val fresh : ?base:string -> unit -> string
-  end
-
-  module Make () = struct
-    let fresh, reset_fresh_cpt =
-      let cpt = ref 0 in
-      let fresh_string ?(base = "") () =
-        let res = base ^ (string_of_int !cpt) in
-        incr cpt;
-        res
-      in
-      let reset_fresh_string_cpt () =
-        cpt := 0
-      in
-      fresh_string, reset_fresh_string_cpt
-  end
-
-  module Internal = Make ()
-
-  module Skolem = Make ()
-
-  module Abstract = Make ()
-
-  let reinit () =
-    Internal.reset_fresh_cpt ();
-    Skolem.reset_fresh_cpt ();
-    Abstract.reset_fresh_cpt ()
+module Dolmen = struct
+  module DStd = Dolmen.Std
+  module DE = Dolmen.Std.Expr
+  module DT = Dolmen.Std.Expr.Ty
+  module DBuiltin = Dolmen.Std.Builtin
 end

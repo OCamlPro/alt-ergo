@@ -25,7 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
+open Alias.Dolmen
 
 type t =
   | Tint
@@ -518,7 +518,6 @@ let type_body name args = Decls.body name args
 let text l s = Text (l, s)
 
 let fresh_empty_text =
-  let module DStd = Dolmen.Std in
   let cpt = ref (-1) in
   fun () ->
     incr cpt;
@@ -551,12 +550,12 @@ let t_adt ?(body=None) s ty_vars =
 
 let tunit =
   let () =
-    match Dolmen.Std.Expr.Ty.definition DE.Ty.Const.unit with
+    match DE.Ty.definition DT.Const.unit with
     | Some def -> Nest.attach_orders [def]
     | None -> assert false
   in
   let body = Some [DE.Term.Cstr.void, []] in
-  let ty = t_adt ~body DE.Ty.Const.unit [] in
+  let ty = t_adt ~body DT.Const.unit [] in
   ty
 
 let trecord ~record_constr lv name lbs =

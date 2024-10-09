@@ -27,7 +27,7 @@
 
 (** Anotations (used by the GUI). *)
 
-module DE = Dolmen.Std.Expr
+open Alias.Dolmen
 
 type ('a, 'b) annoted =
   { c : 'a;

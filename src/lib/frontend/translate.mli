@@ -19,7 +19,7 @@
 val clear_cache : unit -> unit
 (** Empties the internal cache of the module. *)
 
-val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
+val dty_to_ty : ?update:bool -> ?is_var:bool -> Dolmen.Std.Expr.ty -> Ty.t
 (** [dty_to_ty update is_var subst tyv_substs dty]
 
     Converts a Dolmen type to an Alt-Ergo type.
@@ -34,13 +34,13 @@ val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
 
 val make_form :
   string ->
-  D_loop.DStd.Expr.term ->
+  Dolmen.Std.Expr.term ->
   Loc.t ->
   decl_kind:Expr.decl_kind ->
   Expr.t
 
 val make :
-  D_loop.DStd.Loc.file ->
+  Dolmen.Std.Loc.file ->
   Commands.sat_tdecl list ->
   [< D_loop.Typer_Pipe.typechecked
   | `Optimize of Dolmen.Std.Expr.term * bool

@@ -25,7 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
+open Alias.Dolmen
 
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)

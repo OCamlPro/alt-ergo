@@ -31,13 +31,11 @@ module E = Expr
 module A = Xliteral
 module LR = Uf.LX
 module SE = Expr.Set
-module DE = Dolmen.Std.Expr
-
 module Sy = Symbols
-
 module CC_X = Ccx.Main
-
 module L = Shostak.Literal
+
+open Alias.Dolmen
 
 module type S = sig
   type t
