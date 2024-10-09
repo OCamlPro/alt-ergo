@@ -19,6 +19,11 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
+module M: Map.S with type key = Expr.t list = Map.Make
+    (struct
+      type t = Expr.t list [@@deriving ord]
+    end)
+
 (* The type of this module represents a model value for a function [f] by a
    finite set of constraints of the form:
      f(e_1, ..., e_n) = e
@@ -27,10 +32,6 @@ module Sy = Symbols
    As functions in the SMT-LIB standard are total, one of the expressions [e]
    above is used as the default value of the function. *)
 module Constraints = struct
-  module M = Map.Make
-      (struct
-        type t = Expr.t list [@@deriving ord]
-      end)
 
   type t = Expr.t M.t
 
@@ -136,6 +137,12 @@ let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
     P.add sy (C (Constraints.add arg_vals ret_val constraints)) values
   in
   { values; suspicious }
+
+let find k {values; _ } =
+  P.find k values
+
+let fold f {values;_} acc  =
+  P.fold f values acc
 
 let empty ~suspicious declared_ids =
   let values =
