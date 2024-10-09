@@ -146,6 +146,13 @@ let main worker_id filename filecontent =
       Worker_interface.diagnostic =
         Some [Format.asprintf "%a" Errors.report e]
     }
+  | Solving_loop.Exit_with_code code ->
+    let res = Worker_interface.init_results () in
+    let msg = Fmt.str "exit code %d" code in
+    { res with
+      Worker_interface.worker_id = worker_id;
+      Worker_interface.status = Error msg;
+    }
   | exn ->
     let res = Worker_interface.init_results () in
     let msg = Fmt.str "Unknown error: %s" (Printexc.to_string exn) in
@@ -170,7 +177,6 @@ let () =
           (* Extract options and set them *)
           let options = Worker_interface.options_from_json json_options in
           Options_interface.set_options options;
-          Options.set_exit_on_error false;
 
           (* Run the worker on the input file (filecontent) *)
           let filename = Option.get filename_opt in
