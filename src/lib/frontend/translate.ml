@@ -25,9 +25,8 @@ module C = Commands
 module Sy = Symbols
 module SM = Sy.Map
 
-module DE = DStd.Expr
-module DT = DE.Ty
-module B = DStd.Builtin
+open Alias.Dolmen
+module B = DBuiltin
 
 let unsupported msg =
   Fmt.kstr

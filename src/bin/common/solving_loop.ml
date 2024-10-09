@@ -32,6 +32,8 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
+open Alias.Dolmen
+
 type solver_ctx = {
   ctx    : Commands.sat_tdecl list;
   local  : Commands.sat_tdecl list;
@@ -223,8 +225,8 @@ let process_source ?selector_inst ~print_status src =
   let debug_parsed_pipe st c =
     if State.get State.debug st then
       Format.eprintf "[logic][parsed][%a] @[<hov>%a@]@."
-        Dolmen.Std.Loc.print_compact c.Dolmen.Std.Statement.loc
-        Dolmen.Std.Statement.print c;
+        DStd.Loc.print_compact c.DStd.Statement.loc
+        DStd.Statement.print c;
     if O.get_parse_only () then
       st, `Done ()
     else
@@ -232,7 +234,7 @@ let process_source ?selector_inst ~print_status src =
   in
   let debug_stmt stmt =
     Format.eprintf "[logic][typed][%a] @[<hov>%a@]@\n@."
-      Dolmen.Std.Loc.print_compact stmt.Typer_Pipe.loc
+      DStd.Loc.print_compact stmt.Typer_Pipe.loc
       Typer_Pipe.print stmt
   in
   let debug_typed_pipe st stmts =
@@ -244,7 +246,7 @@ let process_source ?selector_inst ~print_status src =
       st, `Continue stmts
   in
   let handle_exn st bt = function
-    | Dolmen.Std.Loc.Syntax_error (_, `Regular msg) ->
+    | DStd.Loc.Syntax_error (_, `Regular msg) ->
       recoverable_error "%t" msg; st
     | Util.Timeout ->
       Printer.print_status_timeout None None None None;
@@ -553,16 +555,16 @@ let process_source ?selector_inst ~print_status src =
     let logic_file = State.get State.logic_file st in
     let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
     match id, terms.ret with
-    | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
+    | DStd.Id.{name = Simple "minimize"; _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
       handle_optimize_stmt ~is_max:false loc id term st
-    | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
+    | DStd.Id.{name = Simple "maximize"; _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
       handle_optimize_stmt ~is_max:true loc id term st
-    | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
+    | DStd.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
       handle_get_objectives terms st
-    | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
+    | DStd.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
       recoverable_error
         "Statement %s only expects 1 argument (%i given)"
         ext
@@ -571,7 +573,7 @@ let process_source ?selector_inst ~print_status src =
     | n, _ ->
       recoverable_error
         "Unknown statement %a."
-        Dolmen.Std.Id.print
+        DStd.Id.print
         n;
       st
   in

@@ -20,7 +20,8 @@ module Sy = Symbols
 module X = Shostak.Combine
 module E = Expr
 module MS = Map.Make(String)
-module DE = Dolmen.Std.Expr
+
+open Alias.Dolmen
 
 let constraints = ref MS.empty
 

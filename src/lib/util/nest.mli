@@ -16,8 +16,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
-
 (** The purpose of this module is to construct an appropriate total order on
     constructors of a given ADT to ensure the termination of model generation
     for this theory.
@@ -30,7 +28,7 @@ module DE = Dolmen.Std.Expr
 
 val order_tag : int Dolmen.Std.Tag.t
 
-val attach_orders : DE.ty_def list -> unit
+val attach_orders : Dolmen.Std.Expr.ty_def list -> unit
 (** [attach_orders defs] generate and attach orders on the constructors for
     each ADT of [defs].
 

@@ -25,10 +25,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DStd = Dolmen.Std
-module DE = DStd.Expr
 module Q = Numbers.Q
 module Z = Numbers.Z
+
+open Alias.Dolmen
 
 (** The five standard rounding modes of the SMTLIB.
     Note that the SMTLIB defines these rounding modes to be the only

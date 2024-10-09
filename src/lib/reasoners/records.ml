@@ -27,7 +27,8 @@
 
 module E = Expr
 module Sy = Symbols
-module DE = Dolmen.Std.Expr
+
+open Alias.Dolmen
 
 type 'a abstract =
   | Record of (DE.term_cst * 'a abstract) list * Ty.t

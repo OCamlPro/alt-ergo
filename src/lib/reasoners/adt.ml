@@ -27,7 +27,8 @@
 
 module Sy = Symbols
 module E  = Expr
-module DE = Dolmen.Std.Expr
+
+open Alias.Dolmen
 
 let src = Logs.Src.create ~doc:"Adt" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)

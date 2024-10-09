@@ -25,8 +25,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
-
 (** The rounding modes for the Floating Point Arithmetic theory.
     In the legacy frontend, the rounding mode type was `fpa_rounding_mode`
     and defined 5 rounding modes (see the [rounding_mode] type below).
@@ -51,7 +49,7 @@ val fpa_rounding_mode_ae_type_name : string
 val fpa_rounding_mode_dty : Dolmen.Std.Expr.Ty.t
 
 (** The Dolmen constructors of [rounding_mode]. *)
-val d_constrs : DE.term_cst list
+val d_constrs : Dolmen.Std.Expr.term_cst list
 
 (** The rounding mode type. *)
 val fpa_rounding_mode : Ty.t

@@ -26,8 +26,7 @@
 (**************************************************************************)
 
 module Sy = Symbols
-module DE = Dolmen.Std.Expr
-module DStd = Dolmen.Std
+open Alias.Dolmen
 
 (** Data structures *)
 
@@ -1323,7 +1322,7 @@ let mk_tester cons t =
 
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
-let void = mk_constr Dolmen.Std.Expr.Term.Cstr.void [] Ty.tunit
+let void = mk_constr DE.Term.Cstr.void [] Ty.tunit
 
 (** Substitutions *)
 

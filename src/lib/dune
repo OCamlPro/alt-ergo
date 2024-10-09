@@ -61,7 +61,7 @@
     ; util
     Emap Gc_debug Hconsing Hstring Heap Loc Numbers Uqueue
     Options Timers Util Vec Version Steps Printer
-    My_zip My_list Theories Nest Compat
+    My_zip My_list Theories Nest Compat Alias
   )
 
  (js_of_ocaml

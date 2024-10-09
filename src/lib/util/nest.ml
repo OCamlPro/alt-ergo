@@ -16,10 +16,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DStd = Dolmen.Std
-module DE = DStd.Expr
-module DT = DE.Ty
-module B = DStd.Builtin
+open Alias.Dolmen
 
 (* A nest is the set of all the constructors of a mutually recursive definition
    of ADTs.
@@ -83,7 +80,7 @@ let (let*) = Option.bind
 let def_of_dstr dstr =
   let* ty_cst =
     match dstr with
-    | DE.{ builtin = B.Destructor _; id_ty; _ } ->
+    | DE.{ builtin = DBuiltin.Destructor _; id_ty; _ } ->
       begin match DT.view id_ty with
         | `Arrow (_, ty) ->
           begin match DT.view ty with
@@ -150,7 +147,7 @@ end
 
 let ty_cst_of_constr DE.{ builtin; _ } =
   match builtin with
-  | B.Constructor { adt; _ } -> adt
+  | DBuiltin.Constructor { adt; _ } -> adt
   | _ -> Fmt.failwith "expect an ADT constructor"
 
 let order_tag : int DStd.Tag.t = DStd.Tag.create ()
@@ -178,7 +175,7 @@ let attach_orders defs =
 
 let perfect_hash id =
   match (id : DE.term_cst) with
-  | { builtin = B.Constructor _; _ } as id ->
+  | { builtin = DBuiltin.Constructor _; _ } as id ->
     begin match DE.Term.Const.get_tag id order_tag with
       | Some h -> h
       | None ->
