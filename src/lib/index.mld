@@ -34,7 +34,6 @@ the {!module:AltErgoLib.Commands} module defines a notion of commands that can
 be sent to the SMT solver.
 
 {!modules:
-AltErgoLib.Parsed
 AltErgoLib.Ty
 AltErgoLib.Typed
 AltErgoLib.Expr
@@ -68,14 +67,6 @@ solver. It is split into three main parts.
 The {!module:AltErgoLib.Frontend} defines a frontend for the core solver,
 as a functor parametrized by a SAT solver implementation, and returning a solver
 that can process commands as defined by the {!module:AltErgoLib.Commands} module.
-
-The {!module:AltErgoLib.Input} module defines a notion of input method. An input method
-is used to transform a string input (typically one or more files), into typed terms
-and statements. These typed terms can then be translated into commands using the
-{!module:AltErgoLib.Cnf} module.
-
-Finally, the native input method is defined in the {!module:AltErgoLib.Parsed_interface}
-and {!module:AltErgoLib.Typechecker} modules.
 
 {!modules:
 AltErgoLib.Translate
