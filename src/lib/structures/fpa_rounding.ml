@@ -25,8 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module DE = Dolmen.Std.Expr
-module Hs = Hstring
+module DStd = Dolmen.Std
+module DE = DStd.Expr
 module Q = Numbers.Q
 module Z = Numbers.Z
 
@@ -58,13 +58,14 @@ let to_smt_string =
   | Down -> "RTN"
   | NearestTiesToAway -> "RNA"
 
+let pp_rounding_mode = Fmt.of_to_string to_smt_string
+
 let to_ae_string = function
   | NearestTiesToEven -> "NearestTiesToEven"
   | ToZero -> "ToZero"
   | Up -> "Up"
   | Down -> "Down"
   | NearestTiesToAway -> "NearestTiesToAway"
-
 
 let fpa_rounding_mode_ae_type_name = "fpa_rounding_mode"
 
@@ -73,64 +74,78 @@ let fpa_rounding_mode_type_name = "RoundingMode"
 (* The exported 'to string' function is the SMT one. *)
 let string_of_rounding_mode = to_smt_string
 
-let hstring_smt_reprs =
+let string_smt_reprs =
   List.map
     (fun c -> to_smt_string c, [])
     constrs
 
-let hstring_ae_reprs =
+let string_ae_reprs =
   List.map
-    (fun c -> Hs.make (to_ae_string c))
+    (fun c -> to_ae_string c)
     constrs
 
 (* The rounding mode is the enum with the SMT values.
    The Alt-Ergo values are injected in this type. *)
 let fpa_rounding_mode_dty, d_constrs, fpa_rounding_mode =
-  let module DStd = Dolmen.Std in
   (* We may use the builtin type `DStd.Expr.Ty.roundingMode` here. *)
   let ty_cst = DE.Ty.Const.mk (DStd.Path.global "RoundingMode") 0 in
   let constrs =
     List.map (fun c -> DStd.Path.global @@ to_smt_string c, []) constrs
   in
-  let def, d_constrs = DE.Term.define_adt ty_cst [] constrs in
-  Nest.attach_orders [def];
-  let body =
-    List.map (fun (c, _) -> Uid.of_term_cst c, []) d_constrs
+  let def, d_constrs =
+    let def, l = DE.Term.define_adt ty_cst [] constrs in
+    let constrs = List.map (fun (c, _) -> c) l in
+    def, constrs
   in
-  let ty = Ty.t_adt ~body:(Some body) (Uid.of_ty_cst ty_cst) [] in
+  Nest.attach_orders [def];
+  let body = List.map (fun c -> c, []) d_constrs in
+  let ty = Ty.t_adt ~body:(Some body) ty_cst [] in
   DE.Ty.apply ty_cst [], d_constrs, ty
 
-let rounding_mode_of_smt_hs =
-  let table = Hashtbl.create 5 in
-  List.iter2 (
-    fun (key, _) bnd ->
-      Hashtbl.add table key bnd
-  ) hstring_smt_reprs constrs;
-  fun key ->
-    try Hashtbl.find table (Hstring.view key) with
-    | Not_found ->
-      Fmt.failwith
-        "Error while searching for SMT2 FPA value %a."
-        Hstring.print key
-        fpa_rounding_mode_type_name
-
-let rounding_mode_of_ae_hs =
+let term_cst_of_rounding_mode =
   let table = Hashtbl.create 5 in
   List.iter2 (
     fun key bnd ->
       Hashtbl.add table key bnd
-  ) hstring_ae_reprs constrs;
+  ) constrs d_constrs;
   fun key ->
     try Hashtbl.find table key with
     | Not_found ->
       Fmt.failwith
-        "Error while searching for Legacy FPA value %a."
-        Hstring.print key
+        "Error while searching for mode %a."
+        pp_rounding_mode key
+
+let rounding_mode_of_smt =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun (key, _) bnd ->
+      Hashtbl.add table key bnd
+  ) string_smt_reprs constrs;
+  fun key ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for SMT2 FPA value %s."
+        key
+        fpa_rounding_mode_type_name
+
+let rounding_mode_of_ae =
+  let table = Hashtbl.create 5 in
+  List.iter2 (
+    fun key bnd ->
+      Hashtbl.add table key bnd
+  ) string_ae_reprs constrs;
+  fun (key : string) ->
+    try Hashtbl.find table key with
+    | Not_found ->
+      Fmt.failwith
+        "Error while searching for Legacy FPA value %s."
+        key
         fpa_rounding_mode_type_name
 
 let translate_smt_rounding_mode hs =
-  match rounding_mode_of_smt_hs hs with
-  | res -> Some (Hstring.make (to_ae_string res))
+  match rounding_mode_of_smt hs with
+  | res -> Some (to_ae_string res)
   | exception (Failure _) -> None
 
 (** Helper functions **)

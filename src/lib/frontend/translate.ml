@@ -187,7 +187,7 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
   | `App ((`Generic ty_cst), []) ->
     let constrs = Fpa_rounding.d_constrs in
     let add_constrs map =
-      List.fold_left (fun map ((c : DE.term_cst), _) ->
+      List.fold_left (fun map (c : DE.term_cst) ->
           let name = get_basename c.path in
           DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term }
             (fun env _ ->
@@ -237,7 +237,7 @@ let inject_ae_to_smt2 id =
         in
         {id with name}
       else
-        match Fpa_rounding.rounding_mode_of_ae_hs (Hstring.make n) with
+        match Fpa_rounding.rounding_mode_of_ae n with
         | rm ->
           let name =
             Dolmen_std.Name.simple (Fpa_rounding.string_of_rounding_mode rm)
@@ -273,8 +273,8 @@ let ae_fpa_builtins =
     DE.Term.apply_cst float_cst [] [prec; exp; mode; x]
   in
   let mode m =
-    let cst, _ =
-      List.find (fun (cst, _args) ->
+    let cst =
+      List.find (fun cst ->
           match cst.DE.path with
           | Absolute { name; _ } -> String.equal name m
           | Local _ -> false)
@@ -580,7 +580,6 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
     (* Records and adts that only have one case are treated in the same way,
        and considered as records. *)
     Nest.attach_orders [adt];
-    let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret id_ty in
     let lbs =
       Array.fold_right (
@@ -588,7 +587,7 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
           match c with
           | Some (DE.{ id_ty; _ } as id) ->
             let pty = dty_to_ty id_ty in
-            (Uid.of_term_cst id, pty) :: acc
+            (id, pty) :: acc
           | _ ->
             Fmt.failwith
               "Unexpected null label for some field of the record type %a"
@@ -596,15 +595,13 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
 
       ) dstrs []
     in
-    let record_constr = Uid.of_term_cst cstr in
-    let ty = Ty.trecord ~record_constr tyvl uid lbs in
+    let ty = Ty.trecord ~record_constr:cstr tyvl ty_c lbs in
     Cache.store_ty ty_c ty
 
   | Some (Adt { cases; _ } as adt) ->
     Nest.attach_orders [adt];
-    let uid = Uid.of_ty_cst ty_c in
     let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-    Cache.store_ty ty_c (Ty.t_adt uid tyvl);
+    Cache.store_ty ty_c (Ty.t_adt ty_c tyvl);
     let cs =
       Array.fold_right (
         fun DE.{ cstr; dstrs; _ } accl ->
@@ -613,21 +610,21 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
               fun tc_o acc ->
                 match tc_o with
                 | Some (DE.{ id_ty; _ } as field) ->
-                  (Uid.of_term_cst field, dty_to_ty id_ty) :: acc
+                  (field, dty_to_ty id_ty) :: acc
                 | None -> assert false
             ) dstrs []
           in
-          (Uid.of_term_cst cstr, fields) :: accl
+          (cstr, fields) :: accl
       ) cases []
     in
-    let ty = Ty.t_adt ~body:(Some cs) uid tyvl in
+    let ty = Ty.t_adt ~body:(Some cs) ty_c tyvl in
     Cache.store_ty ty_c ty
 
   | None | Some Abstract ->
     let ty_params = []
     (* List.init ty_c.id_ty.arity (fun _ -> Ty.fresh_tvar ()) *)
     in
-    let ty = Ty.text ty_params (Uid.of_ty_cst ty_c) in
+    let ty = Ty.text ty_params ty_c in
     Cache.store_ty ty_c ty
 
 (** Handles term declaration by storing the eventual present type variables
@@ -667,7 +664,7 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
             match c with
             | Some (DE.{ id_ty; _ } as id) ->
               let pty = dty_to_ty id_ty in
-              (Uid.of_term_cst id, pty) :: acc
+              (id, pty) :: acc
             | _ ->
               Fmt.failwith
                 "Unexpected null label for some field of the record type %a"
@@ -688,11 +685,11 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
                 fun tc_o acc ->
                   match tc_o with
                   | Some (DE.{ id_ty; _ } as id) ->
-                    (Uid.of_term_cst id, dty_to_ty id_ty) :: acc
+                    (id, dty_to_ty id_ty) :: acc
                   | None -> assert false
               ) dstrs []
             in
-            (Uid.of_term_cst cstr, fields) :: accl
+            (cstr, fields) :: accl
         ) cases []
       in
       let ty = Ty.t_adt ~body:(Some cs) hs tyl in
@@ -723,14 +720,13 @@ let mk_mr_ty_decls (tdl: DE.ty_cst list) =
         match tdef with
         | DE.Adt { cases; record; ty = ty_c; } as adt ->
           let tyvl = Cache.store_ty_vars_ret cases.(0).cstr.id_ty in
-          let uid = Uid.of_ty_cst ty_c in
-          let record_constr = Uid.of_term_cst cases.(0).cstr in
+          let record_constr = cases.(0).cstr in
           let ty =
             if (record || Array.length cases = 1) && not contains_adts
             then
-              Ty.trecord ~record_constr tyvl uid []
+              Ty.trecord ~record_constr tyvl ty_c []
             else
-              Ty.t_adt uid tyvl
+              Ty.t_adt ty_c tyvl
           in
           Cache.store_ty ty_c ty;
           (ty, Some adt) :: acc
@@ -748,14 +744,14 @@ let handle_patt_var id (DE.{ term_descr; _ } as term)  =
   match term_descr with
   | Cst ({ builtin = B.Base; id_ty; _ } as ty_c) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Uid.show id in
+    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
     let sy = Sy.Var v in
     Cache.store_sy ty_c sy;
     v, id, ty
 
   | Var ({ builtin = B.Base; id_ty; _ } as ty_v) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Uid.show id in
+    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
     let sy = Sy.Var v in
     Cache.store_sy ty_v sy;
     v, id, ty
@@ -781,7 +777,7 @@ let mk_pattern DE.{ term_descr; _ } =
           Array.fold_right (
             fun v acc ->
               match v with
-              | Some dstr -> Uid.of_term_cst dstr :: acc
+              | Some dstr -> dstr :: acc
               | _ -> assert false
           ) dstrs []
         | _ ->
@@ -799,10 +795,10 @@ let mk_pattern DE.{ term_descr; _ } =
       ) [] vnames pargs
     in
     let args = List.rev rev_args in
-    Typed.Constr {name = Uid.of_term_cst cst; args}
+    Typed.Constr {name = cst; args}
 
   | Cst ({ builtin = B.Constructor _; _ } as cst) ->
-    Typed.Constr {name = Uid.of_term_cst cst; args = []}
+    Typed.Constr {name = cst; args = []}
 
   | Var ({ builtin = B.Base; path; _ } as t_v) ->
     (* Should the type be passed as an argument
@@ -924,10 +920,9 @@ let mk_add translate sy ty l =
   E.mk_term sy args ty
 
 let mk_rounding fpar =
-  let name = Hstring.make @@ Fpa_rounding.string_of_rounding_mode fpar in
+  let tcst = Fpa_rounding.term_cst_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
-  let sy = Sy.Op (Sy.Constr (Uid.of_hstring name)) in
-  E.mk_term sy [] ty
+  E.mk_constr tcst [] ty
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
@@ -962,7 +957,7 @@ let rec mk_expr
               | Trecord _ as ty ->
                 E.mk_record [] ty
               | Tadt _ as ty ->
-                E.mk_constr (Uid.of_term_cst tcst) [] ty
+                E.mk_constr tcst [] ty
               | ty ->
                 Fmt.failwith "unexpected type %a@." Ty.print ty
             end
@@ -1007,9 +1002,9 @@ let rec mk_expr
                     let sy =
                       match Cache.find_ty adt with
                       | Trecord _ ->
-                        Sy.Op (Sy.Access (Uid.of_term_cst destr))
+                        Sy.Op (Sy.Access destr)
                       | Tadt _ ->
-                        Sy.destruct (Uid.of_term_cst destr)
+                        Sy.destruct destr
                       | _ -> assert false
                     in
                     E.mk_term sy [e] ty
@@ -1029,7 +1024,6 @@ let rec mk_expr
               cstr = { builtin = B.Constructor { adt; _ }; _ } as cstr; _
             }, [x] ->
             begin
-              let builtin = Sy.IsConstr (Uid.of_term_cst cstr) in
               let ty_c =
                 match DT.definition adt with
                 | Some (
@@ -1039,7 +1033,7 @@ let rec mk_expr
               in
               match Cache.find_ty ty_c with
               | Ty.Tadt _ ->
-                E.mk_builtin ~is_pos:true builtin [aux_mk_expr x]
+                E.mk_tester cstr (aux_mk_expr x)
 
               | Ty.Trecord _ ->
                 (* The typechecker allows only testers whose the
@@ -1315,7 +1309,7 @@ let rec mk_expr
             begin match ty with
               | Ty.Tadt _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
-                E.mk_constr (Uid.of_term_cst tcst) l ty
+                E.mk_constr tcst l ty
               | Ty.Trecord _ ->
                 let l = List.map (fun t -> aux_mk_expr t) args in
                 E.mk_record l ty

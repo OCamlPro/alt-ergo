@@ -25,9 +25,11 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DE = Dolmen.Std.Expr
+
 type builtin =
     LE | LT (* arithmetic *)
-  | IsConstr of Uid.term_cst (* ADT tester *)
+  | IsConstr of DE.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type operator =
@@ -35,9 +37,9 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Uid.term_cst | Record
-  | Constr of Uid.term_cst (* enums, adts *)
-  | Destruct of Uid.term_cst
+  | Access of DE.term_cst | Record
+  | Constr of DE.term_cst (* enums, adts *)
+  | Destruct of DE.term_cst
   (* Arrays *)
   | Get | Set
   (* BV *)
@@ -188,7 +190,7 @@ let compare_operators op1 op2 =
     (function
       | Access h1, Access h2 | Constr h1, Constr h2
       | Destruct h1, Destruct h2 ->
-        Uid.compare h1 h2
+        DE.Term.Const.compare h1 h2
       | Extract (i1, j1), Extract (i2, j2) ->
         let r = Int.compare i1 i2 in
         if r = 0 then Int.compare j1 j2 else r
@@ -213,7 +215,7 @@ let compare_operators op1 op2 =
 let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2
     (function
-      | IsConstr h1, IsConstr h2 -> Uid.compare h1 h2
+      | IsConstr tcst1, IsConstr tcst2 -> DE.Term.Const.compare tcst1 tcst2
       | _, (LT | LE | BVULE | IsConstr _) -> assert false
     )
 
@@ -379,9 +381,9 @@ module AEPrinter = struct
 
     (* DT theory *)
     | Record -> Fmt.pf ppf "@Record"
-    | Access s -> Fmt.pf ppf "@Access_%a" Uid.pp s
-    | Constr s
-    | Destruct s -> Uid.pp ppf s
+    | Access tcst -> Fmt.pf ppf "@Access_%a" DE.Term.Const.print tcst
+    | Constr tcst
+    | Destruct tcst -> DE.Term.Const.print ppf tcst
 
     (* Float theory *)
     | Float -> Fmt.pf ppf "float"
@@ -402,9 +404,9 @@ module AEPrinter = struct
     | L_built BVULE -> Fmt.pf ppf "<="
     | L_neg_built BVULE -> Fmt.pf ppf ">"
     | L_built (IsConstr h) ->
-      Fmt.pf ppf "? %a" Uid.pp h
+      Fmt.pf ppf "? %a" DE.Term.Const.print h
     | L_neg_built (IsConstr h) ->
-      Fmt.pf ppf "?not? %a" Uid.pp h
+      Fmt.pf ppf "?not? %a" DE.Term.Const.print h
 
   let pp_form ppf f =
     match f with
@@ -488,7 +490,8 @@ module SmtPrinter = struct
 
     (* DT theory *)
     | Record -> ()
-    | Access s | Constr s | Destruct s -> Uid.pp ppf s
+    | Access tcst | Constr tcst | Destruct tcst ->
+      DE.Term.Const.print ppf tcst
 
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"

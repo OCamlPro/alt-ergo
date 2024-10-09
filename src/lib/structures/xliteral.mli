@@ -27,7 +27,7 @@
 
 type builtin = Symbols.builtin =
     LE | LT | (* arithmetic *)
-    IsConstr of Uid.term_cst (* ADT tester *)
+    IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type 'a view = (*private*)

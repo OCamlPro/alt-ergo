@@ -29,12 +29,12 @@ val src : Logs.src
 
 type 'a abstract =
   | Constr of {
-      c_name : Uid.term_cst;
+      c_name : Dolmen.Std.Expr.term_cst;
       c_ty : Ty.t;
-      c_args : (Uid.term_cst * 'a) list
+      c_args : (Dolmen.Std.Expr.term_cst * 'a) list
     }
 
-  | Select of { d_name : Uid.term_cst ; d_ty : Ty.t ; d_arg : 'a }
+  | Select of { d_name : Dolmen.Std.Expr.term_cst ; d_ty : Ty.t ; d_arg : 'a }
 
   | Alien of 'a
 

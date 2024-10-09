@@ -31,6 +31,7 @@ module E = Expr
 module A = Xliteral
 module LR = Uf.LX
 module SE = Expr.Set
+module DE = Dolmen.Std.Expr
 
 module Sy = Symbols
 
@@ -153,6 +154,8 @@ module Main_Default : S = struct
            | _ -> mp
         ) st Hstring.Map.empty
 
+    module Ty_map = Map.Make (DE.Ty.Const)
+
     let types_of_assumed sty =
       let open Ty in
       Ty.Set.fold
@@ -162,25 +165,25 @@ module Main_Default : S = struct
            | Tvar _ -> assert false
 
            | Text (_, hs) | Trecord { name = hs; _ } when
-               Uid.Ty_map.mem hs mp -> mp
+               Ty_map.mem hs mp -> mp
 
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
-             Uid.Ty_map.add hs (Text(l, hs)) mp
+             Ty_map.add hs (Text(l, hs)) mp
 
            | Trecord { name; _ } ->
              (* cannot do better for records ? *)
-             Uid.Ty_map.add name ty mp
+             Ty_map.add name ty mp
 
            | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
-             Uid.Ty_map.add hs ty mp
-        )sty Uid.Ty_map.empty
+             Ty_map.add hs ty mp
+        )sty Ty_map.empty
 
     let print_types_decls ?(header=true) types =
       let open Ty in
       print_dbg ~flushed:false ~header "@[<v 2>(* types decls: *)@ ";
-      Uid.Ty_map.iter
+      Ty_map.iter
         (fun _ ty ->
            match ty with
            | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> ()
@@ -193,10 +196,10 @@ module Main_Default : S = struct
                | (lbl, ty)::l ->
                  let print fmt (lbl,ty) =
                    Format.fprintf fmt " ; %a :%a"
-                     Uid.pp lbl Ty.print ty in
+                     DE.Term.Const.print lbl Ty.print ty in
                  print_dbg ~flushed:false ~header:false
                    "{ %a : %a%a"
-                   Uid.pp lbl Ty.print ty
+                   DE.Term.Const.print lbl Ty.print ty
                    (pp_list_no_space print) l;
                  print_dbg ~flushed:false ~header:false " }@ "
              end

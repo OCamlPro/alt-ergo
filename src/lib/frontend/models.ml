@@ -20,6 +20,7 @@ module Sy = Symbols
 module X = Shostak.Combine
 module E = Expr
 module MS = Map.Make(String)
+module DE = Dolmen.Std.Expr
 
 let constraints = ref MS.empty
 
@@ -110,15 +111,15 @@ module Pp_smtlib_term = struct
 
         | Sy.L_built (Sy.IsConstr hs), [e] ->
           if Options.get_output_smtlib () then
-            fprintf fmt "((_ is %a) %a)" Uid.pp hs print e
+            fprintf fmt "((_ is %a) %a)" DE.Term.Const.print hs print e
           else
-            fprintf fmt "(%a ? %a)" print e Uid.pp hs
+            fprintf fmt "(%a ? %a)" print e DE.Term.Const.print hs
 
         | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
           if Options.get_output_smtlib () then
-            fprintf fmt "(not ((_ is %a) %a))" Uid.pp hs print e
+            fprintf fmt "(not ((_ is %a) %a))" DE.Term.Const.print hs print e
           else
-            fprintf fmt "not (%a ? %a)" print e Uid.pp hs
+            fprintf fmt "not (%a ? %a)" print e DE.Term.Const.print hs
 
         | (Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
           | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
@@ -152,9 +153,9 @@ module Pp_smtlib_term = struct
 
     | Sy.Op (Sy.Access field), [e] ->
       if Options.get_output_smtlib () then
-        fprintf fmt "(%a %a)" Uid.pp field print e
+        fprintf fmt "(%a %a)" DE.Term.Const.print field print e
       else
-        fprintf fmt "%a.%a" print e Uid.pp field
+        fprintf fmt "%a.%a" print e DE.Term.Const.print field
 
     | Sy.Op (Sy.Record), _ ->
       begin match ty with
@@ -163,7 +164,7 @@ module Pp_smtlib_term = struct
           fprintf fmt "{";
           ignore (List.fold_left2 (fun first (field,_) e ->
               fprintf fmt "%s%a = %a"  (if first then "" else "; ")
-                Uid.pp field print e;
+                DE.Term.Const.print field print e;
               false
             ) true lbs xs);
           fprintf fmt "}";
@@ -178,7 +179,7 @@ module Pp_smtlib_term = struct
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op (Sy.Constr hs), ((_::_) as l) ->
-      fprintf fmt "%a(%a)" Uid.pp hs print_list l
+      fprintf fmt "%a(%a)" DE.Term.Const.print hs print_list l
 
     | Sy.Op _, [e1; e2] ->
       if Options.get_output_smtlib () then
@@ -187,7 +188,7 @@ module Pp_smtlib_term = struct
         fprintf fmt "(%a %a %a)" print e1 Sy.print f print e2
 
     | Sy.Op Sy.Destruct hs, [e] ->
-      fprintf fmt "%a#%a" print e Uid.pp hs
+      fprintf fmt "%a#%a" print e DE.Term.Const.print hs
 
 
     | Sy.In(lb, rb), [t] ->

@@ -42,7 +42,7 @@ type t =
   (** Type variables *)
   | Tbitv of int
   (** Bitvectors of a given length *)
-  | Text of t list * Uid.ty_cst
+  | Text of t list * Dolmen.Std.Expr.ty_cst
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to
       arguments [args]. *)
@@ -51,7 +51,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Uid.ty_cst * t list
+  | Tadt of Dolmen.Std.Expr.ty_cst * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -77,22 +77,22 @@ and tvar = {
 and trecord = {
   mutable args : t list;
   (** Arguments passed to the record constructor *)
-  name : Uid.ty_cst;
+  name : Dolmen.Std.Expr.ty_cst;
   (** Name of the record type *)
-  mutable lbs :  (Uid.term_cst * t) list;
+  mutable lbs :  (Dolmen.Std.Expr.term_cst * t) list;
   (** List of fields of the record. Each field has a name,
       and an associated type. *)
-  record_constr : Uid.term_cst;
+  record_constr : Dolmen.Std.Expr.term_cst;
   (** record constructor. Useful is case it's a specialization of an
       algeberaic datatype. Default value is "\{__[name]" *)
 }
 (** Record types. *)
 
 type adt_constr =
-  { constr : Uid.term_cst ;
+  { constr : Dolmen.Std.Expr.term_cst ;
     (** constructor of an ADT type *)
 
-    destrs : (Uid.term_cst * t) list
+    destrs : (Dolmen.Std.Expr.term_cst * t) list
     (** the list of destructors associated with the constructor and
         their respective types *)
   }
@@ -109,12 +109,15 @@ module Set : Set.S with type elt = t
 (** Sets of types *)
 
 
-val assoc_destrs : Uid.term_cst -> adt_constr list -> (Uid.term_cst * t) list
+val assoc_destrs :
+  Dolmen.Std.Expr.term_cst ->
+  adt_constr list ->
+  (Dolmen.Std.Expr.term_cst * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
     @raises Not_found if the constructor is not in the given list. *)
 
-val type_body : Uid.ty_cst -> t list -> type_body
+val type_body : Dolmen.Std.Expr.ty_cst -> t list -> type_body
 
 (** {2 Type inspection} *)
 
@@ -160,13 +163,16 @@ val fresh_tvar : unit -> t
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
-val text : t list -> Uid.ty_cst -> t
+val text : t list -> Dolmen.Std.Expr.ty_cst -> t
 (** Apply the abstract type constructor to the list of type arguments
     given. *)
 
 val t_adt :
-  ?body:((Uid.term_cst * (Uid.term_cst * t) list) list) option ->
-  Uid.ty_cst -> t list -> t
+  ?body:((Dolmen.Std.Expr.term_cst *
+          (Dolmen.Std.Expr.term_cst * t) list) list) option ->
+  Dolmen.Std.Expr.ty_cst ->
+  t list ->
+  t
 (** Create an algebraic datatype. The body is a list of
     constructors, where each constructor is associated with the list of
     its destructors with their respective types. If [body] is none,
@@ -175,9 +181,8 @@ val t_adt :
     of arguments. *)
 
 val trecord :
-  ?sort_fields:bool ->
-  record_constr:Uid.term_cst ->
-  t list -> Uid.ty_cst -> (Uid.term_cst * t) list -> t
+  record_constr:Dolmen.Std.Expr.term_cst ->
+  t list -> Dolmen.Std.Expr.ty_cst -> (Dolmen.Std.Expr.term_cst * t) list -> t
 (** Create a record type. [trecord args name lbs] creates a record
     type with name [name], arguments [args] and fields [lbs].
 
@@ -210,64 +215,18 @@ val esubst : subst
 val apply_subst : subst -> t -> t
 (** Substitution application. *)
 
-val union_subst : subst -> subst -> subst
-(** [union_subst u v] applies [v] to [u], resulting in [u'].
-    It then computes the union of [u'] and [v], prioritizing
-    bindings from [u'] in case of conflict. *)
-
-
-(** {2 Unification/Matching} *)
+(** {2 Matching} *)
 
 exception TypeClash of t * t
-(** Exception raised during matching or unification.
+(** Exception raised during matching.
     [TypeClash (u, v)] is raised when [u] and [v] could not be
-    matched or unified ([u] and [v] may be sub-types of the
-    types being actually unified or matched). *)
-
-val unify : t -> t -> unit
-(** Destructive unification. Mutates the [value] fields of
-    type variables.
-    @raise TypeClash when unification is impossible. In this
-      case, the [value] fields of already mutated type variables
-      are left modified, which may prevent future unifications. *)
+    matched ([u] and [v] may be sub-types of the types being actually
+    matched). *)
 
 val matching : subst -> t -> t -> subst
 (** Matching of types (non-destructive). [matching pat t] returns a
     substitution [subst] such that [apply_subst subst pat] is
     equal to [t]. *)
-
-val shorten : t -> t
-(** Shorten paths in type variables values.
-    Unification in particular can create chains where the [value]
-    field of one type variable points to another and so on...
-    This function short-circuits such chains so that the value
-    of a type variable can be accessed directly. *)
-
-
-(** {2 Manipulations on types} *)
-
-val fresh : t -> subst -> t * subst
-(** Apply the given substitution, all while generating fresh variables
-    for the variables not already bound in the substitution. Returns
-    a substitution containing bindings from old variable to their
-    fresh counterpart. *)
-
-val fresh_list : t list -> subst -> t list * subst
-(** Same as {!val:fresh} but on lists of types. *)
-
-val instantiate : t list -> t list -> t -> t
-(** [instantiate vars args t] builds the substitutions mapping
-    each type variable in [vars] to the corresponding term in [args],
-    then apply that substitution to [t].
-    @raise Invalid_argument if the lists [vars] and [args]
-      do not have the same length
-    @raise Assertion_failure if one type in [vars] is not
-      a type variable.
-*)
-
-val monomorphize: t -> t
-(** Return a monomorphized variant of the given type, where
-    type variable without values have been replaced by abstract types. *)
 
 type goal_sort =
   | Cut

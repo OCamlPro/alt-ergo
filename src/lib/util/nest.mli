@@ -28,6 +28,8 @@ module DE = Dolmen.Std.Expr
     number of constructors. The total order on ADT constructors is given by
     the hash function. *)
 
+val order_tag : int Dolmen.Std.Tag.t
+
 val attach_orders : DE.ty_def list -> unit
 (** [attach_orders defs] generate and attach orders on the constructors for
     each ADT of [defs].
@@ -36,7 +38,7 @@ val attach_orders : DE.ty_def list -> unit
     (in any order). By nest, we mean the set of all the constructors in a
     mutually recursive definition of ADTs. *)
 
-val perfect_hash : Uid.term_cst -> int
+val perfect_hash : Dolmen.Std.Expr.term_cst -> int
 (** [perfect_hash u] returns an integer between [0] and [n] exclusive where
     [u] is a constructor and [n] is the number of constructors of the ADT of
     [u].
