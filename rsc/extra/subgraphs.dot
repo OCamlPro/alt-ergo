@@ -187,7 +187,6 @@ subgraph cluster_lib {
                 "Expr";
                 "Xliteral";
                 "Ty";
-                "Typed";
                 "Commands";
                 "Errors";
                 "Fpa_rounding";
