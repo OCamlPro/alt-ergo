@@ -38,7 +38,6 @@ type ty_module =
   | M_UF
   | M_Arith
   | M_Arrays
-  | M_Records
   | M_Adt
   | M_Bitv
   | M_AC
@@ -58,7 +57,6 @@ let all_modules =
     M_UF;
     M_Arith;
     M_Arrays;
-    M_Records;
     M_Adt;
     M_Bitv;
     M_AC;
@@ -131,7 +129,6 @@ let string_of_ty_module k = match k with
   | M_UF       -> "UF"
   | M_Arith    -> "Arith"
   | M_Arrays   -> "Arrays"
-  | M_Records  -> "Records"
   | M_Adt      -> "Adt"
   | M_Bitv     -> "Bitv"
   | M_AC       -> "AC"

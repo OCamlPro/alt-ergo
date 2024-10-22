@@ -79,7 +79,6 @@ let pp_sat_solver ppf = function
 type theories_extensions =
   | Adt
   | Arrays
-  | Records
   | Bitv
   | LIA
   | LRA
@@ -117,7 +116,6 @@ let th_ext_of_string ext =
   match ext with
   | "Adt" -> Some Adt
   | "Arrays" -> Some Arrays
-  | "Records" -> Some Records
   | "Bitv" -> Some Bitv
   | "LIA" -> Some LIA
   | "LRA" -> Some LRA
@@ -131,7 +129,6 @@ let string_of_th_ext ext =
   match ext with
   | Adt -> "Adt"
   | Arrays -> "Arrays"
-  | Records -> "Records"
   | Bitv -> "Bitv"
   | LIA -> "LIA"
   | LRA -> "LRA"
