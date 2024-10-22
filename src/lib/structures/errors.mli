@@ -34,53 +34,9 @@
 
 (** Error that can be raised by the typechecker *)
 type typing_error =
-  | BitvExtract of int*int
-  | BitvExtractRange of int*int
   | NonPositiveBitvType of int
-  | ClashType of string
-  | ClashLabel of string * string
-  | ClashParam of string
-  | TypeDuplicateVar of string
-  | UnboundedVar of string
-  | UnknownType of string
-  | WrongArity of string * int
-  | SymbAlreadyDefined of string
-  | SymbUndefined of string
-  | NotAPropVar of string
-  | NotAPredicate of string
-  | Unification of Ty.t * Ty.t
-  | ShouldBeApply of string
-  | WrongNumberofArgs of string
-  | ShouldHaveType of Ty.t * Ty.t
-  | ShouldHaveTypeIntorReal of Ty.t
-  | ShouldHaveTypeInt of Ty.t
-  | ShouldHaveTypeBitv of Ty.t
-  | ArrayIndexShouldHaveTypeInt
-  | ShouldHaveTypeArray
-  | ShouldHaveTypeRecord of Ty.t
-  | ShouldBeARecord
-  | ShouldHaveLabel of string * string
-  | NoLabelInType of Hstring.t * Ty.t
-  | ShouldHaveTypeProp
-  | NoRecordType of Hstring.t
-  | DuplicateLabel of Hstring.t
-  | DuplicatePattern of string
-  | WrongLabel of Hstring.t * Ty.t
-  | WrongNumberOfLabels
-  | Notrigger
-  | CannotGeneralize
-  | SyntaxError
   | ThExtError of string
   | ThSemTriggerError
-  | WrongDeclInTheory
-  | ShouldBeADT of Ty.t
-  | MatchNotExhaustive of Hstring.t list
-  | MatchUnusedCases of Hstring.t list
-  | NotAdtConstr of string * Ty.t
-  | BadPopCommand of {pushed : int; to_pop : int}
-  | ShouldBePositive of int
-  | PolymorphicEnum of string
-  | ShouldBeIntLiteral of string
 
 (** Errors that can be raised at solving*)
 type run_error =
@@ -102,9 +58,6 @@ type model_error =
 
 (** All types of error that can be raised *)
 type error =
-  | Parser_error of string (** Error used at parser loading *)
-  | Lexical_error of Loc.t * string (** Error used by the lexer *)
-  | Syntax_error of Loc.t * string (** Error used by the parser*)
   | Typing_error of Loc.t * typing_error (** Error used at typing *)
   | Run_error of run_error (** Error used during solving *)
   | Warning_as_error
