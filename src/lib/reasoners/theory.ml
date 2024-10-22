@@ -169,7 +169,7 @@ module Main_Default : S = struct
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
              Ty_map.add hs (Text(l, hs)) mp
 
-           | Tadt (hs, _, _) ->
+           | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
              Ty_map.add hs ty mp
         )sty Ty_map.empty

@@ -523,7 +523,7 @@ and handle_ty_app ?(update = false) ty_c l =
   (* Recover the initial versions of the types and apply them on the provided
      type arguments stored in [tyl]. *)
   match Cache.find_ty ty_c with
-  | Tadt (hs, _, record) -> Tadt (hs, tyl, record)
+  | Tadt (hs, _) -> Tadt (hs, tyl )
   | Text (_, s) -> Text (tyl, s)
   | _ -> assert false
 
@@ -586,7 +586,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
 let mk_mr_ty_decls (tdl: DE.ty_cst list) =
   let handle_ty_decl (ty: Ty.t) (tdef: DE.Ty.def option) =
     match ty, tdef with
-    | Tadt (hs, tyl, _), Some (Adt { cases; ty = ty_c; _ }) ->
+    | Tadt (hs, tyl), Some (Adt { cases; ty = ty_c; _ }) ->
       let cs =
         Array.fold_right (
           fun DE.{ cstr; dstrs; _ } accl ->

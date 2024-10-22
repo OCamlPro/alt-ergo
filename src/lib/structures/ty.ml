@@ -35,7 +35,7 @@ type t =
   | Tbitv of int
   | Text of t list * DE.ty_cst
   | Tfarray of t * t
-  | Tadt of DE.ty_cst * t list * bool
+  | Tadt of DE.ty_cst * t list
 
 and tvar = { v : int ; mutable value : t option }
 
@@ -47,9 +47,9 @@ module Smtlib = struct
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
-    | Text ([], name) | Tadt (name, [], _) ->
+    | Text ([], name) | Tadt (name, []) ->
       DE.Ty.Const.print ppf name
-    | Text (args, name) | Tadt (name, args, _) ->
+    | Text (args, name) | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
     | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
     | Tvar { value = Some t; _ } -> pp ppf t
@@ -102,7 +102,7 @@ let print_generic body_of =
         fprintf fmt "%a <ext>%a" print_list l DE.Ty.Const.print s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
-      | Tadt (n, lv, _) ->
+      | Tadt (n, lv) ->
         fprintf fmt "%a <adt>%a" print_list lv DE.Ty.Const.print n;
         begin match body_of with
           | None -> ()
@@ -178,11 +178,11 @@ let rec shorten ty =
     if t1 == t1' && t2 == t2' then ty
     else Tfarray(t1', t2')
 
-  | Tadt (n, args, record) ->
+  | Tadt (n, args) ->
     let args' = List.map shorten args in
     shorten_body n args;
     (* should not rebuild the type if no changes are made *)
-    Tadt (n, args', record)
+    Tadt (n, args')
 
   | Tint | Treal | Tbool | Tbitv _ -> ty
 
@@ -204,7 +204,7 @@ let rec compare t1 t2 =
     if c<>0 then c
     else compare ta2 tb2
   | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
-  | Tadt (s1, pars1, _), Tadt (s2, pars2, _) ->
+  | Tadt (s1, pars1), Tadt (s2, pars2) ->
     let c = DE.Ty.Const.compare s1 s2 in
     if c <> 0 then c
     else compare_list pars1 pars2
@@ -243,7 +243,7 @@ let rec equal t1 t2 =
   | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
 
-  | Tadt (s1, pars1, _), Tadt (s2, pars2, _) ->
+  | Tadt (s1, pars1), Tadt (s2, pars2) ->
     begin
       try DE.Ty.Const.equal s1 s2 && List.for_all2 equal pars1 pars2
       with Invalid_argument _ -> false
@@ -270,7 +270,7 @@ let rec matching s pat t =
     matching (matching s ta1 tb1) ta2 tb2
   | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
-  | Tadt(n1, args1, _), Tadt(n2, args2, _) when DE.Ty.Const.equal n1 n2 ->
+  | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->
     raise (TypeClash(pat,t))
@@ -290,10 +290,10 @@ let apply_subst =
       let t2' = apply_subst s t2 in
       if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
 
-    | Tadt(name, params, record)
+    | Tadt(name, params)
       [@ocaml.ppwarning "TODO: detect when there are no changes "]
       ->
-      Tadt (name, List.map (apply_subst s) params, record)
+      Tadt (name, List.map (apply_subst s) params)
 
     | Tint | Treal | Tbool | Tbitv _ -> ty
   in
@@ -321,9 +321,9 @@ let rec fresh ty subst =
     let ty1, subst = fresh ty1 subst in
     let ty2, subst = fresh ty2 subst in
     Tfarray (ty1, ty2), subst
-  | Tadt(s,args, record) ->
+  | Tadt(s,args) ->
     let args, subst = fresh_list args subst in
-    Tadt (s,args, record), subst
+    Tadt (s,args), subst
   | t -> t, subst
 
 (* Assume that [shorten] have been applied on [lty]. *)
@@ -446,8 +446,8 @@ let fresh_empty_text =
     in
     text [] id
 
-let t_adt ?(record=false) ?(body=None) s ty_vars =
-  let ty = Tadt (s, ty_vars, record) in
+let t_adt ?(body=None) s ty_vars =
+  let ty = Tadt (s, ty_vars) in
   begin match body with
     | None -> ()
     | Some [] -> assert false
@@ -483,7 +483,7 @@ let rec hash t =
   | Text(l,s) ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
-  | Tadt (ty, args, _) ->
+  | Tadt (ty, args) ->
     (* We do not hash constructors. *)
     let h =
       List.fold_left (fun h ty -> 31 * h + hash ty) (DE.Ty.Const.hash ty) args
@@ -512,7 +512,7 @@ let vty_of t =
     | Tvar { v = i ; value = None } -> Svty.add i acc
     | Text(l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
-    | Tadt(_, args, _) ->
+    | Tadt(_, args) ->
       List.fold_left vty_of_rec acc args
 
     | Tvar { value = Some _ ; _ }
