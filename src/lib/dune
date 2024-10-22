@@ -51,7 +51,7 @@
     Ac Arith Arrays_rel Bitv Ccx Shostak Relation
     Fun_sat Fun_sat_frontend Inequalities Bitv_rel Th_util Adt Adt_rel
     Instances IntervalCalculus Intervals_intf Intervals_core Intervals
-    Ite_rel Matching Matching_types Polynome Records Records_rel
+    Ite_rel Matching Matching_types Polynome
     Satml_frontend_hybrid Satml_frontend Satml Sat_solver Sat_solver_sig
     Sig Sig_rel Theory Uf Use Domains Domains_intf Rel_utils Bitlist
     ; structures

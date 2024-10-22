@@ -42,7 +42,7 @@ module Pp_smtlib_term = struct
     asprintf "%a" Ty.pp_smtlib t
 
   let rec print fmt t =
-    let {Expr.f;xs;ty; _} = Expr.term_view t in
+    let {Expr.f;xs; _} = Expr.term_view t in
     match f, xs with
 
     | Sy.Lit lit, xs ->
@@ -150,26 +150,6 @@ module Pp_smtlib_term = struct
 
     | Sy.Op Sy.Extract (i, j), [e] ->
       fprintf fmt "%a^{%d,%d}" print e i j
-
-    | Sy.Op (Sy.Access field), [e] ->
-      if Options.get_output_smtlib () then
-        fprintf fmt "(%a %a)" DE.Term.Const.print field print e
-      else
-        fprintf fmt "%a.%a" print e DE.Term.Const.print field
-
-    | Sy.Op (Sy.Record), _ ->
-      begin match ty with
-        | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.length xs = List.length lbs);
-          fprintf fmt "{";
-          ignore (List.fold_left2 (fun first (field,_) e ->
-              fprintf fmt "%s%a = %a"  (if first then "" else "; ")
-                DE.Term.Const.print field print e;
-              false
-            ) true lbs xs);
-          fprintf fmt "}";
-        | _ -> assert false
-      end
 
     (* TODO: introduce PrefixOp in the future to simplify this ? *)
     | Sy.Op op, [e1; e2] when op == Sy.Pow || op == Sy.Integer_round ||

@@ -77,10 +77,8 @@ let pp_sat_solver ppf = function
   | CDCL_Tableaux -> Format.fprintf ppf "CDCL-Tableaux"
 
 type theories_extensions =
-  | Sum
   | Adt
   | Arrays
-  | Records
   | Bitv
   | LIA
   | LRA
@@ -116,10 +114,8 @@ let equal_mode x y = match x, y with
 
 let th_ext_of_string ext =
   match ext with
-  | "Sum" -> Some Sum
   | "Adt" -> Some Adt
   | "Arrays" -> Some Arrays
-  | "Records" -> Some Records
   | "Bitv" -> Some Bitv
   | "LIA" -> Some LIA
   | "LRA" -> Some LRA
@@ -131,10 +127,8 @@ let th_ext_of_string ext =
 
 let string_of_th_ext ext =
   match ext with
-  | Sum -> "Sum"
   | Adt -> "Adt"
   | Arrays -> "Arrays"
-  | Records -> "Records"
   | Bitv -> "Bitv"
   | LIA -> "LIA"
   | LRA -> "LRA"

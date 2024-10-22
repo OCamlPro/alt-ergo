@@ -445,20 +445,6 @@ module SmtPrinter = struct
         pp x.let_e
         pp_boxed x.in_e
 
-    | Sy.(Op Record), _ ->
-      begin
-        match ty with
-        | Ty.Trecord { Ty.lbs = lbs; record_constr; _ } ->
-          assert (List.compare_lengths xs lbs = 0);
-          Fmt.pf ppf "@[<2>(%a %a@])"
-            DE.Term.Const.print record_constr
-            Fmt.(list ~sep:sp pp |> box) xs
-
-        | _ ->
-          (* Excluded by the typechecker. *)
-          assert false
-      end
-
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
 
     | Sy.Op Minus, [e1; { f = Sy.Real q; _ }] when is_zero e1.f ->
@@ -620,7 +606,7 @@ module AEPrinter = struct
       assert false
 
   and pp_silent ppf t =
-    let { f ; xs ; ty; bind; _ } = t in
+    let { f ; xs ; bind; _ } = t in
     match f, xs with
     | Sy.Form form, xs -> pp_formula ppf form xs bind
 
@@ -646,25 +632,6 @@ module AEPrinter = struct
 
     | Sy.(Op Extract (i, j)), [e] ->
       Fmt.pf ppf "%a^{%d, %d}" pp e i j
-
-    | Sy.(Op (Access field)), [e] ->
-      Fmt.pf ppf "%a.%a" pp e DE.Term.Const.print field
-
-    | Sy.(Op Record), _ ->
-      begin match ty with
-        | Ty.Trecord { Ty.lbs = lbs; _ } ->
-          assert (List.compare_lengths xs lbs = 0);
-          Fmt.pf ppf "{";
-          ignore (List.fold_left2 (fun first (field,_) e ->
-              Fmt.pf ppf "%s%a = %a"  (if first then "" else "; ")
-                DE.Term.Const.print field pp e;
-              false
-            ) true lbs xs);
-          Fmt.pf ppf "}";
-        | _ ->
-          (* Excluded by the typechecker. *)
-          assert false
-      end
 
     | Sy.(Op ((Pow | Integer_round | Max_real | Min_real | Max_int
               | Min_int) as op)), [e1; e2] ->
@@ -1112,7 +1079,7 @@ let mk_ite cond th el =
 
 let rec is_model_term e =
   match e.f, e.xs with
-  | (Op Constr _ | Op Record | Op Set), xs -> List.for_all is_model_term xs
+  | (Op Constr _ | Op Set), xs -> List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
@@ -1320,8 +1287,6 @@ let mk_constr c xs ty =
 
 let mk_tester cons t =
   mk_builtin ~is_pos:true (Sy.IsConstr cons) [t]
-
-let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
 let void = mk_constr Dolmen.Std.Expr.Term.Cstr.void [] Ty.tunit
 
@@ -1960,11 +1925,9 @@ module Triggers = struct
     | { f = Op (Get | Set) ; xs = [t1 ; t2]; _ } ->
       max (score_term t1) (score_term t2)
 
-    | { f = Op (Access _ | Destruct _ | Extract _) ; xs = [t]; _ } ->
+    | { f = Op (Destruct _ | Extract _) ; xs = [t]; _ } ->
       1 + score_term t
-    | { f = Op Record; xs; _ } ->
-      1 + (List.fold_left
-             (fun acc t -> max (score_term t) acc) 0 xs)
+
     | { f = Op Set; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
 
@@ -2047,14 +2010,6 @@ module Triggers = struct
     | { f = Op Concat; _ }, _ -> -1
     | _, { f = Op Concat; _ } -> 1
 
-    | { f = Op (Access a1) ; xs=[t1]; _ },
-      { f = Op (Access a2) ; xs=[t2]; _ } ->
-      let c = DE.Term.Const.compare a1 a2 in
-      if c<>0 then c else cmp_trig_term t1 t2
-
-    | { f = Op (Access _); _ }, _ -> -1
-    | _, { f = Op (Access _); _ } -> 1
-
     | { f = Op (Destruct a1) ; xs = [t1]; _ },
       { f = Op (Destruct a2) ; xs = [t2]; _ } ->
       let c = DE.Term.Const.compare a1 a2 in
@@ -2062,11 +2017,6 @@ module Triggers = struct
 
     | { f = Op (Destruct _); _ }, _ -> -1
     | _, { f =Op (Destruct _); _ } -> 1
-
-    | { f = Op Record ; xs= lbs1; _ }, { f = Op Record ; xs = lbs2; _ } ->
-      Util.cmp_lists lbs1 lbs2 cmp_trig_term
-    | { f = Op Record; _ }, _ -> -1
-    | _, { f = Op Record; _ } -> 1
 
     | { f = (Op _) as s1; xs=tl1; _ }, { f = (Op _) as s2; xs=tl2; _ } ->
       (* ops that are not infix or prefix *)
@@ -2677,7 +2627,6 @@ let mk_match e cases =
   let mk_destr =
     match ty with
     | Ty.Tadt _ -> (fun hs -> Sy.destruct hs)
-    | Ty.Trecord _ -> (fun hs -> Sy.Op (Sy.Access hs))
     | _ -> assert false
   in
   let mker =
@@ -2685,9 +2634,6 @@ let mk_match e cases =
     | Ty.Tadt _ ->
       (fun e name ->
          mk_builtin ~is_pos:true (Sy.IsConstr name) [e])
-
-    | Ty.Trecord _ ->
-      (fun _e _name -> assert false) (* no need to test for records *)
 
     | _ -> assert false
   in

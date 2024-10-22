@@ -294,7 +294,6 @@ val mk_constr : Dolmen.Std.Expr.term_cst -> t list -> Ty.t -> t
            [Nest.attach_orders]. *)
 
 val mk_tester : Dolmen.Std.Expr.term_cst -> t -> t
-val mk_record : t list -> Ty.t -> t
 
 (** Substitutions *)
 
@@ -438,7 +437,6 @@ val is_pure : t -> bool
 val is_model_term : t -> bool
 (** [is_model_term e] checks if the expression [e] is a model terms.
     A model term can be:
-    - A record definition involving only model terms.
     - A constructor application involving only model terms,
     - A literal of a basic type (integer, real, boolean, unit or bitvector),
     - A name. *)

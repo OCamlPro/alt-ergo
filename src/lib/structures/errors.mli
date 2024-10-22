@@ -57,12 +57,9 @@ type typing_error =
   | ShouldHaveTypeBitv of Ty.t
   | ArrayIndexShouldHaveTypeInt
   | ShouldHaveTypeArray
-  | ShouldHaveTypeRecord of Ty.t
-  | ShouldBeARecord
   | ShouldHaveLabel of string * string
   | NoLabelInType of Hstring.t * Ty.t
   | ShouldHaveTypeProp
-  | NoRecordType of Hstring.t
   | DuplicateLabel of Hstring.t
   | DuplicatePattern of string
   | WrongLabel of Hstring.t * Ty.t

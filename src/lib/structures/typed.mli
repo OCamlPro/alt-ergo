@@ -118,9 +118,7 @@ and 'a tt_desc =
   (** Extract a sub-bitvector *)
   | TTconcat of 'a atterm * 'a atterm
   (* Concatenation of bitvectors *)
-  | TTdot of 'a atterm * Hstring.t
-  (** Field access on structs/records *)
-  | TTrecord of (Hstring.t * 'a atterm) list
+  | TTrecord of Ty.t * (Hstring.t * 'a atterm) list
   (** Record creation. *)
   | TTlet of (Symbols.t * 'a atterm) list * 'a atterm
   (** Let-bindings. Accept a list of mutually recursive le-bindings. *)

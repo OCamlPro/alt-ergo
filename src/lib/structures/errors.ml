@@ -51,12 +51,9 @@ type typing_error =
   | ShouldHaveTypeBitv of Ty.t
   | ArrayIndexShouldHaveTypeInt
   | ShouldHaveTypeArray
-  | ShouldHaveTypeRecord of Ty.t
-  | ShouldBeARecord
   | ShouldHaveLabel of string * string
   | NoLabelInType of Hstring.t * Ty.t
   | ShouldHaveTypeProp
-  | NoRecordType of Hstring.t
   | DuplicateLabel of Hstring.t
   | DuplicatePattern of string
   | WrongLabel of Hstring.t * Ty.t
@@ -175,19 +172,12 @@ let report_typing_error fmt = function
       Ty.print t
   | ShouldHaveTypeArray ->
     fprintf fmt "this expression should have type farray"
-  | ShouldHaveTypeRecord t ->
-    fprintf fmt "this expression has type %a but it should have a record type"
-      Ty.print t
-  | ShouldBeARecord ->
-    fprintf fmt "this expression should have a record type"
   | ShouldHaveLabel (s, a) ->
     fprintf fmt "this expression has type %s which has no label %s" s a
   | NoLabelInType (lb, ty) ->
     fprintf fmt "no label %s in type %a" (Hstring.view lb) Ty.print ty
   | ShouldHaveTypeProp ->
     fprintf fmt "this expression should have type prop"
-  | NoRecordType s ->
-    fprintf fmt "no record type has label %s" (Hstring.view s)
   | DuplicateLabel s ->
     fprintf fmt "label %s is defined several times" (Hstring.view s)
   | DuplicatePattern s ->

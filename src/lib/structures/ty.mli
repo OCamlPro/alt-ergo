@@ -60,9 +60,6 @@ type t =
       value [Tadt (Hstring.make "list", [Tint]] where the identifier
       {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
-  | Trecord of trecord
-  (** Record type. *)
-
 and tvar = {
   v : int;
   (** Unique identifier *)
@@ -74,20 +71,6 @@ and tvar = {
     hence distinct types should have disjoints sets of
     type variables (see function {!val:fresh}). *)
 
-and trecord = {
-  mutable args : t list;
-  (** Arguments passed to the record constructor *)
-  name : Dolmen.Std.Expr.ty_cst;
-  (** Name of the record type *)
-  mutable lbs :  (Dolmen.Std.Expr.term_cst * t) list;
-  (** List of fields of the record. Each field has a name,
-      and an associated type. *)
-  record_constr : Dolmen.Std.Expr.term_cst;
-  (** record constructor. Useful is case it's a specialization of an
-      algeberaic datatype. Default value is "\{__[name]" *)
-}
-(** Record types. *)
-
 type adt_constr =
   { constr : Dolmen.Std.Expr.term_cst ;
     (** constructor of an ADT type *)
@@ -97,10 +80,8 @@ type adt_constr =
         their respective types *)
   }
 
-(** Bodies of types definitions. Currently, bodies are inlined in the
-    type [t] for records and enumerations. But, this is not possible
-    for recursive ADTs *)
 type type_body = adt_constr list
+(** Bodies of types definitions. *)
 
 module Svty : Set.S with type elt = int
 (** Sets of type variables, indexed by their identifier. *)
@@ -179,17 +160,6 @@ val t_adt :
     then no definition will be registered for this type. The second
     argument is the name of the type. The third one provides its list
     of arguments. *)
-
-val trecord :
-  record_constr:Dolmen.Std.Expr.term_cst ->
-  t list -> Dolmen.Std.Expr.ty_cst -> (Dolmen.Std.Expr.term_cst * t) list -> t
-(** Create a record type. [trecord args name lbs] creates a record
-    type with name [name], arguments [args] and fields [lbs].
-
-    If [sort_fields] is true, the record fields are sorted according to
-    [Hstring.compare]. This is to preserve compatibility with the old
-    typechecker behavior and should not be used in new code. *)
-
 
 (** {2 Substitutions} *)
 

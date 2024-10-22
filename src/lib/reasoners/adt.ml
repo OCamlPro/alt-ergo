@@ -203,9 +203,6 @@ module Shostak (X : ALIEN) = struct
          else sel_x, ctx (* canonization OK *)
     *)
 
-    | Sy.Op Sy.Constr _, _, Ty.Trecord _ ->
-      Fmt.failwith "unexpected record constructor %a@." E.print t
-
     | _ -> assert false
 
   let hash x =

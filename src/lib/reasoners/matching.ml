@@ -314,11 +314,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ , [] -> l1
     | _ -> List.fold_left (fun acc e -> e :: acc) l2 (List.rev l1)
 
-  let xs_modulo_records t { Ty.lbs; _  } =
-    List.rev
+  (* let xs_modulo_records t { Ty.lbs; _  } =
+     List.rev
       (List.rev_map
          (fun (hs, ty) ->
-            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs)
+            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs) *)
 
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
@@ -413,13 +413,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
               (fun t l ->
                  let { E.f = f; xs = xs; ty = ty; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs::l
-                 else
-                   begin
-                     match f_pat, ty with
-                     | Symbols.Op (Symbols.Record), Ty.Trecord record ->
-                       (xs_modulo_records t record) :: l
-                     | _ -> l
-                   end
+                 else l
+                 (* begin
+                    match f_pat, ty with
+                    | Symbols.Op (Symbols.Record), Ty.Trecord record ->
+                     (xs_modulo_records t record) :: l
+                    | _ -> l
+                    end *)
               ) cl []
           in
           let cl = filter_classes mconf cl tbox in

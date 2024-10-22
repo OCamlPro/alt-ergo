@@ -35,8 +35,7 @@ type operator =
   (* Arithmetic *)
   | Plus | Minus | Mult | Div | Modulo | Pow
   (* ADTs *)
-  | Access of Dolmen.Std.Expr.term_cst | Record
-  | Constr of Dolmen.Std.Expr.term_cst (* enums, adts *)
+  | Constr of Dolmen.Std.Expr.term_cst
   | Destruct of Dolmen.Std.Expr.term_cst
   (* Arrays *)
   | Get | Set
