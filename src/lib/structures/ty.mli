@@ -57,7 +57,7 @@ type t =
   (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
       to values of type [dst]. *)
 
-  | Tadt of Dolmen.Std.Expr.ty_cst * t list * bool
+  | Tadt of Dolmen.Std.Expr.ty_cst * t list
   (** Application of algebraic data types. [Tadt (a, params)] denotes
       the application of the polymorphic datatype [a] to the types parameters
       [params].
@@ -75,10 +75,8 @@ type adt_constr =
         their respective types *)
   }
 
-(** Bodies of types definitions. Currently, bodies are inlined in the
-    type [t] for records and enumerations. But, this is not possible
-    for recursive ADTs *)
 type type_body = adt_constr list
+(** Bodies of types definitions. *)
 
 module Set : Set.S with type elt = t
 (** Sets of types *)
@@ -138,7 +136,6 @@ val text : t list -> Dolmen.Std.Expr.ty_cst -> t
     given. *)
 
 val t_adt :
-  ?record:bool ->
   ?body:((Dolmen.Std.Expr.term_cst *
           (Dolmen.Std.Expr.term_cst * t) list) list) option ->
   Dolmen.Std.Expr.ty_cst ->
