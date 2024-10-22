@@ -59,10 +59,8 @@ type sat_solver =
 val pp_sat_solver : Format.formatter -> sat_solver -> unit
 
 type theories_extensions =
-  | Sum
   | Adt
   | Arrays
-  | Records
   | Bitv
   | LIA
   | LRA

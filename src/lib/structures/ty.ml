@@ -451,14 +451,6 @@ let t_adt ?(body=None) s ty_vars =
   begin match body with
     | None -> ()
     | Some [] -> assert false
-    | Some ([_] as cases) ->
-      if Options.get_debug_adt () then
-        Printer.print_dbg ~module_name:"Ty"
-          "should be registered as a record";
-      let cases =
-        List.map (fun (constr, destrs) -> {constr; destrs}) cases
-      in
-      Decls.add s ty_vars cases
     | Some cases ->
       let cases =
         List.map (fun (constr, destrs) -> {constr; destrs}) cases

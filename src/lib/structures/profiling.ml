@@ -454,18 +454,6 @@ let columns : (string * string * int * bool option * 'a) list =
        Format.sprintf "%s~%s"
          (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
 
-    "Sum", "Time spent in Sum module(s)", 16, Some false,
-    (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Sum in
-       Format.sprintf "%s~%s"
-         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
-
-    "Records", "Time spent in Records module(s)", 16, Some false,
-    (fun _ gtime sz ->
-       let curr = Timers.get_sum (get_timers ()) Timers.M_Records in
-       Format.sprintf "%s~%s"
-         (float_resize curr (sz - 5)) (string_resize (percent gtime curr) 4));
-
     "AC", "Time spent in AC module(s)", 16, Some false,
     (fun _ gtime sz ->
        let curr = Timers.get_sum (get_timers ()) Timers.M_AC in
@@ -480,10 +468,8 @@ let columns : (string * string * int * bool option * 'a) list =
        let tcc = Timers.get_sum timers Timers.M_CC in
        let tarith = Timers.get_sum timers Timers.M_Arith in
        let tarrays = Timers.get_sum timers Timers.M_Arrays in
-       let tsum = Timers.get_sum timers Timers.M_Sum in
-       let trecs = Timers.get_sum timers Timers.M_Records in
        let tac = Timers.get_sum timers Timers.M_AC in
-       let total = tsat+.tmatch+.tcc+.tarith+.tarrays+.tsum+.trecs+.tac in
+       let total = tsat+.tmatch+.tcc+.tarith+.tarrays+.tac in
        float_resize total sz);
   ]
 

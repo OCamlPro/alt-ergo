@@ -35,8 +35,6 @@ type ty_module =
   | M_UF
   | M_Arith
   | M_Arrays
-  | M_Sum
-  | M_Records
   | M_Adt
   | M_Bitv
   | M_AC
