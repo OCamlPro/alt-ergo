@@ -38,7 +38,7 @@ type 'a abstract =
       c_ty : Ty.t;
       c_args : (DE.term_cst * 'a) list
     }
-  (* [Cons { c_name; c_ty; c_args }] reprensents the application of the
+  (* [Cons { c_name; c_ty; c_args }] represents the application of the
      constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
 
   | Select of { d_name : DE.term_cst ; d_ty : Ty.t ; d_arg : 'a }

@@ -165,20 +165,22 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
     let candidate_substitutions pat_info res =
       let open Matching_types in
-      if Options.get_debug_matching () >= 1 then
-        print_dbg
-          ~module_name:"Matching" ~function_name:"candidate_substitutions"
-          "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
-          (List.length res)
-          E.print pat_info.trigger_orig
-          E.print_list pat_info.trigger.E.content;
-      if Options.get_debug_matching() >= 2 then
-        List.iter
-          (fun gsbt ->
-             print_dbg ~header:false
-               ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
-          )res
+      if not @@ Compat.List.is_empty res then begin
+        if Options.get_debug_matching () >= 1 then
+          print_dbg
+            ~module_name:"Matching" ~function_name:"candidate_substitutions"
+            "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
+            (List.length res)
+            E.print pat_info.trigger_orig
+            E.print_list pat_info.trigger.E.content;
+        if Options.get_debug_matching() >= 2 then
+          List.iter
+            (fun gsbt ->
+               print_dbg ~header:false
+                 ">>> sbs = %a  and  sbty = %a@ "
+                 (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
+            )res
+      end
 
   end
   (*BISECT-IGNORE-END*)
