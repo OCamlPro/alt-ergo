@@ -561,7 +561,7 @@ and handle_ty_app ?(update = false) ty_c l =
       List.fold_left2 (
         fun acc tv ty ->
           match tv with
-          | Ty.Tvar tv -> Ty.Subst.bind tv ty acc
+          | Ty.Tvar tv -> Ty.Subst.update tv ty acc
           | _ -> assert false
       ) Ty.Subst.id args tyl
     in

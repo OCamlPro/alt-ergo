@@ -182,21 +182,46 @@ val trecord :
 
 module Subst : sig
   type subst
+  (** Type of substitution from type variables to types.
+
+      A substitution is equal to the identity substitution but for a finite
+      number of type variables.
+
+      The domain of the substitution is the set of types variable that
+      are not sent on itself. *)
 
   val id : subst
   (** The identity substitution. *)
 
   val is_id : subst -> bool
+  (** Check if the substitution is the identify substitution. *)
 
   val eval : subst -> tvar -> t
+  (** [eval sbt tv] returns the value of the substitution for [tv]. *)
 
-  val bind : tvar -> t -> subst -> subst
+  val update : tvar -> t -> subst -> subst
+  (** [update tv ty sbt] replaces the value of [sbt] for [tv] by [ty].
 
-  val is_in_dom : tvar -> subst -> bool
+      If the previous value of [tv] in [sbt] is equal to [ty] for [equal],
+      the returned substitution is physically equal to [sbt]. *)
+
+  val try_bind : tvar -> t -> subst -> subst
+  (** [try_bind tv ty sbt] tries to bind [tv] with [ty]. The function
+      succeeds if [tv] is not in the domain of [sbt] or the current
+      value of [tv] in [sbt] is equal to [ty].
+
+      If the current value of [tv] is not compatible with [ty], raises
+      the exception {!exception TypeClash}.
+
+      If the previous value of [tv] in [sbt] is equal to [ty] for [equal],
+      the returned substitution is physically equal to [sbt]. *)
+
+  val in_domain : tvar -> subst -> bool
+  (** [in_domain tv sbt] checks if [tv] is in the domain of [sbt]. *)
 
   val restrict : TvSet.t -> subst -> subst
-  (** [restrict set sbt] restrict the domain of the substitution [sbt] to be a
-      subset of [set]. *)
+  (** [restrict set sbt] returns a substitution that is equal to [sbt] on
+      the set [set] and the identity otherwise. *)
 
   val compare : subst -> subst -> int
   (** Comparison of substitutions. *)
@@ -211,8 +236,6 @@ module Subst : sig
 end
 
 type subst = Subst.subst
-(** The type of substitution, i.e. maps
-    from type variables identifiers to types.*)
 
 val apply_subst : subst -> t -> t
 (** Substitution application. *)

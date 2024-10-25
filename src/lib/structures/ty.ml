@@ -273,12 +273,24 @@ module Subst = struct
     | ty -> ty
     | exception Not_found -> Tvar tv
 
-  let bind (tv : tvar) ty sbt =
+  let update tv ty sbt =
     match ty with
     | Tvar tv' when DE.Ty.Var.equal tv tv' -> sbt
     | _ -> TvMap.add tv ty sbt
 
-  let is_in_dom = TvMap.mem
+  let try_bind tv ty sbt =
+    match ty with
+    | Tvar tv' when DE.Ty.Var.equal tv tv' -> sbt
+    | _ ->
+      TvMap.update tv
+        (fun ty_opt ->
+           match ty_opt with
+           | None -> Some ty
+           | Some t when equal t ty -> Some t
+           | Some t -> raise (TypeClash (t, ty)))
+        sbt
+
+  let in_domain = TvMap.mem
 
   let restrict set sbt =
     TvMap.filter (fun tv _ -> TvSet.mem tv set) sbt
@@ -306,15 +318,7 @@ type subst = Subst.subst
 (*** matching with a substitution mechanism ***)
 let rec matching s pat t =
   match pat, t with
-  | Tvar tv, _ ->
-    begin
-      if Subst.is_in_dom tv s then
-        (if not @@ equal (Subst.eval s tv) t then
-           raise (TypeClash (pat, t));
-         s)
-      else
-        Subst.bind tv t s
-    end
+  | Tvar tv, _ -> Subst.try_bind tv t s
   | Text (l1,s1) , Text (l2,s2) when DE.Ty.Const.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
@@ -368,11 +372,11 @@ let apply_subst =
 let rec fresh ty subst =
   match ty with
   | Tvar tv ->
-    if Subst.is_in_dom tv subst then
+    if Subst.in_domain tv subst then
       Subst.eval subst tv, subst
     else
       let ntv = fresh_tvar () in
-      ntv, Subst.bind tv ntv subst
+      ntv, Subst.update tv ntv subst
   | Text (args, n) ->
     let args, subst = fresh_list args subst in
     Text (args, n), subst
@@ -466,7 +470,7 @@ module Decls = struct
             List.fold_left2
               (fun sbt vty ty ->
                  match vty with
-                 | Tvar tv -> Subst.bind tv ty sbt
+                 | Tvar tv -> Subst.update tv ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
                      print vty print ty;
