@@ -42,7 +42,7 @@ and term_view = {
   bind : bind_kind;
   tag: int;
   vars : (Ty.t * int) Var.Map.t; (* vars to types and nb of occurences *)
-  vty : Ty.Svty.t;
+  vty : Ty.TvSet.t;
   depth: int;
   nb_nodes : int;
   pure : bool;
@@ -244,11 +244,11 @@ module Msbt : Map.S with type key = expr Var.Map.t =
       let compare a b = Var.Map.compare compare a b
     end)
 
-module Msbty : Map.S with type key = Ty.t Ty.M.t =
+module Msbty : Map.S with type key = Ty.subst =
   Map.Make
     (struct
-      type t = Ty.t Ty.M.t
-      let compare a b = Ty.M.compare Ty.compare a b
+      type t = Ty.subst
+      let compare = Ty.compare_subst
     end)
 
 module TSet : Set.S with type elt = expr =
@@ -335,7 +335,7 @@ module SmtPrinter = struct
 
   (* This printer follows the convention used to print
      type variables in the module [Ty]. *)
-  let pp_tyvar ppf v = Fmt.pf ppf "A%d" v
+  let pp_tvar ppf v = Fmt.pf ppf "A%a" DE.Ty.Var.print v
 
   let rec pp_main bind ppf { user_trs; main; binders; _ } =
     if not @@ Var.Map.is_empty binders then
@@ -348,9 +348,9 @@ module SmtPrinter = struct
       pp_boxed ppf main
 
   and pp_quantified bind ppf q =
-    if q.toplevel && not @@ Ty.Svty.is_empty q.main.vty then
+    if q.toplevel && not @@ Ty.TvSet.is_empty q.main.vty then
       Fmt.pf ppf "@[<2>(par (%a)@, %a)@]"
-        Fmt.(box @@ iter ~sep:sp Ty.Svty.iter pp_tyvar) q.main.vty
+        Fmt.(box @@ iter ~sep:sp Ty.TvSet.iter pp_tvar) q.main.vty
         (pp_main bind) q
     else
       pp_main bind ppf q
@@ -802,7 +802,7 @@ let free_type_vars t = t.vty
 
 let is_ground t =
   Var.Map.is_empty (free_vars t Var.Map.empty) &&
-  Ty.Svty.is_empty (free_type_vars t)
+  Ty.TvSet.is_empty (free_type_vars t)
 
 let size t = t.nb_nodes
 
@@ -876,7 +876,7 @@ let free_vars_non_form s l ty =
   | _, e::r -> List.fold_left (fun s t -> merge_vars s t.vars) e.vars r
 
 let free_type_vars_non_form l ty =
-  List.fold_left (fun acc t -> Ty.Svty.union acc t.vty) (Ty.vty_of ty) l
+  List.fold_left (fun acc t -> Ty.TvSet.union acc t.vty) (Ty.vty_of ty) l
 
 let is_ite s = match s with
   | Sy.Op Sy.Tite -> true
@@ -960,7 +960,7 @@ let vrai =
   let res =
     let nb_nodes = 0 in
     let vars = Var.Map.empty in
-    let vty = Ty.Svty.empty in
+    let vty = Ty.TvSet.empty in
     let faux =
       HC.make
         {f = Sy.False; xs = []; ty = Ty.Tbool; depth = -2; (*smallest depth*)
@@ -1040,7 +1040,7 @@ let mk_or f1 f2 is_impl =
     let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = merge_vars f1.vars f2.vars in
-    let vty = Ty.Svty.union f1.vty f2.vty in
+    let vty = Ty.TvSet.union f1.vty f2.vty in
     let pos =
       HC.make {f=Sy.Form (Sy.F_Clause is_impl); xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
@@ -1070,7 +1070,7 @@ let mk_iff f1 f2 =
     let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = merge_vars f1.vars f2.vars in
-    let vty = Ty.Svty.union f1.vty f2.vty in
+    let vty = Ty.TvSet.union f1.vty f2.vty in
     let pos =
       HC.make {f=Sy.Form Sy.F_Iff; xs=[f1; f2]; ty=Ty.Tbool;
                depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
@@ -1156,7 +1156,7 @@ let mk_forall_ter =
            lemma. Otherwise (if not toplevel), the free vtys of the lemma
            are those of lem.main *)
         let vty =
-          if new_q.toplevel then Ty.Svty.empty
+          if new_q.toplevel then Ty.TvSet.empty
           else free_type_vars new_q.main
         in
         let vars =
@@ -1191,7 +1191,7 @@ let no_occur_check v e =
   not (Var.Map.mem v e.vars)
 
 let no_vtys l =
-  List.for_all (fun e -> Ty.Svty.is_empty e.vty) l
+  List.for_all (fun e -> Ty.TvSet.is_empty e.vty) l
 
 (** smart constructors for literals *)
 
@@ -1356,12 +1356,12 @@ let no_capture_issue s_t binders =
     end
 
 let rec apply_subst_aux (s_t, s_ty) t =
-  if is_ground t || (Var.Map.is_empty s_t && Ty.M.is_empty s_ty) then t
+  if is_ground t || (Var.Map.is_empty s_t && Ty.TvMap.is_empty s_ty) then t
   else
     let { f; xs; ty; vars; vty; bind; _ } = t in
     let s_t = Var.Map.filter (fun v _ -> Var.Map.mem v vars) s_t in
-    let s_ty = Ty.M.filter (fun tvar _ -> Ty.Svty.mem tvar vty) s_ty in
-    if Var.Map.is_empty s_t && Ty.M.is_empty s_ty then t
+    let s_ty = Ty.TvMap.filter (fun tvar _ -> Ty.TvSet.mem tvar vty) s_ty in
+    if Var.Map.is_empty s_t && Ty.TvMap.is_empty s_ty then t
     else
       let s = s_t, s_ty in
       let xs', same = My_list.apply (apply_subst_aux s) xs in
@@ -1501,7 +1501,7 @@ and mk_let_aux ({ let_v; let_e; in_e; _ } as x) =
       let nb_nodes = let_e.nb_nodes + in_e.nb_nodes + 1 (* approx *) in
       (* do not include free vars in let_sko that have been simplified *)
       let vars = merge_vars let_e.vars (Var.Map.remove let_v in_e.vars) in
-      let vty = Ty.Svty.union let_e.vty in_e.vty in
+      let vty = Ty.TvSet.union let_e.vty in_e.vty in
       let pos =
         HC.make {f=Sy.Let; xs=[]; ty;
                  depth=d; tag= -42; vars; vty; nb_nodes; neg = None;
@@ -1524,7 +1524,7 @@ and mk_forall_bis (q : quantified) =
   let binders =  (* ignore binders that are not used in f *)
     Var.Map.filter (fun v _ -> Var.Map.mem v q.main.vars) q.binders
   in
-  if Var.Map.is_empty binders && Ty.Svty.is_empty q.main.vty then q.main
+  if Var.Map.is_empty binders && Ty.TvSet.is_empty q.main.vty then q.main
   else
     let q = {q with binders} in
     (* Attempt to reduce the number of quantifiers. We try to find a
@@ -1582,7 +1582,7 @@ and find_particular_subst =
   in
   fun binders trs f ->
     (* TODO: move the test for `trs` outside. *)
-    if not (Ty.Svty.is_empty f.vty) || has_hypotheses trs ||
+    if not (Ty.TvSet.is_empty f.vty) || has_hypotheses trs ||
        has_semantic_triggers trs
     then
       None
@@ -1699,7 +1699,7 @@ let resolution_of_literal a binders free_vty acc =
   match lit_view a with
   | Pred(t, _) ->
     let cond =
-      Ty.Svty.subset free_vty (free_type_vars t) &&
+      Ty.TvSet.subset free_vty (free_type_vars t) &&
       let vars = free_vars t Var.Map.empty in
       Var.Map.for_all (fun v _ -> Var.Map.mem v vars) binders
     in
@@ -1781,8 +1781,8 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
         )cand []
 
 let free_type_vars_as_types e =
-  Ty.Svty.fold
-    (fun v z -> Ty.Set.add (Ty.Tvar { v }) z)
+  Ty.TvSet.fold
+    (fun tv z -> Ty.Set.add (Ty.Tvar tv) z)
     (free_type_vars e) Ty.Set.empty
 
 
@@ -1806,7 +1806,7 @@ let mk_let let_v let_e in_e =
 
 let skolemize { main = f; binders; sko_v; sko_vty; _ } =
   let print fmt ty =
-    assert (Ty.Svty.is_empty (Ty.vty_of ty));
+    assert (Ty.TvSet.is_empty (Ty.vty_of ty));
     Format.fprintf fmt "<%a>" Ty.print ty
   in
   let pp_sep_nospace fmt () = Format.fprintf fmt "" in
@@ -1928,13 +1928,11 @@ let elim_iff f1 f2 ~with_conj =
 
 module Triggers = struct
 
-  module Svty = Ty.Svty
-
   (* Set of patterns with their sets of free term and type variables. *)
   module STRS =
     Set.Make(
     struct
-      type t = expr * Var.Set.t * Svty.t
+      type t = expr * Var.Set.t * Ty.TvSet.t
 
       let compare (t1,_,_) (t2,_,_) = compare t1 t2
     end)
@@ -2105,7 +2103,7 @@ module Triggers = struct
     fun l ->
       unique (List.stable_sort cmp_trig_term_list l) []
 
-  let vty_of_term acc t = Svty.union acc t.vty
+  let vty_of_term acc t = Ty.TvSet.union acc t.vty
 
   let not_pure t = not t.pure
 
@@ -2126,11 +2124,11 @@ module Triggers = struct
             variables. *)
          not (List.exists not_pure l) &&
          let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
-         let s2 = List.fold_left vty_of_term Svty.empty l in
+         let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
          (* TODO: we can replace `Var.Set.subset bv s1`
             by `Var.Seq.equal bv s1`. By construction `s1` is
             a subset of `bv`. *)
-         Var.Set.subset bv s1 && Svty.subset vty s2 )
+         Var.Set.subset bv s1 && Ty.TvSet.subset vty s2 )
       trs
 
   (* unused
@@ -2142,8 +2140,8 @@ module Triggers = struct
         if List.exists not_pure l then
           failwith "If-Then-Else are not allowed in (theory triggers)";
         let s1 = List.fold_left (vars_of_term bv) SSet.empty l in
-        let s2 = List.fold_left vty_of_term Svty.empty l in
-        if not (Svty.subset vty s2) || not (SSet.subset bv s1) then
+        let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
+        if not (Ty.TvSet.subset vty s2) || not (SSet.subset bv s1) then
           failwith "Triggers of a theory should contain every quantified \
                     types and variables.")
       trs;
@@ -2171,7 +2169,7 @@ module Triggers = struct
   module SLLT =
     Set.Make(
     struct
-      type t = expr list * Var.Set.t * Svty.t
+      type t = expr list * Var.Set.t * Ty.TvSet.t
       let compare (a, y1, _) (b, y2, _)  =
         let c = try compare_lists a b compare; 0 with Util.Cmp c -> c in
         if c <> 0 then c else Var.Set.compare y1 y2
@@ -2222,14 +2220,14 @@ module Triggers = struct
         let llt, llt_ok =
           SLLT.fold
             (fun (l, bv2, vty2) (llt, llt_ok) ->
-               if Var.Set.subset bv1 bv2 && Svty.subset vty1 vty2 then
+               if Var.Set.subset bv1 bv2 && Ty.TvSet.subset vty1 vty2 then
                  (* t doesn't bring new vars *)
                  llt, llt_ok
                else
                  let bv3 = Var.Set.union bv2 bv1 in
-                 let vty3 = Svty.union vty2 vty1 in
+                 let vty3 = Ty.TvSet.union vty2 vty1 in
                  let e = t::l, bv3, vty3 in
-                 if Var.Set.subset bv bv3 && Svty.subset vty vty3 then
+                 if Var.Set.subset bv bv3 && Ty.TvSet.subset vty vty3 then
                    (* The multi-trigger [e] cover all the free variables [bv]
                       and [vty]. *)
                    llt, SLLT.add e llt_ok
@@ -2258,17 +2256,17 @@ module Triggers = struct
       List.exists
         (fun (_, bv',vty') ->
            (Var.Set.subset bv bv' && not(Var.Set.equal bv bv')
-            && Svty.subset vty vty')
-           || (Svty.subset vty vty' && not(Svty.equal vty vty')
+            && Ty.TvSet.subset vty vty')
+           || (Ty.TvSet.subset vty vty' && not(Ty.TvSet.equal vty vty')
                && Var.Set.subset bv bv') ) l
     in fun bv_a vty_a l ->
       let rec simpl_rec acc = function
         | [] -> acc
         | ((_, bv, vty) as e)::l ->
           if strict_subset bv vty l || strict_subset bv vty acc ||
-             (Var.Set.subset bv_a bv && Svty.subset vty_a vty) ||
+             (Var.Set.subset bv_a bv && Ty.TvSet.subset vty_a vty) ||
              (Var.Set.equal (Var.Set.inter bv_a bv) Var.Set.empty &&
-              Svty.equal (Svty.inter vty_a vty) Svty.empty)
+              Ty.TvSet.equal (Ty.TvSet.inter vty_a vty) Ty.TvSet.empty)
           then simpl_rec acc l
           else simpl_rec (e::acc) l
       in
@@ -2294,7 +2292,7 @@ module Triggers = struct
        and [vtype]. *)
     let mono = List.filter
         (fun (_, bv_t, vty_t) ->
-           Var.Set.subset vterm bv_t && Svty.subset vtype vty_t) trs
+           Var.Set.subset vterm bv_t && Ty.TvSet.subset vtype vty_t) trs
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
     let base = if menv.Util.triggers_var then trs_nv @ trs_v else trs_nv in
@@ -2383,7 +2381,7 @@ module Triggers = struct
       Var.Map.exists (fun e _ -> Var.Set.mem e bv) bv_lf
     in
     let has_tyvar vty vty_lf =
-      Svty.exists (fun e -> Svty.mem e vty) vty_lf
+      Ty.TvSet.exists (fun e -> Ty.TvSet.mem e vty) vty_lf
     in
     let args_of e lets =
       match e.bind with
@@ -2479,9 +2477,9 @@ module Triggers = struct
       )terms terms
 
   let check_user_triggers f toplevel binders trs0 ~decl_kind =
-    if Var.Map.is_empty binders && Ty.Svty.is_empty f.vty then trs0
+    if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty then trs0
     else
-      let vtype = if toplevel then f.vty else Ty.Svty.empty in
+      let vtype = if toplevel then f.vty else Ty.TvSet.empty in
       let vterm =
         Var.Map.fold (fun v _ s -> Var.Set.add v s) binders Var.Set.empty
       in
@@ -2498,7 +2496,7 @@ module Triggers = struct
         filter_good_triggers (vterm, vtype) trs0
 
   let make f binders decl_kind mconf =
-    if Var.Map.is_empty binders && Ty.Svty.is_empty f.vty then []
+    if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty then []
     else
       let vtype = f.vty in
       let vterm =
@@ -2604,7 +2602,7 @@ let mk_forall name loc binders trs f ~toplevel ~decl_kind =
      user_trs = trs; main = f; sko_v; sko_vty; kind = decl_kind}
 
 let mk_exists name loc binders trs f ~toplevel ~decl_kind =
-  if not toplevel || Ty.Svty.is_empty f.vty then
+  if not toplevel || Ty.TvSet.is_empty f.vty then
     neg (mk_forall name loc binders trs (neg f) ~toplevel ~decl_kind)
   else
     (* If there are type variables in a toplevel exists: 1 - we add

@@ -49,7 +49,7 @@ type term_view = private {
   (** Map of free term variables in the term to their type and
       number of occurrences. *)
 
-  vty : Ty.Svty.t;
+  vty : Ty.TvSet.t;
   (** Map of free type variables in the term. *)
 
   depth: int;
@@ -222,7 +222,7 @@ val compare_let : letin -> letin -> int
 
 (** Some auxiliary functions *)
 val free_vars : t -> (Ty.t * int) Var.Map.t -> (Ty.t * int) Var.Map.t
-val free_type_vars : t -> Ty.Svty.t
+val free_type_vars : t -> Ty.TvSet.t
 val is_ground : t -> bool
 val size : t -> int
 val depth : t -> int
