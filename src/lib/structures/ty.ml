@@ -27,34 +27,10 @@
 
 module DE = Dolmen.Std.Expr
 
-module Tvar : sig
-  type t
+module TvSet = Set.Make (DE.Ty.Var)
+module TvMap = Map.Make (DE.Ty.Var)
 
-  val fresh : unit -> t
-  val compare : t -> t -> int
-  val equal : t -> t -> bool
-  val hash : t -> int
-  val pp : t Fmt.t
-
-  module Map : Map.S with type key = t
-  module Set : Set.S with type elt = t
-end = struct
-  type t = int
-
-  let fresh =
-    let cpt = ref (-1) in
-    fun () -> incr cpt; !cpt
-
-  let compare = Int.compare
-  let equal = Int.equal
-  let hash tv = tv
-  let pp = Fmt.int
-
-  module Map = Util.MI
-  module Set = Util.SI
-end
-
-type tvar = Tvar.t
+type tvar = DE.ty_var
 
 type t =
   | Tint
@@ -89,7 +65,7 @@ module Smtlib = struct
     | Text (args, name)
     | Trecord { args; name; _ } | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
-    | Tvar tv -> Fmt.pf ppf "A%a" Tvar.pp tv
+    | Tvar tv -> DE.Ty.Var.print ppf tv
 end
 
 let pp_smtlib = Smtlib.pp
@@ -128,7 +104,7 @@ let print_generic body_of =
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
-      | Tvar tv -> fprintf fmt "'a_%a" Tvar.pp tv
+      | Tvar tv -> fprintf fmt "'a_%a" DE.Ty.Var.print tv
       | Text(l, s) when l == [] ->
         fprintf fmt "<ext>%a" DE.Ty.Const.print s
       | Text(l,s) ->
@@ -201,11 +177,11 @@ let print_generic body_of =
 let print_list = snd (print_generic None)
 let print      = fst (print_generic None) None
 
-let fresh_tvar () = Tvar (Tvar.fresh ())
+let fresh_tvar () = Tvar (DE.Ty.Var.mk "A")
 
 let rec compare t1 t2 =
   match t1, t2 with
-  | Tvar v1, Tvar v2 -> Tvar.compare v1 v2
+  | Tvar v1, Tvar v2 -> DE.Ty.Var.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
     let c = DE.Ty.Const.compare s1 s2 in
@@ -257,7 +233,7 @@ and compare_list l1 l2 = match l1, l2 with
 let rec equal t1 t2 =
   t1 == t2 ||
   match t1, t2 with
-  | Tvar v1, Tvar v2 -> Tvar.equal v1 v2
+  | Tvar v1, Tvar v2 -> DE.Ty.Var.equal v1 v2
   | Text(l1, s1), Text(l2, s2) ->
     (try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
@@ -286,35 +262,36 @@ let rec equal t1 t2 =
   | _ -> false
 
 module Subst = struct
-  type subst = t Tvar.Map.t
+  type subst = t TvMap.t
 
-  let id = Tvar.Map.empty
+  let id = TvMap.empty
 
-  let is_id sbt = Tvar.Map.is_empty sbt
+  let is_id sbt = TvMap.is_empty sbt
 
   let eval sbt tv =
-    match Tvar.Map.find tv sbt with
+    match TvMap.find tv sbt with
     | ty -> ty
     | exception Not_found -> Tvar tv
 
   let bind (tv : tvar) ty sbt =
     match ty with
-    | Tvar tv' when Tvar.equal tv tv' -> sbt
-    | _ -> Tvar.Map.add tv ty sbt
+    | Tvar tv' when DE.Ty.Var.equal tv tv' -> sbt
+    | _ -> TvMap.add tv ty sbt
 
-  let is_in_dom = Tvar.Map.mem
+  let is_in_dom = TvMap.mem
 
   let restrict set sbt =
-    Tvar.Map.filter (fun tv _ -> Tvar.Set.mem tv set) sbt
+    TvMap.filter (fun tv _ -> TvSet.mem tv set) sbt
 
-  let compare = Tvar.Map.compare compare
+  let compare = TvMap.compare compare
 
-  let equal = Tvar.Map.equal equal
+  let equal = TvMap.equal equal
 
   let pp =
     let sep ppf () = Fmt.pf ppf " -> " in
     Fmt.(box @@ braces
-         @@ iter_bindings ~sep:comma Tvar.Map.iter (pair ~sep Tvar.pp print))
+         @@ iter_bindings ~sep:comma TvMap.iter
+         @@ pair ~sep DE.Ty.Var.print print)
 
   module Map =
     Map.Make
@@ -569,7 +546,7 @@ let trecord ~record_constr lv name lbs =
 
 let rec hash t =
   match t with
-  | Tvar tv -> Tvar.hash tv
+  | Tvar tv -> DE.Ty.Var.hash tv
   | Text(l,s) ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
@@ -601,7 +578,7 @@ module Set =
 let vty_of t =
   let rec vty_of_rec acc t =
     match t with
-    | Tvar tv -> Tvar.Set.add tv acc
+    | Tvar tv -> TvSet.add tv acc
     | Text (l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
     | Trecord { args; lbs; _ } ->
@@ -613,7 +590,7 @@ let vty_of t =
     | Tint | Treal | Tbool | Tbitv _ ->
       acc
   in
-  vty_of_rec Tvar.Set.empty t
+  vty_of_rec TvSet.empty t
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)

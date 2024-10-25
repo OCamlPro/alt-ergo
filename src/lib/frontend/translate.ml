@@ -1687,7 +1687,7 @@ let make_form name_base f loc ~decl_kind =
   in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
-  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
+  if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
   else
     E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
@@ -1943,7 +1943,7 @@ let make dloc_file acc stmt =
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
-                  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
+                  if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
@@ -1964,7 +1964,7 @@ let make dloc_file acc stmt =
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
-                  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
+                  if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
