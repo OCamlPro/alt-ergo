@@ -1604,9 +1604,14 @@ let apply_subst, clear_subst_cache =
     try TMap.find f ch |> Msbt.find sbt |> Ty.Subst.Map.find sbty
     with Not_found ->
       let nf = apply_subst_aux s f in
-      let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
-      let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Ty.Subst.Map.empty in
-      cache := TMap.add f (Msbt.add sbt (Ty.Subst.Map.add sbty nf c_sbty) c_sbt) ch;
+      let c_sbt =
+        try TMap.find f ch with Not_found -> Msbt.empty
+      in
+      let c_sbty =
+        try Msbt.find sbt c_sbt with Not_found -> Ty.Subst.Map.empty
+      in
+      cache :=
+        TMap.add f (Msbt.add sbt (Ty.Subst.Map.add sbty nf c_sbty) c_sbt) ch;
       nf
   in
   let clear_subst_cache () =
