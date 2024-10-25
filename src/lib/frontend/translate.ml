@@ -523,8 +523,8 @@ and handle_ty_app ?(update = false) ty_c l =
      variable. *)
   let rec apply_ty_substs tysubsts ty =
     match ty with
-    | Ty.Tvar { v; _ } ->
-      Ty.M.find v tysubsts
+    | Ty.Tvar tv ->
+      Ty.Subst.eval tysubsts tv
 
     | Text (tyl, hs) ->
       Ty.Text (List.map (apply_ty_substs tysubsts) tyl, hs)
@@ -561,9 +561,9 @@ and handle_ty_app ?(update = false) ty_c l =
       List.fold_left2 (
         fun acc tv ty ->
           match tv with
-          | Ty.Tvar { v; _ } -> Ty.M.add v ty acc
+          | Ty.Tvar tv -> Ty.Subst.bind tv ty acc
           | _ -> assert false
-      ) Ty.M.empty args tyl
+      ) Ty.Subst.id args tyl
     in
     apply_ty_substs tysubsts ty
 
@@ -1687,7 +1687,7 @@ let make_form name_base f loc ~decl_kind =
   in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
-  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
   else
     E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
@@ -1943,7 +1943,7 @@ let make dloc_file acc stmt =
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
-                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+                  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
@@ -1964,7 +1964,7 @@ let make dloc_file acc stmt =
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
                 let e =
-                  if Ty.Svty.is_empty (E.free_type_vars ff) then ff
+                  if Ty.Tvar.Set.is_empty (E.free_type_vars ff) then ff
                   else
                     E.mk_forall name_base loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind

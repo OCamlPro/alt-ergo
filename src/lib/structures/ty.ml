@@ -27,6 +27,35 @@
 
 module DE = Dolmen.Std.Expr
 
+module Tvar : sig
+  type t
+
+  val fresh : unit -> t
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val hash : t -> int
+  val pp : t Fmt.t
+
+  module Map : Map.S with type key = t
+  module Set : Set.S with type elt = t
+end = struct
+  type t = int
+
+  let fresh =
+    let cpt = ref (-1) in
+    fun () -> incr cpt; !cpt
+
+  let compare = Int.compare
+  let equal = Int.equal
+  let hash tv = tv
+  let pp = Fmt.int
+
+  module Map = Util.MI
+  module Set = Util.SI
+end
+
+type tvar = Tvar.t
+
 type t =
   | Tint
   | Treal
@@ -37,8 +66,6 @@ type t =
   | Tfarray of t * t
   | Tadt of DE.ty_cst * t list
   | Trecord of trecord
-
-and tvar = { v : int ; mutable value : t option }
 
 and trecord = {
   mutable args : t list;
@@ -62,14 +89,12 @@ module Smtlib = struct
     | Text (args, name)
     | Trecord { args; name; _ } | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
-    | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
-    | Tvar { value = Some t; _ } -> pp ppf t
+    | Tvar tv -> Fmt.pf ppf "A%a" Tvar.pp tv
 end
 
 let pp_smtlib = Smtlib.pp
 
-exception TypeClash of t*t
-exception Shorten of t
+exception TypeClash of t * t
 
 type adt_constr =
   { constr : DE.term_cst ;
@@ -96,7 +121,6 @@ let assoc_destrs hs cases =
 
 (*** pretty print ***)
 let print_generic body_of =
-  let h = Hashtbl.create 17 in
   let rec print =
     let open Format in
     fun body_of fmt -> function
@@ -104,17 +128,7 @@ let print_generic body_of =
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
-      | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
-      | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
-        if Hashtbl.mem h v then
-          fprintf fmt "%a %a" print_list l DE.Ty.Const.print n
-        else
-          (Hashtbl.add h v ();
-           (*fprintf fmt "('a_%d->%a)" v print t *)
-           print body_of fmt t)
-      | Tvar{ value = Some t; _ } ->
-        (*fprintf fmt "('a_%d->%a)" v print t *)
-        print body_of fmt t
+      | Tvar tv -> fprintf fmt "'a_%a" Tvar.pp tv
       | Text(l, s) when l == [] ->
         fprintf fmt "<ext>%a" DE.Ty.Const.print s
       | Text(l,s) ->
@@ -187,51 +201,11 @@ let print_generic body_of =
 let print_list = snd (print_generic None)
 let print      = fst (print_generic None) None
 
-
-let fresh_var =
-  let cpt = ref (-1) in
-  fun () -> incr cpt; {v= !cpt ; value = None }
-
-let fresh_tvar () = Tvar (fresh_var ())
-
-let rec shorten ty =
-  match ty with
-  | Tvar { value = None; _ }  -> ty
-  | Tvar { value = Some (Tvar{ value = None; _ } as t'); _ } -> t'
-  | Tvar ({ value = Some (Tvar t2); _ } as t1) ->
-    t1.value <- t2.value; shorten ty
-  | Tvar { value = Some t'; _ } -> shorten t'
-
-  | Text (l,s) ->
-    let l, same = My_list.apply shorten l in
-    if same then ty else Text(l,s)
-
-  | Tfarray (t1,t2) ->
-    let t1' = shorten t1 in
-    let t2' = shorten t2 in
-    if t1 == t1' && t2 == t2' then ty
-    else Tfarray(t1', t2')
-
-  | Trecord r ->
-    r.args <- List.map shorten r.args;
-    r.lbs <- List.map (fun (lb, ty) -> lb, shorten ty) r.lbs;
-    ty
-
-  | Tadt (n, args) ->
-    let args' = List.map shorten args in
-    shorten_body n args;
-    (* should not rebuild the type if no changes are made *)
-    Tadt (n, args')
-
-  | Tint | Treal | Tbool | Tbitv _ -> ty
-
-and shorten_body _ _ =
-  ()
-  [@ocaml.ppwarning "TODO: should be implemented ?"]
+let fresh_tvar () = Tvar (Tvar.fresh ())
 
 let rec compare t1 t2 =
-  match shorten t1 , shorten t2 with
-  | Tvar{ v = v1; _ } , Tvar{ v = v2; _ } -> Int.compare v1 v2
+  match t1, t2 with
+  | Tvar v1, Tvar v2 -> Tvar.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
     let c = DE.Ty.Const.compare s1 s2 in
@@ -282,8 +256,8 @@ and compare_list l1 l2 = match l1, l2 with
 
 let rec equal t1 t2 =
   t1 == t2 ||
-  match shorten t1 , shorten t2 with
-  | Tvar{ v = v1; _ }, Tvar{ v = v2; _ } -> v1 = v2
+  match t1, t2 with
+  | Tvar v1, Tvar v2 -> Tvar.equal v1 v2
   | Text(l1, s1), Text(l2, s2) ->
     (try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
@@ -311,18 +285,59 @@ let rec equal t1 t2 =
 
   | _ -> false
 
+module Subst = struct
+  type subst = t Tvar.Map.t
+
+  let id = Tvar.Map.empty
+
+  let is_id sbt = Tvar.Map.is_empty sbt
+
+  let eval sbt tv =
+    match Tvar.Map.find tv sbt with
+    | ty -> ty
+    | exception Not_found -> Tvar tv
+
+  let bind (tv : tvar) ty sbt =
+    match ty with
+    | Tvar tv' when Tvar.equal tv tv' -> sbt
+    | _ -> Tvar.Map.add tv ty sbt
+
+  let is_in_dom = Tvar.Map.mem
+
+  let restrict set sbt =
+    Tvar.Map.filter (fun tv _ -> Tvar.Set.mem tv set) sbt
+
+  let compare = Tvar.Map.compare compare
+
+  let equal = Tvar.Map.equal equal
+
+  let pp =
+    let sep ppf () = Fmt.pf ppf " -> " in
+    Fmt.(box @@ braces
+         @@ iter_bindings ~sep:comma Tvar.Map.iter (pair ~sep Tvar.pp print))
+
+  module Map =
+    Map.Make
+      (struct
+        type t = subst
+        let compare = compare
+      end)
+end
+
+type subst = Subst.subst
+
 (*** matching with a substitution mechanism ***)
-module M = Util.MI
-type subst = t M.t
-
-let esubst = M.empty
-
 let rec matching s pat t =
-  match pat , t with
-  | Tvar {v=n;value=None} , _ ->
-    (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
-     with Not_found -> M.add n t s)
-  | Tvar { value = _; _ }, _ -> raise (Shorten pat)
+  match pat, t with
+  | Tvar tv, _ ->
+    begin
+      if Subst.is_in_dom tv s then
+        (if not @@ equal (Subst.eval s tv) t then
+           raise (TypeClash (pat, t));
+         s)
+      else
+        Subst.bind tv t s
+    end
   | Text (l1,s1) , Text (l2,s2) when DE.Ty.Const.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
@@ -341,8 +356,8 @@ let rec matching s pat t =
 let apply_subst =
   let rec apply_subst s ty =
     match ty with
-    | Tvar { v= n; _ } ->
-      (try M.find n s with Not_found -> ty)
+    | Tvar tv ->
+      Subst.eval s tv
 
     | Text (l,e) ->
       let l, same = My_list.apply (apply_subst s) l in
@@ -370,23 +385,17 @@ let apply_subst =
 
     | Tint | Treal | Tbool | Tbitv _ -> ty
   in
-  fun s ty -> if M.is_empty s then ty else apply_subst s ty
+  fun s ty ->
+    if Subst.is_id s then ty else apply_subst s ty
 
-(* Assume that [shorten] have been applied on [ty]. *)
 let rec fresh ty subst =
   match ty with
-  | Tvar { value = Some _; _ } ->
-    (* This case is eliminated by the normalization performed
-       in [shorten]. *)
-    assert false
-
-  | Tvar { v= x; _ } ->
-    begin
-      try M.find x subst, subst
-      with Not_found ->
-        let nv = Tvar (fresh_var()) in
-        nv, M.add x nv subst
-    end
+  | Tvar tv ->
+    if Subst.is_in_dom tv subst then
+      Subst.eval subst tv, subst
+    else
+      let ntv = fresh_tvar () in
+      ntv, Subst.bind tv ntv subst
   | Text (args, n) ->
     let args, subst = fresh_list args subst in
     Text (args, n), subst
@@ -408,16 +417,15 @@ let rec fresh ty subst =
     Tadt (s, args), subst
   | t -> t, subst
 
-(* Assume that [shorten] have been applied on [lty]. *)
 and fresh_list lty subst =
   List.fold_right
     (fun ty (lty, subst) ->
        let ty, subst = fresh ty subst in
        ty::lty, subst) lty ([], subst)
 
-let fresh ty subst = fresh (shorten ty) subst
+let fresh ty subst = fresh ty subst
 
-let fresh_list lty subst = fresh_list (List.map shorten lty) subst
+let fresh_list lty subst = fresh_list lty subst
 
 module Decls = struct
 
@@ -439,7 +447,7 @@ module Decls = struct
 
 
   let fresh_type params cases =
-    let params, subst = fresh_list params esubst in
+    let params, subst = fresh_list params Subst.id in
     let _subst, cases =
       List.fold_left
         (fun (subst, cases) {constr; destrs} ->
@@ -480,16 +488,13 @@ module Decls = struct
           try
             List.fold_left2
               (fun sbt vty ty ->
-                 let vty = shorten vty in
                  match vty with
-                 | Tvar { value = Some _ ; _ } -> assert false
-                 | Tvar {v ; value = None}   ->
-                   if equal vty ty then sbt else M.add v ty sbt
+                 | Tvar tv -> Subst.bind tv ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
                      print vty print ty;
                    assert false
-              )M.empty params args
+              ) Subst.id params args
           with Invalid_argument _ -> assert false
         in
         let cases =
@@ -564,7 +569,7 @@ let trecord ~record_constr lv name lbs =
 
 let rec hash t =
   match t with
-  | Tvar{ v; _ } -> v
+  | Tvar tv -> Tvar.hash tv
   | Text(l,s) ->
     abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
   | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
@@ -584,10 +589,6 @@ let rec hash t =
 
   | _ -> Hashtbl.hash t
 
-let compare_subst = M.compare compare
-
-let equal_subst = M.equal equal
-
 module Svty = Util.SI
 
 module Set =
@@ -599,10 +600,9 @@ module Set =
 
 let vty_of t =
   let rec vty_of_rec acc t =
-    let t = shorten t in
     match t with
-    | Tvar { v = i ; value = None } -> Svty.add i acc
-    | Text(l,_) -> List.fold_left vty_of_rec acc l
+    | Tvar tv -> Tvar.Set.add tv acc
+    | Text (l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
     | Trecord { args; lbs; _ } ->
       let acc = List.fold_left vty_of_rec acc args in
@@ -610,16 +610,10 @@ let vty_of t =
     | Tadt(_, args) ->
       List.fold_left vty_of_rec acc args
 
-    | Tvar { value = Some _ ; _ }
     | Tint | Treal | Tbool | Tbitv _ ->
       acc
   in
-  vty_of_rec Svty.empty t
-
-let print_subst =
-  let sep ppf () = Fmt.pf ppf " -> " in
-  Fmt.(box @@ braces
-       @@ iter_bindings ~sep:comma M.iter (pair ~sep int print))
+  vty_of_rec Tvar.Set.empty t
 
 let print_full =
   fst (print_generic (Some type_body)) (Some type_body)

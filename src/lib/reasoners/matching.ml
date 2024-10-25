@@ -112,7 +112,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if Options.get_debug_matching() >= 3 then
         let print fmt Matching_types.{ sbs; sty; _ } =
           Format.fprintf fmt ">>> sbs= %a | sty= %a@ "
-            (SubstE.pp E.print) sbs Ty.print_subst sty
+            (SubstE.pp E.print) sbs Ty.Subst.pp sty
         in
         print_dbg
           ~module_name:"Matching" ~function_name:"match_pats_modulo"
@@ -124,7 +124,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg
           ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a"
-          E.print pat0 (SubstE.pp E.print) sbs Ty.print_subst sty
+          E.print pat0 (SubstE.pp E.print) sbs Ty.Subst.pp sty
 
 
     let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
@@ -136,14 +136,14 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print pat0
           E.print t
           (SubstE.pp E.print) sbs
-          Ty.print_subst sty
+          Ty.Subst.pp sty
 
     let match_term Matching_types.{ sbs; sty; _ } t pat =
       if Options.get_debug_matching() >= 3 then
         print_dbg
           ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a"
-          E.print pat E.print t (SubstE.pp E.print) sbs Ty.print_subst sty
+          E.print pat E.print t (SubstE.pp E.print) sbs Ty.Subst.pp sty
 
     let match_list Matching_types.{ sbs; sty; _ } pats xs =
       if Options.get_debug_matching() >= 3 then
@@ -153,7 +153,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           E.print_list pats
           E.print_list xs
           (SubstE.pp E.print) sbs
-          Ty.print_subst sty
+          Ty.Subst.pp sty
 
     let match_class_of t cl =
       if Options.get_debug_matching() >= 3 then
@@ -177,7 +177,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
           (fun gsbt ->
              print_dbg ~header:false
                ">>> sbs = %a  and  sbty = %a@ "
-               (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
+               (SubstE.pp E.print) gsbt.sbs Ty.Subst.pp gsbt.sty
           )res
 
   end
@@ -492,7 +492,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
     else
       let egs =
         { sbs = SubstE.empty;
-          sty = Ty.esubst;
+          sty = Ty.Subst.id;
           gen = 0;
           goal = false;
           s_term_orig = [];
