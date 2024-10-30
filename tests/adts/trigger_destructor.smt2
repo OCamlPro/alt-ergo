@@ -1,0 +1,7 @@
+(set-logic ALL)
+(declare-datatype unit ((void)))
+(declare-datatype t ((box (unbox unit))))
+(declare-fun f (t t) Bool)
+(assert (forall ((u t) (v t)) (f u (box (unbox v)))))
+(assert (not (f (box void) (box void))))
+(check-sat)
