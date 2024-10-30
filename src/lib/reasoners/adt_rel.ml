@@ -200,6 +200,7 @@ module Domains = struct
   let init r t =
     match Th.embed r with
     | Alien _ when not (MX.mem r t.domains) ->
+      Log.debug (fun k -> k"init term %a" X.print r);
       (* We have to add a default domain if the key `r` is not in map in order
          to be sure that the case split mechanism will attempt to choose a
          value for it. *)
@@ -242,7 +243,9 @@ module Domains = struct
       let t = remove r t in
       tighten nr nd t
 
-    | exception Not_found -> init nr t
+    | exception Not_found ->
+      Log.debug (fun k -> k"add term %a" X.print nr);
+      init nr t
 
   (* [propagate f a t] iterates on all the changed domains of [t] since the
      last call of [propagate]. The list of changed domains is flushed after

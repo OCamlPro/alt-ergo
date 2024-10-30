@@ -26,6 +26,7 @@
 (**************************************************************************)
 
 module E = Expr
+module Sy = Symbols
 module ME = E.Map
 module SubstE = Var.Map
 
@@ -156,31 +157,26 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Ty.print_subst sty
 
     let match_class_of t cl =
-      if Options.get_debug_matching() >= 3 then
-        print_dbg
-          ~module_name:"Matching" ~function_name:"match_class_of"
-          "class_of (%a) = { %a }"
-          E.print t
-          (fun fmt -> E.Set.iter (Format.fprintf fmt "%a , " E.print)) cl
+      Log.debug (fun k -> k "class of '%a' is:@  %a"
+                    E.print t
+                    Fmt.(box @@ braces @@ iter ~sep:comma E.Set.iter E.print) cl)
 
     let candidate_substitutions pat_info res =
       let open Matching_types in
-      if not @@ Compat.List.is_empty res then begin
-        if Options.get_debug_matching () >= 1 then
-          print_dbg
-            ~module_name:"Matching" ~function_name:"candidate_substitutions"
-            "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
-            (List.length res)
-            E.print pat_info.trigger_orig
-            E.print_list pat_info.trigger.E.content;
-        if Options.get_debug_matching() >= 2 then
-          List.iter
-            (fun gsbt ->
-               print_dbg ~header:false
-                 ">>> sbs = %a  and  sbty = %a@ "
-                 (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
-            )res
-      end
+      if Options.get_debug_matching () >= 1 then
+        print_dbg
+          ~module_name:"Matching" ~function_name:"candidate_substitutions"
+          "@[<v 2>%3d candidate substitutions for Axiom %a with trigger %a@ "
+          (List.length res)
+          E.print pat_info.trigger_orig
+          E.print_list pat_info.trigger.E.content;
+      if Options.get_debug_matching() >= 2 then
+        List.iter
+          (fun gsbt ->
+             print_dbg ~header:false
+               ">>> sbs = %a  and  sbty = %a@ "
+               (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty
+          )res
 
   end
   (*BISECT-IGNORE-END*)
@@ -316,12 +312,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
     | _ , [] -> l1
     | _ -> List.fold_left (fun acc e -> e :: acc) l2 (List.rev l1)
 
-  (* let xs_modulo_records t { Ty.lbs; _  } =
-     List.rev
-      (List.rev_map
-         (fun (hs, ty) ->
-            E.mk_term (Symbols.Op (Symbols.Access hs)) [t] ty) lbs) *)
-
   module SLE = (* sets of lists of terms *)
     Set.Make(struct
       type t = E.t list
@@ -414,14 +404,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
             E.Set.fold
               (fun t l ->
                  let { E.f = f; xs = xs; _ } = E.term_view t in
-                 if Symbols.compare f_pat f = 0 then xs::l
+                 if Symbols.compare f_pat f = 0 then xs :: l
                  else l
-                 (* begin
-                    match f_pat, ty with
-                    | Symbols.Op (Symbols.Record), Ty.Trecord record ->
-                     (xs_modulo_records t record) :: l
-                    | _ -> l
-                    end *)
               ) cl []
           in
           let cl = filter_classes mconf cl tbox in
