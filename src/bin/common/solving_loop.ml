@@ -305,6 +305,15 @@ let process_source ?selector_inst ~print_status src =
         end
       | `Stdin -> ()
   in
+  let extract_zip_file f =
+    let cin = Zip.open_in f in
+    Fun.protect ~finally:(fun () -> Zip.close_in cin) @@ fun () ->
+    match Zip.entries cin with
+    | [e] when not @@ e.Zip.is_directory ->
+      Zip.read_entry cin e
+    | _ ->
+      fatal_error "the zip archive '%s' should contain exactly one file" f
+  in
   (* Prepare the input source for Dolmen from an input source for Alt-Ergo. *)
   let mk_files src =
     let lang =
@@ -316,7 +325,7 @@ let process_source ?selector_inst ~print_status src =
     let src =
       match src with
       | `File path when Filename.check_suffix path ".zip" ->
-        let content = AltErgoLib.My_zip.extract_zip_file path in
+        let content = extract_zip_file path in
         `Raw (Filename.(chop_extension path |> basename), content)
       | `File _ | `Raw _ | `Stdin -> src
     in
