@@ -55,6 +55,7 @@ module Conseq =
       type t = E.t * Ex.t
       let compare (lt1,_) (lt2,_) = E.compare lt1 lt2
     end)
+
 (* map k |-> {sem Atom} d'egalites/disegalites sur des atomes semantiques*)
 module LRmap = struct
   include LR.Map
@@ -62,13 +63,14 @@ module LRmap = struct
   let add k v ex mp = add k (Conseq.add (v,ex) (find k mp)) mp
 end
 
-type gtype = {g:Expr.t; gt:Expr.t; gi:Expr.t; gty:Ty.t}
-module G :Set.S with type elt = gtype = Set.Make
+(* Set of reads *)
+type gtype = {g:Expr.t; gt:Expr.t; gi:Expr.t}
+module G = Set.Make
     (struct type t = gtype let compare t1 t2 = E.compare t1.g t2.g end)
 
-(* ensemble de termes "set" avec leurs arguments et leurs types *)
+(* Set of writes *)
 type stype = {s:E.t; st:E.t; si:E.t; sv:E.t}
-module S :Set.S with type elt = stype = Set.Make
+module S = Set.Make
     (struct type t = stype let compare t1 t2 = E.compare t1.s t2.s end)
 
 (* map t |-> {set(t,-,-)} qui associe a chaque tableau l'ensemble
@@ -85,91 +87,91 @@ let timer = Timers.M_Arrays
 
 module H = Ephemeron.K1.Make (Expr)
 
-type t =
-  {gets  : G.t;               (* l'ensemble des "get" croises*)
-   tbset : S.t TBS.t ;        (* map t |-> set(t,-,-) *)
-   split : LRset.t;           (* l'ensemble des case-split possibles *)
-   conseq   : Conseq.t LRmap.t; (* consequences des splits *)
-   seen  : E.Set.t Tmap.t;    (* combinaisons (get,set) deja splitees *)
-   new_terms : E.Set.t;
-   size_splits : Numbers.Q.t;
-   cached_relevant_terms : (G.t * S.t TBS.t) H.t;
-  }
+(* A read is a term of the form `(select a i)` for some array `a` and index `i`
+   and a write is a term of the form `(store a i v)`.
+
+   A relevant index is a term that appears as an index in read/write terms.
+
+   We say that a read/write is known if we have seen this term in [assume]. *)
+type t = {
+  gets : G.t;
+  (* Set of all the known reads. *)
+
+  tbset : S.t TBS.t;
+  (* Set of all the known writes. There are indexed by array. *)
+
+  split : LRset.t;
+  (* Set of equalities or disequalities on relevant indices.
+     There are the hypotheses of consequences in the field [conseq].
+
+     We split on these literals in [case_split].
+
+     If we see one of these literals in [assume], we remove it of this set
+     and directly propagate its associated consequences. *)
+
+  conseq : Conseq.t LRmap.t;
+  (* Map of consequences. More precisely, it is a map of literals [l] to
+     explained formulas [(f, ex)] such that [l => f] is an instantiation
+     of one of the axioms of the array theory. The formula [l => f] is true in
+     all contexts where the explanation [ex] holds.
+
+     The literals [l] are in the set [split] if there have not already be seen
+     by [assume] or splitted in [case_split]. *)
+
+  seen : E.Set.t Tmap.t;
+  (* Cache used to prevent from generating several times the same instantiation
+     in [get_of_set]. *)
+
+  new_terms : E.Set.t;
+  (* Set of read and write terms produced by the theory. These terms
+     are supposed to be sent to the instantiation engine. *)
+
+  (* size_splits : Numbers.Q.t; *)
+  (* Limit the number of case splits performed on indices. This field
+     is currently unused. *)
+
+  cached_relevant_terms : (G.t * S.t TBS.t) H.t;
+  (* Weak cache used to accelerate the exploration of new terms in order to
+     find new read or write terms. *)
+}
 
 
-let empty uf =
-  {gets  = G.empty;
-   tbset = TBS.empty;
-   split = LRset.empty;
-   conseq   = LRmap.empty;
-   seen  = Tmap.empty;
-   new_terms = E.Set.empty;
-   size_splits = Numbers.Q.one;
-   cached_relevant_terms = H.create 1024;
-  }, Uf.domains uf
+let empty uf = {
+  gets  = G.empty;
+  tbset = TBS.empty;
+  split = LRset.empty;
+  conseq   = LRmap.empty;
+  seen  = Tmap.empty;
+  new_terms = E.Set.empty;
+  (* size_splits = Numbers.Q.one; *)
+  cached_relevant_terms = H.create 1024;
+}, Uf.domains uf
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct
-  open Printer
-
   let assume la =
-    let print fmt (a,_,_,_) =
-      Format.fprintf fmt "> %a@,"
-        LR.print (LR.make a)
-    in
-    if Options.get_debug_arrays () && la != [] then
-      Printer.print_dbg
-        ~module_name:"Arrays_rel"
-        ~function_name:"assume"
-        "@[<v 2>We assume: @ %a" (pp_list_no_space print) la
+    let pp_lit ppf (a, _, _, _) = LR.print ppf (LR.make a) in
+    if not @@ Compat.List.is_empty la then
+      Log.debug (fun k -> k "assume@ %a"
+                    Fmt.(list ~sep:comma pp_lit) la)
 
-  (* unused --
-     let print_gets fmt = G.iter (fun t -> fprintf fmt "%a@." E.print t.g)
-     let print_sets fmt = S.iter (fun t -> fprintf fmt "%a@." E.print t.s)
-     let print_splits fmt =
-     LRset.iter (fun a -> fprintf fmt "%a@." LR.print a)
-     let print_tbs fmt =
-     TBS.iter (fun k v -> fprintf fmt "%a --> %a@." E.print k print_sets v)
+  let pp_select ppf t = E.print ppf t.g
+  let pp_store ppf t = E.print ppf t.s
 
-     let env fmt env =
-     if get_debug_arrays () then begin
-      fprintf fmt "-- gets ----------------------------------------@.";
-      print_gets fmt env.gets;
-      fprintf fmt "-- tabs of sets --------------------------------@.";
-      print_tbs fmt env.tbset;
-      fprintf fmt "-- splits --------------------------------------@.";
-      print_splits fmt env.split;
-      fprintf fmt "------------------------------------------------@."
-     end
-  *)
-
-  let new_equalities st =
-    if Options.get_debug_arrays () then begin
-      Printer.print_dbg
-        ~module_name:"Arrays_rel"
-        ~function_name:"new_equalities"
-        "@[<v 2>%d implied equalities"
-        (Conseq.cardinal st);
-      Conseq.iter (fun (a,ex) ->
-          Printer.print_dbg ~header:false
-            "%a : %a" E.print a Ex.print ex
-        ) st
+  let env env =
+    if Options.get_verbose () then begin
+      Log.debug (fun k -> k "selects:@ %a"
+                    Fmt.(box @@ braces
+                         @@ iter ~sep:comma G.iter pp_select) env.gets);
+      Log.debug (fun k -> k "stores:@ %a"
+                    Fmt.(box @@ braces @@ iter_bindings ~sep:comma TBS.iter
+                         @@ pair ~sep:(any "->@,") E.print
+                         @@ box @@ braces
+                         @@ iter ~sep:comma S.iter pp_store) env.tbset);
+      Log.debug (fun k -> k "splits:@ %a"
+                    Fmt.(box @@ braces
+                         @@ iter ~sep:comma LRset.iter LR.print) env.split)
     end
-
-  let case_split a =
-    if Options.get_debug_arrays () then
-      print_dbg
-        ~module_name:"Arrays_rel"
-        ~function_name:"case_split"
-        "%a" LR.print a
-
-  let case_split_none () =
-    if Options.get_debug_arrays () then
-      print_dbg
-        ~module_name:"Arrays_rel"
-        ~function_name:"case_split_none"
-        "Nothing"
-
 end
 (*BISECT-IGNORE-END*)
 
@@ -192,7 +194,7 @@ let merge_revelant_terms (gets, tbset) (g, t) =
 
    See issue https://github.com/OCamlPro/alt-ergo/issues/1123 *)
 let rec relevant_terms env t =
-  let { E.f; xs; ty; _ } = E.term_view t in
+  let { E.f; xs; _ } = E.term_view t in
   let gets, tbset =
     List.fold_left
       (fun acc x ->
@@ -200,7 +202,7 @@ let rec relevant_terms env t =
       ) (G.empty, TBS.empty) xs
   in
   match Sy.is_get f, Sy.is_set f, xs with
-  | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i; gty=ty} gets, tbset
+  | true , false, [a;i]   -> G.add {g=t; gt=a; gi=i} gets, tbset
   | false, true , [a;i;v] ->
     gets, TBS.add a {s=t; st=a; si=i; sv=v} tbset
   | false, false, _ -> (gets,tbset)
@@ -214,8 +216,7 @@ and cached_relevant_terms env t =
     H.add env.cached_relevant_terms t r;
     r
 
-(* met a jour les composantes gets et tbset de env avec les termes
-   contenus dans les atomes de la *)
+(* Search all the reads and writes as subterms of literals [la]. *)
 let new_terms env la =
   let fct acc r =
     List.fold_left
@@ -235,13 +236,14 @@ let new_terms env la =
          | A.Pred (r1,_) -> fct acc r1
       ) (env.gets,env.tbset) la
   in
-  {env with gets=gets; tbset=tbset}
+  {env with gets; tbset}
 
-(* mise a jour de env avec les instances
-   1) p   => p_ded
-   2) n => n_ded *)
-let update_env are_eq are_dist dep env acc gi si p p_ded n n_ded =
-  match are_eq gi si, are_dist gi si with
+module type UF = module type of Uf
+
+(* Add the consequences `p => p_ded` and `n => n_ded`. If the literal [p]
+   (respectively [q]) is already true, we do not add the consequence. *)
+let update_env (module Uf : UF) uf dep env acc gi si p p_ded n n_ded =
+  match Uf.are_equal uf ~added_terms:true gi si, Uf.are_distinct uf gi si with
   | Some (idep, _) , None ->
     let conseq = LRmap.add n n_ded dep env.conseq in
     {env with conseq = conseq},
@@ -258,16 +260,29 @@ let update_env are_eq are_dist dep env acc gi si p p_ded n n_ded =
     let conseq = LRmap.add n n_ded dep conseq in
     { env with split = sp; conseq = conseq }, acc
 
-  | Some _,  Some _ -> assert false
+  | Some _,  Some _ ->
+    (* This case cannot occur because we cannot have `gi = si` and
+       `gi <> si` at the same time. *)
+    assert false
 
-(*----------------------------------------------------------------------
-  get(set(-,-,-),-) modulo egalite
-  ---------------------------------------------------------------------*)
-let get_of_set are_eq are_dist gtype (env,acc) class_of =
-  let {g=get; gt=gtab; gi=gi; gty=gty} = gtype in
+(* Produce a formula to propagate a read over a store.
+
+   More precisely, assume that [gtype] represents the read `(select a i)`.
+   For all writes `(store b j v)` in the equivalence class of `a`, we form the
+   formulas:
+
+     i <> j -> (select a i) = (select b i)
+
+   and
+
+     i = j -> (select a i) = v.
+
+   Moreover, the read `(select b i)` is sent to the instantiation engine. *)
+let get_of_set (module Uf : UF) uf gtype (env, acc) =
+  let {g=get; gt=gtab; gi=gi} = gtype in
   E.Set.fold
-    (fun set (env,acc) ->
-       if Tmap.splited get set env.seen then (env,acc)
+    (fun set (env, acc) ->
+       if Tmap.splited get set env.seen then (env, acc)
        else
          let env = {env with seen = Tmap.update get set env.seen} in
          let { E.f; xs; _ } = E.term_view set in
@@ -275,35 +290,39 @@ let get_of_set are_eq are_dist gtype (env,acc) class_of =
          | true , [stab;si;sv] ->
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
+           let get_stab  = E.ArraysEx.select stab gi in
            let p       = LR.mk_eq xi xj in
            let p_ded   = E.mk_eq ~iff:false get sv in
            let n     = LR.mk_distinct false [xi;xj] in
            let n_ded = E.mk_eq ~iff:false get get_stab in
-           let dep = match are_eq gtab set with
-               Some (dep, _) -> dep | None -> assert false
+           let dep =
+             match Uf.are_equal uf ~added_terms:true gtab set with
+             | Some (dep, _) -> dep
+             | None -> assert false
            in
            let env =
              {env with new_terms =
                          E.Set.add get_stab env.new_terms } in
-           update_env
-             are_eq are_dist dep env acc gi si p p_ded n n_ded
+           update_env (module Uf) uf dep env acc gi si p p_ded n n_ded
          | _ -> (env,acc)
-    ) (class_of gtab) (env,acc)
+    ) (Uf.class_of uf gtab) (env,acc)
 
-(*----------------------------------------------------------------------
-  set(-,-,-) modulo egalite
-  ---------------------------------------------------------------------*)
-let get_from_set _are_eq _are_dist stype (env,acc) class_of =
+(* Assume that [stype] represents the write `(store b j v)`.
+   For all known writes of the form `(store a i w)` such that `a` and
+   `b` are equal, we form the formula:
+
+      (select (store a i w) i) = w
+
+   Moreover, the term `(select (store a i w) i)` is sent to instantiation
+   engine. *)
+let get_from_set (module Uf : UF) uf stype (env, acc) =
   let sets =
     E.Set.fold
       (fun t acc -> S.union acc (TBS.find t env.tbset))
-      (class_of stype.st) (S.singleton stype)
+      (Uf.class_of uf stype.st) (S.singleton stype)
   in
-
   S.fold (fun { s = set; si = si; sv = sv; _ } (env,acc) ->
-      let ty_si = E.type_info sv in
-      let get = E.mk_term (Sy.Op Sy.Get) [set; si] ty_si in
+      let get = E.ArraysEx.select set si in
       if Tmap.splited get set env.seen then (env,acc)
       else
         let env = {env with
@@ -314,16 +333,25 @@ let get_from_set _are_eq _are_dist stype (env,acc) class_of =
         env, Conseq.add (p_ded, Ex.empty) acc
     ) sets (env,acc)
 
-(*----------------------------------------------------------------------
-  get(t,-) and set(t,-,-) modulo egalite
-  ---------------------------------------------------------------------*)
-let get_and_set are_eq are_dist gtype (env,acc) class_of =
-  let {g=get; gt=gtab; gi=gi; gty=gty} = gtype in
+(* Assume that [gtype] represents the read `(select a i)`.
+   For all known writes of the form `(store b j v)` such that `b` and
+   `a` are equal, we form the formulas:
+
+     i <> j -> (select (store b j v) i) = (select b i).
+
+   and
+
+     i = j -> (select (store b j v) i) = v
+
+   Moreover the terms `(select (store b j v))` and `(select b j)` are
+   sent to the instantiation engine. *)
+let get_and_set (module Uf : UF) uf gtype (env, acc) =
+  let {g=get; gt=gtab; gi=gi} = gtype in
 
   let suff_sets =
     E.Set.fold
       (fun t acc -> S.union acc (TBS.find t env.tbset))
-      (class_of gtab) S.empty
+      (Uf.class_of uf gtab) S.empty
   in
   S.fold
     (fun  {s=set; st=stab; si=si; sv=sv; _ } (env,acc) ->
@@ -333,55 +361,54 @@ let get_and_set are_eq are_dist gtype (env,acc) class_of =
            let env = {env with seen = Tmap.update get set env.seen} in
            let xi, _ = X.make gi in
            let xj, _ = X.make si in
-           let get_stab  = E.mk_term (Sy.Op Sy.Get) [stab;gi] gty in
-           let gt_of_st  = E.mk_term (Sy.Op Sy.Get) [set;gi] gty in
+           let get_stab  = E.ArraysEx.select stab gi in
+           let gt_of_st  = E.ArraysEx.select set gi in
            let p       = LR.mk_eq xi xj in
            let p_ded   = E.mk_eq ~iff:false gt_of_st sv in
            let n     = LR.mk_distinct false [xi;xj] in
            let n_ded = E.mk_eq ~iff:false gt_of_st get_stab in
-           let dep = match are_eq gtab stab with
-               Some (dep, _) -> dep | None -> assert false
+           let dep =
+             match Uf.are_equal uf ~added_terms:true gtab stab with
+             | Some (dep, _) -> dep
+             | None -> assert false
            in
            let env =
              {env with
               new_terms =
                 E.Set.add get_stab (E.Set.add gt_of_st env.new_terms) }
            in
-           update_env are_eq are_dist dep env acc gi si p p_ded n n_ded
+           update_env (module Uf) uf dep env acc gi si p p_ded n n_ded
          end
     ) suff_sets (env,acc)
 
-(* Generer de nouvelles instantiations de lemmes *)
-let new_splits are_eq are_dist env acc class_of =
-  let accu =
+(* Generate new consequences of the axioms. *)
+let new_splits uf_mod uf env =
+  let acc =
     G.fold
-      (fun gt_info accu ->
-         let accu = get_of_set are_eq are_dist  gt_info accu class_of in
-         get_and_set are_eq are_dist  gt_info accu class_of
-      ) env.gets (env,acc)
+      (fun gt_info acc ->
+         let acc = get_of_set uf_mod uf gt_info acc in
+         get_and_set uf_mod uf gt_info acc
+      ) env.gets (env, Conseq.empty)
   in
-  TBS.fold (fun _ tbs accu ->
-      S.fold
-        (fun stype accu ->
-           get_from_set are_eq are_dist stype accu class_of)
-        tbs accu
-    ) env.tbset accu
+  TBS.fold (fun _ tbs acc ->
+      S.fold (fun stype acc -> get_from_set uf_mod uf stype acc) tbs acc
+    ) env.tbset acc
 
-
-
-(* nouvelles disegalites par instantiation du premier
-   axiome d'exentionnalite *)
-let extensionality accu la _class_of =
+(* For each disequality `r <> s` where `r` and `s` are two arrays,
+   we produce the formula:
+     exists i:ty. (select r i) <> (select s i),
+   where `ty` denotes the type of indices of `r` and `s`. *)
+let extensionality accu la =
   List.fold_left
     (fun ((env, acc) as accu) (a, _, dep,_) ->
        match a with
        | A.Distinct(false, [r;s]) ->
          begin
            match X.type_info r, X.term_extract r, X.term_extract s with
-           | Ty.Tfarray (ty_k, ty_v), (Some t1, _), (Some t2, _)  ->
-             let i  = E.fresh_name ty_k in
-             let g1 = E.mk_term (Sy.Op Sy.Get) [t1;i] ty_v in
-             let g2 = E.mk_term (Sy.Op Sy.Get) [t2;i] ty_v in
+           | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _)  ->
+             let i  = E.fresh_name ty in
+             let g1 = E.ArraysEx.select t1 i in
+             let g2 = E.ArraysEx.select t2 i in
              let d  = E.mk_distinct ~iff:false [g1;g2] in
              let acc = Conseq.add (d, dep) acc in
              let env =
@@ -393,6 +420,9 @@ let extensionality accu la _class_of =
        | _ -> accu
     ) accu la
 
+(* Remove all the splits of [env.split] that are subsumed by literals [la].
+   If a split is subsumed by a literal with the explanation [ex], this
+   explanation is added to all the consequences of this split. *)
 let implied_consequences env eqs la =
   let spl, eqs =
     L.fold_left
@@ -410,54 +440,54 @@ let implied_consequences env eqs la =
   {env with split=spl}, eqs
 
 (* deduction de nouvelles dis/egalites *)
-let new_equalities env eqs la class_of =
+let new_equalities env eqs la =
   let la = L.filter
       (fun (a,_,_,_) -> match a with A.Builtin _  -> false | _ -> true) la
   in
-  let env, eqs = extensionality (env, eqs) la class_of in
+  let env, eqs = extensionality (env, eqs) la in
   implied_consequences env eqs la
 
-(* choisir une egalite sur laquelle on fait un case-split *)
 let two = Numbers.Q.from_int 2
 
+(* Choose a equality/disequality between relevant indices to split on it. *)
 let case_split env _uf ~for_model:_ =
   (*if Numbers.Q.compare
     (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
     Numbers.Q.sign  (max_split ()) < 0 then*)
   try
     let a = LR.neg (LRset.choose env.split) in
-    Debug.case_split a;
+    Log.debug (fun k -> k "case split@ %a" LR.print a);
     [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
   with Not_found ->
-    Debug.case_split_none ();
+    Log.debug (fun k -> k "no case split");
     []
 
 let optimizing_objective _env _uf _o = None
 
-let count_splits env la =
-  let nb =
+(* unused
+   let count_splits env la =
+   let nb =
     List.fold_left
       (fun nb (_,_,_,i) ->
          match i with
          | Th_util.CS (Th_util.Th_arrays, n) -> Numbers.Q.mult nb n
          | _ -> nb
-      )env.size_splits la
-  in
-  {env with size_splits = nb}
+      ) env.size_splits la
+   in
+   {env with size_splits = nb} *)
 
 let assume env uf la =
-  let are_eq = Uf.are_equal uf ~added_terms:true in
-  let are_neq = Uf.are_distinct uf in
-  let class_of = Uf.class_of uf in
-  let env = count_splits env la in
-
-  (* instantiation des axiomes des tableaux *)
+  (* let env = count_splits env la in *)
+  (* Instantiations of the array axioms. *)
   Debug.assume la;
   let env = new_terms env la in
-  let env, atoms = new_splits are_eq are_neq env Conseq.empty class_of in
-  let env, atoms = new_equalities env atoms la class_of in
-  (*Debug.env fmt env;*)
-  Debug.new_equalities atoms;
+  let env, atoms = new_splits (module Uf : UF) uf env in
+  let env, atoms = new_equalities env atoms la in
+  Debug.env env;
+  Log.debug (fun k -> k "%d implied equalities:@ %a"
+                (Conseq.cardinal atoms)
+                Fmt.(iter ~sep:sp Conseq.iter
+                     @@ pair ~sep:(any ":") E.print Ex.print) atoms);
   let l =
     Conseq.fold (fun (a,ex) l ->
         ((Literal.LTerm a, ex, Th_util.Other)::l)) atoms []
