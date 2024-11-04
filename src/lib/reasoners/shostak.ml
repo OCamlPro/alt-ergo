@@ -27,9 +27,6 @@
 
 (*** Combination module of Shostak theories ***)
 
-module E = Expr
-module Sy = Symbols
-
 [@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
