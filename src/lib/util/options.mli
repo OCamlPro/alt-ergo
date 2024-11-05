@@ -227,10 +227,6 @@ val set_strict_mode : bool -> unit
 (** [dump_models] accessible with {!val:get_dump_models}. *)
 val set_dump_models : bool -> unit
 
-(** Set [interpretation_use_underscore] accessible with
-    {!val:get_interpretation_use_underscore} *)
-val set_interpretation_use_underscore : bool -> unit
-
 (** Set [objectives_in_interpretation] accessible with
     {!val:get_objectives_in_interpretation} *)
 val set_objectives_in_interpretation : bool -> unit
@@ -744,11 +740,6 @@ val get_every_interpretation : unit -> bool
 (** [true] if the interpretation is set to compute interpretation
     before the solver return unknown *)
 val get_last_interpretation : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the interpretation_use_underscore is set to output _
-    instead of fresh values *)
-val get_interpretation_use_underscore : unit -> bool
 (** Default to [false] *)
 
 (** [true] if the objectives_in_interpretation is set to inline

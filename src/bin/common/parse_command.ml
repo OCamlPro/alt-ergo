@@ -149,7 +149,6 @@ module Debug = struct
     | Arith
     | Arrays
     | Bitv
-    | Sum
     | Ite
     | Cc
     | Combine
@@ -165,20 +164,18 @@ module Debug = struct
     | Split
     | Triggers
     | Types
-    | Typing
     | Uf
     | Unsat_core
     | Use
-    | Warnings
     | Commands
     | Optimize
   [@@deriving eq]
 
   let all = [
-    Debug; Ac; Adt; Arith; Arrays; Bitv; Sum; Ite;
+    Debug; Ac; Adt; Arith; Arrays; Bitv; Ite;
     Cc; Combine; Constr; Explanations; Fm; Fpa; Gc;
     Interpretation; Intervals; Matching; Sat; Split; Triggers;
-    Types; Typing; Uf; Unsat_core; Use; Warnings;
+    Types; Uf; Unsat_core; Use;
     Commands; Optimize
   ]
 
@@ -189,7 +186,6 @@ module Debug = struct
     | Arith -> "arith"
     | Arrays -> "arrays"
     | Bitv -> "bitv"
-    | Sum -> "sum"
     | Ite -> "ite"
     | Cc -> "cc"
     | Combine -> "combine"
@@ -205,11 +201,9 @@ module Debug = struct
     | Split -> "split"
     | Triggers -> "triggers"
     | Types -> "types"
-    | Typing -> "typing"
     | Uf -> "uf"
     | Unsat_core -> "unsat-core"
     | Use -> "use"
-    | Warnings -> "warnings"
     | Commands -> "commands"
     | Optimize -> "optimize"
 
@@ -238,14 +232,6 @@ module Debug = struct
         | Bitv ->
           Options.set_debug_bitv true;
           set_level Bitv.src
-        | Sum ->
-          Printer.print_wrn
-            "The debug flag 'sum' is deprecated and is replaced by 'adt'. \
-             It has the same effect as 'adt' and will be removed in a future \
-             version.";
-          Options.set_debug_adt true;
-          set_level Adt.src;
-          set_level Adt_rel.src
         | Ite ->
           Options.set_debug_ite true;
           set_level Ite_rel.src
@@ -290,10 +276,6 @@ module Debug = struct
         | Types ->
           Options.set_debug_types true;
           set_level S.types
-        | Typing ->
-          Printer.print_wrn
-            "The debug flag 'typing' has no effect. It will be removed in a \
-             future version."
         | Uf ->
           Options.set_debug_uf true;
           set_level Uf.src
@@ -303,11 +285,6 @@ module Debug = struct
         | Use ->
           Options.set_debug_use true;
           set_level Use.src
-        | Warnings ->
-          Printer.print_wrn
-            "The debug flag 'warning' is deprecated and will be removed in a \
-             future version.";
-          Options.set_debug_warnings true
         | Commands ->
           Options.set_debug_commands true;
           set_level Commands.src
@@ -442,7 +419,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation use_underscore objectives_in_interpretation unsat_core
+    interpretation objectives_in_interpretation unsat_core
     output_format model_type () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
@@ -455,7 +432,6 @@ let mk_output_opt
     | Some v -> v
   in
   set_interpretation interpretation;
-  set_interpretation_use_underscore use_underscore;
   set_objectives_in_interpretation objectives_in_interpretation;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -529,7 +505,7 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp
 
 let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
-    _use_fpa (theories)
+    (theories)
   =
   set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
   set_no_fm no_fm;
@@ -1121,17 +1097,6 @@ let parse_output_opt =
     Term.term_result' term
   in
 
-  let use_underscore =
-    let doc = "Output \"_\" instead of fresh value in interpretation" in
-    let deprecated =
-      "this option will be removed as it does not produce a \
-       SMTLIB-compliant output."
-    in
-    let docv = "VAL" in
-    Arg.(value & flag & info
-           ["interpretation-use-underscore";"use-underscore"]
-           ~docv ~docs:s_models ~doc ~deprecated)
-  in
   let objectives_in_interpretation =
     let doc = " inline pretty-printing of optimized expressions in the \
                model instead of a dedicated section '(objectives \
@@ -1190,7 +1155,7 @@ let parse_output_opt =
   in
 
   Term.(ret (const mk_output_opt $
-             interpretation $ use_underscore $
+             interpretation $
              objectives_in_interpretation $ unsat_core $
              output_format $ model_type $
              set_dump_models $ set_dump_models_on $
@@ -1444,12 +1409,6 @@ let parse_theory_opt =
     let doc = "Compute the best bounds for arithmetic variables." in
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
-  let use_fpa =
-    let doc = "Floating-point builtins are always enabled and this option has
-      no effect anymore. It will be removed in a future version." in
-    let deprecated = "this option is always enabled" in
-    Arg.(value & flag & info ["use-fpa"] ~docs ~doc ~deprecated) in
-
   let theories =
     let theory_enum =
       Theories.all
@@ -1476,34 +1435,12 @@ let parse_theory_opt =
           (Arg.doc_alts_enum theory_enum)
       in
       let docv = "THEORY" in
-      let disable_theories =
-        Term.(const List.concat $
-              Arg.(
-                value
-                & opt_all (list theory) []
-                & info ["disable-theory"; "disable-theories"] ~docs ~doc ~docv
-              ))
-      in
-      let disable_adts =
-        let doc = "Disable Algebraic Datatypes theory. Deprecated alias for
-        `--disable-theories adt`." in
-        let deprecated = "use `--disable-theories ac` instead." in
-        Arg.(value & flag & info ["disable-adts"] ~docs ~doc ~deprecated)
-      in
-      let no_ac =
-        let doc = "Disable the AC theory of Associative and \
-                   Commutative function symbols. Deprecated alias for
-                  `--disable-theories ac`." in
-        let deprecated = "use `--disable-theories ac` instead" in
-        Arg.(value & flag & info ["no-ac"] ~docs ~doc ~deprecated)
-      in
-      let mk_disable_theories disable_theories disable_adts no_ac =
-        let open Theories in
-        (if disable_adts then [ ADT ] else []) @
-        (if no_ac then [ AC ] else []) @
-        disable_theories
-      in
-      Term.(const mk_disable_theories $ disable_theories $ disable_adts $ no_ac)
+      Term.(const List.concat $
+            Arg.(
+              value
+              & opt_all (list theory) []
+              & info ["disable-theory"; "disable-theories"] ~docs ~doc ~docv
+            ))
     in
     let preludes enable_theories disable_theories =
       let theories = Theories.Set.of_list Theories.default in
@@ -1535,7 +1472,7 @@ let parse_theory_opt =
   Term.(ret (const mk_theory_opt $
              inequalities_plugin $ no_contracongru $
              no_fm $ no_nla $ no_tcp $ no_theory $ restricted $
-             tighten_vars $ use_fpa $ theories
+             tighten_vars $ theories
             )
        )
 
