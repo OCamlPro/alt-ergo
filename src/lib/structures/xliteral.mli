@@ -75,9 +75,6 @@ module type S = sig
 
   val neg : t -> t
 
-  val add_label : Hstring.t -> t -> unit
-  val label : t -> Hstring.t
-
   val print : Format.formatter -> t -> unit
 
   val compare : t -> t -> int
@@ -96,11 +93,6 @@ module type S = sig
   module Set : Set.S with type elt = t
 end
 
-val print_view :
-  ?lbl:string ->
-  (Format.formatter -> 'a -> unit) ->
-  Format.formatter ->
-  'a view ->
-  unit
+val print_view : 'a Fmt.t -> 'a view Fmt.t
 
 module Make ( X : OrderedType ) : S with type elt = X.t

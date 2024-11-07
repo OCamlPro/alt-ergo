@@ -225,13 +225,9 @@ val fresh_skolem_name : string -> t
 val is_get : t -> bool
 val is_set : t -> bool
 
-val add_label : Hstring.t -> t -> unit
-val label : t -> Hstring.t
-
 val print_bound : Format.formatter -> bound -> unit
 val string_of_bound : bound -> string
 
-val clear_labels : unit -> unit
 (** Empties the labels Hashtable *)
 
 module Set : Set.S with type elt = t

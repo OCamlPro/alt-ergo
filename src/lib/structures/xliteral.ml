@@ -74,9 +74,6 @@ module type S = sig
 
   val neg : t -> t
 
-  val add_label : Hstring.t -> t -> unit
-  val label : t -> Hstring.t
-
   val print : Format.formatter -> t -> unit
 
   val compare : t -> t -> int
@@ -94,53 +91,51 @@ module type S = sig
 
 end
 
-let print_view ?(lbl="") pr_elt fmt vw =
+let print_view pp_elt ppf vw =
   match vw with
   | Eq (z1, z2) ->
-    Format.fprintf fmt "%s %a = %a" lbl pr_elt z1 pr_elt z2
+    Fmt.pf ppf "%a =@ %a" pp_elt z1 pp_elt z2
 
-  | Distinct (b,(z::l)) ->
-    let b = if b then "~ " else "" in
-    Format.fprintf fmt "%s %s%a" lbl b pr_elt z;
-    List.iter (fun x -> Format.fprintf fmt " <> %a" pr_elt x) l
+  | Distinct (b, l) ->
+    Fmt.pf ppf "%s%a"
+      (if b then "~" else "")
+      Fmt.(list ~sep:(any " <> ") pp_elt) l
 
-  | Builtin (true, LE, [v1;v2]) ->
-    Format.fprintf fmt "%s %a <= %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (true, LE, [v1; v2]) ->
+    Fmt.pf ppf "%a <=@ %a" pp_elt v1 pp_elt v2
 
-  | Builtin (true, LT, [v1;v2]) ->
-    Format.fprintf fmt "%s %a < %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (true, LT, [v1; v2]) ->
+    Fmt.pf ppf "%a <@ %a" pp_elt v1 pp_elt v2
 
-  | Builtin (false, LE, [v1;v2]) ->
-    Format.fprintf fmt "%s %a > %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (false, LE, [v1; v2]) ->
+    Fmt.pf ppf "%a >@ %a" pp_elt v1 pp_elt v2
 
-  | Builtin (false, LT, [v1;v2]) ->
-    Format.fprintf fmt "%s %a >= %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (false, LT, [v1; v2]) ->
+    Fmt.pf ppf "%a >=@ %a" pp_elt v1 pp_elt v2
 
   | Builtin (_, (LE | LT), _) ->
     assert false (* not reachable *)
 
-  | Builtin (true, BVULE, [v1;v2]) ->
-    Format.fprintf fmt "%s %a <= %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (true, BVULE, [v1; v2]) ->
+    Fmt.pf ppf "%a <=@ %a" pp_elt v1 pp_elt v2
 
-  | Builtin (false, BVULE, [v1;v2]) ->
-    Format.fprintf fmt "%s %a > %a" lbl pr_elt v1 pr_elt v2
+  | Builtin (false, BVULE, [v1; v2]) ->
+    Fmt.pf ppf "%a >@ %a" pp_elt v1 pp_elt v2
 
   | Builtin (_, BVULE, _) ->
     assert false (* not reachable *)
 
   | Builtin (pos, IsConstr tcst, [e]) ->
-    Format.fprintf fmt "%s(%a ? %a)"
-      (if pos then "" else "not ") pr_elt e DE.Term.Const.print tcst
+    Fmt.pf ppf "%s(%a ?@ %a)"
+      (if pos then "" else "~")
+      pp_elt e
+      DE.Term.Const.print tcst
 
   | Builtin (_, IsConstr _, _) ->
     assert false (* not reachable *)
 
-  | Pred (p,b) ->
-    Format.fprintf fmt "%s %a = %s" lbl pr_elt p
-      (if b then "false" else "true")
-
-  | Distinct (_, _) -> assert false
-
+  | Pred (p, b) ->
+    Fmt.pf ppf "%s%a" (if b then "~" else "") pp_elt p
 
 module Make (X : OrderedType) : S with type elt = X.t = struct
 
@@ -179,18 +174,7 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
   module Set = Set.Make(T)
   module Map = Map.Make(T)
 
-  module Labels = Hashtbl.Make(T)
-
-  let labels = Labels.create 100007
-
-  let add_label lbl t = Labels.replace labels t lbl
-
-  let label t = try Labels.find labels t with Not_found -> Hstring.empty
-
-  let print fmt a =
-    let lbl = Hstring.view (label a) in
-    let lbl = if String.length lbl = 0 then lbl else lbl^":" in
-    print_view ~lbl X.print fmt (view a)
+  let print ppf a = print_view X.print ppf (view a)
 
   let equal_builtins n1 n2 =
     match n1, n2 with
@@ -335,7 +319,6 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     HC.save_cache ()
 
   let reinit_cache () =
-    HC.reinit_cache ();
-    Labels.clear labels
+    HC.reinit_cache ()
 
 end

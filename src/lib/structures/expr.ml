@@ -850,11 +850,7 @@ let add_label =
     | _ ->
       add_aux lbl e
 
-let label t =
-  try Labels.find labels t
-  with Not_found ->
-    let { f = f; _ } = t in
-    Sy.label f
+let label t = Labels.find labels t
 
 let print_tagged_classes =
   let is_labeled t = not (Hstring.equal (label t) Hstring.empty) in

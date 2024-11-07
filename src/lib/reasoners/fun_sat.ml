@@ -1874,7 +1874,6 @@ module Make (Th : Theory.S) = struct
     Steps.reinit_steps ();
     clear_instances_cache ();
     Th.reinit_cpt ();
-    Symbols.clear_labels ();
     Id.Namespace.reinit ();
     Var.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
