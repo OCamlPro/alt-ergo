@@ -175,7 +175,6 @@ let debug_types = ref false
 let debug_uf = ref false
 let debug_unsat_core = ref false
 let debug_use = ref false
-let debug_warnings = ref false
 let debug_commands = ref false
 let debug_optimize = ref false
 let rule = ref (-1)
@@ -204,7 +203,6 @@ let set_debug_types b = debug_types := b
 let set_debug_uf b = debug_uf := b
 let set_debug_unsat_core b = debug_unsat_core := b
 let set_debug_use b = debug_use := b
-let set_debug_warnings b = debug_warnings := b
 let set_debug_commands b = debug_commands := b
 let set_debug_optimize b = debug_optimize := b
 let set_rule b = rule := b
@@ -233,7 +231,6 @@ let get_debug_types () = !debug_types
 let get_debug_uf () = !debug_uf
 let get_debug_unsat_core () = !debug_unsat_core
 let get_debug_use () = !debug_use
-let get_debug_warnings () = !debug_warnings
 let get_debug_commands () = !debug_commands
 let get_debug_optimize () = !debug_optimize
 let get_rule () = !rule

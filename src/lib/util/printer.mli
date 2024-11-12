@@ -47,13 +47,11 @@ val print_err :
 
 (** Print warning message on the warning formatter accessible with
     {!val:Options.get_fmt_wrn} and set by default to stderr.
-    Prints only if warning (true by default) is true.
     If header is set, prints a header "[Warning]".
     The wrn formatter is flushed after the print if flushed is set *)
 val print_wrn :
   ?flushed:bool ->
   ?header:bool ->
-  ?warning:bool ->
   ('a, Format.formatter, unit) format -> 'a
 
 (** Print debug message on the debug formatter accessible with

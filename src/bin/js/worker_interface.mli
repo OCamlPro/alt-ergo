@@ -78,7 +78,6 @@ type options = {
   debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
-  debug_warnings : bool option;
   rule : int option;
 
   case_split_policy : case_split_policy option;

@@ -1146,8 +1146,7 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        Printer.print_wrn ~warning:(Options.get_debug_warnings ())
-          "(sub) axiom %s replaced with %s" name q.name;
+        Printer.print_wrn "(sub) axiom %s replaced with %s" name q.name;
         lem
       with Not_found | Exit ->
         let d = new_q.main.depth in (* + 1 ?? *)

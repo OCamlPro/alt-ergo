@@ -181,7 +181,6 @@ type options = {
   debug_uf : bool option;
   debug_unsat_core : bool option;
   debug_use : bool option;
-  debug_warnings : bool option;
   rule : int option;
 
   case_split_policy : case_split_policy option;
@@ -281,7 +280,6 @@ let init_options () = {
   debug_uf = None;
   debug_unsat_core = None;
   debug_use = None;
-  debug_warnings = None;
   rule = None;
 
   case_split_policy = None;
@@ -395,12 +393,11 @@ let opt_dbg3_encoding =
   conv
     (fun dbg3 -> dbg3)
     (fun dbg3 -> dbg3)
-    (obj5
+    (obj4
        (opt "debug_types" bool)
        (opt "debug_uf" bool)
        (opt "debug_unsat_core" bool)
        (opt "debug_use" bool)
-       (opt "debug_warnings" bool)
     )
 
 let opt1_encoding =
@@ -551,8 +548,7 @@ let options_to_json opt =
     (opt.debug_types,
      opt.debug_uf,
      opt.debug_unsat_core,
-     opt.debug_use,
-     opt.debug_warnings)
+     opt.debug_use)
   in
   let all_opt1 =
     (opt.rule,
@@ -677,8 +673,7 @@ let options_from_json options =
     let (debug_types,
          debug_uf,
          debug_unsat_core,
-         debug_use,
-         debug_warnings) = dbg_opt3 in
+         debug_use) = dbg_opt3 in
     let (rule,
          case_split_policy,
          enable_adts_cs,
@@ -762,7 +757,6 @@ let options_from_json options =
       debug_uf;
       debug_unsat_core;
       debug_use;
-      debug_warnings;
       rule;
       case_split_policy;
       enable_adts_cs;

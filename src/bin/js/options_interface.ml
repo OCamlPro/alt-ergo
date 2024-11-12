@@ -113,7 +113,6 @@ let set_options r =
   set_options_opt Options.set_debug_uf r.debug_uf;
   set_options_opt Options.set_debug_unsat_core r.debug_unsat_core;
   set_options_opt Options.set_debug_use r.debug_use;
-  set_options_opt Options.set_debug_warnings r.debug_warnings;
   set_options_opt Options.set_rule r.rule;
 
   set_options_opt Options.set_case_split_policy

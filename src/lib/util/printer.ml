@@ -227,12 +227,10 @@ let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
   end
   else Format.ifprintf Format.err_formatter s
 
-let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
-    ?(warning=true) s =
+let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ())) s =
   if Options.get_warning_as_error () then
-    print_err ~flushed ~header ~error:warning s
+    print_err ~flushed ~header ~error:true s
   else
-  if warning then begin
     let fmt = Options.Output.get_fmt_diagnostic () in
     Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
     if header then
@@ -242,8 +240,6 @@ let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
         Format.fprintf fmt "@[<v 10>[Warning] " ;
     if flushed || Options.get_output_with_forced_flush ()
     then Format.kfprintf flush fmt s else Format.fprintf fmt s
-  end
-  else Format.ifprintf Format.err_formatter s
 
 let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     ?(module_name="") ?(function_name="") s =
