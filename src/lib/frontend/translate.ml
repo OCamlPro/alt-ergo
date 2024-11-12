@@ -761,7 +761,18 @@ let handle_patt_var id (DE.{ term_descr; _ } as term)  =
       "Expected a variable in a case match but got %a"
       DE.Term.print term
 
-module Match = struct
+module Match : sig
+  type pat
+  (** Type used as an intermediate description of patterns during the
+      match compilation. *)
+
+  val mk_pat : DE.term -> pat
+  (** Convert Dolmen pattern into the intermediate description. *)
+
+  val make : Expr.t -> (pat * Expr.t) list -> Expr.t
+  (** [make e l] compiles into ite expressions the match of the expression [e]
+      against the patterns of the branches [l]. *)
+end = struct
   type pat =
     | Var of Var.t
     | Constr of DE.term_cst * (Var.t * DE.term_cst * Ty.t) list
@@ -838,37 +849,6 @@ module Match = struct
         let cond = mk_tester name e in
         E.mk_ite cond _then _else
 
-  (* (* TO BE REMOVED *)
-     let debug_compile_match e cases res =
-     if Options.get_debug_adt () then begin
-      Printer.print_dbg  ~flushed:false ~module_name:"Expr"
-        "compilation of: match %a with@ " print e;
-      let p_list_vars fmt l =
-        match l with
-          [] -> ()
-        | [e,_,_] -> Var.print fmt e
-        | (e,_,_) :: l ->
-          Format.fprintf fmt "(%a" Var.print e;
-          List.iter (fun (e,_,_) -> Format.fprintf fmt ", %a" Var.print e) l;
-          Format.fprintf fmt ")"
-      in
-      List.iter
-        (fun (p, v) ->
-           match p with
-           | Typed.Constr {name; args} ->
-             Printer.print_dbg  ~flushed:false ~header:false
-               "| %a %a -> %a@ "
-               DE.Term.Const.print name
-               p_list_vars args
-               print v;
-           | Typed.Var x ->
-             Printer.print_dbg  ~flushed:false ~header:false
-               "| %a -> %a@ " Var.print x print v;
-        )cases;
-      Printer.print_dbg ~header:false
-        "end@ result is: %a" print res;
-     end *)
-
   let make e cases =
     let ty = E.type_info e in
     let mk_destr =
@@ -891,8 +871,6 @@ module Match = struct
     [@ocaml.ppwarning "TODO: introduce a let if e is a big expr"]
     [@ocaml.ppwarning "TODO: add other elim schemes"]
     [@ocaml.ppwarning "TODO: add a match construct in expr"]
-
-
 end
 
 let arith_ty = function
