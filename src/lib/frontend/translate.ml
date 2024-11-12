@@ -576,9 +576,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
   in
   (Hstring.make name, arg_tys, ret_ty)
 
-(** Handles the definitions of a list of mutually recursive types.
-    - If one of the types is an ADT, the ADTs that have only one case are
-      considered as ADTs as well and not as records. *)
+(** Handles the definitions of a list of mutually recursive types. *)
 let mk_mr_ty_decls (tdl: DE.ty_cst list) =
   let handle_ty_decl (ty: Ty.t) (tdef: DE.Ty.def option) =
     match ty, tdef with

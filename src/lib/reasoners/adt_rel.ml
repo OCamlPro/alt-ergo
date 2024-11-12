@@ -472,12 +472,7 @@ let build_constr_eq r c =
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
         let cons = E.mk_constr c xs ty in
-        let r', ctx = X.make cons in
-        (* In the current implementation of `X.make`, we produce
-           a nonempty context only for interpreted semantic values
-           of the `Arith` and `Records` theories. The semantic
-           values `cons` never involves such values. *)
-        assert (Compat.List.is_empty ctx);
+        let r', _ctx = X.make cons in
         let eq = Shostak.L.(view @@ mk_eq r r') in
         Some (eq, E.mk_constr c xs ty)
 
@@ -635,12 +630,7 @@ let split_domain ~for_model env uf =
   let* cd, r, c = pick_domain ~for_model uf in
   if for_model || can_split env (Numbers.Q.from_int cd) then
     let _, cons = Option.get @@ build_constr_eq r c in
-    let nr, ctx = X.make cons in
-    (* In the current implementation of `X.make`, we produce
-       a nonempty context only for interpreted semantic values
-       of the `Arith` and `Records` theories. The semantic
-       values `cons` never involves such values. *)
-    assert (Compat.List.is_empty ctx);
+    let nr, _ctx = X.make cons in
     Some (LR.mkv_eq r nr)
   else
     None

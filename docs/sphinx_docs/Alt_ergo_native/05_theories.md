@@ -17,8 +17,7 @@ Alt-Ergo currently provides built-in support for the following theories.
 * Linear arithmetic over integers and rationals
 * (Fragment of) non-linear arithmetic
 * Floating-point arithmetic (as an extension)
-* Enumerated datatypes
-* Record datatypes
+* Algebraic datatypes
 * Polymorphic functional arrays
 * Fixed-size bitvectors
 
@@ -28,7 +27,6 @@ All theories are always considered *modulo equality*.
 * `SUM`: Enumerated datatypes
 * `Adt`: Algebraic datatypes
 * `Arrays`: Polymorphic functional arrays
-* `Records`: Record datatypes
 * `Bitv`: Fixed-size bitvectors
 * `LIA`: Linear arithmetic over integers
 * `LRA`: Linear arithmetic over rationals

@@ -71,7 +71,7 @@ module type SHOSTAK = sig
       Semantic value for which [is_constant] returns [true] contains no free
       names and thus have the same concrete value in all contexts.
 
-      Note that for some theories (e.g. records, arrays) the constant may not be
+      Note that for some theories (e.g. adt, arrays) the constant may not be
       pure: it may involve nested (constant) terms of other theories. *)
   val is_constant : t -> bool
 
@@ -126,7 +126,7 @@ module type SHOSTAK = sig
      forced.
 
      Use [false] only when the returned term contains aliens that should be
-     assigned (e.g. records).
+     assigned (e.g. adt).
 
      **When returning [false], you must ensure that the equality between the
      first argument and the return value always hold (i.e. is a *unit* fact).
@@ -198,7 +198,7 @@ module type X = sig
 
   (* the returned bool is true when the returned term in a constant of the
      theory. Otherwise, the term contains aliens that should be assigned
-     (eg. records). In this case, it's a unit fact, not a decision
+     (eg. adt). In this case, it is a unit fact, not a decision
   *)
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
