@@ -333,10 +333,6 @@ module SmtPrinter = struct
     | `Forall -> Fmt.pf ppf "forall"
     | `Exists -> Fmt.pf ppf "exists"
 
-  (* This printer follows the convention used to print
-     type variables in the module [Ty]. *)
-  let pp_tvar ppf v = Fmt.pf ppf "A%a" DE.Ty.Var.print v
-
   let rec pp_main bind ppf { user_trs; main; binders; _ } =
     if not @@ Var.Map.is_empty binders then
       Fmt.pf ppf "@[<2>(%a (%a)@, %a@, %a)@]"
@@ -350,7 +346,7 @@ module SmtPrinter = struct
   and pp_quantified bind ppf q =
     if q.toplevel && not @@ Ty.TvSet.is_empty q.main.vty then
       Fmt.pf ppf "@[<2>(par (%a)@, %a)@]"
-        Fmt.(box @@ iter ~sep:sp Ty.TvSet.iter pp_tvar) q.main.vty
+        Fmt.(box @@ iter ~sep:sp Ty.TvSet.iter DE.Ty.Var.print) q.main.vty
         (pp_main bind) q
     else
       pp_main bind ppf q
