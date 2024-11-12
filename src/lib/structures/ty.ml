@@ -38,7 +38,7 @@ type t =
   | Tadt of DE.ty_cst * t list
   | Trecord of trecord
 
-and tvar = { v : int ; mutable value : t option }
+and tvar = { v : int } [@@unboxed]
 
 and trecord = {
   mutable args : t list;
@@ -62,14 +62,12 @@ module Smtlib = struct
     | Text (args, name)
     | Trecord { args; name; _ } | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
-    | Tvar { v; value = None; _ } -> Fmt.pf ppf "A%d" v
-    | Tvar { value = Some t; _ } -> pp ppf t
+    | Tvar { v } -> Fmt.pf ppf "A%d" v
 end
 
 let pp_smtlib = Smtlib.pp
 
 exception TypeClash of t*t
-exception Shorten of t
 
 type adt_constr =
   { constr : DE.term_cst ;
@@ -96,7 +94,6 @@ let assoc_destrs hs cases =
 
 (*** pretty print ***)
 let print_generic body_of =
-  let h = Hashtbl.create 17 in
   let rec print =
     let open Format in
     fun body_of fmt -> function
@@ -104,17 +101,7 @@ let print_generic body_of =
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
-      | Tvar{v=v ; value = None} -> fprintf fmt "'a_%d" v
-      | Tvar{v=v ; value = Some (Trecord { args = l; name = n; _ } as t) } ->
-        if Hashtbl.mem h v then
-          fprintf fmt "%a %a" print_list l DE.Ty.Const.print n
-        else
-          (Hashtbl.add h v ();
-           (*fprintf fmt "('a_%d->%a)" v print t *)
-           print body_of fmt t)
-      | Tvar{ value = Some t; _ } ->
-        (*fprintf fmt "('a_%d->%a)" v print t *)
-        print body_of fmt t
+      | Tvar{ v } -> fprintf fmt "'a_%d" v
       | Text(l, s) when l == [] ->
         fprintf fmt "<ext>%a" DE.Ty.Const.print s
       | Text(l,s) ->
@@ -190,47 +177,12 @@ let print      = fst (print_generic None) None
 
 let fresh_var =
   let cpt = ref (-1) in
-  fun () -> incr cpt; {v= !cpt ; value = None }
+  fun () -> incr cpt; { v = !cpt }
 
 let fresh_tvar () = Tvar (fresh_var ())
 
-let rec shorten ty =
-  match ty with
-  | Tvar { value = None; _ }  -> ty
-  | Tvar { value = Some (Tvar{ value = None; _ } as t'); _ } -> t'
-  | Tvar ({ value = Some (Tvar t2); _ } as t1) ->
-    t1.value <- t2.value; shorten ty
-  | Tvar { value = Some t'; _ } -> shorten t'
-
-  | Text (l,s) ->
-    let l, same = My_list.apply shorten l in
-    if same then ty else Text(l,s)
-
-  | Tfarray (t1,t2) ->
-    let t1' = shorten t1 in
-    let t2' = shorten t2 in
-    if t1 == t1' && t2 == t2' then ty
-    else Tfarray(t1', t2')
-
-  | Trecord r ->
-    r.args <- List.map shorten r.args;
-    r.lbs <- List.map (fun (lb, ty) -> lb, shorten ty) r.lbs;
-    ty
-
-  | Tadt (n, args) ->
-    let args' = List.map shorten args in
-    shorten_body n args;
-    (* should not rebuild the type if no changes are made *)
-    Tadt (n, args')
-
-  | Tint | Treal | Tbool | Tbitv _ -> ty
-
-and shorten_body _ _ =
-  ()
-  [@ocaml.ppwarning "TODO: should be implemented ?"]
-
 let rec compare t1 t2 =
-  match shorten t1 , shorten t2 with
+  match t1, t2 with
   | Tvar{ v = v1; _ } , Tvar{ v = v2; _ } -> Int.compare v1 v2
   | Tvar _, _ -> -1 | _ , Tvar _ -> 1
   | Text(l1, s1) , Text(l2, s2) ->
@@ -282,8 +234,8 @@ and compare_list l1 l2 = match l1, l2 with
 
 let rec equal t1 t2 =
   t1 == t2 ||
-  match shorten t1 , shorten t2 with
-  | Tvar{ v = v1; _ }, Tvar{ v = v2; _ } -> v1 = v2
+  match t1, t2 with
+  | Tvar{ v = v1 }, Tvar{ v = v2 } -> v1 = v2
   | Text(l1, s1), Text(l2, s2) ->
     (try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
      with Invalid_argument _ -> false)
@@ -319,10 +271,12 @@ let esubst = M.empty
 
 let rec matching s pat t =
   match pat , t with
-  | Tvar {v=n;value=None} , _ ->
-    (try if not (equal (M.find n s) t) then raise (TypeClash(pat,t)); s
-     with Not_found -> M.add n t s)
-  | Tvar { value = _; _ }, _ -> raise (Shorten pat)
+  | Tvar { v } , _ ->
+    (try
+       if not (equal (M.find v s) t) then
+         raise (TypeClash(pat,t));
+       s
+     with Not_found -> M.add v t s)
   | Text (l1,s1) , Text (l2,s2) when DE.Ty.Const.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
   | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
@@ -375,17 +329,12 @@ let apply_subst =
 (* Assume that [shorten] have been applied on [ty]. *)
 let rec fresh ty subst =
   match ty with
-  | Tvar { value = Some _; _ } ->
-    (* This case is eliminated by the normalization performed
-       in [shorten]. *)
-    assert false
-
-  | Tvar { v= x; _ } ->
+  | Tvar { v } ->
     begin
-      try M.find x subst, subst
+      try M.find v subst, subst
       with Not_found ->
         let nv = Tvar (fresh_var()) in
-        nv, M.add x nv subst
+        nv, M.add v nv subst
     end
   | Text (args, n) ->
     let args, subst = fresh_list args subst in
@@ -414,10 +363,6 @@ and fresh_list lty subst =
     (fun ty (lty, subst) ->
        let ty, subst = fresh ty subst in
        ty::lty, subst) lty ([], subst)
-
-let fresh ty subst = fresh (shorten ty) subst
-
-let fresh_list lty subst = fresh_list (List.map shorten lty) subst
 
 module Decls = struct
 
@@ -480,10 +425,8 @@ module Decls = struct
           try
             List.fold_left2
               (fun sbt vty ty ->
-                 let vty = shorten vty in
                  match vty with
-                 | Tvar { value = Some _ ; _ } -> assert false
-                 | Tvar {v ; value = None}   ->
+                 | Tvar { v } ->
                    if equal vty ty then sbt else M.add v ty sbt
                  | _ ->
                    Printer.print_err "vty = %a and ty = %a"
@@ -599,9 +542,8 @@ module Set =
 
 let vty_of t =
   let rec vty_of_rec acc t =
-    let t = shorten t in
     match t with
-    | Tvar { v = i ; value = None } -> Svty.add i acc
+    | Tvar { v = i } -> Svty.add i acc
     | Text(l,_) -> List.fold_left vty_of_rec acc l
     | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
     | Trecord { args; lbs; _ } ->
@@ -610,7 +552,6 @@ let vty_of t =
     | Tadt(_, args) ->
       List.fold_left vty_of_rec acc args
 
-    | Tvar { value = Some _ ; _ }
     | Tint | Treal | Tbool | Tbitv _ ->
       acc
   in

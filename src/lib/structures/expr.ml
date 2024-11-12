@@ -1782,7 +1782,7 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
 
 let free_type_vars_as_types e =
   Ty.Svty.fold
-    (fun i z -> Ty.Set.add (Ty.Tvar {Ty.v=i; value = None}) z)
+    (fun v z -> Ty.Set.add (Ty.Tvar { v }) z)
     (free_type_vars e) Ty.Set.empty
 
 

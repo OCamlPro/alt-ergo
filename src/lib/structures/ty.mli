@@ -66,9 +66,7 @@ type t =
 and tvar = {
   v : int;
   (** Unique identifier *)
-  mutable value : t option;
-  (** Pointer to the current value of the type variable. *)
-}
+} [@@unboxed]
 (** Type variables.
     The [value] field is mutated during unification,
     hence distinct types should have disjoints sets of
