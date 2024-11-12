@@ -157,9 +157,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
           Ty.print_subst sty
 
     let match_class_of t cl =
-      Log.debug (fun k -> k "class of '%a' is:@  %a"
-                    E.print t
-                    Fmt.(box @@ braces @@ iter ~sep:comma E.Set.iter E.print) cl)
+      if Options.get_debug_matching() >= 3 then
+        Log.debug (fun k -> k "class of '%a' is:@  %a"
+                      E.print t
+                      Fmt.(box @@ braces
+                           @@ iter ~sep:comma E.Set.iter E.print) cl)
 
     let candidate_substitutions pat_info res =
       let open Matching_types in
