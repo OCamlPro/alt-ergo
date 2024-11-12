@@ -169,16 +169,16 @@ module Shostak (X : ALIEN) = struct
     assert (not @@ Options.get_disable_adts ());
     Log.debug (fun k -> k "make %a" E.print t);
     let { E.f; xs; ty; _ } = E.term_view t in
-    let sx, ctx =
+    let ssx, ctx =
       List.fold_left
         (fun (args, ctx) s ->
            let rs, ctx' = X.make s in
            rs :: args, List.rev_append ctx' ctx
         )([], []) xs
     in
-    let xs = List.rev sx in
-    match f, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
+    let xxs = List.rev ssx in
+    match f, ty with
+    | Sy.Op Sy.Constr hs, Ty.Tadt (name, params) ->
       let cases = Ty.type_body name params in
       let case_hs =
         try Ty.assoc_destrs hs cases with Not_found -> assert false
@@ -188,12 +188,22 @@ module Shostak (X : ALIEN) = struct
           List.rev @@
           List.fold_left2
             (fun c_args v (lbl, _) -> (lbl, v) :: c_args)
-            [] xs case_hs
+            [] xxs case_hs
         with Invalid_argument _ -> assert false
+      in
+      let ctx =
+        match cases with
+        | [{ destrs; _ }] ->
+          List.fold_left2
+            (fun ctx x (d, d_ty) ->
+               let access = E.mk_term (Sy.destruct d) [t] d_ty in
+               E.mk_eq ~iff:false x access :: ctx
+            ) ctx xs destrs
+        | _ -> ctx
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct _, [_], _ -> X.term_embed t, ctx
+    | Sy.Op Sy.Destruct _, _ -> X.term_embed t, ctx
     (* No risk !
          if equal sel (embed sel_x) then X.term_embed t, ctx
          else sel_x, ctx (* canonization OK *)
