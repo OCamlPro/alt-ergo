@@ -1158,11 +1158,12 @@ end
 
 type cache = {
   array_selects: Expr.t E.Table.t E.Table.t;
-  (** Stores all the get accesses to arrays. *)
+  (** Stores all the get accesses to array names. *)
 
   abstracts: Expr.t Shostak.HX.t;
   (** Stores all the abstract values generated. This cache is necessary
-      to ensure we don't generate twice an abstract value for a given symbol. *)
+      to ensure we do not generate twice an abstract value for a given
+      symbol. *)
 }
 
 let is_destructor = function
@@ -1224,8 +1225,13 @@ let compute_concrete_model_of_val cache =
 
         | Sy.Op Sy.Get, [a; i], _ ->
           begin
-            store_array_select a i ret_rep;
-            acc
+            let E.{ f = fa; _ } = E.term_view a in
+            match fa with
+            | Sy.Name _ ->
+              store_array_select a i ret_rep;
+              acc
+            | _ ->
+              acc
           end
 
         | Sy.Name { hs = id; _ }, _, _ ->
@@ -1273,8 +1279,7 @@ let extract_concrete_model cache =
             | Sy.Name { hs; ns = User; _ } -> hs, true
             | Sy.Name { hs; _ } -> hs, false
             | _ ->
-              (* We only store array declarations as keys in the cache
-                 [array_selects]. *)
+              (* Excluded in [compute_concrete_model_of_val] *)
               assert false
           in
           let mdl =

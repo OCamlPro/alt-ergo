@@ -1,0 +1,7 @@
+(set-option :produce-models true)
+(set-logic ALL)
+(declare-const a (Array Int Int))
+(declare-const b (Array Int Int))
+(assert (= (store a 0 0) (store b 0 0)))
+(check-sat)
+(get-model)
