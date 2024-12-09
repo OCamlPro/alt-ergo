@@ -1,0 +1,5 @@
+
+unknown
+(
+  (define-fun x () Real (- 42.0))
+)

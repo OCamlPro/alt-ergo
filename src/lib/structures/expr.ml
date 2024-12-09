@@ -313,15 +313,22 @@ module SmtPrinter = struct
     | Sy.Real q when Q.(equal q zero) -> true
     | _ -> false
 
+  let pp_integer ppf i =
+    if Z.sign i = -1 then
+      Fmt.pf ppf "(- %a)" Z.pp_print (Z.abs i)
+    else
+      Z.pp_print ppf i
+
   let pp_rational ppf q =
     if Z.equal (Q.den q) Z.one then
-      Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
-    else if Q.sign q = -1 then
-      Fmt.pf ppf "(/ (- %a) %a)"
-        Z.pp_print (Z.abs (Q.num q))
-        Z.pp_print (Q.den q)
+      if Z.sign (Q.num q) = -1 then
+        Fmt.pf ppf "(- %a.0)" Z.pp_print (Z.abs (Q.num q))
+      else
+        Fmt.pf ppf "%a.0" Z.pp_print (Q.num q)
     else
-      Fmt.pf ppf "(/ %a %a)" Z.pp_print (Q.num q) Z.pp_print (Q.den q)
+      Fmt.pf ppf "(/ %a %a)"
+        pp_integer (Q.num q)
+        Z.pp_print (Q.den q)
 
   let pp_binder ppf (var, ty) =
     Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
@@ -484,14 +491,9 @@ module SmtPrinter = struct
 
     | Sy.Var v, [] -> Var.print ppf v
 
-    | Sy.Int i, [] ->
-      if Z.sign i = -1 then
-        Fmt.pf ppf "(- %a)" Z.pp_print (Z.abs i)
-      else
-        Fmt.pf ppf "%a" Z.pp_print i
+    | Sy.Int i, [] -> pp_integer ppf i
 
-    | Sy.Real q, [] ->
-      pp_rational ppf q
+    | Sy.Real q, [] -> pp_rational ppf q
 
     | Sy.Bitv (n, s), [] ->
       if n mod 4 = 0 then
