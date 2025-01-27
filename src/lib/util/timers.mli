@@ -28,14 +28,12 @@
 type ty_module =
   | M_None
   | M_Combine
-  | M_Typing
   | M_Sat
   | M_Match
   | M_CC
   | M_UF
   | M_Arith
   | M_Arrays
-  | M_Sum
   | M_Records
   | M_Adt
   | M_Bitv

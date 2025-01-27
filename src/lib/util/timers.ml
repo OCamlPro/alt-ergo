@@ -32,14 +32,12 @@
 type ty_module =
   | M_None
   | M_Combine
-  | M_Typing
   | M_Sat
   | M_Match
   | M_CC
   | M_UF
   | M_Arith
   | M_Arrays
-  | M_Sum
   | M_Records
   | M_Adt
   | M_Bitv
@@ -54,14 +52,12 @@ let all_modules =
   let l = [
     M_None;
     M_Combine;
-    M_Typing;
     M_Sat;
     M_Match;
     M_CC;
     M_UF;
     M_Arith;
     M_Arrays;
-    M_Sum;
     M_Records;
     M_Adt;
     M_Bitv;
@@ -129,14 +125,12 @@ let all_functions =
 let string_of_ty_module k = match k with
   | M_None     -> "None"
   | M_Combine  -> "Combine"
-  | M_Typing   -> "Typing"
   | M_Sat      -> "Sat"
   | M_Match    -> "Match"
   | M_CC       -> "CC"
   | M_UF       -> "UF"
   | M_Arith    -> "Arith"
   | M_Arrays   -> "Arrays"
-  | M_Sum      -> "Sum"
   | M_Records  -> "Records"
   | M_Adt      -> "Adt"
   | M_Bitv     -> "Bitv"
