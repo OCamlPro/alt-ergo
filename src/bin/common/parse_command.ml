@@ -321,6 +321,10 @@ module Debug = struct
            ~doc:medium_doc),
     Arg.(value & opt_all enum_conv [] & info ["ddd"; "dddebug"] ~docv
            ~doc:full_doc)
+
+  let backtrace_flag =
+    Arg.(value & flag & info ["b"; "backtrace"]
+           ~doc:"Turn on recording of exception backtraces.")
 end
 
 let mk_case_split_opt case_split_policy enable_adts_cs max_split ()
@@ -557,11 +561,12 @@ let get_verbose_t =
   let doc = "Set the verbose mode." in
   Arg.(value & flag & info ["v"; "verbose"] ~doc)
 
-let mk_opts file () () debug_flags ddebug_flags dddebug_flags rule () halt_opt
-    (gc) () () () () () () () () =
+let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace
+    rule () halt_opt (gc) () () () () () () () () =
   Debug.mk ~verbosity:1 debug_flags;
   Debug.mk ~verbosity:2 ddebug_flags;
   Debug.mk ~verbosity:3 dddebug_flags;
+  if backtrace then Printexc.record_backtrace true;
   Rule.mk rule;
   if halt_opt then `Ok false
   (* If save_used_context was invoked as an option it should
@@ -1555,10 +1560,10 @@ let main =
                file $
                parse_case_split_opt $ parse_context_opt $
                Debug.light_flag_term $ Debug.medium_flag_term $
-               Debug.full_flag_term $ Rule.flag_term $ parse_execution_opt $
-               parse_halt_opt $ parse_internal_opt $ parse_limit_opt $
-               parse_profiling_opt $ parse_quantifiers_opt $ parse_sat_opt $
-               parse_term_opt $ parse_output_opt $
+               Debug.full_flag_term $ Debug.backtrace_flag $ Rule.flag_term $
+               parse_execution_opt $ parse_halt_opt $ parse_internal_opt $
+               parse_limit_opt $ parse_profiling_opt $ parse_quantifiers_opt $
+               parse_sat_opt $ parse_term_opt $ parse_output_opt $
                parse_theory_opt $ parse_fmt_opt
               ))
   in
