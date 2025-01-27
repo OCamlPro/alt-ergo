@@ -35,6 +35,14 @@ module Ex = Explanation
 
 module LR = Uf.LX
 
+(* In this module, we follow the below conventions in the comments:
+   - A get term refers to a term of the form `(select a i)` for an array `a` and
+     an index `i`.
+   - A set term refers to a term of the form `(store a i v)` for an array `a`
+     and an index `i`.
+   - A relevant index is any term that appears as an index in get or set terms.
+   - A get or set term is known if it has been encountered in [assume]. *)
+
 let src = Logs.Src.create ~doc:"Arrays_rel" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)
 
@@ -56,30 +64,25 @@ module Conseq =
       let compare (lt1,_) (lt2,_) = E.compare lt1 lt2
     end)
 
-(* map k |-> {sem Atom} d'egalites/disegalites sur des atomes semantiques*)
 module LRmap = struct
   include LR.Map
   let find k mp = try find k mp with Not_found -> Conseq.empty
   let add k v ex mp = add k (Conseq.add (v,ex) (find k mp)) mp
 end
 
-(* Set of reads *)
+(* Set of get terms. *)
 type gtype = {g:Expr.t; gt:Expr.t; gi:Expr.t}
 module G = Set.Make
     (struct type t = gtype let compare t1 t2 = E.compare t1.g t2.g end)
 
-(* Set of writes *)
+(* Set of set terms. *)
 type stype = {s:E.t; st:E.t; si:E.t; sv:E.t}
 module S = Set.Make
     (struct type t = stype let compare t1 t2 = E.compare t1.s t2.s end)
 
-(* map t |-> {set(t,-,-)} qui associe a chaque tableau l'ensemble
-   de ses affectations *)
 module TBS = struct
   include Map.Make(E)
   let find k mp = try find k mp with Not_found -> S.empty
-
-  (* add reutilise find ci-dessus *)
   let add k v mp = add k (S.add v (find k mp)) mp
 end
 
@@ -87,22 +90,16 @@ let timer = Timers.M_Arrays
 
 module H = Ephemeron.K1.Make (Expr)
 
-(* A read is a term of the form `(select a i)` for some array `a` and index `i`
-   and a write is a term of the form `(store a i v)`.
-
-   A relevant index is a term that appears as an index in read/write terms.
-
-   We say that a read/write is known if we have seen this term in [assume]. *)
 type t = {
   gets : G.t;
-  (* Set of all the known reads. *)
+  (* Set of all the known get terms. *)
 
   tbset : S.t TBS.t;
-  (* Set of all the known writes. There are indexed by array. *)
+  (* Set of all the known set terms, indexed by array. *)
 
   split : LRset.t;
   (* Set of equalities or disequalities on relevant indices.
-     There are the hypotheses of consequences in the field [conseq].
+     These are the hypotheses of consequences in the field [conseq].
 
      We split on these literals in [case_split].
 
@@ -123,16 +120,12 @@ type t = {
      in [get_of_set]. *)
 
   new_terms : E.Set.t;
-  (* Set of read and write terms produced by the theory. These terms
+  (* Set of get and set terms produced by the theory. These terms
      are supposed to be sent to the instantiation engine. *)
-
-  (* size_splits : Numbers.Q.t; *)
-  (* Limit the number of case splits performed on indices. This field
-     is currently unused. *)
 
   cached_relevant_terms : (G.t * S.t TBS.t) H.t;
   (* Weak cache used to accelerate the exploration of new terms in order to
-     find new read or write terms. *)
+     find new get or set terms. *)
 }
 
 
@@ -216,7 +209,8 @@ and cached_relevant_terms env t =
     H.add env.cached_relevant_terms t r;
     r
 
-(* Search all the reads and writes as subterms of literals [la]. *)
+(* Search for all the set and get terms within the subterms of literals in the
+   list [la]. *)
 let new_terms env la =
   let fct acc r =
     List.fold_left
@@ -265,11 +259,11 @@ let update_env (module Uf : UF) uf dep env acc gi si p p_ded n n_ded =
        `gi <> si` at the same time. *)
     assert false
 
-(* Produce a formula to propagate a read over a store.
+(* Produce a formula to propagate a get term over a set term.
 
-   More precisely, assume that [gtype] represents the read `(select a i)`.
-   For all writes `(store b j v)` in the equivalence class of `a`, we form the
-   formulas:
+   More precisely, assume that [gtype] represents the get term `(select a i)`.
+   For all set terms `(store b j v)` in the equivalence class of `a`, we create
+   the formulas:
 
      i <> j -> (select a i) = (select b i)
 
@@ -277,7 +271,7 @@ let update_env (module Uf : UF) uf dep env acc gi si p p_ded n n_ded =
 
      i = j -> (select a i) = v.
 
-   Moreover, the read `(select b i)` is sent to the instantiation engine. *)
+   Moreover, the get term `(select b i)` is sent to the instantiation engine. *)
 let get_of_set (module Uf : UF) uf gtype (env, acc) =
   let {g=get; gt=gtab; gi=gi} = gtype in
   E.Set.fold
@@ -307,9 +301,9 @@ let get_of_set (module Uf : UF) uf gtype (env, acc) =
          | _ -> (env,acc)
     ) (Uf.class_of uf gtab) (env,acc)
 
-(* Assume that [stype] represents the write `(store b j v)`.
-   For all known writes of the form `(store a i w)` such that `a` and
-   `b` are equal, we form the formula:
+(* Assume that [stype] represents the set term `(store b j v)`.
+   For all known set terms of the form `(store a i w)` such that `a` and
+   `b` are equal, we create the formula:
 
       (select (store a i w) i) = w
 
@@ -333,9 +327,9 @@ let get_from_set (module Uf : UF) uf stype (env, acc) =
         env, Conseq.add (p_ded, Ex.empty) acc
     ) sets (env,acc)
 
-(* Assume that [gtype] represents the read `(select a i)`.
-   For all known writes of the form `(store b j v)` such that `b` and
-   `a` are equal, we form the formulas:
+(* Assume that [gtype] represents the get term `(select a i)`.
+   For all known set terms of the form `(store b j v)` such that `b` and
+   `a` are equal, we create the formulas:
 
      i <> j -> (select (store b j v) i) = (select b i).
 
@@ -449,11 +443,8 @@ let new_equalities env eqs la =
 
 let two = Numbers.Q.from_int 2
 
-(* Choose a equality/disequality between relevant indices to split on it. *)
+(* Choose an equality or disequality between relevant indices to split on it. *)
 let case_split env _uf ~for_model:_ =
-  (*if Numbers.Q.compare
-    (Numbers.Q.mult two env.size_splits) (max_split ()) <= 0  ||
-    Numbers.Q.sign  (max_split ()) < 0 then*)
   try
     let a = LR.neg (LRset.choose env.split) in
     Log.debug (fun k -> k "case split@ %a" LR.print a);
@@ -464,20 +455,7 @@ let case_split env _uf ~for_model:_ =
 
 let optimizing_objective _env _uf _o = None
 
-(* unused
-   let count_splits env la =
-   let nb =
-    List.fold_left
-      (fun nb (_,_,_,i) ->
-         match i with
-         | Th_util.CS (Th_util.Th_arrays, n) -> Numbers.Q.mult nb n
-         | _ -> nb
-      ) env.size_splits la
-   in
-   {env with size_splits = nb} *)
-
 let assume env uf la =
-  (* let env = count_splits env la in *)
   (* Instantiations of the array axioms. *)
   Debug.assume la;
   let env = new_terms env la in
