@@ -1085,19 +1085,17 @@ let reinit_cache () =
 (*                      Model generation functions                          *)
 (****************************************************************************)
 
-let model_repr_of_term t env mrepr =
-  try ME.find t mrepr, mrepr
-  with Not_found ->
-    let mk = try ME.find t env.make with Not_found -> assert false in
-    let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
-    (* We call this function during the model generation only. At this time,
-       we are sure that class representatives are constant semantic values, or
-       uninterpreted names. *)
-    match X.to_model_term rep with
-    | Some v -> v, ME.add t v mrepr
-    | None ->
-      (* [X.to_model_term] cannot fail on constant semantic values. *)
-      assert false
+let model_repr_of_term t env =
+  let mk = try ME.find t env.make with Not_found -> assert false in
+  let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
+  (* We call this function during the model generation only. At this time,
+     we are sure that class representatives are constant semantic values, or
+     uninterpreted names. *)
+  match X.to_model_term rep with
+  | Some v -> v
+  | None ->
+    (* [X.to_model_term] cannot fail on constant semantic values. *)
+    assert false
 
 (* A map of expressions to terms, ordered by depth first, and then by
    [Expr.compare] for expressions with same depth. This structure will
@@ -1184,7 +1182,7 @@ let is_destructor = function
 let compute_concrete_model_of_val cache =
   let store_array_select = Cache.store_array_get cache.array_selects
   and get_abstract_for = Cache.get_abstract_for cache.abstracts
-  in fun env t ((mdl, mrepr) as acc) ->
+  in fun env t (mdl as acc) ->
     let { E.f; xs; ty; _ } = E.term_view t in
     (* TODO: We have to filter out destructors here as we don't consider
        pending destructors as solvable theory symbols of the ADT theory.
@@ -1198,17 +1196,16 @@ let compute_concrete_model_of_val cache =
       acc
     else
       begin
-        let arg_vals, arg_tys, mrepr =
+        let arg_vals, arg_tys =
           List.fold_left
-            (fun (arg_vals, arg_tys, mrepr) arg ->
-               let rep_arg, mrepr = model_repr_of_term arg env mrepr in
+            (fun (arg_vals, arg_tys) arg ->
+               let rep_arg = model_repr_of_term arg env in
                rep_arg :: arg_vals,
-               (Expr.type_info arg) :: arg_tys,
-               mrepr
+               (Expr.type_info arg) :: arg_tys
             )
-            ([], [], mrepr) (List.rev xs)
+            ([], []) (List.rev xs)
         in
-        let ret_rep, mrepr = model_repr_of_term t env mrepr in
+        let ret_rep = model_repr_of_term t env in
         match f, arg_vals, ty with
         | Sy.Name _, [], Ty.Tfarray _ ->
           begin
@@ -1244,7 +1241,7 @@ let compute_concrete_model_of_val cache =
               get_abstract_for env t
             | _ -> ret_rep
           in
-          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
+          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
 
         | _ ->
           Printer.print_err
@@ -1258,9 +1255,9 @@ let extract_concrete_model cache =
   let get_abstract_for = Cache.get_abstract_for cache.abstracts
   in fun ~prop_model ~declared_ids env ->
     let terms, suspicious = terms env in
-    let model, mrepr =
+    let model =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-        terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
+        terms (ModelMap.empty ~suspicious declared_ids)
     in
     let model =
       E.Table.fold (fun t vals mdl ->
@@ -1299,7 +1296,7 @@ let extract_concrete_model cache =
           ModelMap.subst id arr_val mdl
         ) cache.array_selects model
     in
-    { Models.propositional = prop_model; model; term_values = mrepr }
+    { Models.propositional = prop_model; model }
 
 let extract_concrete_model ~prop_model ~declared_ids =
   let cache : cache = {

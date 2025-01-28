@@ -21,8 +21,6 @@
 type t = {
   propositional : Expr.Set.t;
   model : ModelMap.t;
-  term_values : Expr.t Expr.Map.t
-  (** A map from terms to their values in the model. *)
 }
 
 val empty : t
