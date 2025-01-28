@@ -137,24 +137,24 @@ module type SHOSTAK = sig
      [Some (t, false)], then there must be no context in which
      [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
 
-  val to_model_term : r -> Expr.t option
-  (** [to_model_term r] creates a model term if [r] is constant.
-      The function cannot fail if [r] is a constant (that is statisfied the
-      predicate [X.is_constant]).
+  val to_model_term : (Expr.t -> Expr.t) -> r -> Expr.t option
+  (** [to_model_term abstract r] creates a model term if [r] is constant.
+      The function must succeed when [r] is a constant, this is [r] satisfied
+      the predicate [X.is_constant].
 
-      The returned value always satisfies the predicate
-      [Expr.is_model_term]. See its documentation for more details about
-      model terms. *)
+      The [abstract] function is used to replace internal or fresh names by
+      abstract values.
+
+      The returned value always satisfies the predicate [Expr.is_model_term].
+      Refer to its documentation for more details about model terms. *)
 end
 
 module type X = sig
   type r
 
   val save_cache : unit -> unit
-  (** saves the module's current cache *)
 
   val reinit_cache : unit -> unit
-  (** restores the module's cache *)
 
   val make : Expr.t -> r * Expr.t list
 
@@ -178,7 +178,7 @@ module type X = sig
 
   val term_embed : Expr.t -> r
 
-  val term_extract : r -> Expr.t option * bool (* original term ? *)
+  val term_extract : r -> Expr.t option * bool
 
   val ac_embed : r ac -> r
 
@@ -196,19 +196,8 @@ module type X = sig
 
   val is_solvable_theory_symbol : Symbols.t -> bool
 
-  (* the returned bool is true when the returned term in a constant of the
-     theory. Otherwise, the term contains aliens that should be assigned
-     (eg. records). In this case, it's a unit fact, not a decision
-  *)
   val assign_value :
     r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
-  val to_model_term : r -> Expr.t option
-  (** [to_model_term r] creates a model term if [r] is constant.
-      The function cannot fail if [r] is a constant (that is statisfied the
-      predicate [X.is_constant]).
-
-      The returned value always satisfies the predicate
-      [Expr.is_model_term]. See its documentation for more details about
-      model terms. *)
+  val to_model_term : (Expr.t -> Expr.t) -> r -> Expr.t option
 end

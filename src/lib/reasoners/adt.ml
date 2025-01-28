@@ -418,15 +418,15 @@ module Shostak (X : ALIEN) = struct
        in [Adt_rel]. *)
     None
 
-  let to_model_term r =
+  let to_model_term abstract r =
     match embed r with
     | Constr { c_name; c_ty; c_args } ->
       let args =
-        My_list.try_map (fun (_, arg) -> X.to_model_term arg) c_args
+        My_list.try_map (fun (_, arg) -> X.to_model_term abstract arg) c_args
       in
       Option.bind args @@ fun args ->
       Some (E.mk_constr c_name args c_ty)
 
     | Select _ -> None
-    | Alien a -> X.to_model_term a
+    | Alien a -> X.to_model_term abstract a
 end

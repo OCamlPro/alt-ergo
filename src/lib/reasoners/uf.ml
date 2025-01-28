@@ -1085,18 +1085,6 @@ let reinit_cache () =
 (*                      Model generation functions                          *)
 (****************************************************************************)
 
-let model_repr_of_term t env =
-  let mk = try ME.find t env.make with Not_found -> assert false in
-  let rep, _ = try MapX.find mk env.repr with Not_found -> assert false in
-  (* We call this function during the model generation only. At this time,
-     we are sure that class representatives are constant semantic values, or
-     uninterpreted names. *)
-  match X.to_model_term rep with
-  | Some v -> v
-  | None ->
-    (* [X.to_model_term] cannot fail on constant semantic values. *)
-    assert false
-
 (* A map of expressions to terms, ordered by depth first, and then by
    [Expr.compare] for expressions with same depth. This structure will
    be used to build a model, by starting with the inner/smaller terms
@@ -1126,63 +1114,58 @@ let terms env =
        let Expr.{ f; _ } = Expr.term_view t in
        match f with
        | Name { defined = true; _ } ->
-         (* We don't store names defined by the user. *)
+         (* We do not store names defined by the user. *)
          acc
        | _ ->
          let suspicious = is_suspicious_symbol f || suspicious in
          MED.add t r terms, suspicious
     ) env.make (MED.empty, false)
 
-(* Helper functions used by the caches during the computation of the model. *)
-module Cache = struct
-  let store_array_get arrays_cache (t : E.t) (i : E.t) (v : E.t) =
-    match E.Table.find arrays_cache t with
-    | exception Not_found ->
-      let values = E.Table.create 17 in
-      E.Table.add values i v;
-      E.Table.add arrays_cache t values
-    | values ->
-      E.Table.replace values i v
-
-  let get_abstract_for abstracts_cache env (t : E.t) =
-    let r, _ = find env t in
-    match Shostak.HX.find abstracts_cache r with
-    | exception Not_found ->
-      let abstract = E.mk_abstract (E.type_info t) in
-      Shostak.HX.add abstracts_cache r abstract;
-      abstract
-    | abstract -> abstract
-end
-
-type cache = {
-  array_selects: Expr.t E.Table.t E.Table.t;
-  (** Stores all the get accesses to array names. *)
-
-  abstracts: Expr.t Shostak.HX.t;
-  (** Stores all the abstract values generated. This cache is necessary
-      to ensure we do not generate twice an abstract value for a given
-      symbol. *)
-}
-
 let is_destructor = function
   | Sy.Op (Destruct _) -> true
   | _ -> false
 
-(* The environment of the union-find contains almost a first-order model.
-   There are two situations that require some computations to retrieve an
-   appropriate model value:
-   - As our array theory has no semantic values, there are no value
-     which represents an array in the union-find environment. Instead, the
-     union-find stores the collection of all the access to the array. This
-     function retrieves all these accesses in order to build an expression
-     which defines the approriate array.
-   - If the problem involves declared terms whose the type is abstract,
-     Alt-Ergo cannot produces a constant value for them. This function creates
-     a new abstract value in this case. *)
-let compute_concrete_model_of_val cache =
-  let store_array_select = Cache.store_array_get cache.array_selects
-  and get_abstract_for = Cache.get_abstract_for cache.abstracts
-  in fun env t (mdl as acc) ->
+let model_repr_of_term abstract cache env t =
+  let mk = try ME.find t env.make with Not_found -> assert false in
+  let r, _ = try MapX.find mk env.repr with Not_found -> assert false in
+  match Shostak.HX.find cache r with
+  | exception Not_found -> (
+      (* We call this function during the model generation only. At this time,
+         we are sure that class representatives are constant semantic values, or
+         uninterpreted names. *)
+      match X.to_model_term abstract r with
+      | Some v ->
+        Shostak.HX.replace cache r v;
+        v
+      | None ->
+        (* [X.to_model_term] cannot fail on constant semantic values. *)
+        assert false)
+  | v -> v
+
+let store_select selects (t : E.t) (i : E.t) (v : E.t) =
+  match E.Table.find selects t with
+  | exception Not_found ->
+    let values = E.Table.create 17 in
+    E.Table.add values i v;
+    E.Table.add selects t values
+  | values ->
+    E.Table.replace values i v
+
+(* The union-find environment is almost a first-order model. There are two
+   situations where additional computations are required to retrieve
+   an appropriate model value:
+   1. As our Array theory has no semantic values, there is no single value
+      representing an array in the union-find. Instead, the union-find stores
+      a collection of select terms on this array. This function collects all
+      the selects terms to construct an expression that defines the appropriate
+      array.
+   2. When the problem involves declared terms with abstract types, Alt-Ergo
+      cannot produce a constant value for them. This function creates an
+      abstract value in this case. *)
+let compute_concrete_model_of_val abstract selects cache env =
+  let store_array_select = store_select selects in
+  let model_repr_of_term = model_repr_of_term abstract cache env
+  in fun t mdl ->
     let { E.f; xs; ty; _ } = E.term_view t in
     (* TODO: We have to filter out destructors here as we don't consider
        pending destructors as solvable theory symbols of the ADT theory.
@@ -1193,42 +1176,29 @@ let compute_concrete_model_of_val cache =
     then
       (* These terms are built-in interpreted ones and we don't have
          to produce a definition for them. *)
-      acc
+      mdl
     else
       begin
         let arg_vals, arg_tys =
           List.fold_left
             (fun (arg_vals, arg_tys) arg ->
-               let rep_arg = model_repr_of_term arg env in
+               let rep_arg = model_repr_of_term arg in
                rep_arg :: arg_vals,
                (Expr.type_info arg) :: arg_tys
             )
             ([], []) (List.rev xs)
         in
-        let ret_rep = model_repr_of_term t env in
+        let ret_rep = model_repr_of_term t in
         match f, arg_vals, ty with
         | Sy.Name _, [], Ty.Tfarray _ ->
           begin
-            match E.Table.find cache.array_selects t with
+            match E.Table.find selects t with
             | exception Not_found ->
               (* We have to add an abstract array in case there is no
                  constraint on its values. *)
-              E.Table.add cache.array_selects t (E.Table.create 17);
-              acc
-            | _ -> acc
-          end
-
-        | Sy.Op Sy.Set, _, _ -> acc
-
-        | Sy.Op Sy.Get, [a; i], _ ->
-          begin
-            let E.{ f = fa; _ } = E.term_view a in
-            match fa with
-            | Sy.Name _ ->
-              store_array_select a i ret_rep;
-              acc
-            | _ ->
-              acc
+              E.Table.add selects t (E.Table.create 17);
+              mdl
+            | _ -> mdl
           end
 
         | Sy.Name { hs = id; _ }, _, _ ->
@@ -1238,10 +1208,23 @@ let compute_concrete_model_of_val cache =
               (* We cannot produce a concrete value as the type is abstract.
                  In this case, we produce an abstract value with the appropriate
                  type. *)
-              get_abstract_for env t
+              abstract t
             | _ -> ret_rep
           in
           ModelMap.(add (id, arg_tys, ty) arg_vals value mdl)
+
+        | Sy.Op Sy.Set, _, _ -> mdl
+
+        | Sy.Op Sy.Get, [a; i], _ ->
+          begin
+            let E.{ f = fa; _ } = E.term_view a in
+            match fa with
+            | Sy.Name _ ->
+              store_array_select a i ret_rep;
+              mdl
+            | _ ->
+              mdl
+          end
 
         | _ ->
           Printer.print_err
@@ -1250,57 +1233,71 @@ let compute_concrete_model_of_val cache =
           assert false
       end
 
-let extract_concrete_model cache =
-  let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
-  let get_abstract_for = Cache.get_abstract_for cache.abstracts
-  in fun ~prop_model ~declared_ids env ->
-    let terms, suspicious = terms env in
-    let model =
-      MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-        terms (ModelMap.empty ~suspicious declared_ids)
-    in
-    let model =
-      E.Table.fold (fun t vals mdl ->
-          (* We produce a fresh identifiant for abstract value in order to
-             prevent any capture. *)
-          let abstract = get_abstract_for env t in
-          let ty = Expr.type_info t in
-          let arr_val =
-            E.Table.fold (fun i v arr_val ->
-                Expr.ArraysEx.store arr_val i v
-              ) vals abstract
-          in
-          let id, is_user =
-            let Expr.{ f; _ } = Expr.term_view t in
-            match f with
-            | Sy.Name { hs; ns = User; _ } -> hs, true
-            | Sy.Name { hs; _ } -> hs, false
-            | _ ->
-              (* Excluded in [compute_concrete_model_of_val] *)
-              assert false
-          in
-          let mdl =
-            if is_user then
-              ModelMap.add (id, [], ty) [] arr_val mdl
-            else
-              (* Internal identifiers can occur here if we need to generate
-                 a model term for an embedded array but this array isn't itself
-                 declared by the user -- see the [embedded-array] test . *)
-              mdl
-          in
-          (* We need to update the model [mdl] in order to substitute all the
-             occurrences of the array identifier [id] by an appropriate model
-             term. This cannot be performed while computing the model with
-             `compute_concrete_model_of_val` because we need to first iterate
-             on all the union-find environment to collect array values. *)
-          ModelMap.subst id arr_val mdl
-        ) cache.array_selects model
-    in
-    { Models.propositional = prop_model; model }
-
-let extract_concrete_model ~prop_model ~declared_ids =
-  let cache : cache = {
-    array_selects = E.Table.create 17;
-    abstracts = Shostak.HX.create 17;
-  }
-  in fun env -> extract_concrete_model cache ~prop_model ~declared_ids env
+let extract_concrete_model ~prop_model ~declared_ids env =
+  let selects : Expr.t E.Table.t E.Table.t =
+    (** Stores all the select terms by arrays. *)
+    E.Table.create 17
+  in
+  let abstract =
+    let cache : Expr.t E.Table.t =
+      (** Caches all generated abstract values. This cache is necessary
+          to prevent from generating duplicate abstract values for the same
+          name. *)
+      E.Table.create 17
+    in fun t ->
+      match E.Table.find cache t with
+      | exception Not_found ->
+        let v = E.mk_abstract (E.type_info t) in
+        E.Table.replace cache t v;
+        v
+      | v -> v
+  in
+  let cache : Expr.t Shostak.HX.t =
+    (** Cache used to memoize results of [model_repr_of_term]. *)
+    Shostak.HX.create 17
+  in
+  let compute_concrete_model_of_val =
+    compute_concrete_model_of_val abstract selects cache env
+  in
+  let terms, suspicious = terms env in
+  let model =
+    MED.fold (fun t _mk mdl -> compute_concrete_model_of_val t mdl)
+      terms (ModelMap.empty ~suspicious declared_ids)
+  in
+  let model =
+    E.Table.fold (fun t vals mdl ->
+        (* Generates a fresh abstract value for the name [t]. *)
+        let a = abstract t in
+        let ty = Expr.type_info t in
+        let arr_val =
+          E.Table.fold (fun i v arr_val ->
+              Expr.ArraysEx.store arr_val i v
+            ) vals a
+        in
+        let id, is_user =
+          let Expr.{ f; _ } = Expr.term_view t in
+          match f with
+          | Sy.Name { hs; ns = User; _ } -> hs, true
+          | Sy.Name { hs; _ } -> hs, false
+          | _ ->
+            (* Excluded in [compute_concrete_model_of_val] *)
+            assert false
+        in
+        let mdl =
+          if is_user then
+            ModelMap.add (id, [], ty) [] arr_val mdl
+          else
+            (* Internal identifiers can occur here if we need to generate
+               a model term for an embedded array but this array is not itself
+               declared by the user -- see the [embedded-array] test . *)
+            mdl
+        in
+        (* We need to update the model [mdl] in order to substitute all the
+           occurrences of the array identifier [id] by an appropriate model
+           term. This cannot be performed while computing the model with
+           `compute_concrete_model_of_val` because we need to first iterate
+           on all the union-find environment to collect array values. *)
+        ModelMap.subst id arr_val mdl
+      ) selects model
+  in
+  { Models.propositional = prop_model; model }
