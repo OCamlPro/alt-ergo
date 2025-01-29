@@ -1,8 +1,8 @@
 
 unknown
 (
-  (define-fun x () Real 2.0)
-  (define-fun y () Real 0.0)
   (define-fun a () Data (cons1 2.0 0.0))
   (define-fun b () Data (cons3 0.0))
+  (define-fun x () Real 2.0)
+  (define-fun y () Real 0.0)
 )

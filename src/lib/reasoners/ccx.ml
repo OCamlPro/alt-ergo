@@ -249,7 +249,9 @@ module Main : S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let one, _ = X.make (Expr.mk_term (Sy.name ~ns:Internal "@bottom") [] Ty.Tint)
+  let one, _ =
+    let sy = Sy.name @@ Id.of_string ~ns:Internal "@bottom" in
+    X.make (Expr.mk_term sy [] Ty.Tint)
 
   let concat_leaves uf l =
     let concat_rec acc t =

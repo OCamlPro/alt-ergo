@@ -29,8 +29,8 @@ type t
 (** Type of model. *)
 
 val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
-(** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
-    associated with the symbol [sy]. *)
+(** [add id args ret mdl] adds the binding [args -> ret] to the partial graph
+    associated with the identifier [id]. *)
 
 val empty : suspicious:bool -> Id.typed list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
@@ -38,8 +38,10 @@ val empty : suspicious:bool -> Id.typed list -> t
     model generation is known to be incomplete. *)
 
 val find : Id.typed -> t -> graph
-(** [find sy mdl] returns the graph associated with the symbol [sy] in the model
-    [mdl], raises [Not_found] if it doesn't exist. *)
+(** [find id mdl] returns the graph associated with the identifier [id] in the
+    model [mdl].
+
+    @raise Not_found if it does not exist. *)
 
 val fold: (Id.typed -> graph -> 'a -> 'a) -> t -> 'a -> 'a
 (** [fold f mdl init] folds over the bindings in the model [mdl] with the

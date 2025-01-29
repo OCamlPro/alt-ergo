@@ -32,6 +32,8 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
+module ConstSet = Map.Make (Dolmen.Std.Expr.Term.Const)
+
 exception Exit_with_code of int
 
 type solver_ctx = {
@@ -103,14 +105,14 @@ let cmd_on_modes st modes cmd =
 
 (** Adds the named terms of the statement [stmt] to the map accumulator [acc] *)
 let add_if_named
-    ~(acc : DStd.Expr.term Util.MS.t)
+    ~(acc : DStd.Expr.term ConstSet.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
-  | `Defs [`Term_def ({name = Simple n; _}, id, _, _, t)] ->
+  | `Defs [`Term_def (_, id, _, _, t)] ->
     begin
       match DStd.Expr.Id.get_tag id DStd.Expr.Tags.named with
       | None -> acc
-      | Some _ -> Util.MS.add n t acc
+      | Some _ -> ConstSet.add id t acc
     end
   | _ -> (* Named terms are expected to be definitions with simple
             names. *)
@@ -212,7 +214,7 @@ let process_source ?selector_inst ~print_status src =
     State.create_key ~pipe:"" "sat_state"
   in
 
-  let named_terms: DStd.Expr.term Util.MS.t State.key =
+  let named_terms: DStd.Expr.term ConstSet.t State.key =
     State.create_key ~pipe:"" "named_terms"
   in
 
@@ -357,7 +359,7 @@ let process_source ?selector_inst ~print_status src =
     State.empty
     |> State.set solver_ctx_key solver_ctx
     |> State.set partial_model_key None
-    |> State.set named_terms Util.MS.empty
+    |> State.set named_terms ConstSet.empty
     |> DO.init
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
@@ -633,14 +635,14 @@ let process_source ?selector_inst ~print_status src =
   in
 
   (* Fetches the term value in the current model. *)
-  let evaluate_term get_value name term =
+  let evaluate_term get_value tcst term =
     (* There are two ways to evaluate a term:
        - if its name is registered in the environment, get its value;
        - if not, check if the formula is in the environment.
     *)
     let simple_form =
       Expr.mk_term
-        (Sy.name name)
+        (Sy.name @@ Id.of_term_cst ~defined:true tcst)
         []
         (Translate.dty_to_ty term.DStd.Expr.term_ty)
     in
@@ -652,12 +654,12 @@ let process_source ?selector_inst ~print_status src =
   let print_terms_assignments =
     Fmt.list
       ~sep:Fmt.cut
-      (fun fmt (name, v) -> Fmt.pf fmt "(%s %s)" name v)
+      (fun fmt (name, v) -> Fmt.pf fmt "(%a %s)" Util.pp_term_cst name v)
   in
 
   let handle_get_assignment ~get_value st =
     let assignments =
-      Util.MS.fold
+      ConstSet.fold
         (fun name term acc ->
            if DStd.Expr.Ty.equal term.DStd.Expr.term_ty DStd.Expr.Ty.bool then
              (name, evaluate_term get_value name term) :: acc
@@ -789,7 +791,7 @@ let process_source ?selector_inst ~print_status src =
         |> DO.StrictMode.clear
         |> DO.ProduceAssignment.clear
         |> DO.init
-        |> State.set named_terms Util.MS.empty
+        |> State.set named_terms ConstSet.empty
 
       | {contents = `Exit; _} -> raise Exit
 

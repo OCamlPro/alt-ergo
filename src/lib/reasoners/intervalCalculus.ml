@@ -2202,7 +2202,7 @@ let integrate_mapsTo_bindings sbs maps_to =
                  ~function_name:"integrate_maps_to_bindings"
                  "bad semantic trigger %a |-> %a@,\
                   left-hand side is not a constant!"
-                 Var.print x E.print tx;
+                 Var.pp x E.print tx;
              raise Exit
            | Some c ->
              let tc = mk_const_term (E.type_info t) c in
@@ -2231,7 +2231,7 @@ let extend_with_domain_substitution =
                  "[Error] %a <= %a <= %a@,\
                   Which value should we choose?"
                  Q.print q1
-                 Var.print lb_var
+                 Var.pp lb_var
                  Q.print q2;
                assert (Q.compare q2 q1 >= 0);
                assert false
