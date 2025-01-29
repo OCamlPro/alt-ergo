@@ -331,7 +331,7 @@ module SmtPrinter = struct
         Z.pp_print (Q.den q)
 
   let pp_binder ppf (var, ty) =
-    Fmt.pf ppf "(%a %a)" Var.print var Ty.pp_smtlib ty
+    Fmt.pf ppf "(%a %a)" Var.pp var Ty.pp_smtlib ty
 
   let pp_binders = Fmt.(box @@ iter_bindings ~sep:sp Var.Map.iter pp_binder)
 
@@ -444,7 +444,7 @@ module SmtPrinter = struct
     | Sy.Let, [] ->
       let x = match bind with B_let x -> x | _ -> assert false in
       Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])"
-        Var.print x.let_v
+        Var.pp x.let_v
         pp x.let_e
         pp_boxed x.in_e
 
@@ -479,17 +479,17 @@ module SmtPrinter = struct
 
     | Sy.False, [] -> Fmt.pf ppf "false"
 
-    | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
-      Fmt.pf ppf "(as %a %a)" Id.pp n Ty.pp_smtlib ty
+    | Sy.Name { id = Hstring { ns = Abstract; _ } as id; _ }, [] ->
+      Fmt.pf ppf "(as %a %a)" Id.pp id Ty.pp_smtlib ty
 
-    | Sy.Name { hs = n; _ }, [] -> Id.pp ppf n
+    | Sy.Name { id; _ }, [] -> Id.pp ppf id
 
-    | Sy.Name { hs = n; _ }, _ :: _ ->
+    | Sy.Name { id; _ }, _ :: _ ->
       Fmt.pf ppf "@[<2>(%a %a@])"
-        Id.pp n
+        Id.pp id
         Fmt.(list ~sep:sp pp |> box) xs
 
-    | Sy.Var v, [] -> Var.print ppf v
+    | Sy.Var v, [] -> Var.pp ppf v
 
     | Sy.Int i, [] -> pp_integer ppf i
 
@@ -502,7 +502,7 @@ module SmtPrinter = struct
         Fmt.pf ppf "#b%s" (Z.format (Fmt.str "%%0%db" n) s)
 
     | Sy.MapsTo v, [t] ->
-      Fmt.pf ppf "@[<2>(ae.mapsto %a %a@])" Var.print v pp t
+      Fmt.pf ppf "@[<2>(ae.mapsto %a %a@])" Var.pp v pp t
 
     | Sy.In (_lb, _rb), [_t] ->
       (* WARNING: we don't print the content of this semantic trigger as
@@ -533,7 +533,7 @@ end
 
 module AEPrinter = struct
   let pp_binder ppf (var, ty) =
-    Fmt.pf ppf "%a:%a" Var.print var Ty.pp_smtlib ty
+    Fmt.pf ppf "%a:%a" Var.pp var Ty.pp_smtlib ty
 
   let pp_binders ppf binders =
     if Var.Map.is_empty binders then
@@ -631,7 +631,7 @@ module AEPrinter = struct
         (fun ppf x -> if Options.get_verbose () then
             Fmt.pf ppf
               " [sko = %a]" pp x.let_sko) x
-        Var.print x.let_v pp x.let_e pp_silent x.in_e
+        Var.pp x.let_v pp x.let_e pp_silent x.in_e
 
     | Sy.(Op Get), [e1; e2] ->
       Fmt.pf ppf "%a[%a]" pp e1 pp e2
@@ -982,17 +982,20 @@ let vrai =
 let faux = neg (vrai)
 
 let fresh_name ty =
-  mk_term (Sy.name ~ns:Fresh @@ Id.Namespace.Internal.fresh ()) [] ty
+  let sy = Sy.name @@ Id.fresh ~ns:Fresh () in
+  mk_term sy [] ty
 
 let mk_abstract ty =
-  mk_term (Sy.name ~ns:Abstract @@ Id.Namespace.Abstract.fresh ()) [] ty
+  let sy = Sy.name @@ Id.fresh ~ns:Abstract () in
+  mk_term sy [] ty
 
 let fresh_ac_name ty =
-  mk_term (Sy.name ~ns:Fresh_ac @@ Id.Namespace.Internal.fresh ()) [] ty
+  let sy = Sy.name @@ Id.fresh ~ns:Fresh_ac () in
+  mk_term sy [] ty
 
 let is_fresh_ac_name t =
   match t with
-  | { f = Name { ns = Fresh_ac; _ }; xs = []; _ } -> true
+  | { f = Name { id = Hstring { ns = Fresh_ac; _ }; _ }; xs = []; _ } -> true
   | _ -> false
 
 let positive_int i = mk_term (Sy.int i) [] Ty.Tint
@@ -1814,7 +1817,7 @@ let skolemize { main = f; binders; sko_v; sko_vty; _ } =
 
   let mk_sym cpt s =
     Fmt.kstr
-      (fun str -> Sy.name ~ns:Skolem str)
+      (fun str -> Sy.name @@ Id.of_string ~ns:Skolem str)
       "%s%s!%d"
       s
       tyvars

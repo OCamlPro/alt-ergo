@@ -1112,14 +1112,9 @@ module MED = Map.Make
         else Expr.compare a b
     end)
 
-let is_suspicious_name hs =
-  match Hstring.view hs with
-  | "@/" | "@%" | "@*" -> true
-  | _ -> false
-
 (* The model generation is known to be imcomplete for FPA theory. *)
 let is_suspicious_symbol = function
-  | Symbols.Name { hs; _ } when is_suspicious_name hs -> true
+  | Symbols.Name { id; _ } when Id.is_suspicious id -> true
   | _ -> false
 
 let terms env =
@@ -1127,8 +1122,8 @@ let terms env =
     (fun t r ((terms, suspicious) as acc) ->
        let Expr.{ f; _ } = Expr.term_view t in
        match f with
-       | Name { defined = true; _ } ->
-         (* We don't store names defined by the user. *)
+       | Name { id = Term_cst { defined = true; _ }; _ } ->
+         (* We do not store names defined by the user. *)
          acc
        | _ ->
          let suspicious = is_suspicious_symbol f || suspicious in
@@ -1234,7 +1229,11 @@ let compute_concrete_model_of_val cache =
               acc
           end
 
-        | Sy.Name { hs = id; _ }, _, _ ->
+        | Sy.Name { id = Term_cst { tcst; defined }; _ }, _, _
+          when not defined ->
+          (* XXX: Currently, all the declared constant term identifiers
+             are user-provided. This will change after adopting Dolmen
+             identifiers everywhere. *)
           let value =
             match ty with
             | Ty.Text _ ->
@@ -1244,7 +1243,7 @@ let compute_concrete_model_of_val cache =
               get_abstract_for env t
             | _ -> ret_rep
           in
-          ModelMap.(add (id, arg_tys, ty) arg_vals value mdl), mrepr
+          ModelMap.(add (tcst, arg_tys, ty) arg_vals value mdl), mrepr
 
         | _ ->
           Printer.print_err
@@ -1273,23 +1272,23 @@ let extract_concrete_model cache =
                 Expr.ArraysEx.store arr_val i v
               ) vals abstract
           in
-          let id, is_user =
+          let id, mdl =
             let Expr.{ f; _ } = Expr.term_view t in
             match f with
-            | Sy.Name { hs; ns = User; _ } -> hs, true
-            | Sy.Name { hs; _ } -> hs, false
+            | Sy.Name { id = Term_cst { tcst; defined } as id; _ }
+              when not defined ->
+              (* XXX: Currently, all the declared constant term identifiers
+                 are user-provided. This will change after adopting Dolmen
+                 identifiers everywhere. *)
+              id, ModelMap.add (tcst, [], ty) [] arr_val mdl
+            | Sy.Name { id; _ } ->
+              (* Internal identifiers can occur here if we need to generate
+                 a model term for an embedded array but this array is not itself
+                 declared by the user -- see the [embedded-array] test . *)
+              id, mdl
             | _ ->
               (* Excluded in [compute_concrete_model_of_val] *)
               assert false
-          in
-          let mdl =
-            if is_user then
-              ModelMap.add (id, [], ty) [] arr_val mdl
-            else
-              (* Internal identifiers can occur here if we need to generate
-                 a model term for an embedded array but this array isn't itself
-                 declared by the user -- see the [embedded-array] test . *)
-              mdl
           in
           (* We need to update the model [mdl] in order to substitute all the
              occurrences of the array identifier [id] by an appropriate model

@@ -1875,8 +1875,7 @@ module Make (Th : Theory.S) = struct
     clear_instances_cache ();
     Th.reinit_cpt ();
     Symbols.clear_labels ();
-    Id.Namespace.reinit ();
-    Var.reinit_cnt ();
+    Id.reinit ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
@@ -1888,7 +1887,6 @@ module Make (Th : Theory.S) = struct
 
   let () =
     Steps.save_steps ();
-    Var.save_cnt ();
     Expr.save_cache ();
     Hstring.save_cache ();
     Shostak.Combine.save_cache ();
