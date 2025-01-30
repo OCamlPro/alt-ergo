@@ -1117,12 +1117,25 @@ let is_suspicious_symbol = function
   | Symbols.Name { id; _ } when Id.is_suspicious id -> true
   | _ -> false
 
-let terms env =
+module ConstSet = Set.Make (Dolmen.Std.Expr.Term.Const)
+
+let terms ~declared_ids env =
+  let declared =
+    List.fold_left
+      (fun acc (tcst, _, _) -> ConstSet.add tcst acc)
+      ConstSet.empty declared_ids
+  in
   ME.fold
     (fun t r ((terms, suspicious) as acc) ->
        let Expr.{ f; _ } = Expr.term_view t in
        match f with
-       | Name { id = Term_cst { defined = true; _ }; _ } ->
+       | Name { id = Term_cst { tcst; _ }; _ }
+         when not @@ ConstSet.mem tcst declared ->
+         (* XXX: the current push/pop mechanism of CDCL is insufficient
+            to guarantee that only identifiers declared at the current
+            assertion level reach this point.
+            The [declared_ids] argument does not have this issue.
+            See issue https://github.com/OCamlPro/alt-ergo/issues/1243. *)
          (* We do not store names defined by the user. *)
          acc
        | _ ->
@@ -1256,7 +1269,7 @@ let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
   let get_abstract_for = Cache.get_abstract_for cache.abstracts
   in fun ~prop_model ~declared_ids env ->
-    let terms, suspicious = terms env in
+    let terms, suspicious = terms ~declared_ids env in
     let model, mrepr =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
         terms (ModelMap.empty ~suspicious declared_ids, ME.empty)
