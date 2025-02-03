@@ -479,7 +479,7 @@ let to_string_clean sy =
 let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
-let fresh_skolem_name base = name @@ Id.of_string ~ns:Skolem base
+let fresh_skolem_name base = name @@ Id.fresh ~base ~ns:Skolem ()
 
 let fresh_skolem_var base = Var.of_id @@ Id.fresh ~base ~ns:Skolem ()
 
