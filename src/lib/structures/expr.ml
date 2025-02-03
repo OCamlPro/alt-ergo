@@ -2865,8 +2865,8 @@ type th_elt =
     axiom_kind : Util.axiom_kind;
   }
 
-let print_th_elt fmt t =
-  Format.fprintf fmt "%s/%a: @[<hov>%a@]" t.th_name Id.pp t.ax_name print t.ax_form
+let print_th_elt ppf t =
+  Fmt.pf ppf "%s/%a: @[<hov>%a@]" t.th_name Id.pp t.ax_name print t.ax_form
 
 let save_cache () =
   HC.save_cache ()
