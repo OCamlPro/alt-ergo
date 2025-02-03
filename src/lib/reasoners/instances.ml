@@ -184,7 +184,22 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       let defn =
         if E.equal p f then E.vrai
         else if E.equal np f then E.faux
-        else assert false
+        else (
+          Fmt.pr "p = %a, np = %a, f = %a@."
+            E.print p E.print np E.print f;
+          let () =
+            let E.{ f = nff; _ } = E.term_view (E.neg np) in
+            let E.{ f = ff; _ } = E.term_view (E.neg f) in
+            let module Sy = Symbols in
+            match nff, ff with
+            | Sy.Name { id = Id.Term_cst { tcst = _; defined = d1 }; _ },
+              Sy.Name { id = Id.Term_cst { tcst = _; defined = d2 }; _ } ->
+              if Stdlib.(d1 != d2) then assert false
+              else ()
+            | Sy.Name { id = Id.Hstring _; _ }, Sy.Name { id = Id.Hstring _; _ } -> ()
+            | _ -> assert false
+          in
+          assert false)
       in
       add_ground_pred env ~guard p np defn ex
 

@@ -64,6 +64,10 @@ let of_term_cst ?(defined = false) tcst =
 
 let of_string ~ns s =
   let () =
+    if String.equal s "P_F" then assert false
+    else ()
+  in
+  let () =
     match ns with
     | Fresh | Fresh_ac | Abstract -> invalid_arg "of_string"
     | _ -> ()

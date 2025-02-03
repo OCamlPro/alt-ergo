@@ -977,7 +977,6 @@ let mk_rounding fpar =
 let rec mk_expr
     ?(loc = Loc.dummy) ~name ?(toplevel = false)
     ~decl_kind dt =
-  let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
     let mk = aux_mk_expr in
@@ -1511,7 +1510,7 @@ let rec mk_expr
             List.map (
               fun t ->
                 make_trigger ~loc ~name ~decl_kind ~in_theory
-                  name hyp (t, true)
+                  hyp (t, true)
             ) trgs
           in
 
@@ -1607,8 +1606,8 @@ let rec mk_expr
 
   in aux_mk_expr ~toplevel dt
 
-and make_trigger ?(loc = Loc.dummy) ~name ~decl_kind
-    ~(in_theory: bool) (name: Id.t) (hyp: E.t list)
+and make_trigger ?(loc = Loc.dummy) ~(name : Id.t) ~decl_kind
+    ~(in_theory: bool) (hyp: E.t list)
     (e, from_user: DE.term * bool) =
   (* Dolmen adds an existential quantifier to bind the '?xxx' variables *)
   let e =
@@ -1632,9 +1631,7 @@ and make_trigger ?(loc = Loc.dummy) ~name ~decl_kind
       -> es
     | e -> [e]
   in
-  let mk_expr =
-    mk_expr ~loc ~name ~decl_kind
-  in
+  let mk_expr = mk_expr ~loc ~name ~decl_kind in
   let content = List.map mk_expr e in
   (* clean trigger:
      remove useless terms in multi-triggers after inlining of lets*)
@@ -1948,7 +1945,7 @@ let make dloc_file acc stmt =
           | `Term_def ( _, ({ tags; _ } as tcst), tyvars, terml, body) ->
             Cache.store_tyvl tyvars;
             let st_loc = dl_to_ael dloc_file loc in
-            let name = Id.of_term_cst tcst in
+            let name = Id.of_term_cst ~defined:true tcst in
 
             let binders, defn =
               let rty = dty_to_ty body.term_ty in
