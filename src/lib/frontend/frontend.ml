@@ -32,12 +32,12 @@ open Options
 module E = Expr
 module Ex = Explanation
 
-type used_context = Util.SS.t option
+type used_context = Id.Set.t option
 
 let unused_context name context =
   match context with
   | None -> false
-  | Some s -> not (Util.SS.mem name s)
+  | Some s -> not (Id.Set.mem name s)
 
 type status =
   | Unsat of Commands.sat_tdecl * Ex.t
@@ -147,11 +147,11 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * E.t * bool) process
+  val assume : (Id.t * E.t * bool) process
 
-  val pred_def : (string * E.t) process
+  val pred_def : (Id.t * E.t) process
 
-  val query : (string * E.t * Ty.goal_sort) process
+  val query : (Id.t * E.t * Ty.goal_sort) process
 
   val th_assume : E.th_elt process
 
@@ -169,9 +169,12 @@ end
 let init_with_replay_used acc f =
   assert (Sys.file_exists f);
   let cin = open_in f in
-  let acc = ref (match acc with None -> Util.SS.empty | Some ss -> ss) in
+  let acc = ref (match acc with None -> Id.Set.empty | Some ss -> ss) in
   try
-    while true do acc := Util.SS.add (input_line cin) !acc done;
+    while true do
+      (* TODO: check this line? *)
+      acc := Id.Set.add (Id.of_string ~ns:Internal (input_line cin)) !acc
+    done;
     assert false
   with End_of_file ->
     Some !acc
@@ -238,7 +241,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let output_used_context g_name dep =
     let f = Options.get_used_context_file () in
-    let cout = open_out (sprintf "%s.%s.used" f g_name) in
+    let cout = open_out (asprintf "%s.%a.used" f Id.pp g_name) in
     let cfmt = Format.formatter_of_out_channel cout in
     Ex.print_unsat_core cfmt dep;
     close_out cout
@@ -258,7 +261,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           (fun f ->
              SAT.assume satenv
                {E.ff=f;
-                origin_name = "";
+                origin_name = Id.of_string ~ns:Internal "";
                 gdist = -1;
                 hdist = -1;
                 trigger_depth = max_int;
@@ -276,7 +279,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       ignore (SAT.unsat
                 satenv
                 {E.ff=E.vrai;
-                 origin_name = "";
+                 origin_name = Id.of_string ~ns:Internal "";
                  gdist = -1;
                  hdist = -1;
                  trigger_depth = max_int;
@@ -297,7 +300,8 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     if Options.get_unsat_core () then Ex.singleton (Ex.RootDep {name;f;loc})
     else Ex.empty
 
-  let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
+  let internal_decl ?(loc = Loc.dummy) (id : ModelMap.typed)
+      (env : env) : unit =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
@@ -322,9 +326,12 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
 
   let internal_assume
       ?(loc = Loc.dummy)
-      ((name, f, mf) : string * E.t * bool)
+      ((name, f, mf) : Id.t * E.t * bool)
       (env : env) =
-    let is_hyp = try (Char.equal '@' name.[0]) with _ -> false in
+    let is_hyp =
+      (* TODO: check this code! *)
+      Compat.String.starts_with ~prefix:"@" (Id.show name)
+    in
     if is_hyp || not (unused_context name env.used_context) then
       let expl =
         if is_hyp then

@@ -304,7 +304,7 @@ let status_steps s =
 let status_goal g =
   match g with
     None -> ""
-  | Some g -> Format.sprintf " (goal %s)" g
+  | Some g -> Format.asprintf " (goal %a)" Id.pp g
 
 let print_status_loc fmt loc =
   match loc with

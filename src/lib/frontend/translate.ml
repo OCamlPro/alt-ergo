@@ -975,7 +975,7 @@ let mk_rounding fpar =
     Builds an Alt-Ergo hashconsed expression from a dolmen term
 *)
 let rec mk_expr
-    ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
+    ?(loc = Loc.dummy) ~name ?(toplevel = false)
     ~decl_kind dt =
   let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
@@ -1457,12 +1457,14 @@ let rec mk_expr
           Cache.store_tyvl tyvl;
           aux_mk_expr ~toplevel:true body
         end
-        else
-          let name =
-            if !name_tag = 0 then name_base
-            else Format.sprintf "#%s#sub-%d" name_base !name_tag
-          in
-          incr name_tag;
+        else (
+          (* let name =
+             let base =
+              if !name_tag = 0 then name_base
+              else Format.sprintf "#%s#sub-" name_base
+             in
+             Id.fresh ~base ~ns:Fresh ()
+             in *)
           if tyvl != [] then Cache.store_tyvl tyvl;
 
           (* the following is done in two iterations to preserve the order *)
@@ -1508,7 +1510,7 @@ let rec mk_expr
           let triggers =
             List.map (
               fun t ->
-                make_trigger ~loc ~name_base ~decl_kind ~in_theory
+                make_trigger ~loc ~name ~decl_kind ~in_theory
                   name hyp (t, true)
             ) trgs
           in
@@ -1519,7 +1521,7 @@ let rec mk_expr
             | _ -> assert false (* unreachable *)
           end
           in
-          mk name loc binders triggers qbody ~toplevel ~decl_kind
+          mk name loc binders triggers qbody ~toplevel ~decl_kind)
       | _ -> unsupported "Term %a" DE.Term.print term
     in
     match DStd.Tag.get root_tags DE.Tags.named with
@@ -1605,8 +1607,8 @@ let rec mk_expr
 
   in aux_mk_expr ~toplevel dt
 
-and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
-    ~(in_theory: bool) (name: string) (hyp: E.t list)
+and make_trigger ?(loc = Loc.dummy) ~name ~decl_kind
+    ~(in_theory: bool) (name: Id.t) (hyp: E.t list)
     (e, from_user: DE.term * bool) =
   (* Dolmen adds an existential quantifier to bind the '?xxx' variables *)
   let e =
@@ -1631,7 +1633,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     | e -> [e]
   in
   let mk_expr =
-    mk_expr ~loc ~name_base ~decl_kind
+    mk_expr ~loc ~name ~decl_kind
   in
   let content = List.map mk_expr e in
   (* clean trigger:
@@ -1722,15 +1724,12 @@ let pp_query ?(hyps =[]) t =
   let axioms, goal = intro_hypothesis t in
   List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
-let make_form name_base f loc ~decl_kind =
-  let ff =
-    mk_expr ~loc ~name_base ~toplevel:true ~decl_kind f
-  in
+let make_form name f loc ~decl_kind =
+  let ff = mk_expr ~loc ~name ~toplevel:true ~decl_kind f in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
-  else
-    E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
+  else E.mk_forall name loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
 
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
@@ -1747,8 +1746,9 @@ let make dloc_file acc stmt =
     (* Optimize terms *)
     | { contents = `Optimize (t, is_max); loc; _ } ->
       let st_loc = dl_to_ael dloc_file loc in
+      let name = Id.of_string ~ns:Internal "" in
       let e =
-        mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
+        mk_expr ~name ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
       in
       let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
@@ -1776,15 +1776,15 @@ let make dloc_file acc stmt =
 
     (* Goal and check-sat definitions *)
     | {
-      id; loc; attrs;
+      loc; attrs;
       contents = (`Goal _ | `Check _) as contents;
-      implicit;
+      implicit; _
     } ->
-      let name =
-        match id.name with
-        | Simple name -> name
-        | Indexed _ | Qualified _ -> assert false
-      in
+      (* let name =
+         match id.name with
+         | Simple name -> Id.of_string ~ns:Internal name
+         | Indexed _ | Qualified _ -> assert false
+         in *)
       let goal_sort =
         match contents with
         | `Goal _ -> Ty.Thm
@@ -1811,7 +1811,9 @@ let make dloc_file acc stmt =
             aux acc decl
         ) [] _hyps
       in
-      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
+      (* TODO: put a correct identifier *)
+      let name = Id.of_string ~ns:Internal "" in
+      let e = make_form name t st_loc ~decl_kind:E.Dgoal in
       let st_decl = C.Query (name, e, goal_sort) in
       C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
@@ -1825,11 +1827,11 @@ let make dloc_file acc stmt =
         implicit=_ } ->
       let name =
         match DStd.Tag.get t.term_tags lemma_name_attr with
-        | Some n -> n
+        | Some n -> Id.of_string ~ns:Internal n
         | None ->
           match DStd.Tag.get t.term_tags DE.Tags.named with
-          | Some n -> n
-          | None -> name
+          | Some n -> Id.of_string ~ns:Internal n
+          | None -> Id.of_string ~ns:Internal name
       in
       let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
       let aloc = DStd.Loc.lexing_positions dloc in
@@ -1943,10 +1945,10 @@ let make dloc_file acc stmt =
       append @@
       List.filter_map (fun (def : Typer_Pipe.def) ->
           match def with
-          | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
+          | `Term_def ( _, ({ tags; _ } as tcst), tyvars, terml, body) ->
             Cache.store_tyvl tyvars;
             let st_loc = dl_to_ael dloc_file loc in
-            let name_base = Util.get_basename path in
+            let name = Id.of_term_cst tcst in
 
             let binders, defn =
               let rty = dty_to_ty body.term_ty in
@@ -1972,12 +1974,12 @@ let make dloc_file acc stmt =
               | Some () ->
                 let decl_kind = E.Dpredicate defn in
                 let ff =
-                  mk_expr ~loc ~name_base
+                  mk_expr ~loc ~name
                     ~toplevel:false ~decl_kind body
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                  E.mk_forall name Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -1985,20 +1987,20 @@ let make dloc_file acc stmt =
                 let e =
                   if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
-                    E.mk_forall name_base loc
+                    E.mk_forall name loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
-                Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
+                Some C.{ st_decl = C.PredDef (e, name); st_loc }
               | None ->
                 let decl_kind = E.Dfunction defn in
                 let ff =
-                  mk_expr ~loc ~name_base
+                  mk_expr ~loc ~name
                     ~toplevel:false ~decl_kind body
                 in
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
                 let qb = E.mk_eq ~iff defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                  E.mk_forall name Loc.dummy binders [] qb ~toplevel:true
                     ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -2006,12 +2008,12 @@ let make dloc_file acc stmt =
                 let e =
                   if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
-                    E.mk_forall name_base loc
+                    E.mk_forall name loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
                 if Options.get_verbose () then
                   Format.eprintf "defining term of %a@." DE.Term.print body;
-                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+                Some C.{ st_decl = C.Assume (name, e, true); st_loc }
             end
           | `Type_alias _ -> None
           | `Instanceof _ ->

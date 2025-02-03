@@ -28,11 +28,11 @@
 (* Sat entry *)
 
 type sat_decl_aux =
-  | Decl of Id.typed
-  | Assume of string * Expr.t * bool
-  | PredDef of Expr.t * string (*name of the predicate*)
+  | Decl of ModelMap.typed
+  | Assume of Id.t * Expr.t * bool
+  | PredDef of Expr.t * Id.t (*name of the predicate*)
   | Optimize of Objective.Function.t
-  | Query of string *  Expr.t * Ty.goal_sort
+  | Query of Id.t *  Expr.t * Ty.goal_sort
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int

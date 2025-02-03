@@ -2330,7 +2330,7 @@ let record_this_instance f accepted lorig =
   if Options.get_profiling() then
     match E.form_view lorig with
     | E.Lemma { E.name; loc; _ } ->
-      Profiling.new_instance_of name f loc accepted
+      Profiling.new_instance_of (Id.show name) f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> assert false
 
@@ -2349,7 +2349,7 @@ let profile_produced_terms menv lorig nf s trs =
     let diff = SE.diff st1 st0 in
     let info, _ = EM.terms_info menv in
     let _new = SE.filter (fun t -> not (ME.mem t info)) diff in
-    Profiling.register_produced_terms name loc st0 st1 diff _new
+    Profiling.register_produced_terms (Id.show name) loc st0 st1 diff _new
 
 let new_facts_for_axiom
     ~do_syntactic_matching menv uf selector optimized substs accu =
@@ -2467,8 +2467,8 @@ let syntactic_matching menv env uf _selector =
            Printer.print_dbg
              ~module_name:"IntervalCalculus"
              ~function_name:"syntactic_matching"
-             "syntactic matching of Ax %s: got %d substs"
-             (E.name_of_lemma f) !cpt
+             "syntactic matching of Ax %a: got %d substs"
+             Id.pp (E.name_of_lemma f) !cpt
          end;
          res:: accu
       )env.th_axioms []

@@ -64,7 +64,7 @@ and bind_kind =
   | B_let of letin
 
 and quantified = {
-  name : string;
+  name : Id.t;
   main : t;
   toplevel : bool;
   user_trs : trigger list;
@@ -378,15 +378,15 @@ module SmtPrinter = struct
 
     | Sy.F_Lemma, [], B_lemma q ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! %a :named %s@])" pp_lemma q q.name
+        Fmt.pf ppf "@[<2>(! %a :named %a@])" pp_lemma q Id.pp q.name
       else
-        Fmt.string ppf q.name
+        Id.pp ppf q.name
 
     | Sy.F_Skolem, [], B_skolem q ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[<2>(! %a :named %s@])" pp_skolem q q.name
+        Fmt.pf ppf "@[<2>(! %a :named %a@])" pp_skolem q Id.pp q.name
       else
-        Fmt.string ppf q.name
+        Id.pp ppf q.name
 
     | _ -> assert false
 
@@ -558,13 +558,13 @@ module AEPrinter = struct
 
     | Sy.F_Lemma, [], B_lemma { user_trs ; main ; name ; binders; _ } ->
       if Options.get_verbose () then
-        Fmt.pf ppf "@[(lemma: %s@ forall %a[%a].@  %a@])"
-          name
+        Fmt.pf ppf "@[(lemma: %a@ forall %a[%a].@  %a@])"
+          Id.pp name
           pp_binders binders
           pp_triggers user_trs
           pp_silent main
       else
-        Fmt.pf ppf "(lem %s)" name
+        Fmt.pf ppf "(lem %a)" Id.pp name
 
     | Sy.F_Skolem, [], B_skolem { main; binders; _ } ->
       Fmt.pf ppf "(<sko exists %a.> %a)"
@@ -829,7 +829,7 @@ let name_of_lemma f =
 
 let name_of_lemma_opt opt =
   match opt with
-  | None -> "(Lemma=None)"
+  | None -> Id.of_string ~ns:Internal "(Lemma=None)"
   | Some f -> name_of_lemma f
 
 
@@ -1147,7 +1147,8 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        Printer.print_wrn "(sub) axiom %s replaced with %s" name q.name;
+        Printer.print_wrn "(sub) axiom %a replaced with %a"
+          Id.pp name Id.pp q.name;
         lem
       with Not_found | Exit ->
         let d = new_q.main.depth in (* + 1 ?? *)
@@ -2363,10 +2364,10 @@ module Triggers = struct
           if Options.get_verbose () then
             Printer.print_dbg ~module_name:"Translate"
               ~function_name:"clean_trigger"
-              "AXIOM: %s@ \
+              "AXIOM: %a@ \
                from multi-trig of sz %d : %a@ \
                to   multi-trig of sz %d : %a"
-              name
+              Id.pp name
               sz_l print_list trig.content sz_s print_list content;
           { trig with content; }
 
@@ -2610,7 +2611,15 @@ let mk_exists name loc binders trs f ~toplevel ~decl_kind =
        a forall quantification without term variables (ie. only with
        type variables). 2 - we keep the triggers of 'exists' to try
        to instantiate these type variables *)
-    let nm = Format.sprintf "#%s#sub-%d" name 0 in
+    let nm =
+      let s = Format.asprintf "#%a#sub-%d" Id.pp name 0 in
+      match name with
+      | Term_cst { tcst = { id_ty; _ }; defined } ->
+        DStd.Expr.Term.Const.mk (DStd.Path.local s) id_ty
+        |> Id.of_term_cst ~defined
+      | Hstring { ns; _ } ->
+        Id.of_string ~ns s
+    in
     let tmp =
       neg (mk_forall nm loc binders trs (neg f) ~toplevel:false ~decl_kind)
     in
@@ -2838,7 +2847,7 @@ type gformula = {
   trigger_depth : int;
   age: int;
   lem: expr option;
-  origin_name : string;
+  origin_name : Id.t;
   from_terms : expr list;
   mf: bool;
   gf: bool;
@@ -2850,14 +2859,14 @@ type gformula = {
 type th_elt =
   {
     th_name : string;
-    ax_name : string;
+    ax_name : Id.t;
     ax_form : t;
     extends : Util.theories_extensions;
     axiom_kind : Util.axiom_kind;
   }
 
 let print_th_elt fmt t =
-  Format.fprintf fmt "%s/%s: @[<hov>%a@]" t.th_name t.ax_name print t.ax_form
+  Format.fprintf fmt "%s/%a: @[<hov>%a@]" t.th_name Id.pp t.ax_name print t.ax_form
 
 let save_cache () =
   HC.save_cache ()

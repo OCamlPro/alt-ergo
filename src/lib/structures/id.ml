@@ -40,11 +40,6 @@ type t =
   | Term_cst of { tcst : Dolmen.Std.Expr.term_cst; defined : bool }
   | Hstring of { hs : Hstring.t; ns : name_space }
 
-type typed = Dolmen.Std.Expr.term_cst * Ty.t list * Ty.t
-
-let compare_typed (t1, _, _) (t2, _, _) =
-  Dolmen.Std.Expr.Term.Const.compare t1 t2
-
 let mangle ns s =
   match ns with
   | Internal -> ".!" ^ s
@@ -143,6 +138,11 @@ let reinit () =
   Internal.reset_fresh_cpt ();
   Skolem.reset_fresh_cpt ();
   Abstract.reset_fresh_cpt ()
+
+module Set = Set.Make (struct
+    type nonrec t = t
+    let compare = compare
+  end)
 
 module Map = Map.Make (struct
     type nonrec t = t

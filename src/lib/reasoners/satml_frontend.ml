@@ -68,8 +68,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
 
-    mutable declare_top : Id.typed list;
-    declare_tail : Id.typed list Stack.t;
+    mutable declare_top : ModelMap.typed list;
+    declare_tail : ModelMap.typed list Stack.t;
     (** Stack of the declared symbols by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
@@ -122,7 +122,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { E.ff = f;
       trigger_depth = max_int;
       nb_reductions = 0;
-      origin_name = "<none>";
+      origin_name = Id.of_string ~ns:Internal "<none>";
       age = 0;
       lem = None;
       mf = false;
@@ -170,7 +170,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             | None -> ""
             | Some ff -> begin
                 match E.form_view ff with
-                | E.Lemma xx -> xx.E.name
+                | E.Lemma xx -> Id.show xx.E.name
                 | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
                 | E.Let _ | E.Iff _ | E.Xor _ -> ""
               end
@@ -339,10 +339,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
         print_dbg
           ~module_name:"Satml_frontend" ~function_name:"theory_instance"
-          "@[<v 2>%s >@,\
+          "@[<v 2>%a >@,\
            hypotheses: %a@,\
            conclusion: %a@]"
-          (E.name_of_lemma_opt gf.E.lem)
+          Id.pp (E.name_of_lemma_opt gf.E.lem)
           print_f_conj hyp
           E.print gf.E.ff;
 

@@ -43,7 +43,7 @@ module type S = sig
   val add_predicate :
     t ->
     guard:Expr.t ->
-    name:string ->
+    name:Id.t ->
     Expr.gformula ->
     Ex.t ->
     t
@@ -123,7 +123,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let new_facts_of_axiom ax insts_ok =
       if get_debug_matching () >= 1 && insts_ok != ME.empty then
         let name = match Expr.form_view ax with
-          | E.Lemma { E.name = s; _ } -> s
+          | E.Lemma { name; _ } -> Id.show name
           | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
           | E.Let _ | E.Iff _ | E.Xor _ -> "!(no-name)"
         in
@@ -169,9 +169,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
                 matching = EM.max_term_depth env.matching (E.depth f) } in
     match E.form_view f with
     | E.Iff (f1, f2) ->
-      let p =
-        E.mk_term (Symbols.name @@ Id.of_string ~ns:Internal name) [] Ty.Tbool
-      in
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal f1 p then f2
@@ -181,9 +179,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
       add_ground_pred env ~guard p np defn ex
 
     | E.Literal _ ->
-      let p =
-        E.mk_term (Symbols.name @@ Id.of_string ~ns:Internal name) [] Ty.Tbool
-      in
+      let p = E.mk_term (Symbols.name name) [] Ty.Tbool in
       let np = E.neg p in
       let defn =
         if E.equal p f then E.vrai
@@ -228,7 +224,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let record_this_instance f accepted lorig =
     match Expr.form_view lorig with
     | E.Lemma { E.name; loc; _ } ->
-      Profiling.new_instance_of name f loc accepted
+      Profiling.new_instance_of (Id.show name) f loc accepted
     | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
     | E.Let _ | E.Iff _ | E.Xor _ -> assert false
 
@@ -246,7 +242,7 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let diff = Expr.Set.diff st1 st0 in
     let info, _ = EM.terms_info env.matching in
     let _new = Expr.Set.filter (fun t -> not (ME.mem t info)) diff in
-    Profiling.register_produced_terms name loc st0 st1 diff _new
+    Profiling.register_produced_terms (Id.show name) loc st0 st1 diff _new
 
   let inst_is_seen_during_this_round orig f insts =
     try

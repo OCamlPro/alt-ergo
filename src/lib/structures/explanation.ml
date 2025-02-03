@@ -27,7 +27,7 @@
 
 module E = Expr
 
-type rootdep = { name : string; f : Expr.t; loc : Loc.t}
+type rootdep = { name : Id.t; f : Expr.t; loc : Loc.t}
 
 type exp =
   | Literal of Satml_types.Atom.atom
@@ -112,7 +112,7 @@ let print fmt ex =
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
         | Fresh i -> fprintf fmt "{Fresh:%i}" i;
         | Dep f -> fprintf fmt "{Dep:%a}" E.print f
-        | RootDep r -> fprintf fmt "{RootDep:%s}" r.name
+        | RootDep r -> fprintf fmt "{RootDep:%a}" Id.pp r.name
         | Bj f -> fprintf fmt "{BJ:%a}" E.print f
       ) ex;
     fprintf fmt "}"
@@ -131,8 +131,10 @@ let print_unsat_core ?(tab=false) fmt dep =
   iter_atoms
     (function
       | RootDep r ->
-        if tab then Format.fprintf fmt "  %s@." r.name (* tab is too big *)
-        else Format.fprintf fmt "%s@." r.name
+        if tab then
+          Format.fprintf fmt "  %a@." Id.pp r.name (* tab is too big *)
+        else
+          Format.fprintf fmt "%a@." Id.pp r.name
       | Dep _ -> ()
       | Bj _ | Fresh _ | Literal _ -> assert false
     ) dep

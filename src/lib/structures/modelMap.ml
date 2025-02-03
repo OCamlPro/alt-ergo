@@ -19,6 +19,8 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
+type typed = Dolmen.Std.Expr.term_cst * Ty.t list * Ty.t
+
 module M: Map.S with type key = Expr.t list = Map.Make
     (struct
       type t = Expr.t list [@@deriving ord]
@@ -107,9 +109,10 @@ end
 
 module P = Map.Make
     (struct
-      type t = Id.typed
+      type t = typed
 
-      let compare = Id.compare_typed
+      let compare (t1, _, _) (t2, _, _) =
+        Dolmen.Std.Expr.Term.Const.compare t1 t2
     end)
 
 type graph =

@@ -71,11 +71,11 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * Expr.t * bool) process
+  val assume : (Id.t * Expr.t * bool) process
 
-  val pred_def : (string * Expr.t) process
+  val pred_def : (Id.t * Expr.t) process
 
-  val query : (string * Expr.t * Ty.goal_sort) process
+  val query : (Id.t * Expr.t * Ty.goal_sort) process
 
   val th_assume : Expr.th_elt process
 

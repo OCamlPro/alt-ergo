@@ -33,7 +33,7 @@ val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
 *)
 
 val make_form :
-  string ->
+  Id.t ->
   D_loop.DStd.Expr.term ->
   Loc.t ->
   decl_kind:Expr.decl_kind ->

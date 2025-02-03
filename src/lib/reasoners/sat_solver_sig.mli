@@ -55,7 +55,7 @@ module type S = sig
       The optional argument [selector] is used to filter ground facts
       discovered by the instantiation engine. *)
 
-  val declare : t -> Id.typed -> unit
+  val declare : t -> ModelMap.typed -> unit
   (** [declare env id] declares a new identifier [id].
 
       If the environment [env] isn't unsatisfiable and the model generation
@@ -89,7 +89,7 @@ module type S = sig
   (** [assume env f exp] assumes a new formula [f] with the explanation [exp]
       in the theory environment of [env]. *)
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
+  val pred_def : t -> Expr.t -> Id.t -> Explanation.t -> Loc.t -> unit
   (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 
   val optimize : t -> Objective.Function.t -> unit

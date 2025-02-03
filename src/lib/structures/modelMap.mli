@@ -28,22 +28,25 @@ type graph =
 type t
 (** Type of model. *)
 
-val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
+(* TODO: remove this type after replacing Alt-Ergo types by Dolmen types. *)
+type typed = Dolmen.Std.Expr.term_cst * Ty.t list * Ty.t
+
+val add : typed -> Expr.t list -> Expr.t -> t -> t
 (** [add id args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the identifier [id]. *)
 
-val empty : suspicious:bool -> Id.typed list -> t
+val empty : suspicious:bool -> typed list -> t
 (** An empty model. The [suspicious] flag is used to remember that this
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
 
-val find : Id.typed -> t -> graph
+val find : typed -> t -> graph
 (** [find id mdl] returns the graph associated with the identifier [id] in the
     model [mdl].
 
     @raise Not_found if it does not exist. *)
 
-val fold: (Id.typed -> graph -> 'a -> 'a) -> t -> 'a -> 'a
+val fold: (typed -> graph -> 'a -> 'a) -> t -> 'a -> 'a
 (** [fold f mdl init] folds over the bindings in the model [mdl] with the
     function [f] and with [init] as a initial value for the accumulator. *)
 

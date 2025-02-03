@@ -77,10 +77,6 @@ type t = private
 
   | Hstring of { hs : Hstring.t; ns : name_space }
 
-(* TODO: remove this type after replacing Alt-Ergo types by Dolmen types. *)
-type typed = Dolmen.Std.Expr.term_cst * Ty.t list * Ty.t
-val compare_typed : typed -> typed -> int
-
 val of_term_cst : ?defined:bool -> Dolmen.Std.Expr.term_cst -> t
 (** [of_term_cst ?defined t] creates an identifier from a constant term.
     The argument [defined] is used to determine if the identifier is
@@ -127,4 +123,5 @@ val is_suspicious : t -> bool
 val reinit : unit -> unit
 (** Resets the internal counters of the [fresh] function. *)
 
+module Set : Set.S with type elt = t
 module Map : Map.S with type key = t
