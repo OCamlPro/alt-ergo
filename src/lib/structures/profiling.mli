@@ -47,11 +47,11 @@ val reset_ilevel : int -> unit
 (* record when the axioms are instantiated. Bool tells whether the
    instance is kept or removed by the selector function. The formula
    is the instance that has been generated *)
-val new_instance_of : string -> Expr.t -> Loc.t -> bool -> unit
-val conflicting_instance : string -> Loc.t -> unit
+val new_instance_of : string -> Expr.t -> Dolmen.Std.Loc.loc -> bool -> unit
+val conflicting_instance : string -> Dolmen.Std.Loc.loc -> unit
 val register_produced_terms :
   string ->
-  Loc.t ->
+  Dolmen.Std.Loc.loc ->
   Expr.Set.t -> (* consumed *)
   Expr.Set.t -> (* all terms of the instance *)
   Expr.Set.t -> (* produced *)

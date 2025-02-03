@@ -35,7 +35,7 @@ val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
 val make_form :
   string ->
   D_loop.DStd.Expr.term ->
-  Loc.t ->
+  Dolmen.Std.Loc.loc ->
   decl_kind:Expr.decl_kind ->
   Expr.t
 

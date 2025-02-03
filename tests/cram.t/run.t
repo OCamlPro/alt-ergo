@@ -59,14 +59,14 @@ Then, if model generation is not enabled, we should error out when a
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 26-37: Model generation disabled (try --produce-models)")
 
 This should be the case Tableaux solver as well:
 
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 26-37: Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
@@ -74,12 +74,12 @@ The messages above mention `--produce-models`, but we can also use
   $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 60-71: Model generation disabled (try --produce-models)")
 
   $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 60-71: Model generation disabled (try --produce-models)")
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
 

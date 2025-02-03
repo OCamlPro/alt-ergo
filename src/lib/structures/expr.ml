@@ -71,7 +71,7 @@ and quantified = {
   binders : binders;
   sko_v : t list; (* This list has to be ordered for the skolemization. *)
   sko_vty : Ty.t list; (* This list has to be ordered for the skolemization. *)
-  loc : Loc.t;
+  loc : DStd.Loc.loc;
   kind : decl_kind;
 }
 
@@ -1321,7 +1321,7 @@ let mk_tester c t =
 
 let mk_record xs ty = mk_term (Sy.Op Record) xs ty
 
-let void = mk_constr Dolmen.Std.Expr.Term.Cstr.void [] Ty.tunit
+let void = mk_constr DStd.Expr.Term.Cstr.void [] Ty.tunit
 
 (** Substitutions *)
 

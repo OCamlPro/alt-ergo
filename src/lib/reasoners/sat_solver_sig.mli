@@ -89,7 +89,13 @@ module type S = sig
   (** [assume env f exp] assumes a new formula [f] with the explanation [exp]
       in the theory environment of [env]. *)
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
+  val pred_def :
+    t ->
+    Expr.t ->
+    string ->
+    Explanation.t ->
+    Dolmen.Std.Loc.loc ->
+    unit
   (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 
   val optimize : t -> Objective.Function.t -> unit

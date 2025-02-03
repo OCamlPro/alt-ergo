@@ -120,7 +120,7 @@ and quantified = private {
   (** The set of free type variables. In particular this set is always
       empty if we are the top level. *)
 
-  loc : Loc.t;
+  loc : Dolmen.Std.Loc.loc;
   (** Location of the "GLOBAL" axiom containing this quantified formula. It
       forms with name a unique identifier. *)
 
@@ -378,7 +378,7 @@ val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :
   string -> (* name *)
-  Loc.t -> (* location in the original file *)
+  Dolmen.Std.Loc.loc -> (* location in the original file *)
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)
@@ -388,7 +388,7 @@ val mk_forall :
 
 val mk_exists :
   string -> (* name *)
-  Loc.t -> (* location in the original file *)
+  Dolmen.Std.Loc.loc -> (* location in the original file *)
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
   t -> (* quantified formula *)

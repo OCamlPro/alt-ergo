@@ -27,6 +27,8 @@
 
 open Format
 
+module DStd = Dolmen.Std
+
 type typing_error =
   | NonPositiveBitvType of int
   | ThExtError of string
@@ -48,7 +50,7 @@ type model_error =
   | Subst_not_model_term of Expr.t
 
 type error =
-  | Typing_error of Loc.t * typing_error
+  | Typing_error of Dolmen.Std.Loc.loc * typing_error
   | Run_error of run_error
   | Warning_as_error
   | Dolmen_error of (int * string)
@@ -115,7 +117,7 @@ let report_model_error ppf = function
 
 let report fmt = function
   | Typing_error (l,e) ->
-    Loc.report fmt l;
+    DStd.Loc.fmt fmt l;
     Format.fprintf fmt "Typing Error: ";
     report_typing_error fmt e
   | Run_error e ->

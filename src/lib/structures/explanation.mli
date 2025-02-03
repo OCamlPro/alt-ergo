@@ -27,7 +27,8 @@
 
 type t
 
-type rootdep = { name : string; f : Expr.t; loc : Loc.t}
+type rootdep = { name : string; f : Expr.t; loc : Dolmen.Std.Loc.loc}
+
 type exp =
   | Literal of Satml_types.Atom.atom
   | Fresh of int

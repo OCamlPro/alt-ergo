@@ -1,3 +1,3 @@
 
 unknown
-(error "No model produced.")
+(error "File "../tests/issues/1024.err.default.smt2", line 8, character 0-11: No model produced.")

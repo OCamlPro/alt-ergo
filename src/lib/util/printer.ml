@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module DStd = Dolmen.Std
+
 (*********** Colors ***********)
 type style =
   | Normal
@@ -311,7 +313,7 @@ let print_status_loc fmt loc =
   | None -> ()
   | Some loc ->
     if Options.get_answers_with_locs () then
-      Format.fprintf fmt "%a " Loc.report loc
+      Format.fprintf fmt "%a " DStd.Loc.fmt loc
 
 let print_status_value fmt (v,color) =
   if Options.get_output_with_colors () then

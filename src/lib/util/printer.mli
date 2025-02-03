@@ -104,7 +104,7 @@ val pp_list_space :
     the status. *)
 val print_status_unsat :
   ?validity_mode:bool ->
-  Loc.t option ->
+  Dolmen.Std.Loc.loc option ->
   float option ->
   int option ->
   string option -> unit
@@ -117,7 +117,7 @@ val print_status_unsat :
     the status. *)
 val print_status_sat :
   ?validity_mode:bool ->
-  Loc.t option ->
+  Dolmen.Std.Loc.loc option ->
   float option ->
   int option ->
   string option -> unit
@@ -130,7 +130,7 @@ val print_status_sat :
     the status. *)
 val print_status_unknown :
   ?validity_mode:bool ->
-  Loc.t option ->
+  Dolmen.Std.Loc.loc option ->
   float option ->
   int option ->
   string option -> unit
@@ -143,7 +143,7 @@ val print_status_unknown :
     the status. *)
 val print_status_timeout :
   ?validity_mode:bool ->
-  Loc.t option ->
+  Dolmen.Std.Loc.loc option ->
   float option ->
   int option ->
   string option -> unit
@@ -156,7 +156,7 @@ val print_status_timeout :
     the status. *)
 val print_status_inconsistent :
   ?validity_mode:bool ->
-  Loc.t option ->
+  Dolmen.Std.Loc.loc option ->
   float option ->
   int option ->
   string option -> unit

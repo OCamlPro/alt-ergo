@@ -38,7 +38,7 @@ type sat_decl_aux =
   | Pop of int
 
 type sat_tdecl = {
-  st_loc : Loc.t;
+  st_loc : Dolmen.Std.Loc.loc;
   st_decl : sat_decl_aux
 }
 

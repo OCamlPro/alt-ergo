@@ -371,7 +371,7 @@ let process_source ?selector_inst ~print_status src =
   let print_wrn_opt ~name loc ty value =
     warning
       "%a The option %s expects a %s, got %a"
-      Loc.report loc name ty DStd.Term.print value
+      DStd.Loc.fmt loc name ty DStd.Term.print value
   in
 
   let set_sat_solver sat st =
@@ -413,7 +413,7 @@ let process_source ?selector_inst ~print_status src =
           "%a The generation of unsat cores is not \
            supported for the current SAT solver. Please \
            choose the SAT solver Tableaux."
-          Loc.report st_loc;
+          DStd.Loc.fmt st_loc;
       st
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
       Options.set_unsat_core false; st
@@ -443,7 +443,7 @@ let process_source ?selector_inst ~print_status src =
               "nonnegative integer" value
         else
           warning "%a :reproducible-resource-limit is only supported on Unix"
-            Loc.report st_loc
+            DStd.Loc.fmt st_loc
       end;
       st
     | ":sat-solver", Symbol { name = Simple solver; _ } -> (
@@ -678,15 +678,16 @@ let process_source ?selector_inst ~print_status src =
     'a D_loop.Typer_Pipe.stmt -> State.t =
     let goal_cnt = ref 0 in
     fun all_context st td ->
-      let file_loc = (State.get State.logic_file st).loc in
       let solver_ctx = State.get solver_ctx_key st in
+      let file = (State.get State.logic_file st).loc in
+      let loc = DStd.Loc.loc file td.loc in
       match td with
       | { contents = `Set_logic _; _} ->
         cmd_on_modes st [Start] "set-logic";
         DO.Mode.set Util.Assert st
       (* When the next statement is a goal, the solver is called and provided
          the goal and the current context *)
-      | { id; contents = (`Solve _ as contents); loc ; attrs; implicit } ->
+      | { id; contents = (`Solve _ as contents); attrs; implicit; _ } ->
         cmd_on_modes st [Assert; Sat; Unsat] "solve";
         let l =
           solver_ctx.local @
@@ -704,7 +705,6 @@ let process_source ?selector_inst ~print_status src =
           match id.name with
           | Simple name -> name
           | _ ->
-            let loc = DStd.Loc.loc file_loc loc in
             Fmt.failwith "%a: internal error: goal name should be simple"
               DStd.Loc.fmt loc
         in
@@ -713,13 +713,14 @@ let process_source ?selector_inst ~print_status src =
           | `Solve (hyps, []) -> `Check hyps
           | `Solve ([], [t]) -> `Goal t
           | _ ->
-            let loc = DStd.Loc.loc file_loc loc in
             Fmt.failwith "%a: internal error: unknown statement"
               DStd.Loc.fmt loc
         in
-        let stmt = { Typer_Pipe.id; contents; loc ; attrs; implicit } in
+        let stmt =
+          { Typer_Pipe.id; contents; loc = td.loc ; attrs; implicit }
+        in
         let cnf, is_thm =
-          match Translate.make (State.get State.logic_file st).loc l stmt with
+          match Translate.make file l stmt with
           | { Commands.st_decl = Query (_, _, kind); _ } as cnf :: hyps ->
             let is_thm =
               match kind with Ty.Thm | Sat -> true | _ -> false
@@ -751,9 +752,7 @@ let process_source ?selector_inst ~print_status src =
              { DStd.Term.term =
                  App ({ term = Symbol { name = Simple name; _ }; _ }, [value]);
                _
-             }; loc = l; _ } ->
-        let dloc_file = (State.get State.logic_file st).loc in
-        let loc = DStd.Loc.(lexing_positions (loc dloc_file l)) in
+             }; _ } ->
         handle_option loc name value st
 
       | {contents = `Set_option _; _} ->
@@ -769,15 +768,14 @@ let process_source ?selector_inst ~print_status src =
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
                 FE.print_model env
             | None ->
-              (* TODO: add the location of the statement. *)
-              recoverable_error "No model produced."
+              recoverable_error "%a: No model produced." DStd.Loc.fmt loc
           in
           st
         else
           begin
-            (* TODO: add the location of the statement. *)
             recoverable_error
-              "Model generation disabled (try --produce-models)";
+              "%a: Model generation disabled (try --produce-models)"
+              DStd.Loc.fmt loc;
             st
           end
 
@@ -816,13 +814,14 @@ let process_source ?selector_inst ~print_status src =
                 st
             else
               recoverable_error
-                "Produce assignments disabled; \
-                 add (set-option :produce-assignments true)";
+                "%a: Produce assignments disabled; \
+                 add (set-option :produce-assignments true)"
+                DStd.Loc.fmt loc;
             st
           | None ->
-            (* TODO: add the location of the statement. *)
             recoverable_error
-              "No model produced, cannot execute get-assignment.";
+              "%a: No model produced, cannot execute get-assignment."
+              DStd.Loc.fmt loc;
             st
         end
 

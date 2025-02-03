@@ -470,10 +470,6 @@ let builtins =
        | r -> r)
   | _ -> fun _ _ -> `Not_found
 
-(** Translates dolmen locs to Alt-Ergo's locs *)
-let dl_to_ael dloc_file (compact_loc: DStd.Loc.t) =
-  DStd.Loc.(lexing_positions (loc dloc_file compact_loc))
-
 (** clears the cache in the [Cache] module. *)
 let clear_cache () = Cache.clear ()
 
@@ -499,7 +495,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     let vty = aux vty in
     Ty.Tfarray (ity, vty)
   | `Bitv n ->
-    if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
+    if n <= 0 then Errors.typing_error (NonPositiveBitvType n) DStd.Loc.dummy;
     Ty.Tbitv n
 
   | `App (`Builtin B.Unit, []) -> Ty.tunit
@@ -885,7 +881,7 @@ let arith_ty = function
    - [lb] is the (optional) lower bound for the variable [var]
    - [ub] is the (optional) upper bound for the variable [var]
 *)
-let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
+let parse_semantic_bound ?(loc = DStd.Loc.dummy) ~var b x y =
   let is_main_var { DE.term_descr; _ } =
     match term_descr with
     | DE.Var v -> DE.Id.equal v var
@@ -901,7 +897,7 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
     | _ ->
       Fmt.failwith
         "%aInternal error: invalid semantic bound"
-        Loc.report loc
+        DStd.Loc.fmt loc
   in
   let sort = arith_ty t in
   let parse_bound_kind { DE.term_descr; _ } =
@@ -912,7 +908,7 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
     | _ ->
       Fmt.failwith
         "%aInternal error: invalid semantic bound"
-        Loc.report loc
+        DStd.Loc.fmt loc
   in
   (* Parse [main_var `op` b] *)
   let parse_bound ?(flip = false) b =
@@ -991,7 +987,7 @@ let mk_rounding fpar =
     Builds an Alt-Ergo hashconsed expression from a dolmen term
 *)
 let rec mk_expr
-    ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
+    ?(loc = DStd.Loc.dummy) ?(name_base = "") ?(toplevel = false)
     ~decl_kind dt =
   let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
@@ -1120,7 +1116,7 @@ let rec mk_expr
               | _ ->
                 Fmt.failwith
                   "%asemantic trigger should have at most one bound variable"
-                  Loc.report loc
+                  DStd.Loc.fmt loc
             in
             semantic_trigger ~loc ?var trigger
 
@@ -1546,7 +1542,7 @@ let rec mk_expr
       res
     | _ -> res
 
-  and semantic_trigger ?var ?(loc = Loc.dummy) t =
+  and semantic_trigger ?var ?(loc = DStd.Loc.dummy) t =
     let cst, args =
       match destruct_app t with
       | Some (cst, args) -> cst, args
@@ -1570,7 +1566,7 @@ let rec mk_expr
         | _ ->
           Fmt.failwith
             "%aMaps_to: expected a variable but got: %a"
-            Loc.report loc DE.Term.print x
+            DStd.Loc.fmt loc DE.Term.print x
       end
 
     (* open-ended in interval *)
@@ -1613,16 +1609,16 @@ let rec mk_expr
           E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
         | _ ->
           Fmt.failwith "%aInvalid semantic trigger: %a"
-            Loc.report loc DE.Term.print t
+            DStd.Loc.fmt loc DE.Term.print t
       end
 
     | _ ->
       Fmt.failwith "%aInvalid semantic trigger: %a"
-        Loc.report loc DE.Term.print t
+        DStd.Loc.fmt loc DE.Term.print t
 
   in aux_mk_expr ~toplevel dt
 
-and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
+and make_trigger ?(loc = DStd.Loc.dummy) ~name_base ~decl_kind
     ~(in_theory: bool) (name: string) (hyp: E.t list)
     (e, from_user: DE.term * bool) =
   (* Dolmen adds an existential quantifier to bind the '?xxx' variables *)
@@ -1762,15 +1758,13 @@ let rec is_pure_term t =
   | Sy.Op Tite -> false
   | _ -> List.for_all is_pure_term xs
 
-let make dloc_file acc stmt =
+let make file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
+    let loc = Dolmen.Std.Loc.loc file stmt.loc in
     match stmt with
     (* Optimize terms *)
-    | { contents = `Optimize (t, is_max); loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
-      let e =
-        mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t
-      in
+    | { contents = `Optimize (t, is_max); _ } ->
+      let e = mk_expr ~loc ~toplevel:true ~decl_kind:Dobjective t in
       let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
         begin
@@ -1782,25 +1776,19 @@ let make dloc_file acc stmt =
         end
       else
         let st_decl = C.Optimize fn in
-        C.{ st_decl; st_loc } :: acc
+        C.{ st_decl; st_loc = loc } :: acc
 
     (* Push and Pop commands *)
-    | { contents = `Pop n; loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
+    | { contents = `Pop n; _ } ->
       let st_decl = C.Pop n in
-      C.{ st_decl; st_loc } :: acc
+      C.{ st_decl; st_loc = loc } :: acc
 
-    | { contents = `Push n; loc; _ } ->
-      let st_loc = dl_to_ael dloc_file loc in
+    | { contents = `Push n; _ } ->
       let st_decl = C.Push n in
-      C.{ st_decl; st_loc } :: acc
+      C.{ st_decl; st_loc = loc } :: acc
 
     (* Goal and check-sat definitions *)
-    | {
-      id; loc; attrs;
-      contents = (`Goal _ | `Check _) as contents;
-      implicit;
-    } ->
+    | { id; attrs; contents = (`Goal _ | `Check _) as contents; implicit; _ } ->
       let name =
         match id.name with
         | Simple name -> name
@@ -1811,7 +1799,6 @@ let make dloc_file acc stmt =
         | `Goal _ -> Ty.Thm
         | `Check _ -> Ty.Sat
       in
-      let st_loc = dl_to_ael dloc_file loc in
       let _hyps, t =
         match contents with
         | `Goal t ->
@@ -1826,15 +1813,15 @@ let make dloc_file acc stmt =
             let name = Ty.fresh_hypothesis_name goal_sort in
             let decl: _ Typer_Pipe.stmt = {
               id = DStd.Id.mk ns name;
-              contents = `Hyp t; loc; attrs; implicit
+              contents = `Hyp t; loc = stmt.loc; attrs; implicit
             }
             in
             aux acc decl
         ) [] _hyps
       in
-      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
+      let e = make_form "" t loc ~decl_kind:E.Dgoal in
       let st_decl = C.Query (name, e, goal_sort) in
-      C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
+      C.{st_decl; st_loc = loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     | { contents = `Solve _; _ } ->
       (* Filtered out by the solving_loop *)
@@ -1842,8 +1829,7 @@ let make dloc_file acc stmt =
       assert false
 
     (* Axiom definitions *)
-    | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; loc; attrs;
-        implicit=_ } ->
+    | { id = DStd.Id.{name = Simple name; _}; contents = `Hyp t; attrs; _ } ->
       let name =
         match DStd.Tag.get t.term_tags lemma_name_attr with
         | Some n -> n
@@ -1852,8 +1838,6 @@ let make dloc_file acc stmt =
           | Some n -> n
           | None -> name
       in
-      let dloc = DStd.Loc.(loc dloc_file stmt.loc) in
-      let aloc = DStd.Loc.lexing_positions dloc in
       (* Dolmen adds information about theory extensions and case splits in the
          [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
          where the information we care about is encoded as a [Colon]-list of
@@ -1902,7 +1886,7 @@ let make dloc_file acc stmt =
                 begin match Util.th_ext_of_string name with
                   | Some extends -> extends
                   | None ->
-                    Errors.typing_error (ThExtError name) aloc
+                    Errors.typing_error (ThExtError name) loc
                 end
               | _ ->
                 Fmt.failwith
@@ -1918,7 +1902,7 @@ let make dloc_file acc stmt =
         | _ ->
           Fmt.failwith
             "%a: Internal error: multiple theories."
-            DStd.Loc.fmt dloc
+            DStd.Loc.fmt loc
       in
       let decl_kind, assume =
         match theory with
@@ -1939,13 +1923,12 @@ let make dloc_file acc stmt =
           E.Dtheory, th_assume
         | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
       in
-      let st_loc = dl_to_ael dloc_file loc in
-      let e = make_form name t st_loc ~decl_kind in
+      let e = make_form name t loc ~decl_kind in
       let st_decl = assume name e in
-      C.{ st_decl; st_loc } :: acc
+      C.{ st_decl; st_loc = loc } :: acc
 
     (* Function and predicate definitions *)
-    | { contents = `Defs defs; loc; _ } ->
+    | { contents = `Defs defs; _ } ->
       (* For a mutually recursive definition, we have to add all the function
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
@@ -1967,7 +1950,6 @@ let make dloc_file acc stmt =
           match def with
           | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
             Cache.store_tyvl tyvars;
-            let st_loc = dl_to_ael dloc_file loc in
             let name_base = get_basename path in
 
             let binders, defn =
@@ -1988,8 +1970,6 @@ let make dloc_file acc stmt =
               binders, e
             in
 
-            let loc = st_loc in
-
             begin match DStd.Tag.get tags DE.Tags.predicate with
               | Some () ->
                 let decl_kind = E.Dpredicate defn in
@@ -1999,8 +1979,8 @@ let make dloc_file acc stmt =
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
-                    ~decl_kind
+                  E.mk_forall name_base DStd.Loc.dummy binders [] qb
+                    ~toplevel:true ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
@@ -2010,7 +1990,7 @@ let make dloc_file acc stmt =
                     E.mk_forall name_base loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
-                Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
+                Some C.{ st_decl = C.PredDef (e, name_base); st_loc = loc }
               | None ->
                 let decl_kind = E.Dfunction defn in
                 let ff =
@@ -2020,8 +2000,8 @@ let make dloc_file acc stmt =
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
                 let qb = E.mk_eq ~iff defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
-                    ~decl_kind
+                  E.mk_forall name_base DStd.Loc.dummy binders [] qb
+                    ~toplevel:true ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
                 let ff = E.purify_form ff in
@@ -2033,7 +2013,7 @@ let make dloc_file acc stmt =
                 in
                 if Options.get_verbose () then
                   Format.eprintf "defining term of %a@." DE.Term.print body;
-                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc = loc }
             end
           | `Type_alias _ -> None
           | `Instanceof _ ->
@@ -2043,18 +2023,17 @@ let make dloc_file acc stmt =
             assert false
         ) defs
 
-    | {contents = `Decls [td]; loc; _ } ->
+    | {contents = `Decls [td]; _ } ->
       begin match td with
         | `Type_decl (td, _def) ->
           mk_ty_decl td;
           acc
 
         | `Term_decl td ->
-          let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
+          C.{ st_decl = Decl (mk_term_decl td); st_loc = loc } :: acc
       end
 
-    | {contents = `Decls dcl; loc; _ } ->
+    | {contents = `Decls dcl; _ } ->
       let rec aux ty_decls tdl acc =
         (* for now, when acc has more than one element it is assumed that the
            types are mutually recursive. Which is not necessarily the case.
@@ -2067,8 +2046,7 @@ let make dloc_file acc stmt =
             | [otd] -> mk_ty_decl otd
             | _ -> mk_mr_ty_decls (List.rev ty_decls)
           end;
-          let st_loc = dl_to_ael dloc_file loc in
-          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl acc
+          C.{ st_decl = Decl (mk_term_decl td); st_loc = loc } :: aux [] tl acc
 
         | `Type_decl (td, _def) :: tl ->
           aux (td :: ty_decls) tl acc

@@ -59,7 +59,7 @@
     Profiling Satml_types Symbols
     Expr Var Ty Xliteral ModelMap Id Objective Literal
     ; util
-    Emap Gc_debug Hconsing Hstring Heap Loc Numbers Uqueue
+    Emap Gc_debug Hconsing Hstring Heap Numbers Uqueue
     Options Timers Util Vec Version Steps Printer
     My_list Theories Nest Compat
   )
