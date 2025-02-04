@@ -52,37 +52,45 @@ let empty_solver_ctx = {
   global = [];
 }
 
-let recoverable_error ?(code = 1) =
+let recoverable_error ?loc ?(code = 1) =
+  let pp fmt =
+    match Options.get_output_format () with
+    | Smtlib2 _ -> Printer.print_smtlib_err fmt
+    | _ -> Printer.print_err fmt
+  in
   Format.kasprintf (fun msg ->
       let () =
         if msg <> "" then
-          match Options.get_output_format () with
-          | Smtlib2 _ -> Printer.print_smtlib_err "%s" msg
-          | _ -> Printer.print_err "%s" msg
+          match loc with
+          | Some loc ->
+            pp "@[%a:@ %s@]" DStd.Loc.fmt loc msg
+          | None ->
+            pp "%s" msg
       in
       if Options.get_exit_on_error () then raise (Exit_with_code code))
 
-let fatal_error ?(code = 1) =
+let fatal_error ?loc ?(code = 1) =
   Format.kasprintf
     (fun msg ->
-       recoverable_error ~code "%s" msg;
+       recoverable_error ?loc ~code "%s" msg;
        raise (Exit_with_code code))
 
 let exit_as_timeout () = fatal_error ~code:142 "timeout"
 
-let warning (msg : ('a, Format.formatter, unit, unit, unit, 'b) format6) : 'a =
+let warning ?loc
+    (msg : ('a, Format.formatter, unit, unit, unit, 'b) format6) : 'a =
   if Options.get_warning_as_error () then
-    recoverable_error msg
+    recoverable_error ?loc msg
   else
     Printer.print_wrn msg
 
-let unsupported_opt opt =
+let unsupported_opt ?loc opt =
   let () =
     match Options.get_output_format () with
     | Smtlib2 _ -> Printer.print_std "unsupported"
     | _ -> ()
   in
-  warning "unsupported option %s" opt
+  warning ?loc "unsupported option %s" opt
 
 let on_strict_mode b =
   (* For now, strict mode only disables optimization. *)
@@ -368,7 +376,7 @@ let process_source ?selector_inst ~print_status src =
     |> Typer_Pipe.init ~type_check
   in
 
-  let print_wrn_opt ~name loc ty value =
+  let print_wrn_opt ~loc ~name ty value =
     warning
       "%a The option %s expects a %s, got %a"
       DStd.Loc.fmt loc name ty DStd.Term.print value
@@ -386,7 +394,7 @@ let process_source ?selector_inst ~print_status src =
     DO.StrictMode.set strict_mode st
   in
 
-  let handle_option st_loc name (value : DStd.Term.t) st =
+  let handle_option ~loc name (value : DStd.Term.t) st =
     match name, value.term with
     (* Smtlib2 regular options *)
     | ":regular-output-channel", Symbol { name = Simple name; _ } ->
@@ -413,19 +421,19 @@ let process_source ?selector_inst ~print_status src =
           "%a The generation of unsat cores is not \
            supported for the current SAT solver. Please \
            choose the SAT solver Tableaux."
-          DStd.Loc.fmt st_loc;
+          DStd.Loc.fmt loc;
       st
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
       Options.set_unsat_core false; st
     | (":produce-models" | ":produce-unsat-cores" as name), _ ->
-      print_wrn_opt ~name st_loc "boolean" value; st
+      print_wrn_opt ~loc ~name "boolean" value; st
     | ":verbosity", Symbol { name = Simple level; _ } ->
       begin
         match int_of_string_opt level with
         | Some i when i > 0 -> Options.set_verbose true
         | Some 0 -> Options.set_verbose false
         | None | Some _ ->
-          print_wrn_opt ~name:":verbosity" st_loc "integer" value
+          print_wrn_opt ~loc ~name:":verbosity" "integer" value
       end;
       st
     | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
@@ -439,16 +447,16 @@ let process_source ?selector_inst ~print_status src =
             Options.set_timelimit_per_goal false;
             Options.set_timelimit 0.
           | None | Some _ ->
-            print_wrn_opt ~name:":reproducible-resource-limit" st_loc
+            print_wrn_opt ~loc ~name:":reproducible-resource-limit"
               "nonnegative integer" value
         else
-          warning "%a :reproducible-resource-limit is only supported on Unix"
-            DStd.Loc.fmt st_loc
+          warning ~loc
+            "reproducible-resource-limit is only supported on Unix"
       end;
       st
     | ":sat-solver", Symbol { name = Simple solver; _ } -> (
         if not (is_solver_ctx_empty (State.get solver_ctx_key st)) then (
-          recoverable_error
+          recoverable_error ~loc
             "error setting ':sat-solver', option value cannot be modified \
              after initialization";
           st
@@ -470,7 +478,7 @@ let process_source ?selector_inst ~print_status src =
             Options.set_cdcl_tableaux_th is_cdcl_tableaux;
             set_sat_solver sat_solver st
           with Exit ->
-            recoverable_error
+            recoverable_error ~loc
               "error setting ':sat-solver', invalid option value '%s'"
               solver;
             st
@@ -479,7 +487,7 @@ let process_source ?selector_inst ~print_status src =
       begin
         match bool_of_string_opt b with
         | None ->
-          print_wrn_opt ~name:":verbosity" st_loc "boolean" value;
+          print_wrn_opt ~loc ~name:":verbosity" "boolean" value;
           st
         | Some b -> DO.ProduceAssignment.set b st
       end
@@ -491,34 +499,37 @@ let process_source ?selector_inst ~print_status src =
       | ":print-success"
       | ":random-seed"), _
       ->
-      unsupported_opt name; st
+      unsupported_opt ~loc name; st
     (* Alt-Ergo custom options *)
     | ":profiling", Symbol { name = Simple level; _ } ->
       begin
         match float_of_string_opt level with
-        | None -> print_wrn_opt ~name st_loc "nonnegative integer" value
+        | None -> print_wrn_opt ~loc ~name "nonnegative integer" value
         | Some i -> Options.set_profiling true i
       end; st
     | ":strict-mode", Symbol { name = Simple b; _} ->
       begin
         match bool_of_string_opt b with
-        | None -> print_wrn_opt ~name st_loc "bool" value; st
+        | None -> print_wrn_opt ~loc ~name "bool" value; st
         | Some b -> set_strict_mode b st
       end
     | ":steps-bound", Symbol { name = Simple level; _ } ->
       begin
         match int_of_string_opt level with
-        | None -> print_wrn_opt ~name st_loc "integer" value; st
+        | None -> print_wrn_opt ~loc ~name "integer" value; st
         | Some i -> set_steps_bound i st
       end
     | _ ->
-      unsupported_opt name; st
+      unsupported_opt ~loc name; st
   in
 
-  let handle_optimize_stmt ~is_max loc id (term : DStd.Expr.Term.t) st =
+  let handle_optimize_stmt ~loc ~is_max id (term : DStd.Expr.Term.t) st =
     let module Sat = (val DO.SatSolverModule.get st) in
     if not Sat.supports_optimization then (
-      recoverable_error "the selected solver does not support optimization";
+      let logic_file = State.get State.logic_file st in
+      let loc = DStd.Loc.loc logic_file.loc loc in
+      recoverable_error ~loc
+        "the selected solver does not support optimization";
       st
     ) else
       let contents = `Optimize (term, is_max) in
@@ -535,12 +546,12 @@ let process_source ?selector_inst ~print_status src =
       ) st
   in
 
-  let handle_get_objectives (_args : DStd.Expr.Term.t list) st =
+  let handle_get_objectives ~loc (_args : DStd.Expr.Term.t list) st =
     let module Sat = (val DO.SatSolverModule.get st) in
     let () =
       if Options.get_interpretation () then
         if not Sat.supports_optimization then
-          recoverable_error
+          recoverable_error ~loc
             "the selected solver does not support optimization"
         else
           match State.get partial_model_key st with
@@ -550,54 +561,57 @@ let process_source ?selector_inst ~print_status src =
               match objectives with
               | Some o ->
                 if not @@ Objective.Model.has_no_limit o then
-                  warning "Some objectives cannot be fulfilled";
+                  warning ~loc "Some objectives cannot be fulfilled";
                 Objective.Model.pp (Options.Output.get_fmt_regular ()) o
               | None ->
-                recoverable_error "No objective generated"
+                recoverable_error ~loc "No objective generated"
             end
           | None ->
-            recoverable_error
+            recoverable_error ~loc
               "Model generation is disabled (try --produce-models)"
     in
     st
   in
 
-  let handle_custom_statement loc id args st =
+  let handle_custom_statement ~loc id args st =
     let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
     let logic_file = State.get State.logic_file st in
     let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
     match id, terms.ret with
     | Dolmen.Std.Id.{name = Simple "minimize"; _}, [term] ->
       cmd_on_modes st [Assert] "minimize";
-      handle_optimize_stmt ~is_max:false loc id term st
+      handle_optimize_stmt ~loc ~is_max:false id term st
     | Dolmen.Std.Id.{name = Simple "maximize"; _}, [term] ->
       cmd_on_modes st [Assert] "maximize";
-      handle_optimize_stmt ~is_max:true loc id term st
+      handle_optimize_stmt ~loc ~is_max:true id term st
     | Dolmen.Std.Id.{name = Simple "get-objectives"; _}, terms ->
       cmd_on_modes st [Sat] "get-objectives";
-      handle_get_objectives terms st
+      let loc = DStd.Loc.loc logic_file.loc loc in
+      handle_get_objectives ~loc terms st
     | Dolmen.Std.Id.{name = Simple (("minimize" | "maximize") as ext); _}, _ ->
-      recoverable_error
+      let loc = DStd.Loc.loc logic_file.loc loc in
+      recoverable_error ~loc
         "Statement %s only expects 1 argument (%i given)"
         ext
         (List.length args);
       st
     | n, _ ->
-      recoverable_error
+      let loc = DStd.Loc.loc logic_file.loc loc in
+      recoverable_error ~loc
         "Unknown statement %a."
         Dolmen.Std.Id.print
         n;
       st
   in
 
-  let handle_get_info (st : State.t) (name: string) =
+  let handle_get_info ~loc (st : State.t) (name: string) =
     let print_std =
       fun (type a) (pp :a Fmt.t) (a : a) ->
         Printer.print_std "(%s %a)" name pp a
     in
     let pp_reason_unknown st =
       let err () =
-        recoverable_error "Invalid (get-info :reason-unknown)"
+        recoverable_error ~loc "Invalid (get-info :reason-unknown)"
       in
       match State.get partial_model_key st with
       | None -> err ()
@@ -753,10 +767,10 @@ let process_source ?selector_inst ~print_status src =
                  App ({ term = Symbol { name = Simple name; _ }; _ }, [value]);
                _
              }; _ } ->
-        handle_option loc name value st
+        handle_option ~loc name value st
 
       | {contents = `Set_option _; _} ->
-        recoverable_error "Invalid set-option";
+        recoverable_error ~loc "Invalid set-option";
         st
 
       | {contents = `Get_model; _ } ->
@@ -768,14 +782,13 @@ let process_source ?selector_inst ~print_status src =
               Fmt.pf (Options.Output.get_fmt_regular ()) "%a@."
                 FE.print_model env
             | None ->
-              recoverable_error "%a: No model produced." DStd.Loc.fmt loc
+              recoverable_error ~loc "No model produced."
           in
           st
         else
           begin
-            recoverable_error
-              "%a: Model generation disabled (try --produce-models)"
-              DStd.Loc.fmt loc;
+            recoverable_error ~loc
+              "Model generation disabled (try --produce-models)";
             st
           end
 
@@ -800,7 +813,7 @@ let process_source ?selector_inst ~print_status src =
         st
 
       | {contents = `Get_info kind; _ } ->
-        handle_get_info st kind;
+        handle_get_info ~loc st kind;
         st
 
       | {contents = `Get_assignment; _} ->
@@ -813,20 +826,19 @@ let process_source ?selector_inst ~print_status src =
                 ~get_value:(SAT.get_value partial_model)
                 st
             else
-              recoverable_error
-                "%a: Produce assignments disabled; \
-                 add (set-option :produce-assignments true)"
-                DStd.Loc.fmt loc;
+              recoverable_error ~loc
+                "Produce assignments disabled; \
+                 add (set-option :produce-assignments true)";
             st
           | None ->
-            recoverable_error
+            recoverable_error ~loc
               "%a: No model produced, cannot execute get-assignment."
               DStd.Loc.fmt loc;
             st
         end
 
-      | {contents = `Other (custom, args); loc; _} ->
-        handle_custom_statement loc custom args st
+      | {contents = `Other (custom, args); loc = l; _} ->
+        handle_custom_statement ~loc:l custom args st
 
       | td ->
         let st =

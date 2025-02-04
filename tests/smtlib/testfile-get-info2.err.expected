@@ -1,1 +1,2 @@
-(error "Invalid (get-info :reason-unknown)")
+(error "File "../tests/smtlib/testfile-get-info2.err.smt2", line 7, character 0-26:
+        Invalid (get-info :reason-unknown)")

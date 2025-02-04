@@ -3,4 +3,5 @@ unknown
 (
   (define-fun x () Int 0)
 )
-(error "File "../tests/smtlib/testfile-get-assignment2.err.smt2", line 8, character 0-16: Produce assignments disabled; add (set-option :produce-assignments true)")
+(error "File "../tests/smtlib/testfile-get-assignment2.err.smt2", line 8, character 0-16:
+        Produce assignments disabled; add (set-option :produce-assignments true)")

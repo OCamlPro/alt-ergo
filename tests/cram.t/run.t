@@ -59,14 +59,16 @@ Then, if model generation is not enabled, we should error out when a
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "File "<stdin>", line 1, character 26-37: Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 26-37:
+          Model generation disabled (try --produce-models)")
 
 This should be the case Tableaux solver as well:
 
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "File "<stdin>", line 1, character 26-37: Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 26-37:
+          Model generation disabled (try --produce-models)")
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
@@ -74,12 +76,14 @@ The messages above mention `--produce-models`, but we can also use
   $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --produce-models -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "File "<stdin>", line 1, character 60-71: Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 60-71:
+          Model generation disabled (try --produce-models)")
 
   $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
-  (error "File "<stdin>", line 1, character 60-71: Model generation disabled (try --produce-models)")
+  (error "File "<stdin>", line 1, character 60-71:
+          Model generation disabled (try --produce-models)")
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
 
@@ -104,7 +108,7 @@ We now test the --continue-on-error strategy where alt-ergo fails (legitimately)
   $ echo '(get-info :foo) (set-option :bar) (set-logic ALL) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
   unsupported
   
-  (error "Invalid set-option")
+  (error "File "<stdin>", line 1, character 16-33: Invalid set-option")
   
   unknown
 
@@ -112,7 +116,7 @@ Some errors are unescapable though. It its the case of syntax error in commands.
   $ echo '(get-info :foo) (set-option :bar) (exil) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
   unsupported
   
-  (error "Invalid set-option")
+  (error "File "<stdin>", line 1, character 16-33: Invalid set-option")
   (error "Error on parsing errors (code 3)")
 
 Let us check that we can parse psmt2 files with a .smt2 extension. No output,
@@ -123,21 +127,25 @@ Now we check that we have a proper error message when optimizing with the
 Tableaux solver.
 
   $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --sat-solver Tableaux 2>/dev/null
-  (error "the selected solver does not support optimization")
+  (error "File "<stdin>", line 1, character 16-28:
+          the selected solver does not support optimization")
   [1]
 
   $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo -i smtlib2 -o smtlib2 --sat-solver Tableaux 2>/dev/null
   
   unknown
-  (error "the selected solver does not support optimization")
+  (error "File "<stdin>", line 1, character 62-78:
+          the selected solver does not support optimization")
   [1]
 
   $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error --sat-solver Tableaux 2>/dev/null
-  (error "the selected solver does not support optimization")
+  (error "File "<stdin>", line 1, character 16-28:
+          the selected solver does not support optimization")
   
   unknown
 
   $ echo '(set-option :produce-models true) (set-logic ALL) (check-sat) (get-objectives)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error --sat-solver Tableaux 2>/dev/null
   
   unknown
-  (error "the selected solver does not support optimization")
+  (error "File "<stdin>", line 1, character 62-78:
+          the selected solver does not support optimization")
