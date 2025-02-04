@@ -58,7 +58,8 @@ type model_error =
 
 (** All types of error that can be raised *)
 type error =
-  | Typing_error of Dolmen.Std.Loc.loc * typing_error (** Error used at typing *)
+  | Typing_error of Dolmen.Std.Loc.loc * typing_error
+  (** Error used at typing *)
   | Run_error of run_error (** Error used during solving *)
   | Warning_as_error
   | Dolmen_error of (int * string)
