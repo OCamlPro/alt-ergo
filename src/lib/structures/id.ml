@@ -114,11 +114,11 @@ let equal i1 i2 =
 let hash i =
   match i with
   | Term_cst { tcst; _ } ->
-    Dolmen.Std.Expr.Term.Const.hash tcst
+    2 * (Dolmen.Std.Expr.Term.Const.hash tcst)
   | Hstring { hs; _ } ->
     (* NB: Internal identifiers are pre-mangled, which means that we do not
        need to take the name space into consideration when hashing. *)
-    Hstring.hash hs
+    2 * (Hstring.hash hs) + 1
 
 let pp ppf i =
   match i with
