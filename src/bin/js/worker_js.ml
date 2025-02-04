@@ -103,7 +103,7 @@ let main worker_id filename filecontent =
           | None -> begin
               match Expr.form_view f with
               | Lemma {name=name;loc=loc;_} ->
-                let b,e = loc in
+                let b,e = Dolmen.Std.Loc.lexing_positions loc in
                 let used =
                   if Options.get_unsat_core () then Worker_interface.Unused
                   else Worker_interface.Unknown in
@@ -111,7 +111,7 @@ let main worker_id filename filecontent =
               | _ -> acc
             end
           | Some r ->
-            let b,e = r.loc in
+            let b,e = Dolmen.Std.Loc.lexing_positions r.loc in
             (r.name,b.Lexing.pos_lnum,e.Lexing.pos_lnum,
              !nb,Worker_interface.Used)
             :: acc
