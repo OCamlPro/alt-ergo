@@ -37,7 +37,7 @@ module Make (_ : Theory.S) : sig
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
 
-  val declare : t -> Id.typed -> t
+  val declare : t -> ModelMap.typed -> t
 
   val push : t -> int -> t
 
@@ -50,7 +50,7 @@ module Make (_ : Theory.S) : sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> Id.t -> Explanation.t -> Loc.t -> t
 
   val unsat : t -> Expr.gformula -> Explanation.t
 

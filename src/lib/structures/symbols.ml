@@ -79,32 +79,6 @@ type form =
 
 type name_kind = Ac | Other
 
-type name_space = User | Internal | Fresh | Fresh_ac | Skolem | Abstract
-
-let compare_name_space ns1 ns2 =
-  match ns1, ns2 with
-  | User, User -> 0
-  | User, _ -> -1
-  | _, User -> 1
-
-  | Internal, Internal -> 0
-  | Internal, _ -> -1
-  | _, Internal -> 1
-
-  | Fresh, Fresh -> 0
-  | Fresh, _ -> -1
-  | _, Fresh -> 1
-
-  | Fresh_ac, Fresh_ac -> 0
-  | Fresh_ac, _ -> -1
-  | _, Fresh_ac -> 1
-
-  | Skolem, Skolem -> 0
-  | Skolem, _ -> -1
-  | _, Skolem -> 1
-
-  | Abstract, Abstract -> 0
-
 type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 
 type bound = (* private *)
@@ -113,11 +87,7 @@ type bound = (* private *)
 type t =
   | True
   | False
-  | Name of
-      { hs : Id.t
-      ; kind : name_kind
-      ; defined : bool
-      ; ns : name_space }
+  | Name of { id : Id.t ; kind : name_kind }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -129,21 +99,7 @@ type t =
   | MapsTo of Var.t
   | Let
 
-let mangle ns s =
-  match ns with
-  | User when String.length s > 0 && Char.equal '.' s.[0] -> ".." ^ s
-  | User when String.length s > 0 && Char.equal '@' s.[0] -> ".@" ^ s
-  | User -> s
-  | Internal -> ".!" ^ s
-  | Fresh -> ".k" ^ s
-  | Fresh_ac -> ".K" ^ s
-  | Skolem -> ".?__" ^ s
-  | Abstract -> "@a" ^ s
-
-(* NB: names are pre-mangled, which means that we don't need to take the
-   namespace into consideration when hashing or comparing. *)
-let name ?(kind=Other) ?(defined=false) ?(ns = User) s =
-  Name { hs = Hstring.make (mangle ns s) ; kind ; defined ; ns }
+let name ?(kind=Other) id = Name { id ; kind }
 
 let var s = Var s
 let int i = Int (Z.of_string i)
@@ -174,8 +130,10 @@ let is_ac x = match x with
   | _           -> false
 
 let is_internal sy =
+  (* In the current `Id` implementation, all constant terms are user-provided.
+     This will change once Dolmen identifiers are adopted everywhere. *)
   match sy with
-  | Name { ns = User; _ } -> false
+  | Name { id = Term_cst _; _ } -> false
   | Name _ -> true
   | _ -> false
 
@@ -263,12 +221,10 @@ let compare s1 s2 =
       | Int z1, Int z2 -> Z.compare z1 z2
       | Real h1, Real h2 -> Q.compare h1 h2
       | Var v1, Var v2 | MapsTo v1, MapsTo v2 -> Var.compare v1 v2
-      | Name { ns = ns1; hs = h1; kind = k1; _ },
-        Name { ns = ns2; hs = h2; kind = k2; _ } ->
-        let c = Hstring.compare h1 h2 in
-        if c <> 0 then c else
-          let c = compare_kinds k1 k2 in
-          if c <> 0 then c else compare_name_space ns1 ns2
+      | Name { id = i1; kind = k1; _ },
+        Name { id = i2; kind = k2; _ } ->
+        let c = Id.compare i1 i2 in
+        if c <> 0 then c else compare_kinds k1 k2
       | Bitv (n1, s1), Bitv (n2, s2) ->
         let c = Int.compare n1 n2 in
         if c <> 0 then c else Z.compare s1 s2
@@ -295,8 +251,8 @@ let hash x =
   | Bitv (n, s) -> 19 * (Hashtbl.hash n + Hashtbl.hash s) + 3
   | In (b1, b2) -> 19 * (Hashtbl.hash b1 + Hashtbl.hash b2) + 4
   (* NB: No need to hash the namespace because names are pre-mangled *)
-  | Name { hs = n; kind = Ac; _ } -> 19 * Hstring.hash n + 5
-  | Name { hs = n; kind = Other; _ } -> 19 * Hstring.hash n + 6
+  | Name { id; kind = Ac; _ } -> 19 * Id.hash id + 5
+  | Name { id; kind = Other; _ } -> 19 * Id.hash id + 6
   | Int z -> 19 * Z.hash z + 7
   | Real n -> 19 * Hashtbl.hash n + 7
   | Var v -> 19 * Var.hash v + 8
@@ -307,7 +263,7 @@ let hash x =
 
 let string_of_bound_kind x = match x with
   | Unbounded -> "?"
-  | VarBnd v -> Var.to_string v
+  | VarBnd v -> Var.show v
   | ValBnd v -> Numbers.Q.to_string v
 
 let string_of_bound b =
@@ -318,10 +274,6 @@ let string_of_bound b =
     Format.sprintf "%s %s" kd (if b.is_open then "[" else "]")
 
 let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
-
-let pp_name ppf (_ns, s) =
-  (* Names are pre-mangled *)
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
 
 module AEPrinter = struct
   let pp_operator ppf op =
@@ -427,9 +379,9 @@ module AEPrinter = struct
     (* Core theory *)
     | True -> Fmt.pf ppf "true"
     | False -> Fmt.pf ppf "false"
-    | Name { ns; hs; _ } -> pp_name ppf (ns, Hstring.view hs)
-    | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.to_string v)
-    | Var v -> Fmt.string ppf (Var.to_string v)
+    | Name { id; _ } -> Id.pp ppf id
+    | Var v when show_vars -> Fmt.pf ppf "'%s'" (Var.show v)
+    | Var v -> Fmt.string ppf (Var.show v)
 
     (* Reals and Ints theories *)
     | Int i -> Z.pp_print ppf i
@@ -442,7 +394,7 @@ module AEPrinter = struct
     (* Symbols used in semantic triggers *)
     | In (lb, rb) ->
       Fmt.pf ppf "%s, %s" (string_of_bound lb) (string_of_bound rb)
-    | MapsTo v -> Fmt.pf ppf "%a |->" Var.print v
+    | MapsTo v -> Fmt.pf ppf "%a |->" Var.pp v
 end
 
 module SmtPrinter = struct
@@ -527,9 +479,9 @@ let to_string_clean sy =
 let to_string sy =
   Fmt.str "%a" (AEPrinter.pp ~show_vars:true) sy
 
-let fresh_skolem_string base = Id.Namespace.Skolem.fresh ~base ()
-let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
-let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
+let fresh_skolem_name base = name @@ Id.fresh ~base ~ns:Skolem ()
+
+let fresh_skolem_var base = Var.of_id @@ Id.fresh ~base ~ns:Skolem ()
 
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)

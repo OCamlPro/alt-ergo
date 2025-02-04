@@ -1,0 +1,3 @@
+predicate P1 () = false
+logic P2 : prop
+goal g: P1 -> P2

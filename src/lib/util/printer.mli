@@ -107,7 +107,7 @@ val print_status_unsat :
   Loc.t option ->
   float option ->
   int option ->
-  string option -> unit
+  Id.t option -> unit
 
 (** Print sat status message from the frontend on the standard output.
     If validity_mode is set, the status print :
@@ -120,7 +120,7 @@ val print_status_sat :
   Loc.t option ->
   float option ->
   int option ->
-  string option -> unit
+  Id.t option -> unit
 
 (** Print unknown status message from the frontend on the standard output.
     If validity_mode is set, the status print :
@@ -133,7 +133,7 @@ val print_status_unknown :
   Loc.t option ->
   float option ->
   int option ->
-  string option -> unit
+  Id.t option -> unit
 
 (** Print timeout status message from the frontend on the standard output.
     If validity_mode is set, the status print :
@@ -146,7 +146,7 @@ val print_status_timeout :
   Loc.t option ->
   float option ->
   int option ->
-  string option -> unit
+  Id.t option -> unit
 
 (** Print inconsistent status message from the frontend on the standard output.
     If validity_mode is set, the status print :
@@ -159,7 +159,7 @@ val print_status_inconsistent :
   Loc.t option ->
   float option ->
   int option ->
-  string option -> unit
+  Id.t option -> unit
 
 (** Print smtlib error message on the regular formatter, accessible with
     {!val:Options.get_fmt_regular} and set by default to stdout.

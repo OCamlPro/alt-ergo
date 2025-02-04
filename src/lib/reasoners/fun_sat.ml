@@ -88,7 +88,8 @@ module Make (Th : Theory.S) = struct
         if Options.get_no_decisions_on_is_empty () then delta, []
         else
           List.partition
-            (fun (a, _,_,_) -> Options.get_can_decide_on a.E.origin_name) delta
+            (fun (a, _,_,_) ->
+               Options.get_can_decide_on (Id.show a.E.origin_name)) delta
       in
       let dec =
         List.rev_map
@@ -178,8 +179,8 @@ module Make (Th : Theory.S) = struct
     last_saved_model : Models.t Lazy.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
 
-    declare_top : Id.typed list ref;
-    declare_tail : Id.typed list Stack.t;
+    declare_top : ModelMap.typed list ref;
+    declare_tail : ModelMap.typed list Stack.t;
     (** Stack of the declared symbols by the user. The field [declare_top]
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
@@ -276,7 +277,7 @@ module Make (Th : Theory.S) = struct
               | None -> ""
               | Some ff -> begin
                   match E.form_view ff with
-                  | E.Lemma xx -> xx.E.name
+                  | E.Lemma xx -> Id.show xx.E.name
                   | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
                   | E.Let _ | E.Iff _ | E.Xor _ -> ""
                 end
@@ -408,10 +409,10 @@ module Make (Th : Theory.S) = struct
       if Options.get_debug_fpa() > 1 || Options.get_debug_sat() then
         print_dbg
           ~module_name:"Fun_sat" ~function_name:"print_theory_instances"
-          "@[<v 2>@ %s >@ \
+          "@[<v 2>@ %a >@ \
            hypotheses: %a@ \
            conclusion: %a@]"
-          (E.name_of_lemma_opt gf.E.lem)
+          Id.pp (E.name_of_lemma_opt gf.E.lem)
           print_f_conj hyp
           E.print gf.E.ff
 
@@ -600,7 +601,9 @@ module Make (Th : Theory.S) = struct
 
   let cdcl_learn_clause delay env ex acc0 =
     let f = shift env.gamma ex acc0 in
-    let ff = mk_gf f "<cdcl_learn_clause>" true true in
+    let ff =
+      mk_gf f (Id.of_string ~ns:Internal "<cdcl_learn_clause>") true true
+    in
     cdcl_assume delay env [ff, Ex.empty]
 
   let profile_conflicting_instances exp =
@@ -608,8 +611,8 @@ module Make (Th : Theory.S) = struct
       SE.iter
         (fun f ->
            match E.form_view f with
-           | E.Lemma { E.name; loc; _ } ->
-             Profiling.conflicting_instance name loc
+           | E.Lemma { name; loc; _ } ->
+             Profiling.conflicting_instance (Id.show name) loc
            | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
            | E.Let _ | E.Iff _ | E.Xor _ -> ()
         )(Ex.formulas_of exp)
@@ -622,7 +625,9 @@ module Make (Th : Theory.S) = struct
           "performing case-split";
       let tbox, new_terms = Th.do_case_split env.tbox origin in
       let inst =
-        Inst.add_terms env.inst new_terms (mk_gf E.vrai "" false false) in
+        Inst.add_terms env.inst new_terms
+          (mk_gf E.vrai (Id.of_string ~ns:Internal "") false false)
+      in
       {env with tbox = tbox; inst = inst}
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
@@ -885,7 +890,8 @@ module Make (Th : Theory.S) = struct
           raise e
       in
       let utbox = if env.dlevel = 0 then tbox else utbox in
-      let inst = Inst.add_terms inst new_terms (mk_gf E.vrai "" mf gf) in
+      let inst = Inst.add_terms inst new_terms
+          (mk_gf E.vrai (Id.of_string ~ns:Internal "") mf gf) in
       Steps.incr (Th_assumed cpt);
       { env with tbox = tbox; unit_tbox = utbox; inst = inst }
 
@@ -1429,7 +1435,7 @@ module Make (Th : Theory.S) = struct
       in
       let new_level = env.dlevel + 1 in
       if Options.get_profiling() then
-        Profiling.decision new_level a.E.origin_name;
+        Profiling.decision new_level (Id.show a.E.origin_name);
       (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
       Options.heavy_assert (fun () -> cdcl_same_decisions env);
       let env_a =
@@ -1633,7 +1639,8 @@ module Make (Th : Theory.S) = struct
           let new_guard = E.fresh_name Ty.Tbool in
           save_guard_and_refs acc new_guard;
           let guards = ME.add new_guard
-              (mk_gf new_guard "" true true,Ex.empty)
+              (mk_gf new_guard
+                 (Id.of_string ~ns:Internal "") true true,Ex.empty)
               acc.guards.guards in
           Stack.push !(env.declare_top) env.declare_tail;
           {acc with guards =
@@ -1661,7 +1668,8 @@ module Make (Th : Theory.S) = struct
           assert (not (Stack.is_empty acc.guards.stack_elt));
           let new_current_guard,_ = Stack.top acc.guards.stack_elt in
           let guards = ME.add guard_to_neg
-              (mk_gf (E.neg guard_to_neg) "" true true,Ex.empty)
+              (mk_gf (E.neg guard_to_neg)
+                 (Id.of_string ~ns:Internal "") true true, Ex.empty)
               acc.guards.guards
           in
           acc.model_gen_phase := false;
@@ -1806,7 +1814,7 @@ module Make (Th : Theory.S) = struct
     (* initialize some structures in SAT.empty. Otherwise, E.faux is never
        added as it is replaced with (not E.vrai) *)
     reset_refs ();
-    let gf_true = mk_gf E.vrai "" true true in
+    let gf_true = mk_gf E.vrai (Id.of_string ~ns:Internal "") true true in
     let inst = Inst.empty in
     let tbox = Th.empty () in
     let inst = Inst.add_terms inst (SE.singleton E.vrai) gf_true in
@@ -1875,8 +1883,7 @@ module Make (Th : Theory.S) = struct
     clear_instances_cache ();
     Th.reinit_cpt ();
     Symbols.clear_labels ();
-    Id.Namespace.reinit ();
-    Var.reinit_cnt ();
+    Id.reinit ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
@@ -1888,7 +1895,6 @@ module Make (Th : Theory.S) = struct
 
   let () =
     Steps.save_steps ();
-    Var.save_cnt ();
     Expr.save_cache ();
     Hstring.save_cache ();
     Shostak.Combine.save_cache ();

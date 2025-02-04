@@ -65,7 +65,7 @@ and bind_kind =
   | B_let of letin
 
 and quantified = private {
-  name : string;
+  name : Id.t;
   (** Name of the lemma. This field is used by printers. *)
 
   main : t;
@@ -237,8 +237,8 @@ val symbol_info : t -> Symbols.t
 
 val add_label : Hstring.t -> t -> unit
 val label : t -> Hstring.t
-val name_of_lemma : t -> string
-val name_of_lemma_opt : t option -> string
+val name_of_lemma : t -> Id.t
+val name_of_lemma_opt : t option -> Id.t
 val print_tagged_classes : Format.formatter -> Set.t list -> unit
 
 
@@ -370,14 +370,14 @@ val make_triggers:
     The matching environment [env] is used to limit the number of
     multi-triggers generated per axiom. *)
 
-val clean_trigger: in_theory:bool -> string -> trigger -> trigger
+val clean_trigger: in_theory:bool -> Id.t -> trigger -> trigger
 (** clean trigger:
     remove useless terms in multi-triggers after inlining of lets*)
 
 val resolution_triggers: is_back:bool -> quantified -> trigger list
 
 val mk_forall :
-  string -> (* name *)
+  Id.t -> (* name *)
   Loc.t -> (* location in the original file *)
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
@@ -387,7 +387,7 @@ val mk_forall :
   t
 
 val mk_exists :
-  string -> (* name *)
+  Id.t -> (* name *)
   Loc.t -> (* location in the original file *)
   binders -> (* quantified variables *)
   trigger list -> (* triggers *)
@@ -415,7 +415,7 @@ type gformula = {
   trigger_depth : int;
   age: int;
   lem: t option;
-  origin_name : string;
+  origin_name : Id.t;
   from_terms : t list;
   mf: bool;
   gf: bool;
@@ -427,7 +427,7 @@ type gformula = {
 type th_elt =
   {
     th_name : string;
-    ax_name : string;
+    ax_name : Id.t;
     ax_form : t;
     extends : Util.theories_extensions;
     axiom_kind : Util.axiom_kind;

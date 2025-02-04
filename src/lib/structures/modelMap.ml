@@ -19,6 +19,8 @@
 module X = Shostak.Combine
 module Sy = Symbols
 
+type typed = Dolmen.Std.Expr.term_cst * Ty.t list * Ty.t
+
 module M: Map.S with type key = Expr.t list = Map.Make
     (struct
       type t = Expr.t list [@@deriving ord]
@@ -107,9 +109,10 @@ end
 
 module P = Map.Make
     (struct
-      type t = Id.typed
+      type t = typed
 
-      let compare = Id.compare_typed
+      let compare (t1, _, _) (t2, _, _) =
+        Dolmen.Std.Expr.Term.Const.compare t1 t2
     end)
 
 type graph =
@@ -127,7 +130,7 @@ type t = {
 let add ((id, arg_tys, _) as sy) arg_vals ret_val { values; suspicious } =
   if List.compare_lengths arg_tys arg_vals <> 0 then
     Fmt.invalid_arg "The arity of the symbol %a doesn't agree the number of \
-                     arguments" Id.pp id;
+                     arguments" Util.pp_term_cst id;
   let constraints =
     match P.find sy values with
     | C g -> g
@@ -157,7 +160,7 @@ let empty ~suspicious declared_ids =
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
-  | Sy.Name { hs = id'; _ }, [] when Id.equal id id' ->
+  | Sy.Name { id = id'; _ }, [] when Id.equal id id' ->
     let ty = Expr.type_info e in
     if not @@ Ty.equal ty ty' then
       Errors.error (Model_error (Subst_type_clash (id, ty', ty)));
@@ -188,7 +191,7 @@ let pp_named_arg_ty ~unused ppf (arg_name, arg_ty) =
 let pp_define_fun ~is_constant pp ppf ((id, arg_tys, ret_ty), a) =
   let named_arg_tys = List.mapi (fun i arg_ty -> (i, arg_ty)) arg_tys in
   Fmt.pf ppf "(@[define-fun %a (%a) %a@ %a)@]"
-    Id.pp id
+    Util.pp_term_cst id
     Fmt.(list ~sep:sp (pp_named_arg_ty ~unused:is_constant)) named_arg_tys
     Ty.pp_smtlib ret_ty
     pp a

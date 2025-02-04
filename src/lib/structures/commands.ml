@@ -31,11 +31,11 @@ let src = Logs.Src.create ~doc:"Commands" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)
 
 type sat_decl_aux =
-  | Decl of Id.typed
-  | Assume of string * Expr.t * bool
-  | PredDef of Expr.t * string (*name of the predicate*)
+  | Decl of ModelMap.typed
+  | Assume of Id.t * Expr.t * bool
+  | PredDef of Expr.t * Id.t (*name of the predicate*)
   | Optimize of Objective.Function.t
-  | Query of string *  Expr.t * Ty.goal_sort
+  | Query of Id.t *  Expr.t * Ty.goal_sort
   | ThAssume of Expr.th_elt
   | Push of int
   | Pop of int
@@ -46,19 +46,19 @@ type sat_tdecl = {
 }
 
 let print_aux fmt = function
-  | Decl (id, arg_tys, ret_ty) ->
+  | Decl (tcst, arg_tys, ret_ty) ->
     Fmt.pf fmt "declare %a with type (%a) -> %a"
-      Id.pp id
+      Util.pp_term_cst tcst
       Fmt.(list ~sep:comma Ty.print) arg_tys
       Ty.print ret_ty
 
   | Assume (name, e, b) ->
-    Format.fprintf fmt "assume %s(%b): @[<hov>%a@]" name b Expr.print e
+    Format.fprintf fmt "assume %a(%b): @[<hov>%a@]" Id.pp name b Expr.print e
   | PredDef (e, name) ->
-    Format.fprintf fmt "pred-def %s: @[<hov>%a@]" name Expr.print e
+    Format.fprintf fmt "pred-def %a: @[<hov>%a@]" Id.pp name Expr.print e
   | Query (name, e, sort) ->
-    Format.fprintf fmt "query %s(%a): @[<hov>%a@]"
-      name Ty.print_goal_sort sort Expr.print e
+    Format.fprintf fmt "query %a(%a): @[<hov>%a@]"
+      Id.pp name Ty.print_goal_sort sort Expr.print e
   | ThAssume t ->
     Format.fprintf fmt "th assume %a" Expr.print_th_elt t
   | Push n -> Format.fprintf fmt "Push %d" n

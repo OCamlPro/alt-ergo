@@ -202,3 +202,29 @@ let rec print_list_pp ~sep ~pp fmt = function
 
 let internal_error msg =
   Format.kasprintf (fun s -> raise (Internal_error s)) msg
+
+module DStd = Dolmen.Std
+
+let pp_term_cst ppf t =
+  let show = Fmt.to_to_string DStd.Expr.Term.Const.print in
+  Dolmen.Smtlib2.Script.Poly.Print.id ppf
+  @@ DStd.Name.simple (show t)
+
+let show_term_cst = Fmt.to_to_string pp_term_cst
+
+(** Helper function: returns the basename of a dolmen path, since in AE
+    the problems are contained in one-file (for now at least), the path is
+    irrelevant and only the basename matters *)
+let get_basename = function
+  | DStd.Path.Local { name; }
+  | Absolute { name; path = []; } -> name
+  | Absolute { name; path; } ->
+    Fmt.failwith
+      "Expected an empty path to the basename: \"%s\" but got: [%a]."
+      name (fun fmt l ->
+          match l with
+          | h :: t ->
+            Format.fprintf fmt "%s" h;
+            List.iter (Format.fprintf fmt "; %s") t
+          | _ -> ()
+        ) path

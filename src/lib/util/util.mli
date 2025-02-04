@@ -134,3 +134,12 @@ val print_list_pp:
   Format.formatter -> 'a list -> unit
 
 val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
+
+val pp_term_cst : Dolmen.Std.Expr.term_cst Fmt.t
+(** [pp_term_cst ppf t] prints the constant term to the formatter [ppf],
+    surrounding it with quotes, if it needs. *)
+
+val show_term_cst : Dolmen.Std.Expr.term_cst -> string
+(** Same as pp_term_cst but outpus the result as a string. *)
+
+val get_basename : Dolmen.Std.Path.t -> string

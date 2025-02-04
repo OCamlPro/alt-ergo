@@ -666,8 +666,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
            if Options.get_debug_triggers () then
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
-               "@[<v 2>%s triggers of %s are:@ %a@]"
-               kind name E.print_triggers tgs;
+               "@[<v 2>%s triggers of %a are:@ %a@]"
+               kind Id.pp name E.print_triggers tgs;
            List.fold_left
              (fun env tr ->
                 let info =
