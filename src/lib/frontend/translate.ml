@@ -45,23 +45,6 @@ module HT =
     let hash (Id i)= DE.Id.hash i
   end)
 
-(** Helper function: returns the basename of a dolmen path, since in AE
-    the problems are contained in one-file (for now at least), the path is
-    irrelevant and only the basename matters *)
-let get_basename = function
-  | DStd.Path.Local { name; }
-  | Absolute { name; path = []; } -> name
-  | Absolute { name; path; } ->
-    Fmt.failwith
-      "Expected an empty path to the basename: \"%s\" but got: [%a]."
-      name (fun fmt l ->
-          match l with
-          | h :: t ->
-            Format.fprintf fmt "%s" h;
-            List.iter (Format.fprintf fmt "; %s") t
-          | _ -> ()
-        ) path
-
 module Cache = struct
 
   let ae_sy_ht: Sy.t HT.t = HT.create 100
@@ -124,8 +107,9 @@ module Cache = struct
   let store_sy_vl_names (tvl: DE.term_var list) =
     List.iter (
       fun ({ DE.path; _ } as tv) ->
-        let name = get_basename path in
-        store_sy tv (Sy.name name)
+        let name = Util.get_basename path in
+        (* TODO : Check this line! *)
+        store_sy tv (Sy.name @@ Id.of_string ~ns:Internal name)
     ) tvl
 
   let store_ty_vars ?(is_var = true) ty =
@@ -176,7 +160,7 @@ let builtin_term t = Dl.Typer.T.builtin_term t
 let builtin_ty t = Dl.Typer.T.builtin_ty t
 
 let ty (ty_cst : DE.ty_cst) ty =
-  let name = get_basename ty_cst.path in
+  let name = Util.get_basename ty_cst.path in
   DStd.Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@
   fun env s ->
   builtin_ty @@
@@ -188,7 +172,7 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
     let constrs = Fpa_rounding.d_constrs in
     let add_constrs map =
       List.fold_left (fun map (c : DE.term_cst) ->
-          let name = get_basename c.path in
+          let name = Util.get_basename c.path in
           DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term }
             (fun env _ ->
                builtin_term @@
@@ -629,12 +613,12 @@ let mk_ty_decl (ty_c: DE.ty_cst) =
 
 (** Handles term declaration by storing the eventual present type variables
     in the cache as well as the symbol associated to the term. *)
-let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
-  let name = get_basename path in
+let mk_term_decl ({ id_ty; tags; _ } as tcst: DE.term_cst) =
   let sy =
+    let id = Id.of_term_cst tcst in
     begin match DStd.Tag.get tags DE.Tags.ac with
-      | Some () -> Sy.name ~kind:Sy.Ac name
-      | _ -> Sy.name name
+      | Some () -> Sy.name ~kind:Sy.Ac id
+      | _ -> Sy.name id
     end
   in
   Cache.store_sy tcst sy;
@@ -646,7 +630,7 @@ let mk_term_decl ({ id_ty; path; tags; _ } as tcst: DE.term_cst) =
       List.map dty_to_ty arg_tys, dty_to_ty ret_ty
     | _ -> [], dty_to_ty id_ty
   in
-  (Hstring.make name, arg_tys, ret_ty)
+  (tcst, arg_tys, ret_ty)
 
 (** Handles the definitions of a list of mutually recursive types.
     - If one of the types is an ADT, the ADTs that have only one case are
@@ -744,15 +728,15 @@ let handle_patt_var id (DE.{ term_descr; _ } as term)  =
   match term_descr with
   | Cst ({ builtin = B.Base; id_ty; _ } as ty_c) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
-    let sy = Sy.Var v in
+    let v = Var.of_id @@ Id.of_term_cst ty_c in
+    let sy = Sy.var v in
     Cache.store_sy ty_c sy;
     v, id, ty
 
   | Var ({ builtin = B.Base; id_ty; _ } as ty_v) ->
     let ty = dty_to_ty id_ty in
-    let v = Var.of_string @@ Fmt.to_to_string DE.Term.Const.print id in
-    let sy = Sy.Var v in
+    let v = Var.of_id @@ Id.of_term_cst ty_v in
+    let sy = Sy.var v in
     Cache.store_sy ty_v sy;
     v, id, ty
 
@@ -815,10 +799,10 @@ end = struct
     | Cst ({ builtin = B.Constructor _; _ } as cst) ->
       Constr (cst, [])
 
-    | Var ({ builtin = B.Base; path; _ } as t_v) ->
+    | Var ({ builtin = B.Base; _ } as t_v) ->
       (* Should the type be passed as an argument
          instead of re-evaluating it here? *)
-      let v = Var.of_string (get_basename path) in
+      let v = Var.of_id @@ Id.of_term_cst t_v in
       let sy = Sy.var v in
       Cache.store_sy t_v sy;
       (* Adding the matched variable to the store *)
@@ -1439,9 +1423,8 @@ let rec mk_expr
       | Binder ((Let_par ls | Let_seq ls) as let_binder, body) ->
         let lsbis =
           List.map (
-            fun ({ DE.path; _ } as tv, t) ->
-              let name = get_basename path in
-              let v = Var.of_string name in
+            fun (tv, t) ->
+              let v = Var.of_id @@ Id.of_term_cst tv in
               Cache.store_sy tv (Sy.var v);
               v, t
           ) ls
@@ -1485,9 +1468,9 @@ let rec mk_expr
           (* the following is done in two iterations to preserve the order *)
           (* quantified variables *)
           let ntvl = List.rev_map (
-              fun (DE.{ path; id_ty; _ } as t_v) ->
+              fun (DE.{ id_ty; _ } as t_v) ->
                 dty_to_ty id_ty,
-                Var.of_string (get_basename path),
+                Var.of_id @@ Id.of_term_cst t_v,
                 t_v
             ) tvl
           in
@@ -1631,11 +1614,7 @@ and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     | { DE.term_descr = Binder (Exists (_, qm_vars), e); _ } ->
       List.iter
         (fun (v : DE.term_var) ->
-           let var =
-             match v.path with
-             | Local { name } -> Var.local name
-             | _ -> assert false
-           in
+           let var = Var.local @@ Id.of_term_cst v in
            Cache.store_var v var)
         qm_vars;
       e
@@ -1950,9 +1929,8 @@ let make dloc_file acc stmt =
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
           match def with
-          | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
-            let name_base = get_basename path in
-            let sy = Sy.name ~defined:true name_base in
+          | `Term_def (_, tcst, _, _, _) ->
+            let sy = Sy.name @@ Id.of_term_cst ~defined:true tcst in
             Cache.store_sy tcst sy
           | `Type_alias _ -> ()
           | `Instanceof _ ->
@@ -1968,15 +1946,15 @@ let make dloc_file acc stmt =
           | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
             Cache.store_tyvl tyvars;
             let st_loc = dl_to_ael dloc_file loc in
-            let name_base = get_basename path in
+            let name_base = Util.get_basename path in
 
             let binders, defn =
               let rty = dty_to_ty body.term_ty in
               let binders, rev_args =
                 List.fold_left (
-                  fun (binders, acc) (DE.{ path; id_ty; _ } as tv) ->
+                  fun (binders, acc) (DE.{ id_ty; _ } as tv) ->
                     let ty = dty_to_ty id_ty in
-                    let v = Var.of_string (get_basename path) in
+                    let v = Var.of_id @@ Id.of_term_cst tv in
                     let sy = Sy.var v in
                     Cache.store_sy tv sy;
                     let e = E.mk_term sy [] ty in

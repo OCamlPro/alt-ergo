@@ -25,7 +25,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type repr = Underscore | Local of Hstring.t | Named of Hstring.t
 (** A variable can be:
 
     - The special `Underscore` variable that is used to discard values in
@@ -37,63 +36,61 @@ type repr = Underscore | Local of Hstring.t | Named of Hstring.t
       user. Depending on the input format, regular variable may start with '?'
       (e.g. in SMT-LIB format, this is allowed).
 *)
+type t =
+  | Underscore
+  | Local of Id.t
+  | Named of Id.t
+
+let[@inline always] local id =
+  assert (
+    let s = Id.show id in
+    Compat.String.starts_with ~prefix:"?" s);
+  Local id
+
+let[@inline always] of_id i =
+  assert (
+    match i with
+    | Id.Term_cst _ | Hstring { ns = Skolem; _ } -> true
+    | _ -> false);
+  Named i
+
+(* Note: there is a single [Underscore] variable, with id 0. *)
+let underscore = Underscore
+
+let is_local v = match v with Local _ -> true | _ -> false
+
+let uid v =
+  match v with
+  | Underscore -> 0
+  | Local i -> 3 * Id.hash i + 1
+  | Named i -> 3 * Id.hash i + 2
+
+let hash = uid
 
 let equal_repr v1 v2 =
   match v1, v2 with
   | Underscore, Underscore -> true
   | Underscore, _ | _, Underscore -> false
-  | Local hs1, Local hs2
-  | Named hs1, Named hs2 -> Hstring.equal hs1 hs2
+  | Local i1, Local i2
+  | Named i1, Named i2 -> Id.equal i1 i2
   | Local _, Named _ | Named _, Local _ -> false
 
-let pp_repr ppf = function
-  | Underscore -> Fmt.pf ppf "_"
-  | Local hs | Named hs -> Hstring.print ppf hs
-
-type t = { repr : repr ; id : int }
-
-let fresh, save_cnt, reinit_cnt =
-  let cpt = ref 0 in
-  let fresh repr = incr cpt; { repr ; id = !cpt } in
-  let saved_cnt = ref 0 in
-  let save_cnt () =
-    saved_cnt := !cpt
-  in
-  let reinit_cnt () =
-    cpt := !saved_cnt
-  in
-  fresh, save_cnt, reinit_cnt
-
-let of_hstring hs = fresh (Named hs)
-
-let of_string s = of_hstring (Hstring.make s)
-
-let local s =
-  assert (String.length s > 0 && Char.equal '?' s.[0]);
-  fresh (Local (Hstring.make s))
-
-let is_local { repr; _ } = match repr with Local _ -> true | _ -> false
-
 let compare a b =
-  let c = a.id - b.id in
+  let c = (uid a) - (uid b) in
   if c <> 0 then c
   else begin
-    assert (equal_repr a.repr b.repr);
+    assert (equal_repr a b);
     c
   end
 
 let equal a b = compare a b = 0
 
-let uid { id; _ } = id
+let pp ppf = function
+  | Underscore -> Fmt.pf ppf "_"
+  | Local i | Named i ->
+    Fmt.pf ppf "%a~%d" Id.pp i (Id.hash i)
 
-let hash = uid
-
-(* Note: there is a single [Underscore] variable, with id 1. *)
-let underscore = fresh Underscore
-
-let print ppf { repr; id } = Fmt.pf ppf "%a~%d" pp_repr repr id
-
-let to_string = Fmt.to_to_string print
+let show = Fmt.to_to_string pp
 
 module Set = Set.Make(struct type nonrec t = t let compare = compare end)
 
@@ -104,5 +101,5 @@ module Map = struct
     let sep ppf () = Fmt.pf ppf " -> " in
     Fmt.box @@ Fmt.braces
     @@ Fmt.iter_bindings ~sep:Fmt.comma iter
-    @@ Fmt.pair ~sep print pp_elt
+    @@ Fmt.pair ~sep pp pp_elt
 end

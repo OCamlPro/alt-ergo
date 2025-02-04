@@ -1393,9 +1393,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Ty.Tbool ->
       begin
         let bmodel = SAT.boolean_model env.satml in
+        let tlit = Shostak.Literal.make (LTerm t) in
         Compat.List.find_map
           (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
-             let tlit = Shostak.Literal.make (LTerm t) in
              if Shostak.Literal.equal tlit lit then
                Some E.vrai
              else if Shostak.Literal.equal tlit neglit then
@@ -1414,9 +1414,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let reinit_ctx () =
     Steps.reinit_steps ();
     Th.reinit_cpt ();
-    Id.Namespace.reinit ();
+    Id.reinit ();
     Symbols.clear_labels ();
-    Var.reinit_cnt ();
     Objective.Function.reinit_cnt ();
     Satml_types.Flat_Formula.reinit_cpt ();
     Ty.reinit_decls ();
@@ -1429,7 +1428,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let () =
     Steps.save_steps ();
-    Var.save_cnt ();
     Expr.save_cache ();
     Hstring.save_cache ();
     Shostak.Combine.save_cache ();

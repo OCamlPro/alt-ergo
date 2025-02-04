@@ -4,8 +4,8 @@ unknown
   (define-fun p () Bool true)
   (define-fun q () Bool true)
 )
-((notp false)
- (notnq false))
+((notnq false)
+ (notp false))
 
 
 unknown
@@ -13,6 +13,6 @@ unknown
   (define-fun p () Bool true)
   (define-fun q () Bool true)
 )
-((notp false)
- (notnq false))
+((notnq false)
+ (notp false))
 

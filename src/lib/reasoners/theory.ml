@@ -130,17 +130,17 @@ module Main_Default : S = struct
       | _ -> Ty.fresh_tvar ()
 
     let logics_of_assumed st =
-      (* NB: using an [Hstring.Map] here depends on the fact that name mangling
-         is done pre-emptively in [Symbols.name] *)
+      (* NB: using an [Id.Map] here depends on the fact that name mangling
+         is done pre-emptively in [Id.of_string] or [Id.fresh]. *)
       SE.fold
         (fun t mp ->
            match E.term_view t with
-           | { E.f = Sy.Name { hs; kind = ((Sy.Ac | Sy.Other) as is_ac); _ };
+           | { E.f = Sy.Name { id; kind = ((Sy.Ac | Sy.Other) as is_ac); _ };
                xs; ty; _ } ->
              let xs = List.map E.type_info xs in
              let xs, ty =
                try
-                 let xs', ty', is_ac' = Hstring.Map.find hs mp in
+                 let xs', ty', is_ac' = Id.Map.find id mp in
                  assert (is_ac == is_ac');
                  let ty = generalize_types ty ty' in
                  let xs =
@@ -149,10 +149,10 @@ module Main_Default : S = struct
                  xs, ty
                with Not_found -> xs, ty
              in
-             Hstring.Map.add hs (xs, ty, is_ac) mp
+             Id.Map.add id (xs, ty, is_ac) mp
 
            | _ -> mp
-        ) st Hstring.Map.empty
+        ) st Id.Map.empty
 
     module Ty_map = Map.Make (DE.Ty.Const)
 
@@ -218,12 +218,12 @@ module Main_Default : S = struct
 
     let print_logics ?(header=true) logics =
       print_dbg ~header "@[<v 2>(* logics: *)@ ";
-      Hstring.Map.iter
+      Id.Map.iter
         (fun hs (xs, ty, is_ac) ->
            print_dbg ~flushed:false ~header:false
-             "logic %s%s : %a%a@ "
+             "logic %s%a : %a%a@ "
              (if is_ac == Sy.Ac then "ac " else "")
-             (Hstring.view hs)
+             Id.pp hs
              print_arrow_type xs
              Ty.print ty
         )logics;

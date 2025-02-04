@@ -202,17 +202,19 @@ module Make (X : Sig.X) = struct
   let abstract2 sy t r acc =
     if List.exists (is_other_ac_symbol sy) (X.leaves r) then
       match X.ac_extract r, Expr.term_view t with
-      | Some ac, { f = Name { hs; kind = Ac; _ } ; xs; ty; _ } ->
+      | Some ac, { f = Name { id; kind = Ac; _ } ; xs; ty; _ } ->
         (* It should have been abstracted when building [r] *)
         assert (not (Sy.equal sy ac.h));
-        let aro_sy = Sy.name ~ns:Internal ("@" ^ (HS.view hs)) in
+        let aro_sy =
+          Sy.name @@ Id.of_string ~ns:Internal ("@" ^ (Id.show id))
+        in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
       | Some ac, { f = Op Mult; xs; ty; _ } ->
         (* It should have been abstracted when building [r] *)
         assert (not (Sy.equal sy ac.h));
-        let aro_sy = Sy.name ~ns:Internal "@*" in
+        let aro_sy = Sy.name @@ Id.of_string ~ns:Internal "@*" in
         let aro_t = Expr.mk_term aro_sy xs ty  in
         let eq = Expr.mk_eq ~iff:false aro_t t in
         X.term_embed aro_t, eq::acc
