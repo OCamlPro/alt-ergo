@@ -161,15 +161,6 @@ val print_status_inconsistent :
   int option ->
   string option -> unit
 
-(** Print preprocess status message from the frontend on the standard output.
-    If validity_mode is set, the status print :
-    `Preprocess (<time>s) (<steps> steps)`
-    else, we print nothing. *)
-val print_status_preprocess :
-  ?validity_mode:bool ->
-  float option ->
-  int option -> unit
-
 (** Print smtlib error message on the regular formatter, accessible with
     {!val:Options.get_fmt_regular} and set by default to stdout.
     The regular formatter is flushed after the print if flushed is set. *)

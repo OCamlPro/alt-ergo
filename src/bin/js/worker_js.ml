@@ -88,7 +88,6 @@ let main worker_id filename filecontent =
           | Sat _ -> Worker_interface.Sat n
           | Unknown _ -> Worker_interface.Unknown n
           | Timeout _ -> Worker_interface.LimitReached "timeout"
-          | Preprocess -> Worker_interface.Unknown n
         end;
       Frontend.print_status status n
     in

@@ -373,13 +373,6 @@ let print_status_timeout ?(validity_mode=true) loc
     ("Timeout","unknown","fg_orange") loc
     time steps goal
 
-let print_status_preprocess ?(validity_mode=true)
-    time steps =
-  print_status ~validity_mode
-    ~formatter:(Options.Output.get_fmt_diagnostic ())
-    ("Preprocessing","","fg_magenta") None
-    time steps None
-
 let print_smtlib_err ?(flushed=true) s =
   (* The smtlib error messages are printed on the regular output. *)
   pp_std_smt ();

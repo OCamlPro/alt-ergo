@@ -45,7 +45,6 @@ type status =
   | Sat of Commands.sat_tdecl
   | Unknown of Commands.sat_tdecl
   | Timeout of Commands.sat_tdecl option
-  | Preprocess
 
 let print_status status steps =
   let check_status_consistency s =
@@ -63,7 +62,7 @@ let print_status status steps =
           "This file is known to be Unsat but Alt-Ergo return Sat";
         Errors.warning_as_error ()
       end
-    | Inconsistent _ | Unknown _ | Timeout _ | Preprocess ->
+    | Inconsistent _ | Unknown _ | Timeout _ ->
       assert false
   in
   let validity_mode =
@@ -116,10 +115,6 @@ let print_status status steps =
   | Timeout None ->
     Printer.print_status_timeout ~validity_mode
       None (Some time) (Some steps) None;
-
-  | Preprocess ->
-    Printer.print_status_preprocess ~validity_mode
-      (Some time) (Some steps)
 
 module type S = sig
 

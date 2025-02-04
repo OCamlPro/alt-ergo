@@ -36,7 +36,6 @@ type status =
   | Sat of Commands.sat_tdecl
   | Unknown of Commands.sat_tdecl
   | Timeout of Commands.sat_tdecl option
-  | Preprocess
 
 val print_status : status -> int -> unit
 
