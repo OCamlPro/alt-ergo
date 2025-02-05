@@ -353,6 +353,9 @@ let () =
   let solvers = [
     ("runtest-quick", "default",
      [ "--output=smtlib2"])
+  ; ("runtest-quick", "incremental",
+     [ "--output=smtlib2"
+     ; "--incremental-mode"])
   ; ("runtest-quick", "tableaux",
      [ "--output=smtlib2"
      ; "--sat-solver Tableaux" ])

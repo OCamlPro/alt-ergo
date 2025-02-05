@@ -66,6 +66,8 @@ module type S = sig
       the user. *)
   type 'a process = ?loc:Dolmen.Std.Loc.loc -> 'a -> env -> unit
 
+  val declare : Id.typed process
+
   val push : int process
 
   val pop : int process

@@ -29,8 +29,7 @@ val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
     - If [dty] is a type application, or an arrow type, only its return type
       is converted since those have no counterpart in AE's [Ty] module. The
       function arguments' types or the type paramters ought to be converted
-      individually.
-*)
+      individually. *)
 
 val make_form :
   string ->
@@ -51,6 +50,62 @@ val make :
 (** [make acc stmt] Makes one or more [Commands.sat_tdecl] from the
     type-checked statement [stmt] and appends them to [acc].
 *)
+
+val make_defs :
+  D_loop.Typer_Pipe.def list ->
+  Dolmen.Std.Loc.loc ->
+  [> `Assume of string * Expr.t  | `PredDef of Expr.t * string ] list
+(** [make_defs dlist loc]
+    Transforms the dolmen definition list [dlist] into an Alt-Ergo definition.
+    Dolmen definitions can be:
+    - Definitions, that either are predicates (transformed in `PredDef) or
+      simple definitions (transformed in `Assume);
+    - Type aliases (filtered out);
+    - Statements used in models (they must not be in the input list, otherwise
+      this function fails). *)
+
+val mk_expr :
+  ?loc:Dolmen.Std.Loc.loc ->
+  ?name_base:string ->
+  ?toplevel:bool ->
+  decl_kind:Expr.decl_kind -> D_loop.DStd.Expr.term -> Expr.t
+(** [make_expr ~loc ~name_base ~toplevel ~decl_kind term]
+
+    Builds an Alt-Ergo hashconsed expression from a dolmen term. *)
+
+val make_form :
+  string ->
+  D_loop.DStd.Expr.term ->
+  Dolmen.Std.Loc.loc ->
+  decl_kind:Expr.decl_kind ->
+  Expr.t
+(** [make_form name term loc decl_kind]
+    Same as `make_expr`, but for formulas. It applies a purification step and
+    processes free variables by adding a forall quantifier. *)
+
+val pp_query :
+  ?hyps:D_loop.DStd.Expr.term list ->
+  D_loop.DStd.Expr.term ->
+  D_loop.DStd.Expr.term list * D_loop.DStd.Expr.term
+(** Preprocesses the body of a goal by:
+    - removing the top-level universal quantifiers and considering their
+      quantified variables as uninsterpreted symbols.
+    - transforming a given formula: [a[1] -> a[2] -> ... -> a[n]] in which
+      the [a[i]]s are subformulas and [->] is a logical implication, to a set of
+      hypotheses [{a[1]; ...; a[n-1]}], and a goal [a[n]] whose validity is
+      verified by the solver.
+      If additional hypotheses are provided in [hyps], they are preprocessed and
+      added to the set of hypotheses in the same way as the left-hand side of
+      implications. In other words, [pp_query ~hyps:[h1; ...; hn] t] is the same
+      as [pp_query (h1 -> ... -> hn t)], but more convenient if the some
+      hypotheses are already separated from the goal.
+      Returns a list of hypotheses and the new goal body. *)
+
+val make_decls :
+  D_loop.Typer_Pipe.decl list -> (Hstring.t * Ty.t list * Ty.t) list
+(** Registers the declarations in the cache. If there are more than one element
+    in the list, it is assumed they are mutually recursive (but if it is not the
+    case, it still work). *)
 
 val builtins :
   Dolmen_loop.State.t ->
