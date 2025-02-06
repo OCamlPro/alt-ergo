@@ -31,31 +31,31 @@
   <span><span><span class="type-var">'a</span> list</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div><div class="spec-doc"><p>Print list with separator</p></div></div><h3 id="status-printer"><a href="#status-printer" class="anchor"></a>Status Printer</h3><div class="odoc-spec"><div class="spec value anchored" id="val-print_status_unsat"><a href="#val-print_status_unsat" class="anchor"></a><code><span><span class="keyword">val</span> print_status_unsat : 
   <span><span class="optlabel">?validity_mode</span>:bool <span class="arrow">&#45;&gt;</span></span>
-  <span><span><a href="../Loc/index.html#type-t">Loc.t</a> option</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="xref-unresolved">Dolmen</span>.Std.Loc.loc option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div><div class="spec-doc"><p>Print unsat status message from the frontend on the standard output. If validity_mode is set, the status print : `Valid (&lt;time&gt;s) (&lt;steps&gt; steps) (goal &lt;goal_name&gt;)` else, we print `unsat`. If a location is given, we report it only in validity_mode before printing the status.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-print_status_sat"><a href="#val-print_status_sat" class="anchor"></a><code><span><span class="keyword">val</span> print_status_sat : 
   <span><span class="optlabel">?validity_mode</span>:bool <span class="arrow">&#45;&gt;</span></span>
-  <span><span><a href="../Loc/index.html#type-t">Loc.t</a> option</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="xref-unresolved">Dolmen</span>.Std.Loc.loc option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div><div class="spec-doc"><p>Print sat status message from the frontend on the standard output. If validity_mode is set, the status print : `Invalid (&lt;time&gt;s) (&lt;steps&gt; steps) (goal &lt;goal_name&gt;)` else, we print `sat`. If a location is given, we report it only in validity_mode before printing the status.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-print_status_unknown"><a href="#val-print_status_unknown" class="anchor"></a><code><span><span class="keyword">val</span> print_status_unknown : 
   <span><span class="optlabel">?validity_mode</span>:bool <span class="arrow">&#45;&gt;</span></span>
-  <span><span><a href="../Loc/index.html#type-t">Loc.t</a> option</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="xref-unresolved">Dolmen</span>.Std.Loc.loc option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div><div class="spec-doc"><p>Print unknown status message from the frontend on the standard output. If validity_mode is set, the status print : `I don't Know (&lt;time&gt;s) (&lt;steps&gt; steps) (goal &lt;goal_name&gt;)` else, we print `unknown`. If a location is given, we report it only in validity_mode before printing the status.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-print_status_timeout"><a href="#val-print_status_timeout" class="anchor"></a><code><span><span class="keyword">val</span> print_status_timeout : 
   <span><span class="optlabel">?validity_mode</span>:bool <span class="arrow">&#45;&gt;</span></span>
-  <span><span><a href="../Loc/index.html#type-t">Loc.t</a> option</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="xref-unresolved">Dolmen</span>.Std.Loc.loc option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
   unit</span></code></div><div class="spec-doc"><p>Print timeout status message from the frontend on the standard output. If validity_mode is set, the status print : `Timeout (&lt;time&gt;s) (&lt;steps&gt; steps) (goal &lt;goal_name&gt;)` else, we print `timeout`. If a location is given, we report it only in validity_mode before printing the status.</p></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-print_status_inconsistent"><a href="#val-print_status_inconsistent" class="anchor"></a><code><span><span class="keyword">val</span> print_status_inconsistent : 
   <span><span class="optlabel">?validity_mode</span>:bool <span class="arrow">&#45;&gt;</span></span>
-  <span><span><a href="../Loc/index.html#type-t">Loc.t</a> option</span> <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span class="xref-unresolved">Dolmen</span>.Std.Loc.loc option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>float option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>int option</span> <span class="arrow">&#45;&gt;</span></span>
   <span><span>string option</span> <span class="arrow">&#45;&gt;</span></span>
