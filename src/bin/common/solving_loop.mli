@@ -29,7 +29,12 @@ exception Exit_with_code of int
 (** Exception raised to notify that [process_source] cannot continue.
     The integer corresponds to an error code. *)
 
-val main : [`Stdin | `File of string] -> unit
+type parse_result = {
+  path : [`Stdin | `File of string];
+  (** Path to the input file. *)
+}
+
+val main : parse_result -> unit
 (** [main path] solves the input problem [path]. *)
 
 val process_source :

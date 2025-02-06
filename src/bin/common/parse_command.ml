@@ -1581,7 +1581,7 @@ let parse_cmdline_arguments () =
   at_exit Options.Output.close_all;
   let r = Cmd.eval_value main in
   match r with
-  | Ok `Ok Some path -> path
+  | Ok `Ok Some path -> Solving_loop.{ path }
   | Ok `Ok None -> raise (Exit_parse_command 0)
   | Ok `Version | Ok `Help -> exit 0
   | Error `Parse -> exit Cmd.Exit.cli_error

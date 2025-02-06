@@ -32,6 +32,10 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
+type parse_result = {
+  path : [`Stdin | `File of string];
+}
+
 exception Exit_with_code of int
 
 type solver_ctx = {
@@ -937,7 +941,7 @@ let process_source ?selector_inst ~print_status src =
   in
   d_fe src
 
-let main path =
+let main { path } =
   try
     process_source
       ~print_status:Frontend.print_status
