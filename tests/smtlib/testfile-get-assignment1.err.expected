@@ -1,2 +1,2 @@
-(error "File "../tests/smtlib/testfile-get-assignment1.err.smt2", line 3, character 0-16:
-        File "../tests/smtlib/testfile-get-assignment1.err.smt2", line 3, character 0-16: No model produced, cannot execute get-assignment.")
+(error "../tests/smtlib/testfile-get-assignment1.err.smt2:3.0:
+        No model produced, cannot execute get-assignment.")

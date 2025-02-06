@@ -1,4 +1,3 @@
 
 unsat
-(error "File "../tests/models/issues/719.default.err.smt2", line 18, character 0-11:
-        No model produced.")
+(error "../tests/models/issues/719.default.err.smt2:18.0: No model produced.")
