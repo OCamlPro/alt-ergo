@@ -252,8 +252,6 @@ type options = {
   restricted : bool option;
   tighten_vars : bool option;
   timers : bool option;
-
-  file : string option;
 }
 
 let init_options () = {
@@ -351,8 +349,6 @@ let init_options () = {
   restricted = None;
   tighten_vars = None;
   timers = None;
-
-  file = None;
 }
 
 
@@ -496,7 +492,7 @@ let opt7_encoding =
   conv
     (fun opt7 -> opt7)
     (fun opt7 -> opt7)
-    (obj9
+    (obj8
        (opt "no_contracongru" bool)
        (opt "no_fm" bool)
        (opt "no_nla" bool)
@@ -505,7 +501,6 @@ let opt7_encoding =
        (opt "restricted" bool)
        (opt "tighten_vars" bool)
        (opt "timers" bool)
-       (opt "file" string)
     )
 
 let options_encoding =
@@ -620,8 +615,7 @@ let options_to_json opt =
      opt.no_theory,
      opt.restricted,
      opt.tighten_vars,
-     opt.timers,
-     opt.file)
+     opt.timers)
   in
   let json_all_options = Json.construct options_encoding
       (dbg_opt1,
@@ -731,8 +725,7 @@ let options_from_json options =
          no_theory,
          restricted,
          tighten_vars,
-         timers,
-         file) = all_opt7 in
+         timers) = all_opt7 in
     {
       debug;
       debug_ac;
@@ -813,8 +806,7 @@ let options_from_json options =
       no_theory;
       restricted;
       tighten_vars;
-      timers;
-      file
+      timers
     }
   | Error _e -> assert false
 

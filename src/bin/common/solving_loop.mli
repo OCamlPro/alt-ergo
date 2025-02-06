@@ -29,9 +29,8 @@ exception Exit_with_code of int
 (** Exception raised to notify that [process_source] cannot continue.
     The integer corresponds to an error code. *)
 
-val main : unit -> unit
-(** Main function solve the input problem. The processed source is given
-    by the file located at [Options.get_file ()]. *)
+val main : [`Stdin | `File of string] -> unit
+(** [main path] solves the input problem [path]. *)
 
 val process_source :
   ?selector_inst:(AltErgoLib.Expr.t -> bool) ->

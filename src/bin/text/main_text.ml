@@ -34,9 +34,9 @@ let parse_cmdline () =
   with Parse_command.Exit_parse_command i -> exit i
 
 let () =
-  parse_cmdline ();
+  let path = parse_cmdline () in
   AltErgoLib.Printer.init_colors ();
   AltErgoLib.Printer.init_output_format ();
   Signals_profiling.init_signals ();
   Logs.set_reporter (AltErgoLib.Printer.reporter);
-  Solving_loop.main ()
+  Solving_loop.main path

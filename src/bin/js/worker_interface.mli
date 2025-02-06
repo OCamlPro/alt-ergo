@@ -149,8 +149,6 @@ type options = {
   restricted : bool option;
   tighten_vars : bool option;
   timers : bool option;
-
-  file : string option;
 }
 
 type used_axiom =

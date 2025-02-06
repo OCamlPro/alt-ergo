@@ -303,9 +303,6 @@ val set_verbose : bool -> unit
 (** Set [status] accessible with {!val:get_status} *)
 val set_status : string -> unit
 
-(** Set [file] accessible with {!val:get_file} *)
-val set_file : string -> unit
-
 (** Setters used by parse_command *)
 
 (** Set [case_split_policy] accessible with {!val:get_case_split_policy}  *)
@@ -1006,10 +1003,6 @@ val get_rule : unit -> int
 (** Value specifying the status of the file given to Alt-Ergo *)
 val get_status : unit -> known_status
 (** Default to [Status_Unknown] *)
-
-(** Value specifying the file given to Alt-Ergo *)
-val get_file : unit -> string
-(** Default to [""] *)
 
 (** Value specifying the session file ([base_name.agr]) handled by Alt-Ergo *)
 val get_session_file : unit -> string

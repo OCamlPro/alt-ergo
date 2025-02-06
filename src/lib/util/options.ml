@@ -578,19 +578,16 @@ let get_tighten_vars () = !tighten_vars
 (** Other options *)
 
 let timers = ref false
-let file = ref ""
 let status = ref Status_Unknown
 let session_file = ref ""
 let used_context_file = ref ""
 
 let set_timers b = timers := b
 let set_status s = status := match_known_status s
-let set_file f = file := f
 let set_session_file f = session_file := f
 let set_used_context_file f = used_context_file := f
 
 let get_timers () = !timers || !profiling
-let get_file () = !file
 let get_status () = !status
 let get_session_file () = !session_file
 let get_used_context_file () = !used_context_file

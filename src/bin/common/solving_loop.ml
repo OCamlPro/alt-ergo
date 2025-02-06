@@ -937,11 +937,9 @@ let process_source ?selector_inst ~print_status src =
   in
   d_fe src
 
-let main () =
-  let path = Options.get_file () in
+let main path =
   try
-    if String.equal path "" then
-      process_source ~print_status:Frontend.print_status `Stdin
-    else
-      process_source ~print_status:Frontend.print_status @@ (`File path)
+    process_source
+      ~print_status:Frontend.print_status
+      (path :> D_loop.State.source)
   with Exit_with_code code -> exit code

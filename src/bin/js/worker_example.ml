@@ -65,7 +65,6 @@ let solve () =
   let options =
     {(Worker_interface.init_options ()) with
      input_format = None;
-     file = Some "try-alt-ergo";
      debug = Some true;
      verbose = Some true;
      answers_with_loc = Some false;

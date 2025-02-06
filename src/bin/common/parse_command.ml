@@ -568,7 +568,12 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace
   Debug.mk ~verbosity:3 dddebug_flags;
   if backtrace then Printexc.record_backtrace true;
   Rule.mk rule;
-  if halt_opt then `Ok false
+  let path =
+    match file with
+    | Some f -> `File f
+    | None -> `Stdin
+  in
+  if halt_opt then `Ok None
   (* If save_used_context was invoked as an option it should
        automatically set unsat_core to true *)
   else begin
@@ -579,14 +584,13 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace
            Filename.chop_extension f
          with Invalid_argument _ -> f
        in
-       set_file f;
        set_session_file (base_file^".agr");
        set_used_context_file base_file;
      | _ -> ()
     );
 
     Gc.set { (Gc.get()) with Gc.allocation_policy = gc };
-    `Ok true
+    `Ok (Some path)
   end
 
 let mk_output_channel_opt regular_output diagnostic_output =
@@ -1500,7 +1504,8 @@ let main =
        ($(i,.mlw) and $(i,.why) are deprecated), \
        $(i,.smt2) or $(i,.psmt2)." in
     let i = Arg.(info [] ~docv:"FILE" ~doc) in
-    Arg.(value & pos ~rev:true 0 (some file) None & i) in
+    Arg.(value & pos ~rev:true 0 (some file) None & i)
+  in
 
   let doc = "Execute Alt-Ergo on the given file." in
   let exits = Cmd.Exit.defaults in
@@ -1576,8 +1581,8 @@ let parse_cmdline_arguments () =
   at_exit Options.Output.close_all;
   let r = Cmd.eval_value main in
   match r with
-  | Ok `Ok true -> ()
-  | Ok `Ok false -> raise (Exit_parse_command 0)
+  | Ok `Ok Some path -> path
+  | Ok `Ok None -> raise (Exit_parse_command 0)
   | Ok `Version | Ok `Help -> exit 0
   | Error `Parse -> exit Cmd.Exit.cli_error
   | Error `Term -> exit Cmd.Exit.internal_error
