@@ -17,14 +17,6 @@
 (**************************************************************************)
 
 type t = Hstring.t [@@deriving ord]
-
-type typed = t * Ty.t list * Ty.t
-(** Typed identifier of function. In order:
-    - The identifier.
-    - Types of its arguments.
-    - The returned type. *)
-
-val compare_typed : typed -> typed -> int
 val equal : t -> t -> bool
 val show : t -> string
 val pp : t Fmt.t
@@ -37,6 +29,7 @@ module Namespace : sig
   module Internal : S
   module Skolem : S
   module Abstract : S
+  module GetValue : S
 
   val reinit : unit -> unit
   (** Resets the [fresh_internal_name], [fresh_skolem] and [fresh_abstract]

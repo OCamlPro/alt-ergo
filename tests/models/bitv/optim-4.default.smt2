@@ -1,6 +1,7 @@
 ; Test constrained function optimization
-(set-logic ALL)
 (set-option :produce-models true)
+(set-option :verify-models false)
+(set-logic ALL)
 (declare-const x (_ BitVec 32))
 (define-fun bvabs32 ((x (_ BitVec 32))) (_ BitVec 33)
   (ite
