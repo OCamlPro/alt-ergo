@@ -1760,11 +1760,11 @@ let rec is_pure_term t =
 
 let make file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
-    let loc = Dolmen.Std.Loc.loc file stmt.loc in
+    let st_loc = Dolmen.Std.Loc.loc file stmt.loc in
     match stmt with
     (* Optimize terms *)
     | { contents = `Optimize (t, is_max); _ } ->
-      let e = mk_expr ~loc ~toplevel:true ~decl_kind:Dobjective t in
+      let e = mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t in
       let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
         begin
@@ -1776,16 +1776,16 @@ let make file acc stmt =
         end
       else
         let st_decl = C.Optimize fn in
-        C.{ st_decl; st_loc = loc } :: acc
+        C.{ st_decl; st_loc } :: acc
 
     (* Push and Pop commands *)
     | { contents = `Pop n; _ } ->
       let st_decl = C.Pop n in
-      C.{ st_decl; st_loc = loc } :: acc
+      C.{ st_decl; st_loc } :: acc
 
     | { contents = `Push n; _ } ->
       let st_decl = C.Push n in
-      C.{ st_decl; st_loc = loc } :: acc
+      C.{ st_decl; st_loc } :: acc
 
     (* Goal and check-sat definitions *)
     | { id; attrs; contents = (`Goal _ | `Check _) as contents; implicit; _ } ->
@@ -1819,9 +1819,9 @@ let make file acc stmt =
             aux acc decl
         ) [] _hyps
       in
-      let e = make_form "" t loc ~decl_kind:E.Dgoal in
+      let e = make_form "" t st_loc ~decl_kind:E.Dgoal in
       let st_decl = C.Query (name, e, goal_sort) in
-      C.{st_decl; st_loc = loc} :: List.rev_append (List.rev rev_hyps_c) acc
+      C.{st_decl; st_loc} :: List.rev_append (List.rev rev_hyps_c) acc
 
     | { contents = `Solve _; _ } ->
       (* Filtered out by the solving_loop *)
@@ -1886,7 +1886,7 @@ let make file acc stmt =
                 begin match Util.th_ext_of_string name with
                   | Some extends -> extends
                   | None ->
-                    Errors.typing_error (ThExtError name) loc
+                    Errors.typing_error (ThExtError name) st_loc
                 end
               | _ ->
                 Fmt.failwith
@@ -1902,7 +1902,7 @@ let make file acc stmt =
         | _ ->
           Fmt.failwith
             "%a: Internal error: multiple theories."
-            DStd.Loc.fmt loc
+            DStd.Loc.fmt st_loc
       in
       let decl_kind, assume =
         match theory with
@@ -1923,9 +1923,9 @@ let make file acc stmt =
           E.Dtheory, th_assume
         | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
       in
-      let e = make_form name t loc ~decl_kind in
+      let e = make_form name t st_loc ~decl_kind in
       let st_decl = assume name e in
-      C.{ st_decl; st_loc = loc } :: acc
+      C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
     | { contents = `Defs defs; _ } ->
@@ -1974,7 +1974,7 @@ let make file acc stmt =
               | Some () ->
                 let decl_kind = E.Dpredicate defn in
                 let ff =
-                  mk_expr ~loc ~name_base
+                  mk_expr ~loc:st_loc ~name_base
                     ~toplevel:false ~decl_kind body
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
@@ -1987,14 +1987,14 @@ let make file acc stmt =
                 let e =
                   if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
-                    E.mk_forall name_base loc
+                    E.mk_forall name_base st_loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
-                Some C.{ st_decl = C.PredDef (e, name_base); st_loc = loc }
+                Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
               | None ->
                 let decl_kind = E.Dfunction defn in
                 let ff =
-                  mk_expr ~loc ~name_base
+                  mk_expr ~loc:st_loc ~name_base
                     ~toplevel:false ~decl_kind body
                 in
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
@@ -2008,12 +2008,12 @@ let make file acc stmt =
                 let e =
                   if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
                   else
-                    E.mk_forall name_base loc
+                    E.mk_forall name_base st_loc
                       Var.Map.empty [] ff ~toplevel:true ~decl_kind
                 in
                 if Options.get_verbose () then
                   Format.eprintf "defining term of %a@." DE.Term.print body;
-                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc = loc }
+                Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
             end
           | `Type_alias _ -> None
           | `Instanceof _ ->
@@ -2030,7 +2030,7 @@ let make file acc stmt =
           acc
 
         | `Term_decl td ->
-          C.{ st_decl = Decl (mk_term_decl td); st_loc = loc } :: acc
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
       end
 
     | {contents = `Decls dcl; _ } ->
@@ -2046,7 +2046,7 @@ let make file acc stmt =
             | [otd] -> mk_ty_decl otd
             | _ -> mk_mr_ty_decls (List.rev ty_decls)
           end;
-          C.{ st_decl = Decl (mk_term_decl td); st_loc = loc } :: aux [] tl acc
+          C.{ st_decl = Decl (mk_term_decl td); st_loc } :: aux [] tl acc
 
         | `Type_decl (td, _def) :: tl ->
           aux (td :: ty_decls) tl acc

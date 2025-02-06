@@ -52,6 +52,26 @@ let empty_solver_ctx = {
   global = [];
 }
 
+(* Imported from Dolmen.Std.Loc implementation. *)
+let rec explode_path acc path =
+  match Filename.dirname path with
+  | "." | "/" -> Filename.basename path :: acc
+  | dirname -> explode_path (Filename.basename path :: acc) dirname
+
+(* Imported from Dolmen.Std.Loc implementation. *)
+let normalize_path path =
+  String.concat "/" (explode_path [] path)
+
+let pp_loc ppf (pos : Dolmen.Std.Loc.loc) =
+  let path = normalize_path pos.file in
+  if pos.start_column = pos.stop_column then
+    if pos.file = "" then
+      Fmt.pf ppf "<location missing>"
+    else
+      Fmt.pf ppf "%s:<location missing>" path
+  else
+    Fmt.pf ppf "%s:%d.%d" path pos.start_line pos.start_column
+
 let recoverable_error ?loc ?(code = 1) =
   let pp fmt =
     match Options.get_output_format () with
@@ -63,7 +83,7 @@ let recoverable_error ?loc ?(code = 1) =
         if msg <> "" then
           match loc with
           | Some loc ->
-            pp "@[%a:@ %s@]" DStd.Loc.fmt loc msg
+            pp "@[%a:@ %s@]" pp_loc loc msg
           | None ->
             pp "%s" msg
       in
@@ -379,7 +399,7 @@ let process_source ?selector_inst ~print_status src =
   let print_wrn_opt ~loc ~name ty value =
     warning
       "%a The option %s expects a %s, got %a"
-      DStd.Loc.fmt loc name ty DStd.Term.print value
+      pp_loc loc name ty DStd.Term.print value
   in
 
   let set_sat_solver sat st =
@@ -417,11 +437,10 @@ let process_source ?selector_inst ~print_status src =
       if Stdlib.(Options.get_sat_solver () = Tableaux) then
         Options.set_unsat_core true
       else
-        warning
-          "%a The generation of unsat cores is not \
+        warning ~loc
+          "The generation of unsat cores is not \
            supported for the current SAT solver. Please \
-           choose the SAT solver Tableaux."
-          DStd.Loc.fmt loc;
+           choose the SAT solver Tableaux.";
       st
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
       Options.set_unsat_core false; st
@@ -573,6 +592,10 @@ let process_source ?selector_inst ~print_status src =
     st
   in
 
+  (* TODO: we need to pass the compact location of the custom statement
+     as `Dolmen.Std.Loc.compact` is incorrect. After addressing this
+     issue in Dolmen, we can replace the [loc] argument by the [st_loc]
+     value built in [handle_stmt]. *)
   let handle_custom_statement ~loc id args st =
     let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
     let logic_file = State.get State.logic_file st in
@@ -720,7 +743,7 @@ let process_source ?selector_inst ~print_status src =
           | Simple name -> name
           | _ ->
             Fmt.failwith "%a: internal error: goal name should be simple"
-              DStd.Loc.fmt loc
+              pp_loc loc
         in
         let contents =
           match contents with
@@ -728,7 +751,7 @@ let process_source ?selector_inst ~print_status src =
           | `Solve ([], [t]) -> `Goal t
           | _ ->
             Fmt.failwith "%a: internal error: unknown statement"
-              DStd.Loc.fmt loc
+              pp_loc loc
         in
         let stmt =
           { Typer_Pipe.id; contents; loc = td.loc ; attrs; implicit }
@@ -832,13 +855,12 @@ let process_source ?selector_inst ~print_status src =
             st
           | None ->
             recoverable_error ~loc
-              "%a: No model produced, cannot execute get-assignment."
-              DStd.Loc.fmt loc;
+              "No model produced, cannot execute get-assignment.";
             st
         end
 
-      | {contents = `Other (custom, args); loc = l; _} ->
-        handle_custom_statement ~loc:l custom args st
+      | {contents = `Other (custom, args); loc; _} ->
+        handle_custom_statement ~loc custom args st
 
       | td ->
         let st =
