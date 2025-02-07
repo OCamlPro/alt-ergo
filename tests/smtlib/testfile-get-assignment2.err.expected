@@ -4,4 +4,4 @@ unknown
   (define-fun x () Int 0)
 )
 (error "../tests/smtlib/testfile-get-assignment2.err.smt2:8.0:
-        Produce assignments disabled; add (set-option :produce-assignments true)")
+Produce assignments disabled; add (set-option :produce-assignments true)")

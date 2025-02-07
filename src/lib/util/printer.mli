@@ -161,6 +161,9 @@ val print_status_inconsistent :
   int option ->
   string option -> unit
 
+(** Print an SMT-LIB string with quotes and escaping. *)
+val pp_smtlib_string : Format.formatter -> string -> unit
+
 (** Print smtlib error message on the regular formatter, accessible with
     {!val:Options.get_fmt_regular} and set by default to stdout.
     The regular formatter is flushed after the print if flushed is set. *)

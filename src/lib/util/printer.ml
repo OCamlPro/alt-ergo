@@ -375,6 +375,23 @@ let print_status_timeout ?(validity_mode=true) loc
     ("Timeout","unknown","fg_orange") loc
     time steps goal
 
+(* Version of [kfprintf] that escapes its input. *)
+let ekfprintf k ppf fmt =
+  let buf = Buffer.create 1024 in
+  let buf_ppf = Format.formatter_of_buffer buf in
+  Format.kfprintf (fun buf_ppf ->
+      Format.pp_print_flush buf_ppf ();
+      let s =
+        String.concat "\"\"" (String.split_on_char '"' (Buffer.contents buf))
+      in
+      Format.pp_print_string ppf s;
+      k ppf
+    ) buf_ppf fmt
+
+let pp_smtlib_string ppf s =
+  Format.fprintf ppf "\"";
+  ekfprintf (fun ppf -> Format.fprintf ppf "\"") ppf "%s" s
+
 let print_smtlib_err ?(flushed=true) s =
   (* The smtlib error messages are printed on the regular output. *)
   pp_std_smt ();
@@ -386,7 +403,7 @@ let print_smtlib_err ?(flushed=true) s =
       Format.fprintf fmt "\")"
   in
   Format.fprintf fmt "(error \"";
-  Format.kfprintf k fmt s
+  ekfprintf k fmt s
 
 let pp_source ppf src =
   let name = Logs.Src.doc src in

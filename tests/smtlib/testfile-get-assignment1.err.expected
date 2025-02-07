@@ -1,2 +1,2 @@
 (error "../tests/smtlib/testfile-get-assignment1.err.smt2:3.0:
-        No model produced, cannot execute get-assignment.")
+No model produced, cannot execute get-assignment.")

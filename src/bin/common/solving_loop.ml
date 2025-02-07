@@ -832,11 +832,11 @@ let process_source ?selector_inst ~print_status src =
       | {contents = `Exit; _} -> raise Exit
 
       | {contents = `Echo str; _} ->
-        let new_str = String.concat "\"\"" (String.split_on_char '"' str) in
         Fmt.pf
           (Options.Output.get_fmt_regular ())
-          "\"%s\"@."
-          new_str;
+          "%a@."
+          Printer.pp_smtlib_string
+          str;
         st
 
       | {contents = `Get_info kind; _ } ->
