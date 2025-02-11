@@ -12,6 +12,7 @@
    cmdliner
    dune-site
    dune-site.plugins
+   camlzip
  )
  (modules
    Config

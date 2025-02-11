@@ -17,7 +17,6 @@
     dynlink
     ocplib-simplex
     stdlib-shims
-    camlzip
     dolmen
     dolmen_type
     dolmen_loop

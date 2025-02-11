@@ -42,5 +42,6 @@ pkgs.mkShell {
     landmarks
     landmarks-ppx
     qcheck
+    utop
   ];
 }
