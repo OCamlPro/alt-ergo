@@ -28,10 +28,10 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (ocaml (>= 4.08.1))
   dune
   (alt-ergo-lib (= :version))
-  menhir
   dune-site
   (cmdliner (>= 1.1.0))
   (odoc :with-doc)
+  (camlzip (>= 1.07))
  )
 
  (sites (share preludes) (lib plugins))
@@ -63,7 +63,6 @@ See more details on http://alt-ergo.ocamlpro.com/"
   stdlib-shims
   (ppx_blob (>= 0.7.2))
   ppx_deriving
-  (camlzip (>= 1.07))
   (odoc :with-doc)
   ppx_deriving
   (qcheck (and :with-test (= 0.22)))
