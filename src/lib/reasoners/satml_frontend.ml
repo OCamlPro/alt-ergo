@@ -42,6 +42,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let reset_refs () = Steps.reset_steps ()
 
+  type 'a atom = {
+    lit: 'a;
+    neg: 'a;
+  }
+
   type guards = {
     mutable current_guard: E.t;
     stack_guard: E.t Stack.t;
@@ -64,6 +69,16 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     guards : guards;
     mutable last_saved_model : Models.t Lazy.t option;
     mutable last_saved_objectives : Objective.Model.t option;
+    mutable last_saved_bmodel : Shostak.Literal.t atom list option;
+    (** The boolean model saved in this field is intented for use by
+        [get_value]. This field can be updated in two situations:
+        - Just before returning [I_dont_know] in the [unsat_rec] function, it
+            is updated with the current boolean model of [env.satml].
+        - After encountering a contradiction in [optimize_models], it is
+            updated with the lastest consistent boolean model produced by
+            SatML. This model must be consistent with the boolean model of
+            [env.satml] but it may be a strict extension of it. *)
+
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
         default. *)
@@ -74,6 +89,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         is the top of the stack and [declare_tail] is tail. In particular, this
         stack is never empty. *)
   }
+
+  (* Helper function that produces an independent copy of the current boolean
+     model of [env.satml]. *)
+  let capture_bmodel env =
+    List.map
+      (fun Atom.{ lit; neg = { lit = nlit; _ }; _ }  ->
+         { lit; neg = nlit }
+      ) (SAT.boolean_model env.satml)
 
   let empty_guards () = {
     current_guard = Expr.vrai;
@@ -103,6 +126,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       add_inst = selector;
       last_saved_model = None;
       last_saved_objectives = None;
+      last_saved_bmodel = None;
       unknown_reason = None;
       declare_top = [];
       declare_tail = Stack.create ();
@@ -116,7 +140,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env.unknown_reason <- Some ur;
     raise I_dont_know
 
-  exception IUnsat of t * Explanation.t
+  exception IUnsat of Explanation.t
 
   let mk_gf f =
     { E.ff = f;
@@ -860,7 +884,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (*update_lazy_cnf done inside assume at the right place *)
         SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl;
       with
-      | Satml.Unsat (lc) -> raise (IUnsat (env, make_explanation lc))
+      | Satml.Unsat lc -> raise (IUnsat (make_explanation lc))
       | Satml.Sat -> assert false
 
   let assume_aux_bis ~dec_lvl env l : bool * Atom.atom list =
@@ -1009,9 +1033,159 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       env.last_saved_model <- Some model;
       env.last_saved_objectives <- Some objectives;
+      env.last_saved_bmodel <- Some (capture_bmodel env);
     with
     | Ex.Inconsistent (_expl, _classes) as e -> raise e
     | Util.Timeout -> i_dont_know env (Timeout ModelGen)
+
+  let rec unsat_rec env : unit =
+    try SAT.solve env.satml; assert false
+    with
+    | Satml.Unsat lc -> raise (IUnsat (make_explanation lc))
+    | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+    | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
+    | Satml.Sat ->
+      try
+        do_case_split env Util.BeforeMatching;
+        let () =
+          env.nb_mrounds <- env.nb_mrounds + 1
+                            [@ocaml.ppwarning
+                              "TODO: first intantiation a la DfsSAT before \
+                               searching ..."]
+        in
+        if Options.get_profiling() then Profiling.instantiation env.nb_mrounds;
+        let strat =
+          if env.nb_mrounds - env.last_forced_greedy > 1000 then Force_greedy
+          else
+          if env.nb_mrounds - env.last_forced_normal > 50 then Force_normal
+          else Auto
+        in
+        (*let strat = Auto in*)
+        let dec_lvl = SAT.decision_level env.satml in
+        let updated = instantiation env strat dec_lvl in
+        do_case_split env Util.AfterMatching;
+        let updated =
+          if not updated && strat != Auto then instantiation env Auto dec_lvl
+          else updated
+        in
+        let dec_lvl' = SAT.decision_level env.satml in
+        let () =
+          if strat == Auto && dec_lvl' = dec_lvl then
+            (* increase chances of forcing Normal each time Auto
+               instantiation doesn't allow to backjump *)
+            env.last_forced_normal <- env.last_forced_normal - 1
+        in
+        if not updated then (
+          if Options.get_produce_models () then update_model env;
+          env.last_saved_bmodel <- Some (capture_bmodel env);
+          Options.Time.unset_timeout ();
+          i_dont_know env Incomplete
+        );
+        unsat_rec env
+
+      with
+      | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+      | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
+      | Satml.Unsat lc -> raise (IUnsat (make_explanation lc))
+      | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
+        begin
+          try
+            SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
+            unsat_rec env
+          with
+          | Satml.Unsat lc -> raise (IUnsat (make_explanation lc))
+          | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
+          | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
+        end
+
+  (* copied from sat_solvers.ml *)
+  let max_term_depth_in_sat env =
+    let aux mx f = Stdlib.max mx (E.depth f) in
+    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
+
+  let checks_implemented_features () =
+    let fails msg =
+      let msg =
+        Format.sprintf
+          "%S is not implemented in CDCL solver ! \
+           Please use the old Tableaux-like SAT solver instead."
+          msg
+      in
+      Errors.run_error (Errors.Unsupported_feature msg)
+    in
+    let open Options in
+    if get_save_used_context () then fails "save_used_context";
+    if get_unsat_core () then fails "unsat_core"
+
+  let create_guard env =
+    let expr_guard = E.fresh_name Ty.Tbool in
+    let ff, axs, new_vars =
+      FF.simplify env.ff_hcons_env expr_guard
+        (fun f -> ME.find f env.abstr_of_axs) []
+    in
+    assert (axs == []);
+    match FF.view ff, new_vars with
+    | FF.UNIT atom_guard, [v] ->
+      assert (Atom.eq_atom atom_guard v.pa);
+      let nbv = FF.nb_made_vars env.ff_hcons_env in
+      (* Need to use new_vars function to add the new_var corresponding to
+         the atom atom_guard in the satml env *)
+      let u, nu = SAT.new_vars env.satml ~nbv new_vars [] [] in
+      assert (u == [] && nu == []);
+      expr_guard, atom_guard
+    | _ -> assert false
+
+  let declare env id =
+    env.declare_top <- id :: env.declare_top
+
+  let push env to_push =
+    Util.loop ~f:(fun _n () () ->
+        try
+          let expr_guard, atom_guard = create_guard env in
+          SAT.push env.satml atom_guard;
+          Stack.push expr_guard env.guards.stack_guard;
+          Steps.push_steps ();
+          env.guards.current_guard <- expr_guard;
+          Stack.push env.declare_top env.declare_tail;
+        with
+        | Util.Step_limit_reached _ ->
+          (* This function should be called without step limit
+             (see Steps.apply_without_step_limit) *)
+          assert false
+      )
+      ~max:to_push
+      ~elt:()
+      ~init:()
+
+  let pop env to_pop =
+    Util.loop
+      ~f:(fun _n () () ->
+          SAT.pop env.satml;
+          let guard_to_neg = Stack.pop env.guards.stack_guard in
+          let inst = Inst.pop ~guard:guard_to_neg env.inst in
+          assert (not (Stack.is_empty env.guards.stack_guard));
+          let b = Stack.top env.guards.stack_guard in
+          Steps.pop_steps ();
+          env.last_saved_model <- None;
+          env.last_saved_objectives <- None;
+          env.last_saved_bmodel <- None;
+          env.inst <- inst;
+          env.guards.current_guard <- b;
+          let declare_top =
+            try
+              Stack.pop env.declare_tail
+            with Stack.Empty ->
+              Errors.error (Run_error Stack_underflow)
+          in
+          env.declare_top <- declare_top;
+        )
+      ~max:to_pop
+      ~elt:()
+      ~init:()
+
+  let add_guard env gf =
+    let current_guard = env.guards.current_guard in
+    {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
@@ -1088,14 +1262,26 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       else mk_gt ty_op
     end
 
-  (* This function is called after receiving an `I_dont_know` exception from
-     unsat_rec. It may re-raise this exception. *)
-  let analyze_unknown_for_objectives env unsat_rec_prem : unit =
-    let objs =
+  let capture_models env =
+    (* Models must be saved before asserting a new formula in [optimize_models]
+       as they may be altered if a contradiction arises. More precisely,
+       - There is no need to force [env.last_saved_model], as this closure
+         has captured the correct theory environment in
+         [SAT.compute_concrete_model].
+       - [env.last_saved_objectives] is pure and only needs to be saved
+         without additional precautions.
+       - The atoms of [env.last_saved_bmodel] are mutable and part of the SAT
+         solver state [env.satml], which means they may be altered after
+         popping an assertion level. *)
+    let fmdl = env.last_saved_model in
+    let omdl =
       match env.last_saved_objectives with
       | Some objs -> objs
-      | None -> raise I_dont_know
+      | None -> assert false
     in
+    fmdl, omdl, capture_bmodel env
+
+  let rec optimize_models (fmdl, omdl, bmdl) env =
     let acc =
       try
         Objective.Model.fold (fun { e; is_max; _ } value acc ->
@@ -1108,15 +1294,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               raise (Give_up ((e, v, is_max, false) :: acc))
             | Unknown ->
               assert false
-          ) objs []
+          ) omdl []
       with Give_up acc -> acc
     in
     begin match acc with
       | [] ->
         (* The answer for the first objective is infinity. We stop here as
-           we cannot go beyond infinity and the next objectives with lower
-           priority cannot be optimized in presence of infinity values. *)
-        raise I_dont_know;
+           we cannot go beyond infinity and lower-priority objectives
+           cannot be optimized in the presence of infinity values. *)
+        fmdl, omdl, bmdl
       | (e, tv, is_max, is_le) :: l ->
         let neg =
           List.fold_left
@@ -1126,196 +1312,55 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                E.Core.(or_ acc (not ((op (E.type_info e) is_max is_le) e tv)))
             ) (E.Core.not ((op (E.type_info e) is_max is_le) e tv)) l
         in
-        if Options.get_debug_optimize () then
-          Printer.print_dbg
-            "The objective function %a has an optimum. We should continue \
-             to explore other branches to try to find a better optimum than \
-             %a." Expr.print e Expr.print tv;
-        let l = [mk_gf neg] in
-        (* TODO: Can we add the clause without 'cancel_until 0' ? *)
-        SAT.cancel_until env.satml 0;
-        if Options.get_debug_optimize () then
-          Printer.print_dbg
-            "We assert the formula %a to explore another branch."
-            E.print neg;
-        let updated = assume_aux ~dec_lvl:0 env l in
-        if not updated then begin
-          Printer.print_dbg
-            "env not updated after injection of neg! termination \
-             issue.@.@.";
+        Logs.debug ~src:Options.Sources.optimize
+          (fun k -> k
+              "The objective function %a has an optimum. We should continue \
+               to explore other branches to try to find a better optimum than \
+               %a." Expr.print e Expr.print tv);
+        Logs.debug ~src:Options.Sources.optimize
+          (fun k -> k
+              "We assert the formula %a to explore another branch."
+              E.print neg);
+        try
+          let gf = add_guard env @@ mk_gf neg in
+          let updated = assume_aux ~dec_lvl:0 env [gf] in
+          if not updated then
+            Fmt.failwith
+              "env not updated after injection of neg! termination issue";
+          unsat_rec env;
           assert false
-        end;
-        Options.Time.unset_timeout ();
-        Options.Time.set_timeout (Options.get_timelimit ());
-        unsat_rec_prem env ~first_call:false
+        with
+        | I_dont_know ->
+          optimize_models (capture_models env) env
+        | IUnsat _ex ->
+          (* The unsatisfability of [env] means that the objectives cannot
+             be further optimized.
+
+             The explanation [_ex] can be discared, as we revert the assertion
+             of formulas that led to this contradiction in
+             [unsat_then_optimize]. *)
+          fmdl, omdl, bmdl
     end
 
-  let rec unsat_rec env ~first_call:_ : unit =
-    try SAT.solve env.satml; assert false
-    with
-    | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-    | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
-    | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
-    | Satml.Sat ->
-      try
-        do_case_split env Util.BeforeMatching;
-        let () =
-          env.nb_mrounds <- env.nb_mrounds + 1
-                            [@ocaml.ppwarning
-                              "TODO: first intantiation a la DfsSAT before \
-                               searching ..."]
-        in
-        if Options.get_profiling() then Profiling.instantiation env.nb_mrounds;
-        let strat =
-          if env.nb_mrounds - env.last_forced_greedy > 1000 then Force_greedy
-          else
-          if env.nb_mrounds - env.last_forced_normal > 50 then Force_normal
-          else Auto
-        in
-        (*let strat = Auto in*)
-        let dec_lvl = SAT.decision_level env.satml in
-        let updated = instantiation env strat dec_lvl in
-        do_case_split env Util.AfterMatching;
-        let updated =
-          if not updated && strat != Auto then instantiation env Auto dec_lvl
-          else updated
-        in
-        let dec_lvl' = SAT.decision_level env.satml in
-        let () =
-          if strat == Auto && dec_lvl' = dec_lvl then
-            (* increase chances of forcing Normal each time Auto
-               instantiation doesn't allow to backjump *)
-            env.last_forced_normal <- env.last_forced_normal - 1
-        in
-        if not updated then (
-          if Options.get_produce_models () then update_model env;
-          Options.Time.unset_timeout ();
-          i_dont_know env Incomplete
-        );
-        unsat_rec env ~first_call:false
-
-      with
-      | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
-      | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
-      | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-      | Ex.Inconsistent (expl, _cls) -> (*may be raised during matching or CS*)
-        begin
-          try
-            SAT.conflict_analyze_and_fix env.satml (Satml.C_theory expl);
-            unsat_rec env ~first_call:false
-          with
-          | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
-          | Util.Timeout -> i_dont_know env (Timeout ProofSearch)
-          | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
-        end
-
-  let rec unsat_rec_prem env ~first_call : unit =
+  let unsat_then_optimize env =
     try
-      unsat_rec env ~first_call
+      unsat_rec env
     with
     | I_dont_know ->
-      begin
-        try analyze_unknown_for_objectives env unsat_rec_prem
-        with
-        | IUnsat (env, _) ->
-          assert (Option.is_some env.last_saved_objectives);
-          (* objectives is a ref, it's necessiraly updated as a
-             side-effect to best value *)
-          raise I_dont_know
-      end
-    | IUnsat (env, _) as e ->
-      if Option.is_none env.last_saved_objectives then raise e;
-      (* TODO: put the correct objectives *)
-      raise I_dont_know
-
-  (* copied from sat_solvers.ml *)
-  let max_term_depth_in_sat env =
-    let aux mx f = Stdlib.max mx (E.depth f) in
-    ME.fold (fun f _ mx -> aux mx f) env.gamma 0
-
-
-  let checks_implemented_features () =
-    let fails msg =
-      let msg =
-        Format.sprintf
-          "%S is not implemented in CDCL solver ! \
-           Please use the old Tableaux-like SAT solver instead."
-          msg
-      in
-      Errors.run_error (Errors.Unsupported_feature msg)
-    in
-    let open Options in
-    if get_save_used_context () then fails "save_used_context";
-    if get_unsat_core () then fails "unsat_core"
-
-  let create_guard env =
-    let expr_guard = E.fresh_name Ty.Tbool in
-    let ff, axs, new_vars =
-      FF.simplify env.ff_hcons_env expr_guard
-        (fun f -> ME.find f env.abstr_of_axs) []
-    in
-    assert (axs == []);
-    match FF.view ff, new_vars with
-    | FF.UNIT atom_guard, [v] ->
-      assert (Atom.eq_atom atom_guard v.pa);
-      let nbv = FF.nb_made_vars env.ff_hcons_env in
-      (* Need to use new_vars function to add the new_var corresponding to
-         the atom atom_guard in the satml env *)
-      let u, nu = SAT.new_vars env.satml ~nbv new_vars [] [] in
-      assert (u == [] && nu == []);
-      expr_guard, atom_guard
-    | _ -> assert false
-
-  let declare env id =
-    env.declare_top <- id :: env.declare_top
-
-  let push env to_push =
-    Util.loop ~f:(fun _n () () ->
-        try
-          let expr_guard, atom_guard = create_guard env in
-          SAT.push env.satml atom_guard;
-          Stack.push expr_guard env.guards.stack_guard;
-          Steps.push_steps ();
-          env.guards.current_guard <- expr_guard;
-          Stack.push env.declare_top env.declare_tail;
-        with
-        | Util.Step_limit_reached _ ->
-          (* This function should be called without step limit
-             (see Steps.apply_without_step_limit) *)
-          assert false
-      )
-      ~max:to_push
-      ~elt:()
-      ~init:()
-
-  let pop env to_pop =
-    Util.loop
-      ~f:(fun _n () () ->
-          SAT.pop env.satml;
-          let guard_to_neg = Stack.pop env.guards.stack_guard in
-          let inst = Inst.pop ~guard:guard_to_neg env.inst in
-          assert (not (Stack.is_empty env.guards.stack_guard));
-          let b = Stack.top env.guards.stack_guard in
-          Steps.pop_steps ();
-          env.last_saved_model <- None;
-          env.last_saved_objectives <- None;
-          env.inst <- inst;
-          env.guards.current_guard <- b;
-          let declare_top =
-            try
-              Stack.pop env.declare_tail
-            with Stack.Empty ->
-              Errors.error (Run_error Stack_underflow)
-          in
-          env.declare_top <- declare_top;
-        )
-      ~max:to_pop
-      ~elt:()
-      ~init:()
-
-  let add_guard env gf =
-    let current_guard = env.guards.current_guard in
-    {gf with E.ff = E.mk_imp current_guard gf.E.ff}
+      match env.last_saved_objectives with
+      | None -> raise I_dont_know
+      | Some omdl when Objective.Model.is_empty omdl -> raise I_dont_know
+      | Some _ ->
+        (* An additional assertion level is inserted around [optimize_models]
+           to revert to a consistent SAT environment after reaching an
+           unsatisfiable state in [optimize_models]. *)
+        push env 1;
+        let fmdl, omdl, bmdl = optimize_models (capture_models env) env in
+        pop env 1;
+        env.last_saved_model <- fmdl;
+        env.last_saved_objectives <- Some omdl;
+        env.last_saved_bmodel <- Some bmdl;
+        raise I_dont_know
 
   let unsat env gf =
     assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
@@ -1331,10 +1376,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       let _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       env.inst <- Inst.register_max_term_depth env.inst max_t;
-      unsat_rec_prem env ~first_call:true;
+      unsat_then_optimize env;
       assert false
     with
-    | IUnsat (_env, dep) ->
+    | IUnsat dep ->
       assert begin
         Ex.fold_atoms
           (fun e b -> match e with
@@ -1349,7 +1394,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
     try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
-    with | IUnsat (_env, dep) -> raise (Unsat dep)
+    with | IUnsat dep -> raise (Unsat dep)
          | Util.Timeout ->
            (* don't attempt to compute a model if timeout before
               calling unsat function *)
@@ -1379,16 +1424,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let get_unknown_reason env = env.unknown_reason
 
   let get_value env t =
-    match E.type_info t with
-    | Ty.Tbool ->
+    match E.type_info t, env.last_saved_bmodel with
+    | Ty.Tbool, Some bmodel ->
       begin
-        let bmodel = SAT.boolean_model env.satml in
         Compat.List.find_map
-          (fun Atom.{lit; neg = {lit=neglit; _}; _} ->
+          (fun { lit; neg } ->
              let tlit = Shostak.Literal.make (LTerm t) in
              if Shostak.Literal.equal tlit lit then
                Some E.vrai
-             else if Shostak.Literal.equal tlit neglit then
+             else if Shostak.Literal.equal tlit neg then
                Some E.faux
              else
                None
