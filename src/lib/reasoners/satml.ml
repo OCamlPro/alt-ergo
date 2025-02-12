@@ -84,6 +84,9 @@ type conflict_origin =
 (* not even the final one *)
 let vraie_form = E.vrai
 
+type status =
+  | Sat
+  | Unsat of Atom.clause list option
 
 module type SAT_ML = sig
   (*module Make (Dummy : sig end) : sig*)
@@ -141,6 +144,7 @@ module type SAT_ML = sig
 
   val optimize : t -> Objective.Function.t -> unit
 
+  val status : t -> status
 end
 
 module MFF = FF.Map
@@ -2289,4 +2293,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     else
       Vec.replace (fun fns -> fn :: fns) env.objectives
         (Vec.size env.objectives - 1)
+
+  let[@inline always] status env =
+    if env.is_unsat then Unsat env.unsat_core
+    else Sat
 end

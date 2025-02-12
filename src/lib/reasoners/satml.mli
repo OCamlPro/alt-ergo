@@ -36,6 +36,10 @@ type conflict_origin =
   | C_bool of Atom.clause
   | C_theory of Explanation.t
 
+type status =
+  | Sat
+  | Unsat of Atom.clause list option
+
 val src : Logs.src
 
 module type SAT_ML = sig
@@ -97,6 +101,10 @@ module type SAT_ML = sig
       [env].
 
       @raise invalid_argurment if the decision level of [env] is not zero. *)
+
+  val status : t -> status
+  (** [unsat env] returns the status of the solver. If the status is [Unsat],
+      the explanation is an unsat core. *)
 end
 
 module Make (Th : Theory.S) : SAT_ML with type th = Th.t

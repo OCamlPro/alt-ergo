@@ -1331,43 +1331,58 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     checks_implemented_features ();
     let gf = add_guard env gf in
     Debug.unsat gf;
-    (*fprintf fmt "FF.unsat@.";*)
-    (* In dfs_sat goals' terms are added to env.inst *)
-    env.inst <-
-      Inst.add_terms env.inst
-        (E.max_ground_terms_rec_of_form gf.E.ff) gf;
-    try
-      assert (SAT.decision_level env.satml == 0);
-      let _updated = assume_aux ~dec_lvl:0 env [gf] in
-      let max_t = max_term_depth_in_sat env in
-      env.inst <- Inst.register_max_term_depth env.inst max_t;
-      unsat_rec_prem env ~first_call:true;
-      assert false
-    with
-    | IUnsat (_env, dep) ->
-      assert begin
-        Ex.fold_atoms
-          (fun e b -> match e with
-             | Ex.Bj _ -> false (* only used in fun_sat *)
-             | Ex.Literal _ | Ex.Fresh _ -> false (* bug if this happens *)
-             | Ex.RootDep _ | Ex.Dep _ -> b
-          )dep true
-      end;
-      dep
+    match SAT.status env.satml with
+    | Unsat _ ->
+      (* XXX: SatML does not yet support unsat core. Instead, an empty
+         explanation is returned. *)
+      Ex.empty
+    | Sat -> (
+        (*fprintf fmt "FF.unsat@.";*)
+        (* In dfs_sat goals' terms are added to env.inst *)
+        env.inst <-
+          Inst.add_terms env.inst
+            (E.max_ground_terms_rec_of_form gf.E.ff) gf;
+        try
+          assert (SAT.decision_level env.satml == 0);
+          let _updated = assume_aux ~dec_lvl:0 env [gf] in
+          let max_t = max_term_depth_in_sat env in
+          env.inst <- Inst.register_max_term_depth env.inst max_t;
+          unsat_rec_prem env ~first_call:true;
+          assert false
+        with
+        | IUnsat (_env, dep) ->
+          assert begin
+            Ex.fold_atoms
+              (fun e b -> match e with
+                 | Ex.Bj _ -> false (* only used in fun_sat *)
+                 | Ex.Literal _ | Ex.Fresh _ -> false (* bug if this happens *)
+                 | Ex.RootDep _ | Ex.Dep _ -> b
+              )dep true
+          end;
+          dep)
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
     assert (SAT.decision_level env.satml == 0);
-    try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
-    with | IUnsat (_env, dep) -> raise (Unsat dep)
-         | Util.Timeout ->
-           (* don't attempt to compute a model if timeout before
-              calling unsat function *)
-           i_dont_know env (Timeout Assume)
-         | Util.Step_limit_reached n ->
-           (* When reaching the step limit on an assume, we do not want to
-              answer 'unknown' right away. *)
-           env.unknown_reason <- Some (Step_limit n)
+    match SAT.status env.satml with
+    | Unsat _ ->
+      (* XXX: SatML does not yet support unsat core. Instead, an empty
+         explanation is returned. *)
+      raise (Unsat Ex.empty)
+    | Sat -> (
+        try
+          let _ : bool = assume_aux ~dec_lvl:0 env [add_guard env gf] in
+          ()
+        with
+        | IUnsat (_env, dep) -> raise (Unsat dep)
+        | Util.Timeout ->
+          (* don't attempt to compute a model if timeout before
+             calling unsat function *)
+          i_dont_know env (Timeout Assume)
+        | Util.Step_limit_reached n ->
+          (* When reaching the step limit on an assume, we do not want to
+             answer 'unknown' right away. *)
+          env.unknown_reason <- Some (Step_limit n))
 
   (* instrumentation of relevant exported functions for profiling *)
   let assume t ff dep =
