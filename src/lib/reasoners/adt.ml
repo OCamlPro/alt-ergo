@@ -118,7 +118,7 @@ module Shostak (X : ALIEN) = struct
           Fmt.(box @@ list ~sep:sp @@ pair nop X.print) c_args
 
     | Select d ->
-      Fmt.pf ppf "(%a %a)" X.print d.d_arg DE.Term.Const.print d.d_name
+      Fmt.pf ppf "%a#!!%a" X.print d.d_arg DE.Term.Const.print d.d_name
 
   let is_mine u =
     match u with
@@ -169,14 +169,14 @@ module Shostak (X : ALIEN) = struct
     assert (not @@ Options.get_disable_adts ());
     Log.debug (fun k -> k "make %a" E.print t);
     let { E.f; xs; ty; _ } = E.term_view t in
-    let ssx, ctx =
+    let rev_rs, ctx =
       List.fold_left
         (fun (args, ctx) s ->
            let rs, ctx' = X.make s in
            rs :: args, List.rev_append ctx' ctx
         )([], []) xs
     in
-    let xxs = List.rev ssx in
+    let rs = List.rev rev_rs in
     match f, ty with
     | Sy.Op Sy.Constr hs, Ty.Tadt (name, params) ->
       let cases = Ty.type_body name params in
@@ -188,10 +188,15 @@ module Shostak (X : ALIEN) = struct
           List.rev @@
           List.fold_left2
             (fun c_args v (lbl, _) -> (lbl, v) :: c_args)
-            [] xxs case_hs
+            [] rs case_hs
         with Invalid_argument _ -> assert false
       in
       let ctx =
+        (* If [t] is a record constructor term of the form
+             { x1 = t1; ...; xn = t2 }
+           we generate the equation
+             t.x1 = t1, ..., t.xn = tn
+           and store them in the context returned by `X.make`. *)
         match cases with
         | [{ destrs; _ }] ->
           List.fold_left2

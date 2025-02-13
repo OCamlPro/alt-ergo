@@ -472,9 +472,18 @@ let build_constr_eq r c =
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
         let cons = E.mk_constr c xs ty in
+        (* In `X.make`, we produce a non-empty context for record constructors.
+           In the below case, the context [ctx] has the form:
+              cons.x1 = .k1, ..., cons.xn = .kn
+            where x1, ..., xn are the record fields and .k1, ..., .kn are fresh
+            terms generated earlier.
+
+            Usually, the equations of the context are propagated as facts to
+            CC(X) via [Ccx.add_term]. Since .ki are fresh terms, adding these
+            facts could not contribute to any meaningful reasoning. *)
         let r', _ctx = X.make cons in
         let eq = Shostak.L.(view @@ mk_eq r r') in
-        Some (eq, E.mk_constr c xs ty)
+        Some (eq, cons)
 
       | _ -> assert false
     end
