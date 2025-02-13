@@ -638,9 +638,8 @@ let pick_domain ~for_model uf =
 let split_domain ~for_model env uf =
   let* cd, r, c = pick_domain ~for_model uf in
   if for_model || can_split env (Numbers.Q.from_int cd) then
-    let _, cons = Option.get @@ build_constr_eq r c in
-    let nr, _ctx = X.make cons in
-    Some (LR.mkv_eq r nr)
+    let eq, _ = Option.get @@ build_constr_eq r c in
+    Some eq
   else
     None
 
