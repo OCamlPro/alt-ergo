@@ -194,7 +194,7 @@ module Shostak (X : ALIEN) = struct
       let ctx =
         (* If [t] is a record constructor term of the form
              { x1 = t1; ...; xn = t2 }
-           we generate the equation
+           we generate the equations
              t.x1 = t1, ..., t.xn = tn
            and store them in the context returned by `X.make`. *)
         match cases with

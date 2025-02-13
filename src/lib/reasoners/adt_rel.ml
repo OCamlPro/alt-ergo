@@ -482,8 +482,21 @@ let build_constr_eq r c =
             CC(X) via [Ccx.add_term]. Since .ki are fresh terms, adding these
             facts could not contribute to any meaningful reasoning. *)
         let r', _ctx = X.make cons in
-        let eq = Shostak.L.(view @@ mk_eq r r') in
-        Some (eq, cons)
+        let eqs = [Shostak.L.(view @@ mk_eq r r')] in
+        let eqs =
+          match cases with
+          | [{ destrs; _ }] ->
+            List.fold_left2
+              (fun eqs x (d, d_ty) ->
+                 let access, _ =
+                   X.make @@ E.mk_term (Sy.destruct d) [cons] d_ty
+                 in
+                 let tx, _ = X.make x in
+                 Shostak.L.(view @@ mk_eq tx access) :: eqs
+              ) eqs xs destrs
+          | _ -> eqs
+        in
+        Some (eqs, cons)
 
       | _ -> assert false
     end
@@ -502,9 +515,12 @@ let propagate_domains new_terms domains =
        match Domain.as_singleton d with
        | Some (c, ex) ->
          begin match build_constr_eq rr c with
-           | Some (eq, cons) ->
+           | Some (eqs, cons) ->
              let new_terms = SE.add cons new_terms in
-             (Literal.LSem eq, ex, Th_util.Other) :: eqs, new_terms
+             let eqs =
+               List.map (fun eq -> (Literal.LSem eq, ex, Th_util.Other)) eqs
+             in
+             eqs, new_terms
            | None ->
              eqs, new_terms
          end
@@ -637,16 +653,17 @@ let pick_domain ~for_model uf =
 
 let split_domain ~for_model env uf =
   let* cd, r, c = pick_domain ~for_model uf in
-  if for_model || can_split env (Numbers.Q.from_int cd) then
-    let eq, _ = Option.get @@ build_constr_eq r c in
-    Some eq
+  if for_model || can_split env (Numbers.Q.from_int cd) then (
+    (*     assert for_model; None) *)
+    let eqs, _ = Option.get @@ build_constr_eq r c in
+    Some eqs)
   else
     None
 
 let next_case_split ~for_model env uf =
   match split_delayed_destructor env with
   | None -> split_domain ~for_model env uf
-  | r -> r
+  | Some eq -> Some [eq]
 
 let case_split env uf ~for_model =
   if Options.get_disable_adts () then
@@ -660,8 +677,11 @@ let case_split env uf ~for_model =
             (Uf.GlobalDomains.find (module Domains) (Uf.domains uf)));
       Log.debug
         (fun k -> k "assume by case splitting:@ %a"
-            (Xliteral.print_view X.print) cs);
-      [ cs, true, Th_util.CS (Th_util.Th_adt, two)]
+            Fmt.(braces @@ list ~sep:comma (Xliteral.print_view X.print)) cs);
+      let eqs =
+        List.map (fun eq -> eq, true, Th_util.CS (Th_util.Th_adt, two)) cs
+      in
+      eqs
     | None ->
       Log.debug (fun k -> k "no case split done");
       []
