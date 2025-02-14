@@ -383,15 +383,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
         else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
       | _ -> []
 
-  let xs_module_records t name args =
-    let l = Ty.type_body name args in
-    match l with
-    (* | [{ destrs; _ }] ->
-       List.map
-        (fun (d, ty) ->
-          E.mk_term Sy.(Op (Destruct d)) [t] ty) destrs *)
-    | _ -> []
-
   let rec match_term mconf env tbox
       ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst)
       pat t =
@@ -430,13 +421,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
           let cl =
             E.Set.fold
               (fun t l ->
-                 let { E.f = f; xs = xs; ty; _ } = E.term_view t in
+                 let { E.f = f; xs = xs; _ } = E.term_view t in
                  if Symbols.compare f_pat f = 0 then xs :: l
-                 else (
-                   match f_pat, ty with
-                   | Sy.(Op Constr _), Ty.Tadt (name, args) ->
-                     (xs_module_records t name args) :: l
-                   | _ -> l)
+                 else l
               ) cl []
           in
           let cl = filter_classes mconf cl tbox in
