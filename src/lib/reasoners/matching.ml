@@ -229,22 +229,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
     in
     if info.term_age > age_limite () then env else add_rec env t
 
-  (* let add_term info t env =
-     match E.type_info t with
-     | Tadt (name, args) as ty -> (
-        match Ty.type_body name args with
-        | [{ constr; destrs }] ->
-          let xs =
-            List.map
-              (fun (d, ty) ->
-                  E.mk_term Sy.(Op (Destruct d)) [t] ty
-              ) destrs
-          in
-          let c = E.mk_constr constr xs ty in
-          add_term info c env
-        | _ -> add_term info t env)
-     | _ -> add_term info t env
-  *)
   let add_trigger p env = { env with pats = p :: env.pats }
 
   let all_terms
