@@ -1902,7 +1902,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      check_vec env.learnts
   *)
 
-  let solve env =
+  let solve env : unit =
     if env.is_unsat then raise (Unsat env.unsat_core);
     let n_of_conflicts = ref (Atom.to_float env.restart_first) in
     let n_of_learnts =

@@ -94,9 +94,9 @@ val string_of_th_ext : theories_extensions -> string
    - Stdlib.compare a b is used if
 
 *)
-val [@inline always] compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
+val compare_algebraic : 'a -> 'a -> (('a * 'a) -> int) -> int
 
-val [@inline always] cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
+val cmp_lists: 'a list -> 'a list -> ('a -> 'a -> int) -> int
 
 type matching_env =
   {
