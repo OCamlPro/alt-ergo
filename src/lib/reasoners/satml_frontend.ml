@@ -1328,6 +1328,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     {gf with E.ff = E.mk_imp current_guard gf.E.ff}
 
   let unsat env gf =
+    assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
     checks_implemented_features ();
     let gf = add_guard env gf in
     Debug.unsat gf;
@@ -1337,7 +1338,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       Inst.add_terms env.inst
         (E.max_ground_terms_rec_of_form gf.E.ff) gf;
     try
-      assert (SAT.decision_level env.satml == 0);
       let _updated = assume_aux ~dec_lvl:0 env [gf] in
       let max_t = max_term_depth_in_sat env in
       env.inst <- Inst.register_max_term_depth env.inst max_t;
@@ -1357,7 +1357,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
-    assert (SAT.decision_level env.satml == 0);
+    assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
     try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf])
     with | IUnsat (_env, dep) -> raise (Unsat dep)
          | Util.Timeout ->

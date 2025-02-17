@@ -77,6 +77,11 @@ module type SAT_ML = sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
+
+  val assertion_level : t -> int
+  (** Returns the number of active assertion levels, that is the number of
+      levels introduced with [push] that have not yet been popped. *)
+
   val cancel_until : t -> int -> unit
 
   val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
@@ -90,7 +95,11 @@ module type SAT_ML = sig
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
   val push : t -> Satml_types.Atom.atom -> unit
+  (** [push env g] adds a new assertion level. The formula [g] is used in
+      [Satml_frontend] to guard all formulas asserted at this level. *)
+
   val pop : t -> unit
+  (** [pop env] pops the latest assertion level. *)
 
   val optimize : t -> Objective.Function.t -> unit
   (** [optimize env fn] adds the objection [fn] to the environment

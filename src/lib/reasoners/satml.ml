@@ -121,6 +121,7 @@ module type SAT_ML = sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
   val decision_level : t -> int
+  val assertion_level : t -> int
   val cancel_until : t -> int -> unit
 
   val exists_in_lazy_cnf : t -> FF.t -> bool
@@ -583,6 +584,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     end
 
   let decision_level env = Vec.size env.trail_lim
+  let[@inline always] assertion_level env = Vec.size env.increm_guards
 
   let nb_choices env = env.nchoices
   let nb_assigns env = Vec.size env.trail - nb_choices env
