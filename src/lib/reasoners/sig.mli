@@ -28,6 +28,12 @@
 type 'a ac =
   {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
 
+type abs_kind =
+    Ac (** Semantic value abstracted for AC(X) purposes. *)
+(** Type of abstractions that can be used in [abstract]. Used to distinguish
+    the reason for which a semantic value was abstracted, which some code
+    cares about (see {!module-Arith}). *)
+
 type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
 
 module type SHOSTAK = sig
@@ -183,6 +189,38 @@ module type X = sig
   val ac_embed : r ac -> r
 
   val ac_extract : r -> (r ac) option
+
+  val abstract : kind:abs_kind -> r -> r
+  (** [abstract ~kind r] returns an abstracted constant representing [r].
+
+      The abstract constant [abstract ~kind r] is {e definitionally equal} to
+      [r]: when processed by the {!module-Uf} and {!module-Ccx} modules in any
+      context, the equality [r = abstract ~kind r] is introduced automatically.
+
+      Calling [abstract ~kind r] multiple times with the same [kind] and the
+      same [r] always returns the same abstracted constant.
+
+      Abstracted constants, like terms, are terminal leaves: the only leaf of
+      [abstract ~kind r] is [abstract ~kind r] itself. In particular,
+      substituting the leaves of [r] does not impact [abstract ~kind r].
+  *)
+
+  val is_abstract : ?kind:abs_kind -> r -> bool
+  (** [is_abstract ?kind r] returns [true] if [r] is an abstracted constant
+      created with {!val-abstract} with the provided [kind] (if any).
+  *)
+
+  val abstract_extract : r -> r option
+  (** [abstract_extract r] returns the inner abstracted semantic value
+      embedded in [r], if any.
+
+      If [abstract_extract r] is [Some r'], then [r] is definitionally equal to
+      [r'], that is, the equation [r = r'] holds in all contexts.
+
+      {b Note}: While [abstract_extract (abstract ~kind r)] and [r] are
+      guaranteed to be definitionally equal, they are not, in general,
+      guaranteed to be equal as semantic values according to {!val-equal}.
+  *)
 
   val color : (r ac) -> r
 

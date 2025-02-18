@@ -106,28 +106,11 @@ type name_space =
       that was introduced during solving as part of some kind of purification
       or abstraction procedure.
 
-      In order to correctly implement AC(X) in the presence of distributive
-      symbols, symbols generated for AC(X) abstraction use a special
-      namespace, [Fresh_ac] below.
-
       To ensure uniqueness, fresh names must always be generated using
       [Id.Namespace.Internal.fresh ()].
 
       In particular, fresh names are only used to denote constants, not
       arbitrary functions. *)
-  | Fresh_ac
-  (** This symbol has been introduced as part of the AC(X) abstraction process.
-      This is notably used by some parts of AC(X) that check if terms contains
-      fresh symbols (see [contains_a_fresh_alien] in the [Arith] module for an
-      example).
-
-      These correspond to the K sort in the AC(X) paper. They use a different
-      name space from other fresh symbols because we need to be able to know
-      whether a fresh symbol comes from the AC(X) abstraction procedure in order
-      to prevent loops.
-
-      To ensure uniqueness, AC abstraction names must always be generated using
-      [Id.Namespace.Internal.fresh ()]. *)
   | Skolem
   (** This symbol has been introduced as part of skolemization, and represents
       the (dependent) variable of an existential quantifier. Skolem names can

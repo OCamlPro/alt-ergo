@@ -27,6 +27,22 @@
 
 (*** Combination module of Shostak theories ***)
 
+let equal_abs_kind k1 k2 =
+  match k1, k2 with
+  | Sig.Ac, Sig.Ac -> true
+
+let hash_abs_kind k =
+  match k with
+  | Sig.Ac -> 1
+
+let compare_abs_kind k1 k2 =
+  match k1, k2 with
+  | Sig.Ac, Sig.Ac -> 0
+
+let pp_abs_kind ppf k =
+  match k with
+  | Sig.Ac -> Fmt.pf ppf "ac"
+
 [@@@ocaml.warning "-60"]
 module rec CX : sig
   include Sig.X
@@ -51,6 +67,7 @@ struct
 
   type rview =
     | Term of Expr.t
+    | Abstract of Sig.abs_kind * CX.r
     | Ac of AC.t
     | Arith of ARITH.t
     | Records of RECORDS.t
@@ -72,6 +89,7 @@ struct
         | Bitv t -> fprintf fmt "%a" BITV.print t
         | Adt t -> fprintf fmt "%a" ADT.print t
         | Term t -> fprintf fmt "%a" Expr.print t
+        | Abstract (k, t) -> fprintf fmt "@@%a(%a)" pp_abs_kind k CX.print t
         | Ac t -> fprintf fmt "%a" AC.print t
       end
       else begin
@@ -86,6 +104,8 @@ struct
           fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
         | Term t ->
           fprintf fmt "FT:[%a]" Expr.print t
+        | Abstract (k, t) ->
+          fprintf fmt "K:%a[%a]" pp_abs_kind k CX.print t
         | Ac t ->
           fprintf fmt "Ac:[%a]" AC.print t
       end
@@ -165,6 +185,8 @@ struct
         | Bitv x -> 3 + 10 * BITV.hash x
         | Adt x -> 6 + 10 * ADT.hash x
         | Ac ac -> 9 + 10 * AC.hash ac
+        | Abstract (k, t) ->
+          7 + 10 * (5003 * (hash_abs_kind k) + CX.hash t)
         | Term t -> 8 + 10 * Expr.hash t
       in
       abs res
@@ -176,6 +198,8 @@ struct
       | Bitv x, Bitv y -> BITV.equal x y
       | Adt x, Adt y -> ADT.equal x y
       | Term x, Term y -> Expr.equal x y
+      | Abstract (kx, x), Abstract (ky, y) ->
+        equal_abs_kind kx ky && CX.equal x y
       | Ac x, Ac y -> AC.equal x y
       | _ -> false
 
@@ -214,6 +238,16 @@ struct
 
   let term_embed t = hcons {v = Term t; id = -1000 (* dummy *)}
 
+  let abstract ~kind arg =
+    (* No need to nest abstractions
+       XXX: would it be OK to abstract terms into themselves? *)
+    let arg =
+      match arg.v with
+      | Abstract (_, arg) -> arg
+      | _ -> arg
+    in
+    hcons { v = Abstract (kind, arg); id = -1000 (* dummy *) }
+
   let extract1 = function { v=Arith r; _ } -> Some r | _ -> None
   let extract2 = function { v=Records r; _ } -> Some r | _ -> None
   let extract3 = function { v=Bitv r; _ } -> Some r | _ -> None
@@ -223,6 +257,18 @@ struct
     | { v = Ac t; _ }   -> Some t
     | _ -> None
 
+  let is_abstract ?kind = function
+    | { v = Abstract (k, _); _ } -> (
+        match kind with
+        | None -> true
+        | Some k' -> equal_abs_kind k k'
+      )
+    | _ -> false
+
+  let abstract_extract = function
+    | { v = Abstract (_, r); _ } -> Some r
+    | _ -> None
+
   let term_extract r =
     match r.v with
     | Arith _ -> ARITH.term_extract r
@@ -230,6 +276,7 @@ struct
     | Bitv _ -> BITV.term_extract r
     | Adt _ -> ADT.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
+    | Abstract _ -> None, false
     | Term t -> Some t, true
 
   let to_model_term r =
@@ -240,7 +287,7 @@ struct
       | Bitv _ -> BITV.to_model_term r
       | Adt _ -> ADT.to_model_term r
       | Term t when Expr.is_model_term t -> Some t
-      | Ac _ | Term _ -> None
+      | Abstract _ | Ac _ | Term _ -> None
     in
     Option.bind res @@ fun t ->
     assert (Expr.is_model_term t);
@@ -256,15 +303,17 @@ struct
     | { v = Adt t; _ } -> ADT.type_info t
     | { v = Ac x; _ } -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
+    | { v = Abstract (_, t); _ } -> CX.type_info t
 
   (* Constraint that must be maintained:
-     all theories should have Xi < Term < Ac *)
+     all theories should have Xi < Abstract < Term < Ac *)
   let theory_num x = match x with
     | Ac _ -> -1
     | Term  _ -> -2
-    | Arith _ -> -3
-    | Records _ -> -4
-    | Bitv _ -> -5
+    | Abstract _ -> -3
+    | Arith _ -> -4
+    | Records _ -> -5
+    | Bitv _ -> -6
     | Adt _ -> -7
 
   let compare_tag a b = theory_num a - theory_num b
@@ -278,6 +327,11 @@ struct
       | Bitv _, Bitv _ -> BITV.compare a b
       | Adt _, Adt _ -> ADT.compare a b
       | Term x, Term y -> Expr.compare x y
+      | Abstract (kx, x), Abstract (ky, y) ->
+        (* Make sure that new abstractions are smaller, i.e.
+           old abstractions are rewritten into new abstractions. *)
+        let c = Int.compare y.id x.id in
+        if c <> 0 then c else compare_abs_kind kx ky
       | Ac x, Ac y -> AC.compare x y
       | va, vb -> compare_tag va vb
 
@@ -322,7 +376,7 @@ struct
     | Bitv t -> BITV.leaves t
     | Adt t -> ADT.leaves t
     | Ac t -> r :: (AC.leaves t)
-    | Term _ -> [r]
+    | Term _ | Abstract _ -> [r]
 
   let is_constant r =
     match r.v with
@@ -338,7 +392,7 @@ struct
         | Symbols.(True | False), [] -> true
         | _ -> false
       end
-    | Ac _ -> false
+    | Abstract _ | Ac _ -> false
 
   let subst p v r =
     if equal p v then r
@@ -348,6 +402,7 @@ struct
       | Bitv t -> BITV.subst p v t
       | Adt t -> ADT.subst p v t
       | Ac t -> if equal p r then v else AC.subst p v t
+      | Abstract _ -> if equal p r then v else r
       | Term _ -> if equal p r then v else r
 
   let make t =
@@ -416,7 +471,7 @@ struct
      ADT.is_mine_symb sb)
 
   let is_a_leaf r = match r.v with
-    | Term _ | Ac _ -> true
+    | Term _ | Ac _ | Abstract _ -> true
     | _ -> false
 
   let color ac =
@@ -448,7 +503,7 @@ struct
     | Records a -> RECORDS.abstract_selectors a acc
     | Bitv a -> BITV.abstract_selectors a acc
     | Adt a -> ADT.abstract_selectors a acc
-    | Term _ -> a, acc
+    | Term _ | Abstract _ -> a, acc
     | Ac a -> AC.abstract_selectors a acc
 
   let abstract_equality a b =
@@ -483,7 +538,7 @@ struct
     let sbs =
       List.filter (fun (p,_) ->
           match p.v with
-          | Ac _ -> true | Term _ -> SX.mem p original
+          | Ac _ | Abstract _ -> true | Term _ -> SX.mem p original
           | _ ->
             Printer.print_err "%a" CX.print p;
             assert false
