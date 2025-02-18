@@ -232,14 +232,20 @@ struct
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
-  let to_model_term r =
+  let to_model_term abstract r =
     let res =
       match r.v with
-      | Arith _ -> ARITH.to_model_term r
-      | Records _ -> RECORDS.to_model_term r
-      | Bitv _ -> BITV.to_model_term r
-      | Adt _ -> ADT.to_model_term r
-      | Term t when Expr.is_model_term t -> Some t
+      | Arith _ -> ARITH.to_model_term abstract r
+      | Records _ -> RECORDS.to_model_term abstract r
+      | Bitv _ -> BITV.to_model_term abstract r
+      | Adt _ -> ADT.to_model_term abstract r
+      | Term t when Expr.is_model_term t ->
+        let Expr.{ f; _ } = Expr.term_view t in
+        (match f with
+         | Symbols.Name { ns = Internal | Fresh | Fresh_ac; _ } ->
+           Some (abstract t)
+         | _ ->
+           Some t)
       | Ac _ | Term _ -> None
     in
     Option.bind res @@ fun t ->

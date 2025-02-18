@@ -401,7 +401,7 @@ module Shostak (X : ALIEN) = struct
         Some (s, false) (* false <-> not a case-split *)
       | _ -> assert false
 
-  let to_model_term =
+  let to_model_term abstract =
     let rec to_model_term r =
       match r with
       | Record (fields, ty) ->
@@ -414,7 +414,7 @@ module Shostak (X : ALIEN) = struct
         Some (E.mk_term Sy.(Op Record) l ty)
 
       | Other (a, _) ->
-        X.to_model_term a
+        X.to_model_term abstract a
       | Access _ -> None
     in fun r -> to_model_term (embed r)
 end

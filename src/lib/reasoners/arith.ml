@@ -744,7 +744,7 @@ module Shostak
         cpt := Q.add Q.one (max_constant distincts !cpt);
         Some (term_of_cst (Q.to_string !cpt), true)
 
-  let to_model_term r =
+  let to_model_term _abstract r =
     match P.is_const (embed r), X.type_info r with
     | Some i, Ty.Tint ->
       assert (Z.equal (Q.den i) Z.one);
