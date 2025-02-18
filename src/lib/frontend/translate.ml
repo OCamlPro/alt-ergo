@@ -1758,6 +1758,134 @@ let rec is_pure_term t =
   | Sy.Op Tite -> false
   | _ -> List.for_all is_pure_term xs
 
+let make_defs defs loc =
+  (* For a mutually recursive definition, we have to add all the function
+     names in a row. *)
+  List.iter (fun (def : Typer_Pipe.def) ->
+      match def with
+      | `Term_def (_, ({ path; _ } as tcst), _, _, _) ->
+        let name_base = get_basename path in
+        let sy = Sy.name ~defined:true name_base in
+        Cache.store_sy tcst sy
+      | `Type_alias _ -> ()
+      | `Instanceof _ ->
+        (* These statements are only used in models when completing a
+           polymorphic partially-defined bulitin and should not end up
+           here. *)
+        assert false
+    ) defs;
+  List.filter_map (fun (def : Typer_Pipe.def) ->
+      match def with
+      | `Term_def ( _, ({ path; tags; _ } as tcst), tyvars, terml, body) ->
+        Cache.store_tyvl tyvars;
+        let name_base = get_basename path in
+
+        let binders, defn =
+          let rty = dty_to_ty body.term_ty in
+          let binders, rev_args =
+            List.fold_left (
+              fun (binders, acc) (DE.{ path; id_ty; _ } as tv) ->
+                let ty = dty_to_ty id_ty in
+                let v = Var.of_string (get_basename path) in
+                let sy = Sy.var v in
+                Cache.store_sy tv sy;
+                let e = E.mk_term sy [] ty in
+                Var.Map.add v ty binders, e :: acc
+            ) (Var.Map.empty, []) terml
+          in
+          let sy = Cache.find_sy tcst in
+          let e = E.mk_term sy (List.rev rev_args) rty in
+          binders, e
+        in
+
+        begin match DStd.Tag.get tags DE.Tags.predicate with
+          | Some () ->
+            let decl_kind = E.Dpredicate defn in
+            let ff = mk_expr ~loc ~name_base ~toplevel:false ~decl_kind body in
+            let qb = E.mk_eq ~iff:true defn ff in
+            let ff =
+              E.mk_forall name_base
+                Dolmen.Std.Loc.dummy binders [] qb ~toplevel:true
+                ~decl_kind
+            in
+            assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
+            let ff = E.purify_form ff in
+            let e =
+              if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
+              else
+                E.mk_forall name_base loc
+                  Var.Map.empty [] ff ~toplevel:true ~decl_kind
+            in
+            Some (`PredDef (e, name_base))
+          | None ->
+            let decl_kind = E.Dfunction defn in
+            let ff =
+              mk_expr ~loc ~name_base
+                ~toplevel:false ~decl_kind body
+            in
+            let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
+            let qb = E.mk_eq ~iff defn ff in
+            let ff =
+              E.mk_forall name_base DStd.Loc.dummy binders [] qb ~toplevel:true
+                ~decl_kind
+            in
+            assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
+            let ff = E.purify_form ff in
+            let e =
+              if Ty.TvSet.is_empty (E.free_type_vars ff) then ff
+              else
+                E.mk_forall name_base loc
+                  Var.Map.empty [] ff ~toplevel:true ~decl_kind
+            in
+            if Options.get_verbose () then
+              Format.eprintf "defining term of %a@." DE.Term.print body;
+            Some (`Assume (name_base, e))
+        end
+      | `Type_alias _ -> None
+      | `Instanceof _ ->
+        (* These statements are only used in models when completing a
+           polymorphic partially-defined bulitin and should not end up
+           here. *)
+        assert false
+    ) defs
+
+let make_decls = function
+  | [] -> assert false (* We could probably just return (). *)
+  | [td] ->
+    begin
+      match td with
+      | `Type_decl (td, _def) -> mk_ty_decl td; []
+      | `Term_decl td -> [mk_term_decl td];
+    end
+  | dcl ->
+    let rec aux term_acc acc tdl =
+      (* for now, when acc has more than one element it is assumed that the
+         types are mutually recursive. Which is not necessarily the case.
+         But it doesn't affect the execution.
+      *)
+      match tdl with
+      | `Term_decl td :: tl ->
+        begin match acc with
+          | [] -> ()
+          | [otd] -> mk_ty_decl otd
+          | _ -> mk_mr_ty_decls (List.rev acc)
+        end;
+        let t = mk_term_decl td in
+        aux (t :: term_acc) [] tl
+
+      | `Type_decl (td, _def) :: tl ->
+        aux term_acc (td :: acc) tl
+
+      | [] ->
+        begin match acc with
+          | [] -> ()
+          | [otd] -> mk_ty_decl otd
+          | _ ->  mk_mr_ty_decls (List.rev acc)
+        end;
+        term_acc
+    in
+    aux [] [] dcl
+
 let make file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
     let st_loc = Dolmen.Std.Loc.loc file stmt.loc in
