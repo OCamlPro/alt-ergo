@@ -70,7 +70,7 @@ module type S = sig
   val extract_concrete_model :
     declared_ids:Id.typed list ->
     t ->
-    Models.t Lazy.t * Objective.Model.t
+    Models.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
@@ -894,12 +894,11 @@ module Main_Default : S = struct
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
     in
-    lazy (
-      CC_X.extract_concrete_model
-        ~prop_model:assumed_set
-        ~declared_ids
-        gamma_finite
-    ), objectives
+    CC_X.extract_concrete_model
+      ~prop_model:assumed_set
+      ~declared_ids
+      gamma_finite,
+    objectives
 
   let assume_th_elt t th_elt dep =
     { t with gamma = CC_X.assume_th_elt t.gamma th_elt dep }
@@ -953,7 +952,7 @@ module Main_Empty : S = struct
   let add_term env _ ~add_in_cs:_ = env
   let compute_concrete_model ~acts:_ _env = ()
   let extract_concrete_model ~declared_ids:_ _env =
-    lazy Models.empty, Objective.Model.empty
+    Models.empty, Objective.Model.empty
 
   let assume_th_elt e _ _ = e
   let theories_instances ~do_syntactic_matching:_ _ e _ _ _ = e, []

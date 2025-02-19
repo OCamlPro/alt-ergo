@@ -62,7 +62,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
-    mutable last_saved_model : Models.t Lazy.t option;
+    mutable last_saved_model : Models.t option;
     mutable last_saved_objectives : Objective.Model.t option;
     mutable unknown_reason : Sat_solver_sig.unknown_reason option;
     (** The reason why satml raised [I_dont_know] if it does; [None] by
@@ -1383,8 +1383,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let optimize env fn = SAT.optimize env.satml fn
 
-  let get_model env =
-    Option.map Lazy.force env.last_saved_model
+  let get_model env = env.last_saved_model
 
   let get_unknown_reason env = env.unknown_reason
 

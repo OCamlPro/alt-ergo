@@ -61,7 +61,7 @@ module type S = sig
   val extract_concrete_model :
     declared_ids:Id.typed list ->
     t ->
-    Models.t Lazy.t * Objective.Model.t
+    Models.t * Objective.Model.t
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
   val theories_instances :
