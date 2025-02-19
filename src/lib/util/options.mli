@@ -199,7 +199,7 @@ val set_inline_lets : bool -> unit
 val set_input_format : input_format option -> unit
 
 (** Set [produce_models] accessible with {!val:get_produce_models} *)
-val set_model_generation : bool -> unit
+val set_produce_models : bool -> unit
 
 (** Set [strict_mode] accessible with {!val:get_strict_mode}. *)
 val set_strict_mode : bool -> unit
@@ -679,7 +679,7 @@ val get_timelimit_per_goal : unit -> bool
 (** {4 Output options} *)
 
 (** [true] if model generation is enabled. *)
-val get_model_generation : unit -> bool
+val get_produce_models : unit -> bool
 (** Default to [false] *)
 
 (** [true] if strict mode is enabled. *)

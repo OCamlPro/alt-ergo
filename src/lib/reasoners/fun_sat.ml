@@ -1123,7 +1123,7 @@ module Make (Th : Theory.S) = struct
       env, true
 
   let may_update_last_saved_model env =
-    if not @@ Options.get_model_generation () then env
+    if not @@ Options.get_produce_models () then env
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
@@ -1148,7 +1148,7 @@ module Make (Th : Theory.S) = struct
       i_dont_know env (Timeout ModelGen)
 
   let model_gen_on_timeout env =
-    let i = Options.get_model_generation () in
+    let i = Options.get_produce_models () in
     let ti = Options.get_timelimit_interpretation () in
     if not i || (* not asked to gen a model *)
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)

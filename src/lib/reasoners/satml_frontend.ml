@@ -1009,8 +1009,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       in
       env.last_saved_model <- Some model;
       env.last_saved_objectives <- Some objectives;
-    with Ex.Inconsistent (_expl, _classes) as e ->
-      raise e
+    with
+    | Ex.Inconsistent (_expl, _classes) as e -> raise e
+    | Util.Timeout -> i_dont_know env (Timeout ModelGen)
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
@@ -1187,9 +1188,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             env.last_forced_normal <- env.last_forced_normal - 1
         in
         if not updated then (
-          if Options.get_model_generation () then update_model env;
+          if Options.get_produce_models () then update_model env;
           Options.Time.unset_timeout ();
-          (* may becomes ModelGen *)
           i_dont_know env Incomplete
         );
         unsat_rec env ~first_call:false

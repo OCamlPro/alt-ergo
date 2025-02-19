@@ -423,7 +423,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    model_generation objectives_in_interpretation unsat_core
+    produce_models objectives_in_interpretation unsat_core
     output_format model_type () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
@@ -435,7 +435,7 @@ let mk_output_opt
     | None -> Value
     | Some v -> v
   in
-  set_model_generation model_generation;
+  set_produce_models produce_models;
   set_objectives_in_interpretation objectives_in_interpretation;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -915,7 +915,7 @@ let parse_output_opt =
       let doc =
         Fmt.str
           "This option allowed choosing when the model generation occurs. \
-           It have been removed in Alt-Ergo 2.7.0. If model generation is \
+           It has been removed in Alt-Ergo 2.7.0. If model generation is \
            enabled, it is performed as the final step, which was the default \
            in previous versions."
       in
@@ -969,11 +969,12 @@ let parse_output_opt =
            info ["dump-models-on"] ~docv ~docs:s_models ~doc)
     in
 
-    let mk_interpretation _interpretation produce_models dump_models =
+    let mk_produce_models _interpretation produce_models dump_models =
       produce_models || dump_models
     in
     Term.(
-      const mk_interpretation $ interpretation $ produce_models $ dump_models),
+      const mk_produce_models $ interpretation $ produce_models
+      $ dump_models),
     dump_models,
     dump_models_on,
     frontend
