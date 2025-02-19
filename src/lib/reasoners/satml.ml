@@ -2144,6 +2144,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
 
   let assume env unit_cnf nunit_cnf f ~cnumber sff ~dec_lvl =
+    if env.is_unsat then raise (Unsat env.unsat_core);
     begin
       match unit_cnf, nunit_cnf with
       | [], [] -> ()
