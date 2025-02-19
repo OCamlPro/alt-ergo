@@ -1122,12 +1122,8 @@ module Make (Th : Theory.S) = struct
       ignore (update_instances_cache (Some []));
       env, true
 
-  let may_update_last_saved_model env compute =
-    let compute =
-      if not (Options.get_first_interpretation ()) then compute
-      else !(env.last_saved_model) == None
-    in
-    if not compute then env
+  let may_update_last_saved_model env =
+    if not @@ Options.get_model_generation () then env
     else begin
       try
         (* also performs case-split and pushes pending atoms to CS *)
@@ -1142,9 +1138,9 @@ module Make (Th : Theory.S) = struct
         raise (IUnsat (expl, classes))
     end
 
-  let update_model_and_return_unknown env compute_model ~unknown_reason =
+  let update_model_and_return_unknown env ~unknown_reason =
     try
-      let env = may_update_last_saved_model env compute_model in
+      let env = may_update_last_saved_model env in
       Options.Time.unset_timeout ();
       i_dont_know env unknown_reason
     with Util.Timeout when !(env.model_gen_phase) ->
@@ -1152,7 +1148,7 @@ module Make (Th : Theory.S) = struct
       i_dont_know env (Timeout ModelGen)
 
   let model_gen_on_timeout env =
-    let i = Options.get_interpretation () in
+    let i = Options.get_model_generation () in
     let ti = Options.get_timelimit_interpretation () in
     if not i || (* not asked to gen a model *)
        !(env.model_gen_phase) ||  (* we timeouted in model-gen-phase *)
@@ -1168,7 +1164,7 @@ module Make (Th : Theory.S) = struct
         Options.Time.unset_timeout ();
         Options.Time.set_timeout ti;
         update_model_and_return_unknown
-          env i ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
+          env ~unknown_reason:(Timeout ProofSearch) (* may becomes ModelGen *)
       end
 
   let reduce_hypotheses tcp_cache tmp_cache env acc (hyp, gf, dep) =
@@ -1279,8 +1275,7 @@ module Make (Th : Theory.S) = struct
     | INormal ->
       (* TODO: check if this test still produces a wrong model. *)
       update_model_and_return_unknown
-        env (Options.get_last_interpretation ())
-        ~unknown_reason:Incomplete (* may becomes ModelGen *)
+        env ~unknown_reason:Incomplete (* may becomes ModelGen *)
     | IAuto | IGreedy ->
       let gre_inst =
         ME.fold
@@ -1307,15 +1302,11 @@ module Make (Th : Theory.S) = struct
       if ok1 || ok2 || ok3 || ok4 then env
       else
         update_model_and_return_unknown
-          env (Options.get_last_interpretation ())
-          ~unknown_reason:Incomplete (* may becomes ModelGen *)
+          env ~unknown_reason:Incomplete (* may becomes ModelGen *)
 
   let normal_instantiation env try_greedy =
     Debug.print_nb_related env;
     let env = do_case_split env Util.BeforeMatching in
-    let env =
-      may_update_last_saved_model env (Options.get_every_interpretation ())
-    in
     let env = new_inst_level env in
     let mconf =
       {Util.nb_triggers = Options.get_nb_triggers ();

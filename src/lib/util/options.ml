@@ -109,7 +109,6 @@ end
 (* Declaration of all the options as refs with default values *)
 
 type instantiation_heuristic = INormal | IAuto | IGreedy
-type interpretation = INone | IFirst | IEvery | ILast
 
 (* As in Dolmen *)
 type smtlib2_version = [ `Latest | `V2_6 | `Poly ]
@@ -355,7 +354,7 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 
 (** Output options *)
 
-let interpretation = ref INone
+let model_generation = ref false
 let strict_mode = ref false
 let dump_models = ref false
 let objectives_in_interpretation = ref false
@@ -364,7 +363,7 @@ let model_type = ref Value
 let infer_output_format = ref true
 let unsat_core = ref false
 
-let set_interpretation b = interpretation := b
+let set_model_generation b = model_generation := b
 let set_strict_mode b = strict_mode := b
 let set_dump_models b = dump_models := b
 let set_objectives_in_interpretation b = objectives_in_interpretation := b
@@ -373,28 +372,15 @@ let set_model_type t = model_type := t
 let set_infer_output_format b = infer_output_format := b
 let set_unsat_core b = unsat_core := b
 
-let equal_mode a b =
-  match a, b with
-  | INone, INone -> true
-  | INone, _ | _, INone -> false
-  | IFirst, IFirst -> true
-  | IFirst, _ | _, IFirst -> false
-  | IEvery, IEvery -> true
-  | IEvery, _ | _, IEvery -> false
-  | ILast, ILast -> true
-
 let equal_mode_type a b =
   match a, b with
   | Constraints, Constraints -> true
   | Constraints, _ | _, Constraints -> false
   | Value, Value -> true
 
-let get_interpretation () = not @@ equal_mode !interpretation INone
+let get_model_generation () = !model_generation
 let get_strict_mode () = !strict_mode
 let get_dump_models () = !dump_models
-let get_first_interpretation () = equal_mode !interpretation IFirst
-let get_every_interpretation () = equal_mode !interpretation IEvery
-let get_last_interpretation () = equal_mode !interpretation ILast
 let get_objectives_in_interpretation () = !objectives_in_interpretation
 let get_output_format () = !output_format
 let get_output_smtlib () =
