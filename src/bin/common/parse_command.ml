@@ -423,7 +423,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation
     `Ok()
 
 let mk_output_opt
-    interpretation objectives_in_interpretation unsat_core
+    produce_models objectives_in_interpretation unsat_core
     output_format model_type () () () ()
   =
   set_infer_output_format (Option.is_none output_format);
@@ -435,7 +435,7 @@ let mk_output_opt
     | None -> Value
     | Some v -> v
   in
-  set_interpretation interpretation;
+  set_produce_models produce_models;
   set_objectives_in_interpretation objectives_in_interpretation;
   set_unsat_core unsat_core;
   set_output_format output_format;
@@ -912,28 +912,17 @@ let parse_output_opt =
      --interpretation last) to determine the interpretation value. *)
   let interpretation, dump_models, dump_models_on, frontend =
     let interpretation =
-      let doc = Format.sprintf
-          "Best effort support for counter-example generation. \
-           $(docv) must be %s. %s shows the first computed interpretation. \
-           %s compute an interpretation before every decision, \
-           and %s only before returning unknown. \
-           Note that $(b, --max-split) limitation will \
-           be ignored in model generation phase."
-          (Arg.doc_alts
-             ["none"; "first"; "every"; "last"])
-          (Arg.doc_quote "first") (Arg.doc_quote "every")
-          (Arg.doc_quote "last") in
-      let docv = "VAL" in
-      let interpretation =
-        Arg.enum
-          [ "none", INone
-          ; "first", IFirst
-          ; "every", IEvery
-          ; "last", ILast
-          ]
+      let doc =
+        Fmt.str
+          "This option allowed choosing when the model generation occurs. \
+           It has been removed in Alt-Ergo 2.7.0. If model generation is \
+           enabled, it is performed as the final step, which was the default \
+           in previous versions."
       in
-      Arg.(value & opt interpretation INone &
-           info ["interpretation"] ~docv ~docs:s_models ~doc)
+      let docv = "VAL" in
+      let deprecated = "this option is deprecated and is ignored." in
+      Arg.(value & opt string "dummy" &
+           info ["interpretation"] ~docv ~docs:s_models ~doc ~deprecated)
     in
     let produce_models =
       let doc =
@@ -980,15 +969,12 @@ let parse_output_opt =
            info ["dump-models-on"] ~docv ~docs:s_models ~doc)
     in
 
-    let mk_interpretation interpretation produce_models dump_models =
-      match interpretation with
-      | INone when produce_models || dump_models -> ILast
-      | interpretation -> interpretation
+    let mk_produce_models _interpretation produce_models dump_models =
+      produce_models || dump_models
     in
     Term.(
-      const mk_interpretation $ interpretation $
-      produce_models $ dump_models
-    ),
+      const mk_produce_models $ interpretation $ produce_models
+      $ dump_models),
     dump_models,
     dump_models_on,
     frontend

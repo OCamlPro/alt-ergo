@@ -1000,28 +1000,18 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | C_bool _ -> assert false
     | C_theory expl -> raise (Ex.Inconsistent (expl, []))
 
-  let may_update_last_saved_model env compute =
-    let compute =
-      if not (Options.get_first_interpretation ()) then compute
-      else env.last_saved_model == None
-    in
-    if compute then begin
-      try
-        (* also performs case-split and pushes pending atoms to CS *)
-        let declared_ids = env.declare_top in
-        let model, objectives =
-          SAT.compute_concrete_model ~declared_ids env.satml
-        in
-        env.last_saved_model <- Some model;
-        env.last_saved_objectives <- Some objectives;
-      with Ex.Inconsistent (_expl, _classes) as e ->
-        raise e
-    end
-
-  let update_model_and_return_unknown env compute_model ~unknown_reason =
-    may_update_last_saved_model env compute_model;
-    Options.Time.unset_timeout ();
-    i_dont_know env unknown_reason
+  let update_model env =
+    try
+      (* also performs case-split and pushes pending atoms to CS *)
+      let declared_ids = env.declare_top in
+      let model, objectives =
+        SAT.compute_concrete_model ~declared_ids env.satml
+      in
+      env.last_saved_model <- Some model;
+      env.last_saved_objectives <- Some objectives;
+    with
+    | Ex.Inconsistent (_expl, _classes) as e -> raise e
+    | Util.Timeout -> i_dont_know env (Timeout ModelGen)
 
   exception Give_up of (E.t * E.t * bool * bool) list
 
@@ -1169,7 +1159,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     | Satml.Sat ->
       try
         do_case_split env Util.BeforeMatching;
-        may_update_last_saved_model env (Options.get_every_interpretation ());
         let () =
           env.nb_mrounds <- env.nb_mrounds + 1
                             [@ocaml.ppwarning
@@ -1198,10 +1187,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                instantiation doesn't allow to backjump *)
             env.last_forced_normal <- env.last_forced_normal - 1
         in
-        if not updated then
-          update_model_and_return_unknown
-            env (Options.get_last_interpretation ())
-            ~unknown_reason:Incomplete; (* may becomes ModelGen *)
+        if not updated then (
+          if Options.get_produce_models () then update_model env;
+          Options.Time.unset_timeout ();
+          i_dont_know env Incomplete
+        );
         unsat_rec env ~first_call:false
 
       with

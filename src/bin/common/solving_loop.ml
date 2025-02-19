@@ -209,7 +209,7 @@ let process_source ?selector_inst ~print_status src =
       | `Sat ->
         begin
           let mdl = Model ((module SAT), partial_model) in
-          if Options.(get_interpretation () && get_dump_models ()) then begin
+          if Options.(get_produce_models () && get_dump_models ()) then begin
             Fmt.pf (Options.Output.get_fmt_models ()) "%a@."
               FE.print_model partial_model
           end;
@@ -218,7 +218,7 @@ let process_source ?selector_inst ~print_status src =
       | `Unknown ->
         begin
           let mdl = Model ((module SAT), partial_model) in
-          if Options.(get_interpretation () && get_dump_models ()) then begin
+          if Options.(get_produce_models () && get_dump_models ()) then begin
             let ur = SAT.get_unknown_reason partial_model in
             Printer.print_fmt (Options.Output.get_fmt_diagnostic ())
               "@[<v 0>Returned unknown reason = %a@]"
@@ -430,10 +430,10 @@ let process_source ?selector_inst ~print_status src =
       |> Options.Output.set_diagnostic;
       st
     | ":produce-models", Symbol { name = Simple "true"; _ } ->
-      Options.set_interpretation ILast;
+      Options.set_produce_models true;
       st
     | ":produce-models", Symbol { name = Simple "false"; _ } ->
-      Options.set_interpretation INone;
+      Options.set_produce_models false;
       st
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
       (* The generation of unsat core is supported only with the SAT
@@ -572,7 +572,7 @@ let process_source ?selector_inst ~print_status src =
   let handle_get_objectives ~loc (_args : DStd.Expr.Term.t list) st =
     let module Sat = (val DO.SatSolverModule.get st) in
     let () =
-      if Options.get_interpretation () then
+      if Options.get_produce_models () then
         if not Sat.supports_optimization then
           recoverable_error ~loc
             "the selected solver does not support optimization"
@@ -802,7 +802,7 @@ let process_source ?selector_inst ~print_status src =
 
       | {contents = `Get_model; _ } ->
         cmd_on_modes st [Sat] "get-model";
-        if Options.get_interpretation () then
+        if Options.get_produce_models () then
           let () = match State.get partial_model_key st with
             | Some (Model ((module SAT), env)) ->
               let module FE = Frontend.Make (SAT) in

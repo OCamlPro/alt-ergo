@@ -112,7 +112,6 @@ let sat_solver_encoding =
   ]
 
 type instantiation_heuristic =  INormal | IAuto | IGreedy
-type interpretation = INone | IFirst | IEvery | ILast
 
 let instantiation_heuristic_encoding =
   union [
@@ -131,30 +130,6 @@ let instantiation_heuristic_encoding =
       (constant "IGreedy")
       (function IGreedy -> Some () | _ -> None)
       (fun () -> IGreedy);
-  ]
-
-let interpretation_encoding =
-  union [
-    case(Tag 1)
-      ~title:"INone"
-      (constant "INone")
-      (function INone -> Some () | _ -> None)
-      (fun () -> INone);
-    case(Tag 2)
-      ~title:"IFirst"
-      (constant "IFirst")
-      (function IFirst -> Some () | _ -> None)
-      (fun () -> IFirst);
-    case(Tag 3)
-      ~title:"IEvery"
-      (constant "IEvery")
-      (function IEvery -> Some () | _ -> None)
-      (fun () -> IEvery);
-    case(Tag 4)
-      ~title:"ILast"
-      (constant "ILast")
-      (function ILast -> Some () | _ -> None)
-      (fun () -> ILast);
   ]
 
 type options = {
@@ -205,8 +180,6 @@ type options = {
   age_bound : int option;
   fm_cross_limit : int option;
   steps_bound : int option;
-
-  interpretation : interpretation option;
 
   output_format : output_format option;
   unsat_core : bool option;
@@ -302,8 +275,6 @@ let init_options () = {
   age_bound = None;
   fm_cross_limit = None;
   steps_bound = None;
-
-  interpretation = None;
 
   output_format = None;
   unsat_core = None;
@@ -428,13 +399,12 @@ let opt3_encoding =
   conv
     (fun opt3 -> opt3)
     (fun opt3 -> opt3)
-    (obj8
+    (obj7
        (opt "disable_weaks" bool)
        (opt "enable_assertions" bool)
        (opt "age_bound" int31)
        (opt "fm_cross_limit" int31)
        (opt "steps_bound" int31)
-       (opt "interpretation" interpretation_encoding)
        (opt "output_format" format_encoding)
        (opt "unsat_core" bool)
     )
@@ -569,7 +539,6 @@ let options_to_json opt =
      opt.age_bound,
      opt.fm_cross_limit,
      opt.steps_bound,
-     opt.interpretation,
      opt.output_format,
      opt.unsat_core)
   in
@@ -687,7 +656,6 @@ let options_from_json options =
          age_bound,
          fm_cross_limit,
          steps_bound,
-         interpretation,
          output_format,
          unsat_core) = all_opt3 in
     let (verbose,
@@ -769,7 +737,6 @@ let options_from_json options =
       age_bound;
       fm_cross_limit;
       steps_bound;
-      interpretation;
       output_format;
       unsat_core;
       verbose;

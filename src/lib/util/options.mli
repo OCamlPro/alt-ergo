@@ -44,17 +44,6 @@ type instantiation_heuristic =
   | IGreedy      (** Force instantiation to be the greedier as possible,
                      use all available ground terms *)
 
-(** Type used to describe the type of interpretation wanted by
-    {!val:set_interpretation} *)
-type interpretation =
-  | INone        (** Default, No interpretation computed *)
-  | IFirst       (** Compute an interpretation after the first instantiation
-                     and output it at the end of the executionn *)
-  | IEvery       (** Compute an interpretation before every instantiation
-                     and return the last one computed *)
-  | ILast        (** Compute only the last interpretation just before
-                     returning SAT/Unknown *)
-
 type smtlib2_version =
   [ `Latest
   (** Latest version of the SMT-LIB standard. *)
@@ -209,14 +198,8 @@ val set_inline_lets : bool -> unit
 (** Set [input_format] accessible with {!val:get_input_format} *)
 val set_input_format : input_format option -> unit
 
-(** Set [interpretation] accessible with {!val:get_interpretation}
-
-    Possible values are :
-    {ol {- First} {- Before every instantiation}
-     {- Before every decision and instantiation}
-     {- Before end}}
-*)
-val set_interpretation : interpretation -> unit
+(** Set [produce_models] accessible with {!val:get_produce_models} *)
+val set_produce_models : bool -> unit
 
 (** Set [strict_mode] accessible with {!val:get_strict_mode}. *)
 val set_strict_mode : bool -> unit
@@ -695,20 +678,8 @@ val get_timelimit_per_goal : unit -> bool
 
 (** {4 Output options} *)
 
-(** Experimental support for counter-example generation.
-
-    Possible values are :
-     {ol {- First} {- Before every instantiation}
-      {- Before every decision and instantiation}
-      {- Before end}}
-
-    Which are used in the four getters below. This option answers
-    [true] if the interpretation is set to First, Before_end, Before_dec
-    or Before_inst.
-
-    Note that {!val:get_max_split} limitation will be ignored in model
-    generation phase. *)
-val get_interpretation : unit -> bool
+(** [true] if model generation is enabled. *)
+val get_produce_models : unit -> bool
 (** Default to [false] *)
 
 (** [true] if strict mode is enabled. *)
@@ -718,20 +689,6 @@ val get_strict_mode : unit -> bool
     printed. *)
 val get_dump_models : unit -> bool
 (** Default to [false]. *)
-
-(** [true] if the interpretation is set to first interpretation *)
-val get_first_interpretation : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the interpretation is set to compute interpretation
-    before every instantiation *)
-val get_every_interpretation : unit -> bool
-(** Default to [false] *)
-
-(** [true] if the interpretation is set to compute interpretation
-    before the solver return unknown *)
-val get_last_interpretation : unit -> bool
-(** Default to [false] *)
 
 (** [true] if the objectives_in_interpretation is set to inline
     pretty-printing of optimized expressions in the model instead of a
