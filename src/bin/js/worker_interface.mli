@@ -50,8 +50,6 @@ type sat_solver =
 
 type instantiation_heuristic =  INormal | IAuto | IGreedy
 
-type interpretation = INone | IFirst | IEvery | ILast
-
 (** Record type that contains all options that can be set for the Alt-Ergo's
     worker. *)
 type options = {
@@ -102,8 +100,6 @@ type options = {
   age_bound : int option;
   fm_cross_limit : int option;
   steps_bound : int option;
-
-  interpretation : interpretation option;
 
   output_format : output_format option;
   unsat_core : bool option;
