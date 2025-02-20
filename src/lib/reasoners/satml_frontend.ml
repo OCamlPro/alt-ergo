@@ -67,7 +67,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     mutable skolems : E.gformula ME.t; (* key <-> f *)
     add_inst : E.t -> bool;
     guards : guards;
-    mutable last_saved_model : Models.t Lazy.t option;
+    mutable last_saved_model : Models.t option;
     mutable last_saved_objectives : Objective.Model.t option;
     mutable last_saved_bmodel : Shostak.Literal.t atom list option;
     (** The boolean model saved in this field is intented for use by
@@ -1418,8 +1418,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let optimize env fn = SAT.optimize env.satml fn
 
-  let get_model env =
-    Option.map Lazy.force env.last_saved_model
+  let get_model env = env.last_saved_model
 
   let get_unknown_reason env = env.unknown_reason
 
