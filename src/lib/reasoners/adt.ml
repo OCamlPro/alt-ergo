@@ -38,7 +38,7 @@ type 'a abstract =
       c_ty : Ty.t;
       c_args : (DE.term_cst * 'a) list
     }
-  (* [Cons { c_name; c_ty; c_args }] reprensents the application of the
+  (* [Cons { c_name; c_ty; c_args }] represents the application of the
      constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
 
   | Select of { d_name : DE.term_cst ; d_ty : Ty.t ; d_arg : 'a }
@@ -105,21 +105,20 @@ module Shostak (X : ALIEN) = struct
     | Some c -> c
     | None -> Alien r
 
-  let pp_field ppf (lbl, v) =
-    Fmt.pf ppf "%a : %a" DE.Term.Const.print lbl X.print v
-
   let print ppf = function
     | Alien x ->
       X.print ppf x
 
     | Constr { c_name; c_args; _ } ->
-      Fmt.pf ppf "%a@[(%a@])"
-        DE.Term.Const.print c_name
-        Fmt.(list ~sep:semi pp_field) c_args
+      if Compat.List.is_empty c_args then
+        Fmt.pf ppf "%a" DE.Term.Const.print c_name
+      else
+        Fmt.pf ppf "(%a %a)"
+          DE.Term.Const.print c_name
+          Fmt.(box @@ list ~sep:sp @@ pair nop X.print) c_args
 
     | Select d ->
       Fmt.pf ppf "%a#!!%a" X.print d.d_arg DE.Term.Const.print d.d_name
-
 
   let is_mine u =
     match u with
@@ -168,21 +167,18 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     assert (not @@ Options.get_disable_adts ());
-    if Options.get_debug_adt () then
-      Printer.print_dbg
-        ~module_name:"Adt" ~function_name:"make"
-        "make %a" E.print t;
+    Log.debug (fun k -> k "make %a" E.print t);
     let { E.f; xs; ty; _ } = E.term_view t in
-    let sx, ctx =
+    let rev_rs, ctx =
       List.fold_left
         (fun (args, ctx) s ->
            let rs, ctx' = X.make s in
            rs :: args, List.rev_append ctx' ctx
         )([], []) xs
     in
-    let xs = List.rev sx in
-    match f, xs, ty with
-    | Sy.Op Sy.Constr hs, _, Ty.Tadt (name, params) ->
+    let rs = List.rev rev_rs in
+    match f, ty with
+    | Sy.Op Sy.Constr hs, Ty.Tadt (name, params) ->
       let cases = Ty.type_body name params in
       let case_hs =
         try Ty.assoc_destrs hs cases with Not_found -> assert false
@@ -192,19 +188,31 @@ module Shostak (X : ALIEN) = struct
           List.rev @@
           List.fold_left2
             (fun c_args v (lbl, _) -> (lbl, v) :: c_args)
-            [] xs case_hs
+            [] rs case_hs
         with Invalid_argument _ -> assert false
+      in
+      let ctx =
+        (* If [t] is a record constructor term of the form
+             { x1 = t1; ...; xn = t2 }
+           we generate the equation
+             t.x1 = t1, ..., t.xn = tn
+           and store them in the context returned by `X.make`. *)
+        match cases with
+        | [{ destrs; _ }] ->
+          List.fold_left2
+            (fun ctx x (d, d_ty) ->
+               let access = E.mk_term (Sy.destruct d) [t] d_ty in
+               E.mk_eq ~iff:false x access :: ctx
+            ) ctx xs destrs
+        | _ -> ctx
       in
       is_mine @@ Constr {c_name = hs; c_ty = ty; c_args}, ctx
 
-    | Sy.Op Sy.Destruct _, [_], _ -> X.term_embed t, ctx
+    | Sy.Op Sy.Destruct _, _ -> X.term_embed t, ctx
     (* No risk !
          if equal sel (embed sel_x) then X.term_embed t, ctx
          else sel_x, ctx (* canonization OK *)
     *)
-
-    | Sy.Op Sy.Constr _, _, Ty.Trecord _ ->
-      Fmt.failwith "unexpected record constructor %a@." E.print t
 
     | _ -> assert false
 

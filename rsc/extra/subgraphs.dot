@@ -141,7 +141,6 @@ subgraph cluster_lib {
                         "Enum";
                         "Ite";
                         "Polynome";
-                        "Records";
                         "Sig";
                 }
 

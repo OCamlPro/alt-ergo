@@ -164,16 +164,10 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> mp
            | Tvar _ -> assert false
 
-           | Text (_, hs) | Trecord { name = hs; _ } when
-               Ty_map.mem hs mp -> mp
-
+           | Text (_, hs) when Ty_map.mem hs mp -> mp
            | Text (l, hs) ->
              let l = List.map (fun _ -> Ty.fresh_tvar()) l in
              Ty_map.add hs (Text(l, hs)) mp
-
-           | Trecord { name; _ } ->
-             (* cannot do better for records ? *)
-             Ty_map.add name ty mp
 
            | Tadt (hs, _) ->
              (* cannot do better for ADT ? *)
@@ -189,20 +183,6 @@ module Main_Default : S = struct
            | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> ()
            | Tvar _ -> assert false
            | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
-           | Trecord { Ty.lbs; _ } ->
-             print_dbg ~flushed:false ~header:false "type %a = " Ty.print ty;
-             begin match lbs with
-               | [] -> assert false
-               | (lbl, ty)::l ->
-                 let print fmt (lbl,ty) =
-                   Format.fprintf fmt " ; %a :%a"
-                     DE.Term.Const.print lbl Ty.print ty in
-                 print_dbg ~flushed:false ~header:false
-                   "{ %a : %a%a"
-                   DE.Term.Const.print lbl Ty.print ty
-                   (pp_list_no_space print) l;
-                 print_dbg ~flushed:false ~header:false " }@ "
-             end
            | Tadt _ ->
              print_dbg ~flushed:false ~header:false "%a@ " Ty.print_full ty
         )types;

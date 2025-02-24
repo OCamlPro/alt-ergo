@@ -200,6 +200,7 @@ module Domains = struct
   let init r t =
     match Th.embed r with
     | Alien _ when not (MX.mem r t.domains) ->
+      Log.debug (fun k -> k"init term %a" X.print r);
       (* We have to add a default domain if the key `r` is not in map in order
          to be sure that the case split mechanism will attempt to choose a
          value for it. *)
@@ -242,7 +243,9 @@ module Domains = struct
       let t = remove r t in
       tighten nr nd t
 
-    | exception Not_found -> init nr t
+    | exception Not_found ->
+      Log.debug (fun k -> k"add term %a" X.print nr);
+      init nr t
 
   (* [propagate f a t] iterates on all the changed domains of [t] since the
      last call of [propagate]. The list of changed domains is flushed after
@@ -469,14 +472,12 @@ let build_constr_eq r c =
         in
         let xs = List.map (fun (_, ty) -> E.fresh_name ty) ds in
         let cons = E.mk_constr c xs ty in
-        let r', ctx = X.make cons in
-        (* In the current implementation of `X.make`, we produce
-           a nonempty context only for interpreted semantic values
-           of the `Arith` and `Records` theories. The semantic
-           values `cons` never involves such values. *)
-        assert (Compat.List.is_empty ctx);
+        (* XXX: we do not propagate the context of X.make to the matching
+           environment. It could be better to do it. See issue
+           https://github.com/OCamlPro/alt-ergo/issues/1296 *)
+        let r', _ctx = X.make cons in
         let eq = Shostak.L.(view @@ mk_eq r r') in
-        Some (eq, E.mk_constr c xs ty)
+        Some (eq, cons)
 
       | _ -> assert false
     end
@@ -631,14 +632,8 @@ let pick_domain ~for_model uf =
 let split_domain ~for_model env uf =
   let* cd, r, c = pick_domain ~for_model uf in
   if for_model || can_split env (Numbers.Q.from_int cd) then
-    let _, cons = Option.get @@ build_constr_eq r c in
-    let nr, ctx = X.make cons in
-    (* In the current implementation of `X.make`, we produce
-       a nonempty context only for interpreted semantic values
-       of the `Arith` and `Records` theories. The semantic
-       values `cons` never involves such values. *)
-    assert (Compat.List.is_empty ctx);
-    Some (LR.mkv_eq r nr)
+    let eq, _ = Option.get @@ build_constr_eq r c in
+    Some eq
   else
     None
 

@@ -1,0 +1,7 @@
+(set-logic ALL)
+(declare-datatype t ((c (b Bool))))
+(declare-fun f (t) Bool)
+(declare-const x t)
+(assert (forall ((y Bool)) (f (c y))))
+(assert (not (f x)))
+(check-sat)

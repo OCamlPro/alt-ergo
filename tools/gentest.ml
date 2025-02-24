@@ -264,6 +264,8 @@ end = struct
                 {acc with accepted_exit_codes = [142]}
               | "default" ->
                 {acc with filters = Some ["default"]}
+              | "tableaux" ->
+                {acc with filters = Some ["tableaux"]}
               | _ -> acc
           )
             Test.base_params
