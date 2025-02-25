@@ -2210,7 +2210,7 @@ let assume env uf la =
   Uf.GlobalDomains.add (module Interval_domains) int_domain ds,
   result
 
-let query _ _ _ = None
+let query _ _ _ = Th_util.Unknown
 
 let case_split env uf ~for_model =
   if not for_model && Stdlib.(env.size_splits >= Options.get_max_split ()) then

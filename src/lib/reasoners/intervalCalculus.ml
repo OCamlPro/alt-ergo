@@ -794,9 +794,10 @@ let cannot_be_equal_to_zero env p ip =
   try
     let z = alien_of (P.create [] Q.zero (P.type_info p)) in
     match X.solve (alien_of p) z with
-    | [] -> None (* p is equal to zero *)
+    | [] -> Th_util.Unknown (* p is equal to zero *)
     | _ -> I.doesnt_contain_0 ip
-  with Util.Unsolvable -> Some (Explanation.empty, env.classes)
+  with Util.Unsolvable ->
+    Entailed { ex = Explanation.empty; classes = env.classes }
 
 
 let rec init_monomes_of_poly are_eq env p use_p expl =
@@ -867,22 +868,23 @@ and update_monome are_eq expl use_x env x =
             let env, ib =
               init_alien are_eq expl pb npb use_x env in
             let ib = I.add_explanation ib eb in (* take repr into account*)
-            let ia, ib = match cannot_be_equal_to_zero env pb ib with
-              | Some (ex, _) when Q.equal ca cb
-                               && P.compare pa' pb' = 0 ->
+            let ia, ib =
+              match cannot_be_equal_to_zero env pb ib with
+              | Entailed { ex; _ }
+                when Q.equal ca cb && P.compare pa' pb' = 0 ->
                 let expl = Explanation.union ex expl in
                 I.point da ty expl, I.point db ty expl
-              | Some (ex, _) ->
+              | Entailed { ex; _ } ->
                 begin
                   match are_eq a b with
-                  | Some (ex_eq, _) ->
+                  | Th_util.Entailed { ex = ex_eq; _ } ->
                     let expl = Explanation.union ex expl in
                     let expl = Explanation.union ex_eq expl in
                     I.point Q.one ty expl,
                     I.point Q.one ty expl
-                  | None -> ia, ib
+                  | Unknown -> ia, ib
                 end
-              | None -> ia, ib
+              | Unknown -> ia, ib
             in
             I.div ia ib, env
           | _ -> I.undefined ty, env
@@ -1743,8 +1745,9 @@ let assume ~query env uf la =
 let query env uf a_ex =
   try
     ignore(assume ~query:true env uf [a_ex]);
-    None
-  with Ex.Inconsistent (expl, classes) -> Some (expl, classes)
+    Th_util.Unknown
+  with Ex.Inconsistent (ex, classes) ->
+    Entailed { ex; classes }
 
 let case_split_polynomes env =
   let o = MP.fold
@@ -1824,7 +1827,10 @@ let default_case_split env uf ~for_model =
 
 let add =
   let are_eq t1 t2 =
-    if E.equal t1 t2 then Some (Explanation.empty, []) else None
+    if E.equal t1 t2 then
+      Th_util.Entailed { ex = Explanation.empty; classes = [] }
+    else
+      Unknown
   in
   fun env new_uf r t ->
     Debug.env env;

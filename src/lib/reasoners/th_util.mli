@@ -25,7 +25,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type answer = (Explanation.t * Expr.Set.t list) option
+(** Type of answers returned by theory queries for ground literals. *)
+type answer =
+  | Entailed of { ex : Explanation.t; classes : Expr.Set.t list }
+  (** The literal is entailed by the theory environment:
+      - The explanation [ex] justifies why the literal holds in the
+        environment.
+      - [classes] is used only for debugging purposes. *)
+
+  | Unknown
+  (** One does not encounter a contradiction when assuming the negation of the
+      literal. It does not imply that the literal is false in the environment,
+      as the decision procedures might be incomplete. *)
 
 type theory =
   | Th_arith

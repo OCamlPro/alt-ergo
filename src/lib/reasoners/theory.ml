@@ -781,7 +781,7 @@ module Main_Default : S = struct
       { t with gamma = gamma }
     in
     fun a t ->
-      if Options.get_no_tcp () then None
+      if Options.get_no_tcp () then Th_util.Unknown
       else begin
         if Options.get_profiling() then Profiling.query();
         Options.exec_thread_yield ();
@@ -800,7 +800,7 @@ module Main_Default : S = struct
           | E.Distinct _ | E.Eql _ ->
             (* we only assume toplevel distinct with more that one arg.
                not interesting to do a query in this case ?? or query ? *)
-            None
+            Th_util.Unknown
 
           | E.Pred (t1,b) ->
             let t = add_and_process_conseqs a t in
@@ -812,8 +812,8 @@ module Main_Default : S = struct
             let na = E.neg a in
             let t = add_and_process_conseqs na t in
             CC_X.query t.gamma na
-        with Ex.Inconsistent (d, classes) ->
-          Some (d, classes)
+        with Ex.Inconsistent (ex, classes) ->
+          Th_util.Entailed { ex; classes }
       end
 
   let add_term_in_gm gm t =
@@ -921,7 +921,7 @@ module Main_Empty : S = struct
     in
     {assumed_set}, E.Set.empty, 0
 
-  let query _ _ = None
+  let query _ _ = Th_util.Unknown
 
   let cl_extract _ = []
   let extract_ground_terms _ = Expr.Set.empty
