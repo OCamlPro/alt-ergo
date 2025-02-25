@@ -163,16 +163,17 @@ module Make (X : OrderedType) : S with type elt = X.t = struct
     | b    , PR p    -> Pred(p,b)
     | b    , BT(n,l) -> Builtin(not b, n, l) (* b true <-> not negated *)
 
-  module T = struct
-    type t' = t
-    type t = t'
-    let compare=compare
-    let equal = equal
-    let hash = hash
-  end
+  module Set =
+    Set.Make (struct
+      type nonrec t = t
+      let compare = compare
+    end)
 
-  module Set = Set.Make(T)
-  module Map = Map.Make(T)
+  module Map =
+    Map.Make (struct
+      type nonrec t = t
+      let compare = compare
+    end)
 
   let print ppf a = print_view X.print ppf (view a)
 
