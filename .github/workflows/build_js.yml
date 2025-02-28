@@ -55,7 +55,7 @@ jobs:
 
       # compile Alt-Ergo with Js_of_ocaml
       - name: Make alt-ergo.js
-        run: opam exec -- make js-node
+        run: opam exec -- make js
 
       # Use Node Js actions
       - uses: actions/setup-node@v4
@@ -76,10 +76,6 @@ jobs:
         with:
           name: alt-ergo-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
           path: "alt-ergo.js"
-
-      # compile the Alt-Ergo web worker with Js_of_ocaml
-      - name: Make alt-ergo-worker.js
-        run: opam exec -- make js-worker
 
       # Upload Alt-Ergo-worker.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
