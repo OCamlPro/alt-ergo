@@ -18,7 +18,6 @@ Alt-ergo supports different input languages:
 - Alt-ergo supports the SMT-LIB language v2.6. **This is Alt-Ergo's preferred
   and recommended input format.**
 - The original input language is its native language, based on the language of the Why3 platform. Since the version 2.6.0, this language is deprecated.
-- It also (partially) supports the input language of Why3 through the [AB-Why3 plugin](../Plugins/ab_why3).
 
 ```{toctree}
 :caption: Contents

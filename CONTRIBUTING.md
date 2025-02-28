@@ -50,6 +50,34 @@ Or directly from GitHub:
 $ nix run -f https://github.com/OCamlPro/alt-ergo/archive/master.tar.gz#alt-ergo alt-ergo
 ```
 
+## Develop with Opam
+
+If you are using opam, you can set up a switch development for Alt-Ergo using:
+```shell
+$ make dev-switch
+```
+This command creates a local switch with all the dependencies required for
+building the Alt-Ergo binary and library.
+
+To install dependencies for the JavaScript artifacts of Alt-Ergo in the
+current switch, run:
+```shell
+$ make js-deps
+```
+
+## Build the project with Makefile
+
+Once you have set up a development environment, you can use the following
+Makefile targets to compile different parts of the project:
+
+| Target            | Description                                   |
+|-------------------|-----------------------------------------------|
+| `make bin`        | Builds the Alt-Ergo binary and library.       |
+| `make lib`        | Builds only the Alt-Ergo library.             |
+| `make js`         | Builds the Alt-Ergo artifacts for JavaScript. |
+| `make plugins`    | Builds the Alt-Ergo plugins.                  |
+| `make`            | Builds everything.                            |
+
 ## Release Process
 
 Alt-Ergo releases do not have a fixed schedule and are made based on features. We try to maintain the main branch (`next`) of the repository as stable as possible, and cut a release from there when an important feature is complete. We also make point release to fix important bugs.
