@@ -612,13 +612,11 @@ module Main_Default : S = struct
     | Pinfinity | Minfinity | Limit _ | Value _ ->
       let (lview, is_cs, _) = opt_split.case_split in
       assert is_cs;
-
-      if Options.get_debug_optimize () then
-        Printer.print_dbg "Objective for %a is %a [split: %a]"
-          Objective.Function.pp obj
-          Objective.Value.pp opt_split.value
-          Shostak.L.print (Shostak.L.make lview);
-
+      Logs.debug ~src:Options.Sources.optimize
+        (fun k -> k "Objective for %a is %a [split: %a]"
+            Objective.Function.pp obj
+            Objective.Value.pp opt_split.value
+            Shostak.L.print (Shostak.L.make lview));
       add_objective
         obj opt_split.value
         (Shostak.(Literal.make @@ LSem (L.make lview)))

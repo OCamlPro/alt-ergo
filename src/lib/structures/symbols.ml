@@ -529,20 +529,6 @@ let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
 let is_get f = equal f (Op Get)
 let is_set f = equal f (Op Set)
 
-module Labels = Hashtbl.Make(struct
-    type nonrec t = t
-    let equal = equal
-    let hash = hash
-  end)
-
-let labels = Labels.create 107
-
-let add_label lbl t = Labels.replace labels t lbl
-
-let label t = try Labels.find labels t with Not_found -> Hstring.empty
-
-let clear_labels () = Labels.clear labels
-
 module Set : Set.S with type elt = t =
   Set.Make (struct type nonrec t = t let compare=compare end)
 

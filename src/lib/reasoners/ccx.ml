@@ -188,17 +188,12 @@ module Main : S = struct
             Expr.print t (pp_list_no_space print) ctx
 
     let rel_add_cst t ctx =
-      if ctx != [] then
-        let c = ref 0 in
-        let print fmt (a, _ex) =
-          incr c;
-          Format.fprintf fmt " %d) %a@ " !c (A.print_view X.print) a
-        in
-        if Options.get_debug_cc () then
-          print_dbg
-            ~module_name:"Ccx" ~function_name:"rel_add_cst"
-            "constraints of Rel.add(%a)@ %a"
-            Expr.print t (pp_list_no_space print) ctx
+      if not (Compat.List.is_empty ctx) then
+        Log.debug
+          (fun k -> k "constraints of Rel.add(%a):@ %a"
+              E.print t
+              Fmt.(braces @@ list ~sep:comma
+                   @@ pair (A.print_view X.print) nop) ctx)
 
     let add_to_use t =
       if Options.get_debug_cc () then
