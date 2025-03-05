@@ -1,0 +1,6 @@
+(* This test ensures that we cover the specific code for ground predicates in Instances.ml, see
+   https://github.com/OCamlPro/alt-ergo/blob/2c6d4211c65b48830384710895074ec279b5538f/src/lib/reasoners/instances.ml#L171-L189 *)
+logic x, y : int
+predicate p() = 0 = 0
+predicate q() = x = y
+goal g: p or q
