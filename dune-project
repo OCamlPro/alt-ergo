@@ -29,7 +29,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   dune
   (alt-ergo-lib (= :version))
   dune-site
-  (cmdliner (>= 1.1.0))
+  (cmdliner (and (>= 1.1.0) (< 2.0)))
   (odoc :with-doc)
   (camlzip (>= 1.07))
  )
