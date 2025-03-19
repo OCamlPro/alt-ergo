@@ -4,6 +4,10 @@
 
   - Remove the legacy frontend and AB-Why3 plugin
 
+### User Interface
+
+ - Interactive prompt when using interactive mode (#1310)
+
 ## v2.6.0
 
 ### Command-line interface
