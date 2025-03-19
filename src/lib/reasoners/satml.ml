@@ -1397,13 +1397,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_bool c -> C_bool c
     | C_theory _ -> assert false
     | C_none ->
-      if Options.get_tableaux_cdcl () then
-        C_none
-      else
-        match theory_propagate env with
-        | C_bool _ -> assert false
-        | C_theory dep -> C_theory dep
-        | C_none -> C_none
+      match theory_propagate env with
+      | C_bool _ -> assert false
+      | C_theory dep -> C_theory dep
+      | C_none -> C_none
 
   let report_conflict env c =
     match c with
@@ -1696,39 +1693,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     try find_uip_reason q
     with Last_UIP_reason r -> r
 
-  let reason_of_conflict (confl_clause : Atom.clause) =
-    let q = Queue.create () in
-    Vec.iter (fun a -> Queue.push a q) confl_clause.atoms;
-    find_uip_reason q
-
   let rec propagate_and_stabilize env propagator conflictC strat =
     match propagator env with
     | C_none -> ()
     | (C_bool _ | C_theory _ ) as confl -> (* Conflict *)
-      let x =
-        match strat, confl with
-        | Auto, _ -> None
-        | _, C_bool confl ->
-          (try reason_of_conflict confl
-           with Last_UIP_reason r-> Some r)
-        | _ -> assert false
-      in
-      try
-        incr conflictC;
-        conflict_analyze_and_fix env confl;
-        propagate_and_stabilize env propagator conflictC strat;
-        if Options.get_tableaux_cdcl () then
-          match x with
-          | None -> ()
-          | Some r -> raise (Last_UIP_reason r)
-      with
-        Unsat _ as e ->
-        if Options.get_tableaux_cdcl () then begin
-          if not (Options.get_minimal_bj ()) then
-            assert (decision_level env = 0);
-          raise (Last_UIP_reason Atom.Set.empty)
-        end
-        else raise e
+      incr conflictC;
+      conflict_analyze_and_fix env confl;
+      propagate_and_stabilize env propagator conflictC strat
 
   let clause_of_dep d fuip =
     let cpt = ref 0 in

@@ -994,7 +994,7 @@ let parse_output_opt =
           Ok Util.Tableaux
         | "tableaux-cdcl" | "Tableaux-CDCL"
         | "tableaux-CDCL" | "Tableaux-cdcl" ->
-          Ok Util.Tableaux_CDCL
+          Error ("Tableaux-CDCL is no longer available.")
         | sat_solver ->
           Error ("Args parsing error: unkown SAT solver " ^ sat_solver)
 

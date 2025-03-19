@@ -113,7 +113,6 @@ subgraph cluster_lib {
                         "Sat_solver";
                         "Sat_solver_sig";
                         "Satml_frontend";
-                        "Satml_frontend_hybrid";
                         "Fun_sat";
                         "Satml";
                 }

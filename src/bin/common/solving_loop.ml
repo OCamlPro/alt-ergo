@@ -488,7 +488,6 @@ let process_source ?selector_inst ~print_status src =
             let sat_solver =
               match solver with
               | "tableaux" -> Util.Tableaux
-              | "tableaux_cdcl" -> Util.Tableaux_CDCL
               | "cdcl" | "satml" -> Util.CDCL
               | "cdcl_tableaux" | "satml_tableaux" | "default" ->
                 Util.CDCL_Tableaux

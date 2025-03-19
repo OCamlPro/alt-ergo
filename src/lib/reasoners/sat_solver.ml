@@ -26,7 +26,7 @@
 (**************************************************************************)
 
 let get = function
-  | Util.Tableaux | Util.Tableaux_CDCL ->
+  | Util.Tableaux ->
     if Options.get_verbose () then
       Printer.print_dbg
         ~module_name:"Sat_solver"
