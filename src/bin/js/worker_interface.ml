@@ -83,7 +83,6 @@ let case_split_policy_encoding =
 
 type sat_solver =
   | Tableaux
-  | Tableaux_CDCL
   | CDCL
   | CDCL_Tableaux
 
@@ -95,16 +94,11 @@ let sat_solver_encoding =
       (function Tableaux -> Some () | _ -> None)
       (fun () -> Tableaux);
     case(Tag 2)
-      ~title:"Tableaux_CDCL"
-      (constant "Tableaux_CDCL")
-      (function Tableaux_CDCL -> Some () | _ -> None)
-      (fun () -> Tableaux_CDCL);
-    case(Tag 3)
       ~title:"CDCL"
       (constant "CDCL")
       (function CDCL -> Some () | _ -> None)
       (fun () -> CDCL);
-    case(Tag 4)
+    case(Tag 3)
       ~title:"CDCL_Tableaux"
       (constant "CDCL_Tableaux")
       (function CDCL_Tableaux -> Some () | _ -> None)

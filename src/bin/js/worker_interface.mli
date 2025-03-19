@@ -44,7 +44,6 @@ type case_split_policy =
 
 type sat_solver =
   | Tableaux
-  | Tableaux_CDCL
   | CDCL
   | CDCL_Tableaux
 
