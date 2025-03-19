@@ -158,6 +158,13 @@ type solve_res =
 
 exception StopProcessDecl
 
+let interactive_prompt st =
+  match D_loop.State.get D_loop.State.logic_file st with
+  | { source = `Stdin; mode = (None | Some `Incremental); _ }
+    when Compat.In_channel.isatty stdin ->
+    Some "alt-ergo>"
+  | _ -> None
+
 let process_source ?selector_inst ~print_status src =
   let () = Dolmen_loop.Code.init [] in
 
@@ -335,7 +342,7 @@ let process_source ?selector_inst ~print_status src =
           | ext ->
             warning "cannot infer output format from the extension '%s'" ext
         end
-      | `Stdin -> ()
+      | `Stdin -> set_output_format Dl.Logic.(Smtlib2 `Poly)
   in
   let extract_zip_file f =
     let cin = Zip.open_in f in
@@ -394,6 +401,7 @@ let process_source ?selector_inst ~print_status src =
     |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
       ~size_limit ~response_file
     |> Parser.init
+      ~interactive_prompt
     |> Typer.init
       ~additional_builtins:Translate.builtins
       ~extension_builtins:[Typer.Ext.bv2nat]
