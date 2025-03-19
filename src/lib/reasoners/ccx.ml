@@ -259,9 +259,10 @@ module Main : S = struct
 
   let explain_equality env ex t1 t2 =
     if E.equal t1 t2 then ex
-    else match Uf.are_equal env.uf t1 t2 ~added_terms:true with
-      | Some (dep, _) -> Ex.union ex dep
-      | None -> raise Exit
+    else
+      match Uf.are_equal env.uf t1 t2 ~added_terms:true with
+      | Entailed { ex = ex'; _ } -> Ex.union ex ex'
+      | Unknown -> raise Exit
 
   let equal_only_by_congruence env (facts: r Sig_rel.facts) t1 t2 =
     if not (E.equal t1 t2) then
@@ -348,11 +349,11 @@ module Main : S = struct
                let ty_y = Expr.type_info y in
                if Ty.equal ty_x ty_y then
                  begin match Uf.are_distinct env.uf t1 t2 with
-                   | Some (ex_r, _) ->
+                   | Entailed { ex = ex_r; _ } ->
                      let a = E.mk_distinct ~iff:false [x; y] in
                      Debug.contra_congruence a ex_r;
                      Q.push (Literal.LTerm a, ex_r, Th_util.Other) facts.diseqs
-                   | None -> assert false
+                   | Unknown -> assert false
                  end
              | _ -> ()
           ) (Uf.class_of env.uf bol)
@@ -734,7 +735,8 @@ module Main : S = struct
     {env with relation = Rel.assume_th_elt env.relation th_elt dep}
 
   let are_equal env t1 t2 ~init_terms =
-    if E.equal t1 t2 then Some (Ex.empty, [])
+    if E.equal t1 t2 then
+      Th_util.Entailed { ex = Ex.empty; classes = [] }
     else
     if init_terms then
       let facts = empty_facts() in
@@ -743,7 +745,8 @@ module Main : S = struct
       try
         let env, _ = assume_literals env [] facts in
         Uf.are_equal env.uf t1 t2 ~added_terms:true
-      with Ex.Inconsistent (ex,cl) -> Some (ex, cl)
+      with Ex.Inconsistent (ex, classes) ->
+        Entailed { ex; classes }
     else
       Uf.are_equal env.uf t1 t2 ~added_terms:false
 

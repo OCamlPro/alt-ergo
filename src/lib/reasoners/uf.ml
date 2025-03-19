@@ -923,7 +923,8 @@ let distinct env rl dep =
   env
 
 let are_equal env t1 t2 ~added_terms =
-  if E.equal t1 t2 then Some (Ex.empty, cl_extract env)
+  if E.equal t1 t2 then
+    Th_util.Entailed { ex = Ex.empty; classes = cl_extract env }
   else
     let lookup =
       if added_terms then Env.lookup_by_t
@@ -931,8 +932,10 @@ let are_equal env t1 t2 ~added_terms =
     in
     let r1, ex_r1 = lookup t1 env in
     let r2, ex_r2 = lookup t2 env in
-    if X.equal r1 r2 then Some (Ex.union ex_r1 ex_r2, cl_extract env)
-    else None
+    if X.equal r1 r2 then
+      Th_util.Entailed { ex = Ex.union ex_r1 ex_r2; classes = cl_extract env }
+    else
+      Th_util.Unknown
 
 let are_distinct env t1 t2 =
   Debug.are_distinct t1 t2;
@@ -940,8 +943,9 @@ let are_distinct env t1 t2 =
   let r2, ex_r2 = Env.lookup_by_t t2 env in
   try
     ignore (union env r1 r2 (Ex.union ex_r1 ex_r2));
-    None
-  with Ex.Inconsistent (ex, classes) -> Some (ex, classes)
+    Th_util.Unknown
+  with Ex.Inconsistent (ex, classes) ->
+    Th_util.Entailed { ex; classes }
 
 let already_distinct env lr =
   let d = LX.mk_distinct false lr in

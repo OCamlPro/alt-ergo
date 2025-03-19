@@ -237,23 +237,23 @@ module type UF = module type of Uf
    (respectively [q]) is already true, we do not add the consequence. *)
 let update_env (module Uf : UF) uf dep env acc gi si p p_ded n n_ded =
   match Uf.are_equal uf ~added_terms:true gi si, Uf.are_distinct uf gi si with
-  | Some (idep, _) , None ->
+  | Entailed { ex = idep; _ }, Unknown ->
     let conseq = LRmap.add n n_ded dep env.conseq in
     {env with conseq = conseq},
     Conseq.add (p_ded, Ex.union dep idep) acc
 
-  | None, Some (idep, _) ->
+  | Unknown, Entailed { ex = idep; _ } ->
     let conseq = LRmap.add p p_ded dep env.conseq in
     {env with conseq = conseq},
     Conseq.add (n_ded, Ex.union dep idep) acc
 
-  | None, None ->
+  | Unknown, Unknown ->
     let sp = LRset.add p env.split in
     let conseq = LRmap.add p p_ded dep env.conseq in
     let conseq = LRmap.add n n_ded dep conseq in
     { env with split = sp; conseq = conseq }, acc
 
-  | Some _,  Some _ ->
+  | Entailed _,  Entailed _ ->
     (* This case cannot occur because we cannot have `gi = si` and
        `gi <> si` at the same time. *)
     assert false
@@ -290,8 +290,8 @@ let get_of_set (module Uf : UF) uf gtype (env, acc) =
            let n_ded = E.mk_eq ~iff:false get get_stab in
            let dep =
              match Uf.are_equal uf ~added_terms:true gtab set with
-             | Some (dep, _) -> dep
-             | None -> assert false
+             | Entailed { ex; _ } -> ex
+             | Unknown -> assert false
            in
            let env =
              {env with new_terms =
@@ -362,8 +362,8 @@ let get_and_set (module Uf : UF) uf gtype (env, acc) =
            let n_ded = E.mk_eq ~iff:false gt_of_st get_stab in
            let dep =
              match Uf.are_equal uf ~added_terms:true gtab stab with
-             | Some (dep, _) -> dep
-             | None -> assert false
+             | Entailed { ex; _ } -> ex
+             | Unknown -> assert false
            in
            let env =
              {env with
@@ -471,7 +471,7 @@ let assume env uf la =
   in
   env, Uf.domains uf, { Sig_rel.assume = l; remove = [] }
 
-let query _ _ _ = None
+let query _ _ _ = Th_util.Unknown
 let add env uf _ _ = env, Uf.domains uf, []
 
 let new_terms env = env.new_terms

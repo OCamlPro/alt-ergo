@@ -1136,11 +1136,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             | LSem _ -> false
             | LTerm lit ->
               match Th.query lit env.tenv with
-              | Some _ ->
+              | Entailed _ ->
                 a.timp <- 1;
                 a.neg.timp <- 1;
                 true
-              | None ->
+              | Unknown ->
                 false
           else
             ta.timp = 1
@@ -1751,15 +1751,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       | LSem _ -> None
       | LTerm lit ->
         match Th.query lit tenv with
-        | Some (d,_) ->
+        | Entailed { ex; _ } ->
           a.timp <- 1;
-          Some (clause_of_dep d a)
-        | None  ->
+          Some (clause_of_dep ex a)
+        | Unknown ->
           match Th.query (E.neg lit) tenv with
-          | Some (d,_) ->
+          | Entailed { ex; _ } ->
             a.neg.timp <- 1;
-            Some (clause_of_dep d a.Atom.neg)
-          | None -> None
+            Some (clause_of_dep ex a.Atom.neg)
+          | Unknown -> None
 
   let make_decision env atom =
     match th_entailed env.tenv atom with

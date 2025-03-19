@@ -25,7 +25,23 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type answer = (Explanation.t * Expr.Set.t list) option
+(** Type of answers returned by theory queries for ground literals. *)
+type answer =
+  | Entailed of { ex : Explanation.t; classes : Expr.Set.t list }
+  (** The literal [lit] is entailed by the theory environment:
+      - The explanation [ex] justifies why the literal holds in the
+        environment, that is [ex] holds in the current environment and
+        [ex => lit] is a tautology.
+      - [classes] is used only for debugging purposes. *)
+
+  | Unknown
+  (** The theory could not prove that the literal is entailed by the current
+      environment. This might mean one of several things:
+      - The negation of the literal is entailed by the current environment, or
+      - The truth value of the literal is independent of the current
+        environment (it is true in some models and false in other models), or
+      - The literal is entailed by the current environment but we failed to
+        prove so (in which case the decision procedure used is incomplete). *)
 
 type theory =
   | Th_arith

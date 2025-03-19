@@ -104,8 +104,8 @@ let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
     k =
   match Timers.with_timer R.timer Timers.F_query
     @@ fun () -> R.query env uf a with
-  | Some r -> Some r
-  | None -> k ()
+  | Th_util.Entailed _ as r -> r
+  | Th_util.Unknown -> k ()
 
 let query env uf a =
   Options.exec_thread_yield ();
@@ -113,7 +113,7 @@ let query env uf a =
   try_query (module Rel2) env.r2 uf a @@ fun () ->
   try_query (module Rel3) env.r3 uf a @@ fun () ->
   try_query (module Rel4) env.r4 uf a @@ fun () ->
-  try_query (module Rel5) env.r5 uf a @@ fun () -> None
+  try_query (module Rel5) env.r5 uf a @@ fun () -> Th_util.Unknown
 
 let case_split env uf ~for_model =
   Options.exec_thread_yield ();

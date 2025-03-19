@@ -678,8 +678,10 @@ module Make (Th : Theory.S) = struct
     with Not_found ->
       assert (E.is_ground a);
       match Th.query a env.tbox with
-      | None -> tmp_cache := ME.add a None !tmp_cache; None
-      | Some (ex,_) as y ->
+      | Unknown ->
+        tmp_cache := ME.add a Th_util.Unknown !tmp_cache;
+        Unknown
+      | Entailed { ex; _ } as y ->
         if Options.get_tableaux_cdcl () then
           cdcl_learn_clause true env ex (ff.E.ff);
         learn_clause env ff ex;
@@ -689,43 +691,50 @@ module Make (Th : Theory.S) = struct
     match E.form_view ff.E.ff with
     | E.Literal a ->
       let ans = query_of tcp_cache tmp_cache ff a env in
-      if ans != None then
-        begin
-          Options.tool_req 2 "TR-Sat-Bcp-Elim-2";
-          if Options.get_profiling() then Profiling.elim false;
-        end;
+      let () =
+        match ans with
+        | Entailed _ ->
+          begin
+            Options.tool_req 2 "TR-Sat-Bcp-Elim-2";
+            if Options.get_profiling() then Profiling.elim false;
+          end
+        | Unknown -> ()
+      in
       ans
     | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-    | E.Let _ | E.Iff _ | E.Xor _ -> None
+    | E.Let _ | E.Iff _ | E.Xor _ -> Unknown
 
   let red tcp_cache tmp_cache ff env tcp =
     let nf = E.neg ff.E.ff in
     let nff = {ff with E.ff = nf} in
     try
       let _, ex = ME.find nf !(env.unit_facts_cache) in
-      Some(ex, []), true
+      Th_util.Entailed { ex; classes = [] }, true
     with Not_found ->
     try
       let _, ex, _, _ = ME.find nf env.gamma in
-      let r = Some (ex, Th.cl_extract env.tbox) in
       Options.tool_req 2 "TR-Sat-Bcp-Red-1";
-      r, true
+      Entailed { ex; classes = Th.cl_extract env.tbox }, true
     with Not_found ->
-      if not tcp then None, false
+      if not tcp then Unknown, false
       else match E.form_view nf with
         | E.Literal a ->
           let ans = query_of tcp_cache tmp_cache nff a env in
-          if ans != None then Options.tool_req 2 "TR-Sat-Bcp-Red-2";
+          let () =
+            match ans with
+            | Entailed _ -> Options.tool_req 2 "TR-Sat-Bcp-Red-2"
+            | _ -> ()
+          in
           ans, false
         | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
-        | E.Let _ | E.Iff _ | E.Xor _ -> None, false
+        | E.Let _ | E.Iff _ | E.Xor _ -> Unknown, false
 
   let red tcp_cache tmp_cache ff env tcp =
     match red tcp_cache tmp_cache ff env tcp with
-    | (Some _, _)  as ans -> ans
-    | None, b ->
+    | Entailed _, _  as ans -> ans
+    | Unknown, b ->
       if not (Options.get_tableaux_cdcl ()) then
-        None, b
+        Th_util.Unknown, b
       else
         match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
         | Some (ex, _lvl) ->
@@ -733,9 +742,9 @@ module Make (Th : Theory.S) = struct
           if Options.(get_debug_sat () && get_verbose ()) then
             Printer.print_dbg "red thanks to satML";
           assert (cdcl_known_decisions ex env);
-          Some(ex, []), true
+          Entailed { ex; classes = [] }, true
         | None ->
-          None, b
+          Unknown, b
 
   let add_dep f dep =
     match E.form_view f with
@@ -790,16 +799,16 @@ module Make (Th : Theory.S) = struct
             let u =
               match th_elim tcp_cache tmp_cache gf1 env,
                     th_elim tcp_cache tmp_cache gf2 env with
-              | None, None -> raise Exit
-              | Some _, _ | _, Some _ when gf1.E.theory_elim -> u
+              | Unknown, Unknown -> raise Exit
+              | Entailed _, _ | _, Entailed _ when gf1.E.theory_elim -> u
 
-              | Some _, Some _ ->
+              | Entailed _, Entailed _ ->
                 u (* eliminate if both are true ? why ? *)
               (*(gf1, Ex.union d d1) :: (gf2, Ex.union d d2) :: u*)
 
-              | Some (d1, _), _ -> (gf1, Ex.union d d1) :: u
+              | Entailed { ex = d1; _ }, _ -> (gf1, Ex.union d d1) :: u
 
-              | _, Some (d2, _) -> (gf2, Ex.union d d2) :: u
+              | _, Entailed { ex = d2; _ } -> (gf2, Ex.union d d2) :: u
             in
             cl, u
           with Exit ->
@@ -809,27 +818,28 @@ module Make (Th : Theory.S) = struct
                 red tcp_cache tmp_cache gf1 env tcp,
                 red tcp_cache tmp_cache gf2 env tcp
               with
-              | (Some (d1, c1), b1) , (Some (d2, c2), b2) ->
+              | (Entailed { ex = d1; classes = c1 }, b1),
+                (Entailed { ex = d2; classes = c2 }, b2) ->
                 if Options.get_profiling() then Profiling.bcp_conflict b1 b2;
                 let expl = Ex.union (Ex.union d d1) d2 in
                 let c = List.rev_append c1 c2 in
                 raise (Ex.Inconsistent (expl, c))
 
-              | (Some(d1, _), b) , (None, _) ->
+              | (Entailed { ex = d1; _ }, b), (Unknown, _) ->
                 if Options.get_profiling() then Profiling.red b;
                 let gf2 =
                   {gf2 with E.nb_reductions = gf2.E.nb_reductions + 1} in
                 let gf2 = update_distances env gf2 f1 in
                 cl, (gf2,Ex.union d d1) :: u
 
-              | (None, _) , (Some(d2, _),b) ->
+              | (Unknown, _) , (Entailed { ex = d2; _ }, b) ->
                 if Options.get_profiling() then Profiling.red b;
                 let gf1 =
                   {gf1 with E.nb_reductions = gf1.E.nb_reductions + 1} in
                 let gf1 = update_distances env gf1 f2 in
                 cl, (gf1,Ex.union d d2) :: u
 
-              | (None, _) , (None, _) -> fd::cl , u
+              | (Unknown, _) , (Unknown, _) -> fd::cl , u
             end
       ) acc delta
 
@@ -1185,9 +1195,9 @@ module Make (Th : Theory.S) = struct
            | E.Literal a ->
              begin
                match query_of tcp_cache tmp_cache {gf with E.ff=f} a env with
-               | Some (ex, _) ->
+               | Entailed { ex; _ } ->
                  Ex.union dep ex, ({gf with E.ff=f}, ex) :: acc
-               | None ->
+               | Unknown ->
                  Printer.print_err
                    "Bad inst! Hyp %a is not true!" E.print f;
                  assert false
