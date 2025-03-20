@@ -201,17 +201,3 @@ module type FLAT_FORMULA = sig
 end
 
 module Flat_Formula : FLAT_FORMULA
-
-module Proxy_formula : sig
-  val get_proxy_of : Expr.t ->
-    Atom.atom Expr.Map.t -> Atom.atom option
-
-  val mk_cnf :
-    Atom.hcons_env ->
-    Expr.t ->
-    Atom.atom Expr.Map.t * Expr.t Atom.Map.t *
-    Atom.var list * Atom.atom list list ->
-    Atom.atom *
-    (Atom.atom Expr.Map.t * Expr.t Atom.Map.t *
-     Atom.var list * Atom.atom list list)
-end
