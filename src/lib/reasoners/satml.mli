@@ -92,9 +92,9 @@ module type SAT_ML = sig
 
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
-  val push : t -> Satml_types.Atom.atom -> unit
-  (** [push env g] adds a new assertion level. The formula [g] is used in
-      [Satml_frontend] to guard all formulas asserted at this level. *)
+  val push : t -> Expr.t
+  (** [push env] adds a new assertion level and returns a guard [g] that must be
+      used to guard all formulas asserted at this level. *)
 
   val pop : t -> unit
   (** [pop env] pops the latest assertion level. *)

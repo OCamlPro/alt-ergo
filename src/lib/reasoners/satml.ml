@@ -133,7 +133,7 @@ module type SAT_ML = sig
 
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
-  val push : t -> Satml_types.Atom.atom -> unit
+  val push : t -> E.t
   val pop : t -> unit
 
   val optimize : t -> Objective.Function.t -> unit
@@ -2175,13 +2175,18 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let known_lazy_formulas env = env.ff_lvl
 
-  let push env guard =
-    assert (not (is_assigned guard));
-    guard.is_guard <- true;
-    guard.neg.is_guard <- false;
+  let push env =
+    let expr_guard, var_guard = Atom.fresh_var env.hcons_env in
+    let nbv = Atom.nb_made_vars env.hcons_env in
+    let unit, nunit = new_vars env ~nbv [var_guard] [] [] in
+    assert (unit == [] && nunit == []);
+    assert (not (is_assigned var_guard.pa));
+    var_guard.pa.is_guard <- true;
+    var_guard.na.is_guard <- false;
     cancel_until env env.next_dec_guard;
-    Vec.push env.increm_guards guard;
-    Vec.push env.objectives []
+    Vec.push env.increm_guards var_guard.pa;
+    Vec.push env.objectives [];
+    expr_guard
 
   let pop env =
     assert (not (Vec.is_empty env.increm_guards));
