@@ -175,7 +175,7 @@ module Make (Th : Theory.S) = struct
     guards : guards;
     add_inst: E.t -> bool;
     unit_facts_cache : (E.gformula * Ex.t) ME.t ref;
-    last_saved_model : Models.t Lazy.t option ref;
+    last_saved_model : Models.t option ref;
     unknown_reason : Sat_solver_sig.unknown_reason option;
 
     declare_top : Id.typed list ref;
@@ -1848,8 +1848,7 @@ module Make (Th : Theory.S) = struct
     {env with tbox = Th.assume_th_elt env.tbox th_elt dep}
 
   (** returns the latest model stored in the env if any *)
-  let get_model env =
-    Option.map Lazy.force !(env.last_saved_model)
+  let get_model env = !(env.last_saved_model)
 
   let get_unknown_reason env = env.unknown_reason
 
