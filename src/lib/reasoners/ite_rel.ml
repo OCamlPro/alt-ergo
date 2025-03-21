@@ -216,7 +216,7 @@ let case_split _env _uf ~for_model:_ = []
 
 let optimizing_objective _env _uf _o = None
 
-let query _ _ _ = None
+let query _ _ _ = Th_util.Unknown
 
 let new_terms _ = E.Set.empty
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []

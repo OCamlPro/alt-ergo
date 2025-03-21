@@ -757,17 +757,16 @@ module Legacy = struct
     | _ -> Fmt.invalid_arg "point: %a (as %a)" Q.pp_print v Ty.print ty
 
   let doesnt_contain_0 u =
-    Option.map (fun ex -> (ex, [])) @@
     match u with
     | Real u -> Real.(
         match intersect u (of_interval @@ Interval.singleton Q.zero) with
-        | NonEmpty _ -> None
-        | Empty ex -> Some ex
+        | NonEmpty _ -> Th_util.Unknown
+        | Empty ex -> Entailed { ex; classes = [] }
       )
     | Int u -> Int.(
         match intersect u (of_interval @@ Interval.singleton Z.zero) with
-        | NonEmpty _ -> None
-        | Empty ex -> Some ex
+        | NonEmpty _ -> Unknown
+        | Empty ex -> Entailed { ex; classes = [] }
       )
 
   let is_strict_smaller u1 u2 =

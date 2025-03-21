@@ -297,7 +297,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
       max_t_depth =
     if SubstE.mem f s_t then
       let s = SubstE.find f s_t in
-      if are_equal_full tbox t s == None then raise Echec;
+      let () =
+        match are_equal_full tbox t s with
+        | Th_util.Unknown -> raise Echec
+        | Th_util.Entailed _ -> ()
+      in
       sg
     else
       let t =
@@ -394,8 +398,13 @@ module Make (X : Arg) : S with type theory = X.t = struct
       try
         let s_ty = Ty.matching s_ty ty_pat (E.type_info t) in
         let gsb = { sg with sty = s_ty } in
-        if E.is_ground pat &&
-           are_equal_light tbox pat t != None then
+        let ignore_match =
+          E.is_ground pat &&
+          (match are_equal_light tbox pat t with
+           | Entailed _ -> true
+           | _ -> false)
+        in
+        if ignore_match then
           [gsb]
         else
           let cl = if mconf.Util.no_ematching then E.Set.singleton t

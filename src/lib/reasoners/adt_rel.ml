@@ -664,7 +664,7 @@ let case_split env uf ~for_model =
 let optimizing_objective _env _uf _o = None
 
 let query _env uf (ra, _, ex, _) =
-  if Options.get_disable_adts () then None
+  if Options.get_disable_adts () then Th_util.Unknown
   else
     let domains = Uf.GlobalDomains.find (module Domains) (Uf.domains uf) in
     try
@@ -672,16 +672,17 @@ let query _env uf (ra, _, ex, _) =
       | Xliteral.Builtin(true, Sy.IsConstr c, [r]) ->
         let rr, _ = Uf.find_r uf r in
         ignore (assume_is_constr ~ex rr c domains);
-        None
+        Unknown
 
       | Xliteral.Builtin(false, Sy.IsConstr c, [r]) ->
         let rr, _ = Uf.find_r uf r in
         ignore (assume_not_is_constr ~ex rr c domains);
-        None
+        Unknown
 
       | _ ->
-        None
+        Unknown
     with
-    | Domain.Inconsistent ex -> Some (ex, Uf.cl_extract uf)
+    | Domain.Inconsistent ex ->
+      Entailed { ex; classes = Uf.cl_extract uf }
 
 (* ################################################################ *)
