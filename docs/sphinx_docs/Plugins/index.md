@@ -23,9 +23,3 @@ be registered in the `(alt-ergo plugins)` site using
 [dune-site](https://dune.readthedocs.io/en/stable/reference/dune/plugin.html)
 to be available as an option to `--inequalities-plugin`.
 ```
-
-```{toctree}
-:maxdepth: 2
-
-AB why3 <ab_why3>
-```
