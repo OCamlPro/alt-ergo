@@ -827,8 +827,6 @@ val get_bottom_classes : unit -> bool
     {ul {- satML}}}
     {- Tableaux : SAT-solver based on tableaux method
     {ul {- tableaux} {- tableaux-like} {- Tableaux-like}}}
-    {- Tableaux-CDCL : Tableaux method assisted with a CDCL SAT-solver
-    {ul {- tableaux-cdcl} {- tableaux-CDCL} {- Tableaux-cdcl}}}
     }
 *)
 val get_sat_solver : unit -> Util.sat_solver
@@ -848,10 +846,6 @@ val get_cdcl_tableaux_th : unit -> bool
     is enabled with the CDCL solver if satML is used. *)
 val get_cdcl_tableaux : unit -> bool
 (** Default to [true] *)
-
-(** [true] if the tableaux SAT-solver is used with CDCL assist. *)
-val get_tableaux_cdcl : unit -> bool
-(** Default to [false] *)
 
 (** [true] if minimal backjumping in satML CDCL solver is enabled *)
 val get_minimal_bj : unit -> bool

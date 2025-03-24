@@ -507,10 +507,6 @@ let get_no_sat_learning () = !no_sat_learning
 let get_sat_learning () = not (!no_sat_learning)
 let get_sat_plugin () = !sat_plugin
 let get_sat_solver () = !sat_solver
-let get_tableaux_cdcl () =
-  match !sat_solver with
-  | Tableaux_CDCL -> true
-  | _ -> false
 
 (** Term options *)
 

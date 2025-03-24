@@ -52,7 +52,6 @@ type inst_kind = Normal | Forward | Backward
 
 type sat_solver =
   | Tableaux
-  | Tableaux_CDCL
   | CDCL
   | CDCL_Tableaux
 

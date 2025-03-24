@@ -188,7 +188,8 @@ end = struct
           pp_output tst
       else
         Format.fprintf fmt
-          "@[(ignore-stdout (with-accepted-exit-codes (not 0) (run diff %a %a)))@]"
+          "@[(ignore-stdout \
+           (with-accepted-exit-codes (not 0) (run diff %a %a)))@]"
           pp_expected_output tst
           pp_output tst
     in
@@ -358,9 +359,6 @@ let () =
   ; ("runtest-quick", "tableaux",
      [ "--output=smtlib2"
      ; "--sat-solver Tableaux" ])
-  ; ("runtest-quick", "tableaux_cdcl",
-     [ "--output=smtlib2"
-     ; "--sat-solver Tableaux-CDCL" ])
   ; ("runtest-quick", "cdcl",
      [ "--output=smtlib2"
      ; "--sat-solver CDCL" ])
@@ -376,7 +374,8 @@ let () =
      [ "--output=smtlib2"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-instantiation" ])
-  ; ("runtest-ci", "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation",
+  ; ("runtest-ci",
+     "ci_cdcl_tableaux_no_tableaux_cdcl_in_theories_and_instantiation",
      [ "--output=smtlib2"
      ; "--sat-solver CDCL-Tableaux"
      ; "--no-tableaux-cdcl-in-theories"

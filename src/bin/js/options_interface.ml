@@ -57,7 +57,6 @@ let get_sat_solver = function
     | CDCL -> Some Util.CDCL
     | CDCL_Tableaux -> Some Util.CDCL_Tableaux
     | Tableaux -> Some Util.Tableaux
-    | Tableaux_CDCL -> Some Util.Tableaux_CDCL
 
 let get_instantiation_heuristic = function
   | None -> None

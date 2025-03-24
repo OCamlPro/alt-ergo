@@ -88,10 +88,8 @@ module type SAT_ML = sig
   val known_lazy_formulas : t -> int Flat_Formula.Map.t
 
   val reason_of_deduction: Atom.atom -> Atom.Set.t
-  val assume_simple : t -> Atom.atom list list -> unit
   val do_case_split : t -> Util.case_split_policy -> conflict_origin
 
-  val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
   val push : t -> Satml_types.Atom.atom -> unit

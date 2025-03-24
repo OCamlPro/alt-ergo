@@ -35,17 +35,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 module Make (Th : Theory.S) = struct
   module Inst = Instances.Make(Th)
-  module CDCL = Satml_frontend_hybrid.Make(Th)
 
   exception No_suitable_decision
-  exception Propagate of E.gformula * Explanation.t
-
-  let is_fact_in_CDCL cdcl f =
-    match CDCL.is_true cdcl f with
-    | None -> false
-    | Some (ex,lvl) ->
-      assert (lvl <> 0 || Ex.has_no_bj (Lazy.force ex));
-      lvl = 0
 
   module Heuristics = struct
 
@@ -83,7 +74,7 @@ module Make (Th : Theory.S) = struct
       in
       { env with mp = mp; var_inc = var_inc *. env.var_decay }
 
-    let choose delta env cdcl =
+    let choose delta env =
       let dec, no_dec =
         if Options.get_no_decisions_on_is_empty () then delta, []
         else
@@ -92,26 +83,10 @@ module Make (Th : Theory.S) = struct
       in
       let dec =
         List.rev_map
-          (fun ((a,b,_,_) as e) ->
-             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl a.E.ff then
-               raise (Propagate (a, Ex.empty));
-             if Options.get_tableaux_cdcl () && is_fact_in_CDCL cdcl b.E.ff then
-               raise (Propagate (b, Ex.empty));
+          (fun ((a,_,_,_) as e) ->
              e, (try (ME.find a.E.ff env.mp) with Not_found -> 0.), a.E.gf
           ) dec
       in
-
-      if Options.get_tableaux_cdcl () then
-        (* force propagate modulo satML *)
-        List.iter
-          (fun (a, b, _, _) ->
-             match CDCL.is_true cdcl a.E.ff with
-             | Some (ex, _lvl) -> raise (Propagate (a, Lazy.force ex))
-             | None ->
-               match CDCL.is_true cdcl b.E.ff with
-               | Some (ex, _lvl) -> raise (Propagate (b, Lazy.force ex))
-               | None -> ()
-          )no_dec;
 
       let dec =
         List.fast_sort
@@ -160,7 +135,6 @@ module Make (Th : Theory.S) = struct
     nb_related_to_hypo : int;
     nb_related_to_both : int;
     nb_unrelated : int;
-    cdcl : CDCL.t ref;
     tcp_cache : Th_util.answer ME.t;
     delta : (E.gformula * E.gformula * Ex.t * bool) list;
     decisions : int ME.t;
@@ -458,151 +432,6 @@ module Make (Th : Theory.S) = struct
       gf= gf;
       theory_elim = true; }
 
-
-  (* hybrid functions*)
-  let print_decisions_in_the_sats msg env =
-    if Options.(get_tableaux_cdcl () && get_verbose ()) then begin
-      Printer.print_dbg ~flushed:false ~module_name:"Fun_sat"
-        ~function_name:"print_decisions_in_the_sats"
-        "@[<v 0>-----------------------------------------------------@ \
-         >> %s@ \
-         decisions in DfsSAT are:@ "
-        msg;
-      let l = ME.bindings env.decisions in
-      let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
-      List.iter
-        (fun (f, i) ->
-           Printer.print_dbg ~flushed:false ~header:false
-             "%d  -> %a@ " i E.print f
-        )l;
-      Printer.print_dbg ~flushed:false ~header:false
-        "decisions in satML are:@ ";
-      List.iter
-        (fun (i, f) ->
-           Printer.print_dbg ~flushed:false ~header:false
-             "%d  -> %a@ " i E.print f
-        )(CDCL.get_decisions !(env.cdcl));
-      Printer.print_dbg ~header:false
-        "-----------------------------------------------------@]"
-    end
-
-  let cdcl_same_decisions env =
-    if Options.get_tableaux_cdcl () then begin
-      let cdcl_decs = CDCL.get_decisions !(env.cdcl) in
-      let ok = ref true in
-      let decs =
-        List.fold_left
-          (fun decs (i, d) ->
-             try
-               let j = ME.find d decs in
-               assert (i = j);
-               ME.remove d decs
-             with Not_found ->
-               ok := false;
-               Printer.print_err
-                 "Ouch! Decision %a is only in satML!@,\
-                  nb decisions in DfsSAT: %d\
-                  nb decisions in satML:  %d"
-                 E.print d
-                 (ME.cardinal env.decisions)
-                 (List.length cdcl_decs);
-               decs
-          )env.decisions cdcl_decs
-      in
-      if decs != ME.empty then begin
-        Printer.print_err "Ouch! Some decisions are only in DfsSAT";
-        ok := false;
-      end;
-      !ok
-    end
-    else true
-
-  let cdcl_known_decisions ex env =
-    Ex.fold_atoms
-      (fun e b ->
-         match e with
-         | Ex.Bj f -> b && ME.mem f env.decisions
-         | _ -> b
-      )ex true
-
-  let shift gamma ex acc0 =
-    let l =
-      Ex.fold_atoms
-        (fun e acc ->
-           match e with
-           | Ex.Bj f ->
-             let dec =
-               try let _,_,dec,_ = ME.find f gamma in dec
-               with Not_found -> max_int
-             in
-             (f, dec) :: acc
-           | _ ->
-             acc
-        )ex []
-    in
-    (* try to keep the decision ordering *)
-    let l = List.fast_sort (fun (_,i) (_,j) -> j - i) l in
-    List.fold_left (fun acc (f, _) -> E.mk_imp f acc) acc0 l
-
-
-  let cdcl_assume delay env l =
-    if Options.(get_debug_sat () && get_verbose ()) then
-      Printer.print_dbg
-        ~module_name:"Fun_sat" ~function_name:"cdcl_assume" "";
-    let gamma = env.gamma in
-    try
-      let l =
-        List.rev_map
-          (fun ((gf, ex) as e) ->
-             if Ex.has_no_bj ex then e
-             else {gf with E.ff = shift gamma ex gf.E.ff}, Ex.empty
-          )(List.rev l)
-      in
-      env.cdcl := CDCL.assume delay !(env.cdcl) l
-    with
-    | CDCL.Bottom (ex, l, cdcl) ->
-      if Options.(get_debug_sat () && get_verbose ()) then
-        Printer.print_dbg
-          ~module_name:"Fun_sat" ~function_name:"cdcl_assume"
-          "conflict";
-      env.cdcl := cdcl;
-      assert (cdcl_known_decisions ex env);
-      raise (IUnsat(ex, l))
-
-  let cdcl_decide env f dlvl =
-    if Options.(get_debug_sat () && get_verbose ()) then
-      Printer.print_dbg
-        ~module_name:"Fun_sat" ~function_name:"cdcl_decide" "";
-    try
-      env.cdcl := CDCL.decide !(env.cdcl) f dlvl
-    with
-    | CDCL.Bottom (ex, l, _cdcl) ->
-      if Options.(get_debug_sat () && get_verbose ()) then
-        Printer.print_dbg
-          ~module_name:"Fun_sat" ~function_name:"cdcl_decide"
-          "conflict";
-      assert (cdcl_known_decisions ex env);
-      (* no need to save cdcl here *)
-      raise (IUnsat(ex, l))
-    | e ->
-      Printer.print_err "%s" (Printexc.to_string e);
-      assert false
-
-  let cdcl_forget_decision env f lvl =
-    try
-      env.cdcl := CDCL.forget_decision !(env.cdcl) f lvl
-    with
-    | _ ->
-      Printer.print_err
-        "@[<v 2>cdcl_backjump error:@,%s@]"
-        (Printexc.get_backtrace ());
-      assert false
-
-  let cdcl_learn_clause delay env ex acc0 =
-    let f = shift env.gamma ex acc0 in
-    let ff = mk_gf f "<cdcl_learn_clause>" true true in
-    cdcl_assume delay env [ff, Ex.empty]
-
   let profile_conflicting_instances exp =
     if Options.get_profiling () then
       SE.iter
@@ -682,8 +511,6 @@ module Make (Th : Theory.S) = struct
         tmp_cache := ME.add a Th_util.Unknown !tmp_cache;
         Unknown
       | Entailed { ex; _ } as y ->
-        if Options.get_tableaux_cdcl () then
-          cdcl_learn_clause true env ex (ff.E.ff);
         learn_clause env ff ex;
         tcp_cache := ME.add a y !tcp_cache; y
 
@@ -728,23 +555,6 @@ module Make (Th : Theory.S) = struct
           ans, false
         | E.Unit _ | E.Clause _ | E.Lemma _ | E.Skolem _
         | E.Let _ | E.Iff _ | E.Xor _ -> Unknown, false
-
-  let red tcp_cache tmp_cache ff env tcp =
-    match red tcp_cache tmp_cache ff env tcp with
-    | Entailed _, _  as ans -> ans
-    | Unknown, b ->
-      if not (Options.get_tableaux_cdcl ()) then
-        Th_util.Unknown, b
-      else
-        match CDCL.is_true !(env.cdcl) (E.neg ff.E.ff) with
-        | Some (ex, _lvl) ->
-          let ex = Lazy.force ex in
-          if Options.(get_debug_sat () && get_verbose ()) then
-            Printer.print_dbg "red thanks to satML";
-          assert (cdcl_known_decisions ex env);
-          Entailed { ex; classes = [] }, true
-        | None ->
-          Unknown, b
 
   let add_dep f dep =
     match E.form_view f with
@@ -974,20 +784,10 @@ module Make (Th : Theory.S) = struct
           match E.form_view f with
           | E.Iff (f1, f2) ->
             let g = E.elim_iff f1 f2 ~with_conj:true in
-            if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g in
-              (* correct to put <-> ?*)
-              cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
-            end;
             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
 
           | E.Xor (f1, f2) ->
             let g = E.elim_iff f1 f2 ~with_conj:false |> E.neg in
-            if Options.get_tableaux_cdcl () then begin
-              let f_imp_g = E.mk_imp f g in
-              (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_g}, Ex.empty]
-            end;
             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff = g}, dep]
 
           | E.Unit (f1, f2) ->
@@ -1007,8 +807,6 @@ module Make (Th : Theory.S) = struct
           | E.Lemma _ ->
             Options.tool_req 2 "TR-Sat-Assume-Ax";
             let inst_env = Inst.add_lemma env.inst ff dep in
-            if Options.get_tableaux_cdcl () then
-              cdcl_assume false env [ff,dep];
             {env with inst = inst_env}, true, tcp, ap_delta, lits
 
           | E.Literal a ->
@@ -1022,9 +820,6 @@ module Make (Th : Theory.S) = struct
                    Inst.ground_preds is cleaned when the guard is
                    propagated to FALSE *)
                 assert (ME.mem guard env.gamma);
-                if Options.get_tableaux_cdcl () then
-                  cdcl_assume false env
-                    [{ff with E.ff = E.mk_imp f af}, adep];
                 asm_aux acc [{ff with E.ff = af}, Ex.union dep adep]
               | None -> acc
             end
@@ -1032,35 +827,18 @@ module Make (Th : Theory.S) = struct
           | E.Skolem quantif ->
             Options.tool_req 2 "TR-Sat-Assume-Sko";
             let f' = E.skolemize quantif  in
-            if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f f' in
-              (* correct to put <-> ?*)
-              (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
-            end;
             asm_aux (env, true, tcp, ap_delta, lits) [{ff with E.ff=f'},dep]
 
           | E.Let letin ->
             Options.tool_req 2 "TR-Sat-Assume-Let";
             let elim_let = E.elim_let ~recursive:true letin in
             let ff = {ff with E.ff = elim_let} in
-            if Options.get_tableaux_cdcl () then begin
-              let f_imp_f' = E.mk_imp f elim_let in
-              (* correct to put <-> ?*)
-              (* should do something similar for Let ? *)
-              cdcl_assume false env [{ff with E.ff=f_imp_f'}, Ex.empty]
-            end;
             asm_aux (env, true, tcp, ap_delta, lits) [ff, dep]
 
       ) acc list
 
   let rec assume env list =
-    if list == [] then
-      begin
-        print_decisions_in_the_sats "exit assume rec" env;
-        Options.heavy_assert (fun () -> cdcl_same_decisions env);
-        env
-      end
+    if list == [] then env
     else
       try
         let result = asm_aux (env, false, false, [], []) list in
@@ -1116,8 +894,6 @@ module Make (Th : Theory.S) = struct
         (fun (gf, dep) ->
            if Ex.has_no_bj dep then update_unit_facts env gf dep;
         )l;
-    if Options.get_tableaux_cdcl () then
-      cdcl_assume false env l;
 
     if Options.get_profiling() then Profiling.instances l;
     match l with
@@ -1125,8 +901,6 @@ module Make (Th : Theory.S) = struct
     | _  ->
       (* Put new generated instances in cache *)
       ignore (update_instances_cache (Some l));
-      if Options.get_tableaux_cdcl () then
-        cdcl_assume false env l;
       let env = assume env l in
       (* No conflict by direct assume, empty cache *)
       ignore (update_instances_cache (Some []));
@@ -1250,8 +1024,6 @@ module Make (Th : Theory.S) = struct
         in
         let env = {env with tcp_cache = !tcp_cache} in
         ignore (update_instances_cache (Some l));
-        if Options.get_tableaux_cdcl () then
-          cdcl_assume false env l;
         let env = assume env l in
         ignore (update_instances_cache (Some []));
         Debug.out_mk_theories_instances true;
@@ -1386,13 +1158,6 @@ module Make (Th : Theory.S) = struct
 
   let rec unsat_rec env fg is_decision =
     try
-      if is_decision then
-        begin
-          let f = (fst fg).E.ff in
-          if Options.get_tableaux_cdcl () then
-            try cdcl_decide env f (ME.find f env.decisions)
-            with Not_found -> assert false
-        end;
       let env = assume env [fg] in
       let env =
         if is_decision || not (Options.get_instantiate_after_backjump ())
@@ -1424,82 +1189,54 @@ module Make (Th : Theory.S) = struct
     | Util.Timeout -> model_gen_on_timeout env
 
   and make_one_decision env =
+    let ({ E.ff = f; _ } as a,b,d,_is_impl), l =
+      Heuristics.choose env.delta !(env.heuristics)
+    in
+    let new_level = env.dlevel + 1 in
+    if Options.get_profiling() then
+      Profiling.decision new_level a.E.origin_name;
+    (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
+    let env_a =
+      {env with
+       delta=l;
+       dlevel = new_level;
+       plevel = 0;
+       decisions = ME.add f new_level env.decisions}
+    in
+    Debug.decide f env_a;
+    let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
+    Debug.unsat_rec dep;
     try
-      let ({ E.ff = f; _ } as a,b,d,_is_impl), l =
-        Heuristics.choose env.delta !(env.heuristics) !(env.cdcl)
+      let dep' =
+        try Ex.remove (Ex.Bj f) dep
+        with Not_found when Options.get_no_backjumping() -> dep
       in
-      let new_level = env.dlevel + 1 in
-      if Options.get_profiling() then
-        Profiling.decision new_level a.E.origin_name;
-      (*fprintf fmt "@.BEFORE DECIDING %a@." E.print f;*)
-      Options.heavy_assert (fun () -> cdcl_same_decisions env);
-      let env_a =
-        {env with
-         delta=l;
-         dlevel = new_level;
-         plevel = 0;
-         decisions = ME.add f new_level env.decisions}
-      in
-      if Options.get_tableaux_cdcl () then begin
-        assert (not (is_fact_in_CDCL !(env.cdcl) f));
-        assert (not (is_fact_in_CDCL !(env.cdcl) (E.neg f)));
+      Debug.backtracking f env;
+      Options.tool_req 2 "TR-Sat-Decide";
+      if Options.get_profiling() then begin
+        Profiling.reset_dlevel env.dlevel;
+        Profiling.reset_ilevel env.ilevel;
       end;
-      Debug.decide f env_a;
-      let dep = unsat_rec env_a (a,Ex.singleton (Ex.Bj f)) true in
-      if Options.get_tableaux_cdcl () then
-        cdcl_forget_decision env f new_level;
-      Debug.unsat_rec dep;
-      try
-        let dep' =
-          try Ex.remove (Ex.Bj f) dep
-          with Not_found when Options.get_no_backjumping() -> dep
-        in
-        Debug.backtracking f env;
-        Options.tool_req 2 "TR-Sat-Decide";
-        if Options.get_profiling() then begin
-          Profiling.reset_dlevel env.dlevel;
-          Profiling.reset_ilevel env.ilevel;
-        end;
-        let not_a = {a with E.ff = E.neg f} in
-        if Options.get_sat_learning () then learn_clause env not_a dep';
-        let env = {env with delta=l} in
-        (* in the section below, we try to backjump further with latest
-           generated instances if any *)
-        begin
-          match update_instances_cache None with
-          | None    -> assert false
-          | Some [] -> ()
-          | Some l  ->
-            (* backtrack further if Unsat is raised by the assume below *)
-            ignore (assume env l);
-            (*No backtrack, reset cache*)
-            ignore (update_instances_cache (Some []));
-        end;
-        Options.heavy_assert (fun () -> cdcl_same_decisions env);
-        if Options.get_tableaux_cdcl () then
-          cdcl_learn_clause false env dep' (E.neg f);
-        print_decisions_in_the_sats "make_one_decision:backtrack" env;
-        Options.heavy_assert (fun () -> cdcl_same_decisions env);
-        if not (Options.get_tableaux_cdcl ()) then
-          unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
-        else
-          match CDCL.is_true !(env.cdcl) a.E.ff with
-          | Some (ex, _lvl) -> (* it is a propagation in satML *)
-            if Options.get_verbose () then
-              Printer.print_dbg
-                "Better backjump thanks to satML";
-            let ex = Lazy.force ex in
-            assert (not (Ex.mem (Ex.Bj f) ex));
-            Ex.union dep' ex
-          | None ->
-            unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
-      with Not_found ->
-        Debug.backjumping (E.neg f) env;
-        Options.tool_req 2 "TR-Sat-Backjumping";
-        dep
-    with Propagate (ff, ex) ->
-      Options.heavy_assert (fun () -> cdcl_same_decisions env);
-      back_tracking (assume env [ff, ex])
+      let not_a = {a with E.ff = E.neg f} in
+      if Options.get_sat_learning () then learn_clause env not_a dep';
+      let env = {env with delta=l} in
+      (* in the section below, we try to backjump further with latest
+          generated instances if any *)
+      begin
+        match update_instances_cache None with
+        | None    -> assert false
+        | Some [] -> ()
+        | Some l  ->
+          (* backtrack further if Unsat is raised by the assume below *)
+          ignore (assume env l);
+          (*No backtrack, reset cache*)
+          ignore (update_instances_cache (Some []));
+      end;
+      unsat_rec (assume env [b, Ex.union d dep']) (not_a,dep') false
+    with Not_found ->
+      Debug.backjumping (E.neg f) env;
+      Options.tool_req 2 "TR-Sat-Backjumping";
+      dep
 
   let max_term_depth_in_sat env =
     let aux mx f = max mx (E.depth f) in
@@ -1622,13 +1359,6 @@ module Make (Th : Theory.S) = struct
     env
 
   let push env to_push =
-    if Options.get_tableaux_cdcl () then
-      Errors.run_error
-        (Errors.Unsupported_feature
-           "Incremental commands are not implemented in \
-            Tableaux(CDCL) solver ! \
-            Please use the Tableaux or CDLC SAT solvers instead"
-        );
     Util.loop
       ~f:(fun _n () acc ->
           let new_guard = E.fresh_name Ty.Tbool in
@@ -1648,13 +1378,6 @@ module Make (Th : Theory.S) = struct
       ~init:env
 
   let pop env to_pop =
-    if Options.get_tableaux_cdcl () then
-      Errors.run_error
-        (Errors.Unsupported_feature
-           "Incremental commands are not implemented in \
-            Tableaux(CDCL) solver ! \
-            Please use the Tableaux or CDLC SAT solvers instead"
-        );
     Util.loop
       ~f:(fun _n () acc ->
           let acc,guard_to_neg = restore_guards_and_refs acc in
@@ -1689,11 +1412,6 @@ module Make (Th : Theory.S) = struct
         ME.fold (fun _g gf_guard_with_ex acc ->
             gf_guard_with_ex :: acc
           ) env.guards.guards [] in
-
-      if Options.get_tableaux_cdcl () then begin
-        cdcl_assume false env guards_to_assume;
-        cdcl_assume false env [gf,Ex.empty];
-      end;
 
       let env = assume env guards_to_assume in
       let env = assume env [gf, Ex.empty] in
@@ -1734,8 +1452,6 @@ module Make (Th : Theory.S) = struct
       let gd, _ =
         inst_lemmas mconf  env env.inst env.tbox (selector env) env.ilevel
       in
-      if Options.get_tableaux_cdcl () then
-        cdcl_assume false env gd;
       if Options.get_profiling() then Profiling.instances gd;
       let env = assume env gd in
 
@@ -1760,8 +1476,6 @@ module Make (Th : Theory.S) = struct
 
   let assume env fg dep =
     try
-      if Options.get_tableaux_cdcl () then
-        cdcl_assume false env [add_guard env fg,dep];
       assume env [add_guard env fg,dep]
     with
     | IUnsat (d, classes) ->
@@ -1820,7 +1534,6 @@ module Make (Th : Theory.S) = struct
       nb_related_to_hypo = 0;
       nb_related_to_both = 0;
       nb_unrelated = 0;
-      cdcl = ref (CDCL.empty ());
       tcp_cache = ME.empty;
       delta = [] ;
       decisions = ME.empty;

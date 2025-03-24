@@ -74,7 +74,6 @@ exception Sat
 exception Unsat of Atom.clause list option
 exception Last_UIP_reason of Atom.Set.t
 exception Restart
-exception Stopped
 
 type conflict_origin =
   | C_none
@@ -130,11 +129,8 @@ module type SAT_ML = sig
 
   val reason_of_deduction: Atom.atom -> Atom.Set.t
 
-  val assume_simple : t -> Atom.atom list list -> unit
-
   val do_case_split : t -> Util.case_split_policy -> conflict_origin
 
-  val decide : t -> Atom.atom -> unit
   val conflict_analyze_and_fix : t -> conflict_origin -> unit
 
   val push : t -> Satml_types.Atom.atom -> unit
@@ -1397,13 +1393,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     | C_bool c -> C_bool c
     | C_theory _ -> assert false
     | C_none ->
-      if Options.get_tableaux_cdcl () then
-        C_none
-      else
-        match theory_propagate env with
-        | C_bool _ -> assert false
-        | C_theory dep -> C_theory dep
-        | C_none -> C_none
+      match theory_propagate env with
+      | C_bool _ -> assert false
+      | C_theory dep -> C_theory dep
+      | C_none -> C_none
 
   let report_conflict env c =
     match c with
@@ -1664,12 +1657,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   with Ex.Inconsistent _ -> ()
 *)
 
-
-  type strat =
-    | Auto
-    | Stop
-    | Interactive of Atom.atom
-
   let find_uip_reason q =
     let res = ref SA.empty in
     let seen = ref SA.empty in
@@ -1696,39 +1683,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     try find_uip_reason q
     with Last_UIP_reason r -> r
 
-  let reason_of_conflict (confl_clause : Atom.clause) =
-    let q = Queue.create () in
-    Vec.iter (fun a -> Queue.push a q) confl_clause.atoms;
-    find_uip_reason q
-
-  let rec propagate_and_stabilize env propagator conflictC strat =
+  let rec propagate_and_stabilize env propagator conflictC =
     match propagator env with
     | C_none -> ()
     | (C_bool _ | C_theory _ ) as confl -> (* Conflict *)
-      let x =
-        match strat, confl with
-        | Auto, _ -> None
-        | _, C_bool confl ->
-          (try reason_of_conflict confl
-           with Last_UIP_reason r-> Some r)
-        | _ -> assert false
-      in
-      try
-        incr conflictC;
-        conflict_analyze_and_fix env confl;
-        propagate_and_stabilize env propagator conflictC strat;
-        if Options.get_tableaux_cdcl () then
-          match x with
-          | None -> ()
-          | Some r -> raise (Last_UIP_reason r)
-      with
-        Unsat _ as e ->
-        if Options.get_tableaux_cdcl () then begin
-          if not (Options.get_minimal_bj ()) then
-            assert (decision_level env = 0);
-          raise (Last_UIP_reason Atom.Set.empty)
-        end
-        else raise e
+      incr conflictC;
+      conflict_analyze_and_fix env confl;
+      propagate_and_stabilize env propagator conflictC
 
   let clause_of_dep d fuip =
     let cpt = ref 0 in
@@ -1858,11 +1819,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       (Options.get_cdcl_tableaux_inst () &&
        Matoms.is_empty env.lazy_cnf))
 
-  let search env strat n_of_conflicts n_of_learnts =
+  let search env n_of_conflicts n_of_learnts =
     let conflictC = ref 0 in
     env.starts <- env.starts + 1;
     while true do
-      propagate_and_stabilize env all_propagations conflictC !strat;
+      propagate_and_stabilize env all_propagations conflictC;
 
       if is_sat env then
         raise Sat;
@@ -1878,12 +1839,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          Vec.size env.learnts - nb_assigns env >= n_of_learnts then
         reduce_db();
 
-      match !strat with
-      | Auto -> pick_branch_lit env
-      | Stop -> raise Stopped
-      | Interactive f ->
-        strat := Stop;
-        make_decision env f
+      pick_branch_lit env
     done
 
   (* unused --
@@ -1911,7 +1867,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       ref ((Atom.to_float (nb_clauses env)) *. env.learntsize_factor) in
     try
       while true do
-        (try search env (ref Auto)
+        (try search env
                (Atom.to_int !n_of_conflicts) (Atom.to_int !n_of_learnts);
          with Restart -> ());
         n_of_conflicts := !n_of_conflicts *. env.restart_inc;
@@ -2048,7 +2004,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         end;
         a.var.vpremise <- init;
         enqueue env a 0 None;
-        propagate_and_stabilize env propagate (ref 0) Auto
+        propagate_and_stabilize env propagate (ref 0)
     (* TODO *)
 
     with Trivial ->
@@ -2073,7 +2029,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       env.lvl_ff <- Util.MI.add dec_lvl s env.lvl_ff;
       if do_bcp then
         propagate_and_stabilize (*theory_propagate_opt*)
-          env all_propagations (ref 0) Auto;
+          env all_propagations (ref 0);
     end
 
   let new_vars env ~nbv new_v unit_cnf nunit_cnf  =
@@ -2124,7 +2080,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           sf old_lazy
       in
       env.lazy_cnf <- fictive_lazy;
-      propagate_and_stabilize env all_propagations (ref 0) Auto;
+      propagate_and_stabilize env all_propagations (ref 0);
       let new_dlvl = decision_level env in
       if old_dlvl > new_dlvl then better_bj env sf
       else
@@ -2167,7 +2123,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     (* do it after add clause and before T-propagate, disable bcp*)
     update_lazy_cnf env ~do_bcp:false sff ~dec_lvl;
     (* do bcp globally *)
-    propagate_and_stabilize env all_propagations (ref 0) Auto;
+    propagate_and_stabilize env all_propagations (ref 0);
     if dec_lvl > decision_level env then
       (*dec_lvl <> 0 and a bj have been made*)
       try_to_backjump_further env sff
@@ -2218,43 +2174,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 *)
 
   let known_lazy_formulas env = env.ff_lvl
-
-  (* HYBRID SAT functions *)
-  let assume_simple env cnf =
-    match cnf with
-    | [] -> ()
-    | _ ->
-      let nbc = env.nb_init_clauses + List.length cnf in
-      Vec.grow_to_by_double env.clauses nbc;
-      Vec.grow_to_by_double env.learnts nbc;
-      env.nb_init_clauses <- nbc;
-
-      List.iter (add_clause env vraie_form ~cnumber:0) cnf;
-
-      if Options.get_verbose () then
-        Printer.print_dbg
-          "%d clauses@ %d learnts"
-          (Vec.size env.clauses)
-          (Vec.size env.learnts);
-
-      (* do it after add clause and before T-propagate, disable bcp*)
-      (* do bcp globally *)
-      propagate_and_stabilize env all_propagations (ref 0) Stop
-
-
-  let decide env f =
-    if env.is_unsat then raise (Unsat env.unsat_core);
-    let n_of_conflicts = ref (Atom.to_float env.restart_first) in
-    let n_of_learnts =
-      ref ((Atom.to_float (nb_clauses env)) *. env.learntsize_factor) in
-    try
-      search env (ref (Interactive f))
-        (Atom.to_int !n_of_conflicts) (Atom.to_int !n_of_learnts);
-    with
-    | Restart -> assert false
-    | Sat -> ()
-    | Stopped -> ()
-    | Unsat _ -> assert false
 
   let push env guard =
     assert (not (is_assigned guard));

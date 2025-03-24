@@ -1,5 +1,10 @@
 ## unreleased
 
+### Supported features
+
+ - Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
+   Tableaux solver (#1309)
+
 ### SMT-LIB support
 
   - Remove the legacy frontend and AB-Why3 plugin
