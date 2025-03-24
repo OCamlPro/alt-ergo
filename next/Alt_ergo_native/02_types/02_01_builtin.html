@@ -180,44 +180,37 @@ Functional polymorphic arrays are persistent structures: they may be updated, bu
 <h1>Built-in operators<a class="headerlink" href="#built-in-operators" title="Permalink to this heading"></a></h1>
 <section id="logical-operators">
 <h2>Logical operators<a class="headerlink" href="#logical-operators" title="Permalink to this heading"></a></h2>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <thead>
-<tr>
-<th>Operation</th>
-<th>Notation</th>
-<th>Type(s)</th>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>Notation</p></th>
+<th class="head"><p>Type(s)</p></th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Negation</td>
-<td><code>not p</code></td>
-<td><code>bool -&gt; bool</code></td>
+<tr class="row-even"><td><p>Negation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">p</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
-<tr>
-<td>Conjonction</td>
-<td><code>p and q</code></td>
-<td><code>bool, bool -&gt; bool</code></td>
+<tr class="row-odd"><td><p>Conjonction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">and</span> <span class="pre">q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool,</span> <span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
-<tr>
-<td>Disjonction</td>
-<td><code>p or q</code></td>
-<td><code>bool, bool -&gt; bool</code></td>
+<tr class="row-even"><td><p>Disjonction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">or</span> <span class="pre">q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool,</span> <span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
-<tr>
-<td>Implication</td>
-<td><code>p -&gt; q</code></td>
-<td><code>bool, bool -&gt; bool</code></td>
+<tr class="row-odd"><td><p>Implication</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">-&gt;</span> <span class="pre">q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool,</span> <span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
-<tr>
-<td>Equivalence</td>
-<td><code>p &lt;-&gt; q</code></td>
-<td><code>bool, bool -&gt; bool</code></td>
+<tr class="row-even"><td><p>Equivalence</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">&lt;-&gt;</span> <span class="pre">q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool,</span> <span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
-<tr>
-<td>Exclusive or</td>
-<td><code>p xor q</code></td>
-<td><code>bool, bool -&gt; bool</code></td>
+<tr class="row-odd"><td><p>Exclusive or</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">p</span> <span class="pre">xor</span> <span class="pre">q</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool,</span> <span class="pre">bool</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
 </tr>
 </tbody>
 </table>
@@ -260,111 +253,94 @@ Note that a <code class="docutils literal notranslate"><span class="pre">predica
 </section>
 <section id="numeric-operators">
 <h2>Numeric operators<a class="headerlink" href="#numeric-operators" title="Permalink to this heading"></a></h2>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <thead>
-<tr>
-<th>Operation</th>
-<th>Notation</th>
-<th>Type(s)</th>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>Notation</p></th>
+<th class="head"><p>Type(s)</p></th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Unary negative</td>
-<td><code>-x</code></td>
-<td><code>int -&gt; int</code>, <br><code>real -&gt; real</code></td>
+<tr class="row-even"><td><p>Unary negative</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">-x</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
-<tr>
-<td>Addition</td>
-<td><code>x + y</code></td>
-<td><code>int, int -&gt; int</code>, <br><code>real, real -&gt; real</code></td>
+<tr class="row-odd"><td><p>Addition</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">+</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
-<tr>
-<td>Subtraction</td>
-<td><code>x - y</code></td>
-<td><code>int, int -&gt; int</code>, <br><code>real, real -&gt; real</code></td>
+<tr class="row-even"><td><p>Subtraction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">-</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
-<tr>
-<td>Multiplication</td>
-<td><code>x * y</code></td>
-<td><code>int, int -&gt; int</code>, <br><code>real, real -&gt; real</code></td>
+<tr class="row-odd"><td><p>Multiplication</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">*</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
-<tr>
-<td>Division</td>
-<td><code>x / y</code></td>
-<td><code>int, int -&gt; int</code>, <br><code>real, real -&gt; real</code></td>
+<tr class="row-even"><td><p>Division</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">/</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
-<tr>
-<td>Remainder</td>
-<td><code>x % y</code></td>
-<td><code>int, int -&gt; int</code></td>
+<tr class="row-odd"><td><p>Remainder</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">%</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></p></td>
 </tr>
-<tr>
-<td>Exponentiation (<code>int</code>)</td>
-<td><code>x ** y</code></td>
-<td><code>int, int -&gt; int</code></td>
+<tr class="row-even"><td><p>Exponentiation (<code class="docutils literal notranslate"><span class="pre">int</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">**</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">int</span></code></p></td>
 </tr>
-<tr>
-<td>Exponentiation (<code>real</code>)</td>
-<td><code>x **. y</code></td>
-<td><code>real, real -&gt; real</code>, <br><code>real, int -&gt; real</code>, <br><code>int, real -&gt; real</code>, <br><code>int, int -&gt; real</code></td>
+<tr class="row-odd"><td><p>Exponentiation (<code class="docutils literal notranslate"><span class="pre">real</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">**.</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code>, <br><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code>, <br><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">real</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="comparisons">
 <h2>Comparisons<a class="headerlink" href="#comparisons" title="Permalink to this heading"></a></h2>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <thead>
-<tr>
-<th>Operation</th>
-<th>Notation</th>
-<th>Type(s)</th>
-<th>Notes</th>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>Notation</p></th>
+<th class="head"><p>Type(s)</p></th>
+<th class="head"><p>Notes</p></th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Equality</td>
-<td><code>x = y</code></td>
-<td><code>'a, 'a -&gt; bool</code></td>
-<td><code>'a</code> can be any type</td>
+<tr class="row-even"><td><p>Equality</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'a,</span> <span class="pre">'a</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'a</span></code> can be any type</p></td>
 </tr>
-<tr>
-<td>Inequality</td>
-<td><code>x &lt;&gt; y</code></td>
-<td><code>'a, 'a -&gt; bool</code></td>
-<td>Syntactic sugar for <code>not(x = y)</code></td>
+<tr class="row-odd"><td><p>Inequality</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&lt;&gt;</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'a,</span> <span class="pre">'a</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p>Syntactic sugar for <code class="docutils literal notranslate"><span class="pre">not(x</span> <span class="pre">=</span> <span class="pre">y)</span></code></p></td>
 </tr>
-<tr>
-<td>All distinct</td>
-<td><code>distinct(x1,x2,x3, ..., xn)</code></td>
-<td><code>'a, 'a, ..., 'a -&gt; bool</code></td>
-<td>Can be used on any number of operands. <br> Syntactic sugar for  <code>(x1&lt;&gt;x2) and ... and (x1&lt;&gt;xn) and (x2&lt;&gt;x3) and ...</code></td>
+<tr class="row-even"><td><p>All distinct</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">distinct(x1,x2,x3,</span> <span class="pre">...,</span> <span class="pre">xn)</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">'a,</span> <span class="pre">'a,</span> <span class="pre">...,</span> <span class="pre">'a</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p>Can be used on any number of operands. <br> Syntactic sugar for  <code class="docutils literal notranslate"><span class="pre">(x1&lt;&gt;x2)</span> <span class="pre">and</span> <span class="pre">...</span> <span class="pre">and</span> <span class="pre">(x1&lt;&gt;xn)</span> <span class="pre">and</span> <span class="pre">(x2&lt;&gt;x3)</span> <span class="pre">and</span> <span class="pre">...</span></code></p></td>
 </tr>
-<tr>
-<td>Strictly less than</td>
-<td><code>x &lt; y</code></td>
-<td><code>int, int -&gt; bool</code>, <br><code>real, real -&gt; bool</code></td>
-<td></td>
+<tr class="row-odd"><td><p>Strictly less than</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&lt;</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p></p></td>
 </tr>
-<tr>
-<td>Lesser than or equal to</td>
-<td><code>x &lt;= y</code></td>
-<td><code>int, int -&gt; bool</code>, <br><code>real, real -&gt; bool</code></td>
-<td></td>
+<tr class="row-even"><td><p>Lesser than or equal to</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&lt;=</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p></p></td>
 </tr>
-<tr>
-<td>Strictly greater than</td>
-<td><code>x &gt; y</code></td>
-<td><code>int, int -&gt; bool</code>, <br><code>real, real -&gt; bool</code></td>
-<td></td>
+<tr class="row-odd"><td><p>Strictly greater than</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&gt;</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p></p></td>
 </tr>
-<tr>
-<td>Greater than or equal to</td>
-<td><code>x &gt;= y</code></td>
-<td><code>int, int -&gt; bool</code>, <br><code>real, real -&gt; bool</code></td>
-<td></td>
+<tr class="row-even"><td><p>Greater than or equal to</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&gt;=</span> <span class="pre">y</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int,</span> <span class="pre">int</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code>, <br><code class="docutils literal notranslate"><span class="pre">real,</span> <span class="pre">real</span> <span class="pre">-&gt;</span> <span class="pre">bool</span></code></p></td>
+<td><p></p></td>
 </tr>
 </tbody>
 </table>
@@ -441,29 +417,25 @@ functions using <code class="docutils literal notranslate"><span class="pre">if<
 <p>Remember that bitvectors are fixed-size binary words: vectors of <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p>
 <p>There exists a bitvector type <code class="docutils literal notranslate"><span class="pre">bitv[n]</span></code> for each fixed non-zero positive integer <code class="docutils literal notranslate"><span class="pre">n</span></code>. For example, <code class="docutils literal notranslate"><span class="pre">bitv[8]</span></code> is a bitvector.</p>
 <p>Note that bitvectors are indexed from right to left.</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <thead>
-<tr>
-<th>Operation</th>
-<th>Notation</th>
-<th>Type</th>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>Notation</p></th>
+<th class="head"><p>Type</p></th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Explicit declaration</td>
-<td><code>[|&lt;x&gt;|]</code> <br> where <code>&lt;x&gt;</code> is a string of <code>0</code> and <code>1</code> without spaces</td>
-<td><code>bitv[&lt;len(x)&gt;]</code></td>
+<tr class="row-even"><td><p>Explicit declaration</p></td>
+<td><p>`[</p></td>
+<td><p><x></p></td>
 </tr>
-<tr>
-<td>Concatenation</td>
-<td><code>x @ y</code></td>
-<td>bitv[n], bitv[m] -&gt; bitv[n+m]</td>
+<tr class="row-odd"><td><p>Concatenation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">&#64;</span> <span class="pre">y</span></code></p></td>
+<td><p>bitv[n], bitv[m] -&gt; bitv[n+m]</p></td>
 </tr>
-<tr>
-<td>Extraction of contiguous bits</td>
-<td><code>x^{p,q}</code> <br> where 0&lt;=p&lt;=q&lt;len(x)</td>
-<td><code>bitv[q-p+1]</code></td>
+<tr class="row-even"><td><p>Extraction of contiguous bits</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">x^{p,q}</span></code> <br> where 0&lt;=p&lt;=q&lt;len(x)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bitv[q-p+1]</span></code></p></td>
 </tr>
 </tbody>
 </table>
