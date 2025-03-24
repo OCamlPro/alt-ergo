@@ -168,3 +168,24 @@ module Type : sig
         to [i1] and [None] otherwise. *)
   end
 end
+
+module In_channel : sig
+  (** Input channels.
+
+      This module provides functions for working with input channels.
+
+      See {{!examples} the example section} below.
+
+      @since OCaml 4.14 *)
+
+  (** {1:channels Channels} *)
+
+  type t = in_channel
+  (** The type of input channel. *)
+
+  val isatty : t -> bool
+  (** [isatty ic] is [true] if [ic] refers to a terminal or console window,
+      [false] otherwise.
+
+      @since OCaml 5.1 *)
+end

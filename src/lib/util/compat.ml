@@ -153,3 +153,11 @@ module Type = struct
       match A.Id with B.Id -> Some Equal | _ -> None
   end
 end
+
+module In_channel = struct
+  type t = in_channel
+
+  (* Even though this function is only exposed through the [In_channel] module
+     since OCaml 5.1, it has been available in the runtime since OCaml 4.03. *)
+  external isatty : t -> bool = "caml_sys_isatty"
+end
