@@ -47,24 +47,17 @@
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Install</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#from-a-package-manager">From a package manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#from-github-releases-linux-and-macos">From GitHub releases (Linux and macOS)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#build-and-install">Build and Install</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#everything-binaries-plugins-library">Everything (binaries, plugins, library, …)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-library">Alt-Ergo library</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-binary">Alt-Ergo binary</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-with-nodejs">Alt-Ergo with Nodejs</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-web-worker">Alt-Ergo web worker</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#alt-ergo-web-worker-small-example">Alt-Ergo web worker small example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#releases">Releases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installing-via-opam">Installing via opam</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installing-via-github-releases-linux-and-macos">Installing via GitHub releases (Linux and macOS)</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#development-versions">Development versions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Installing via opam</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installing-via-dune">Installing via Dune</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#plugins">Plugins</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#the-satml-plugin">The SatML Plugin</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#the-fm-simplex-plugin">The Fm-Simplex Plugin</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#the-ab-why3-parser-plugin">The AB-Why3 parser plugin</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#the-profiler-plugin">The profiler plugin</a></li>
 </ul>
 </li>
 </ul>
@@ -107,140 +100,57 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
-<section id="from-a-package-manager">
-<h2>From a package manager<a class="headerlink" href="#from-a-package-manager" title="Permalink to this heading"></a></h2>
-<p>Alt-ergo is available on <a class="reference external" href="https://opam.ocaml.org/">opam</a>, the ocaml package manager with the following command :</p>
+<p>This page explains how to install both the Alt-Ergo releases and the
+development versions. If you are interested in contributing to this project,
+please refer to the developer documentation.</p>
+<section id="releases">
+<h2>Releases<a class="headerlink" href="#releases" title="Permalink to this heading"></a></h2>
+<section id="installing-via-opam">
+<h3>Installing via opam<a class="headerlink" href="#installing-via-opam" title="Permalink to this heading"></a></h3>
+<p>The recommended way to install Alt-Ergo releases is throught the OCaml package
+manager <a class="reference external" href="https://opam.ocaml.org/">opam</a>. Simply run:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">opam install alt-ergo</span>
 </pre></div>
 </div>
-<p>This command will install the Alt-ergo library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code>, as well as other librairies detailled in <a class="reference internal" href="#dependencies">dependencies</a>.</p>
-<p>Since version 2.6.0, Alt-Ergo is compatible with opam 2.2 installations using both Cygwin and MSYS2 on Windows. To setup opam on Windows, please follow the instructions <a class="reference external" href="https://ocamlpro.com/blog/2024_07_01_opam_2_2_0_releases/">here</a>.</p>
+<p>to install the latest Alt-Ergo release in the current switch.</p>
+<p>A free version of Alt-Ergo is also available on opam. To install it, run:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">opam install alt-ergo-free</span>
+</pre></div>
+</div>
 </section>
-<section id="from-github-releases-linux-and-macos">
-<h2>From GitHub releases (Linux and macOS)<a class="headerlink" href="#from-github-releases-linux-and-macos" title="Permalink to this heading"></a></h2>
+<section id="installing-via-github-releases-linux-and-macos">
+<h3>Installing via GitHub releases (Linux and macOS)<a class="headerlink" href="#installing-via-github-releases-linux-and-macos" title="Permalink to this heading"></a></h3>
 <p>For convenience, binary releases for Linux and macOS (amd64 and arm64) of
-Alt-Ergo are provided on the GitHub release page. These binary releases are
-statically linked and very portable. They are distributed under the same
-licensing restrictions as the source code.</p>
+Alt-Ergo are provided on the <a class="reference external" href="https://github.com/OCamlPro/alt-ergo/releases">GitHub release page</a>.
+These binary releases are statically linked and very portable.
+They are distributed under the same licensing restrictions as the source code.</p>
 </section>
-<section id="from-sources">
-<h2>From sources<a class="headerlink" href="#from-sources" title="Permalink to this heading"></a></h2>
-<section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading"></a></h3>
-<p>External dependencies graph generated with <code class="docutils literal notranslate"><span class="pre">dune-deps</span></code> (use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">archi</span></code> for source files dependencies):</p>
-<p><img alt="" src="../_images/deps.png" /></p>
-<p>To compile the sources of the library <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and the binary <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code>, you will need the
-following libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span>  <span class="n">ocaml</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="o">.</span><span class="mi">08</span><span class="o">.</span><span class="mi">1</span>
-  <span class="n">dune</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="o">.</span><span class="mi">0</span>
-  <span class="n">dune</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">info</span>
-  <span class="n">dune</span><span class="o">-</span><span class="n">site</span>
-  <span class="n">dolmen</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
-  <span class="n">dolmen_type</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
-  <span class="n">dolmen_loop</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">10</span>
-  <span class="n">ocplib</span><span class="o">-</span><span class="n">simplex</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">5</span><span class="o">.</span><span class="mi">1</span>
-  <span class="n">zarith</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">11</span>
-  <span class="n">seq</span>
-  <span class="n">fmt</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">0</span>
-  <span class="n">ppx_blob</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">7</span><span class="o">.</span><span class="mi">2</span>
-  <span class="n">camlzip</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">07</span>
-  <span class="n">menhir</span>
-  <span class="n">dune</span><span class="o">-</span><span class="n">site</span>
-  <span class="n">cmdliner</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="o">.</span><span class="mi">1</span><span class="o">.</span><span class="mi">0</span>
-  <span class="n">psmt2</span><span class="o">-</span><span class="n">frontend</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="o">.</span><span class="mi">4</span>
-  <span class="n">stdlib</span><span class="o">-</span><span class="n">shims</span>
-  <span class="n">ppx_deriving</span>
+</section>
+<section id="development-versions">
+<h2>Development versions<a class="headerlink" href="#development-versions" title="Permalink to this heading"></a></h2>
+<section id="id1">
+<h3>Installing via opam<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<p>To install the development version of Alt-Ergo from a cloned Git repository,
+run at the root of the repository:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">opam</span> <span class="n">install</span> <span class="o">.</span>
 </pre></div>
 </div>
-<p>You can install dependencies using:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>deps
+<p>This installs <code class="docutils literal notranslate"><span class="pre">alt-ergo</span></code>, <code class="docutils literal notranslate"><span class="pre">alt-ergo-lib</span></code> and all their dependencies in the
+current switch.</p>
+</section>
+<section id="installing-via-dune">
+<h3>Installing via Dune<a class="headerlink" href="#installing-via-dune" title="Permalink to this heading"></a></h3>
+<p>If you prefer install Alt-Ergo binary in a specific prefix directory [DIR], use
+the following commands:</p>
+<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">deps</span>
+<span class="n">make</span> <span class="n">bin</span>
+<span class="n">dune</span> <span class="n">install</span> <span class="o">-</span><span class="n">p</span> <span class="n">alt</span><span class="o">-</span><span class="n">ergo</span> <span class="o">--</span><span class="n">prefix</span> <span class="n">DIR</span>
 </pre></div>
 </div>
-<p>and create a development switch with:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>dev-switch
-</pre></div>
-</div>
-</section>
-<section id="build-and-install">
-<h3>Build and Install<a class="headerlink" href="#build-and-install" title="Permalink to this heading"></a></h3>
-<p>The steps below will build and install native or bytecode binaries
-depending on whether ocamlopt is installed or only ocamlc is detected.</p>
-<p>Note: these are somewhat obsolete; nowadays you can just use <code class="docutils literal notranslate"><span class="pre">dune</span></code></p>
-<section id="everything-binaries-plugins-library">
-<h4>Everything (binaries, plugins, library, …)<a class="headerlink" href="#everything-binaries-plugins-library" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span></code></p></li>
-<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-all</span></code></p></li>
-<li><p>Uninstall with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">uninstall-all</span></code></p></li>
-</ol>
-</section>
-<section id="alt-ergo-library">
-<h4>Alt-Ergo library<a class="headerlink" href="#alt-ergo-library" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo-lib</span></code></p></li>
-<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-lib</span></code></p></li>
-</ol>
-</section>
-<section id="alt-ergo-binary">
-<h4>Alt-Ergo binary<a class="headerlink" href="#alt-ergo-binary" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">alt-ergo</span></code></p></li>
-<li><p>Install with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">install-bin</span></code></p></li>
-</ol>
-</section>
-<section id="alt-ergo-with-nodejs">
-<h4>Alt-Ergo with Nodejs<a class="headerlink" href="#alt-ergo-with-nodejs" title="Permalink to this heading"></a></h4>
-<p>You can install dependencies using:</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="err">$</span> <span class="n">make</span> <span class="n">js</span><span class="o">-</span><span class="n">deps</span>
-</pre></div>
-</div>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-node</span></code></p></li>
-</ol>
-<p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
-<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
-</pre></div>
-</div>
-</section>
-<section id="alt-ergo-web-worker">
-<h4>Alt-Ergo web worker<a class="headerlink" href="#alt-ergo-web-worker" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-worker</span></code></p></li>
-</ol>
-<p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
-<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
-<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
-<span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
-</pre></div>
-</div>
-</section>
-<section id="alt-ergo-web-worker-small-example">
-<h4>Alt-Ergo web worker small example<a class="headerlink" href="#alt-ergo-web-worker-small-example" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js-example</span></code></p></li>
-</ol>
-<p>This command create a <code class="docutils literal notranslate"><span class="pre">www/</span></code> directory in which you can find a small js example running in the <code class="docutils literal notranslate"><span class="pre">index.html</span></code> file</p>
-<p>For this build rule you will need the following aditional libraries :</p>
-<div class="highlight-alt-ergo notranslate"><div class="highlight"><pre><span></span><span class="n">js_of_ocaml</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="o">.</span><span class="mi">4</span><span class="o">.</span><span class="mi">0</span>
-<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">lwt</span>
-<span class="n">js_of_ocaml</span><span class="o">-</span><span class="n">ppx</span>
-<span class="n">lwt_ppx</span>
-<span class="n">zarith_stubs_js</span> <span class="o">&gt;=</span> <span class="n">v0</span><span class="o">.</span><span class="mi">16</span><span class="o">.</span><span class="mi">1</span>
-<span class="n">data</span><span class="o">-</span><span class="n">encoding</span>
-</pre></div>
-</div>
-</section>
 </section>
 <section id="plugins">
 <h3>Plugins<a class="headerlink" href="#plugins" title="Permalink to this heading"></a></h3>
-<p>The steps below will build and install additional plugins (extension
-.cmxs if ocamlopt is installed or .cma if only ocamlc is detected).</p>
-<section id="the-satml-plugin">
-<h4>The SatML Plugin<a class="headerlink" href="#the-satml-plugin" title="Permalink to this heading"></a></h4>
-<p>satML is now inlined and compiled directly with Alt-Ergo’s source code</p>
-</section>
+<p>The steps below will build and install additional plugins.</p>
 <section id="the-fm-simplex-plugin">
 <h4>The Fm-Simplex Plugin<a class="headerlink" href="#the-fm-simplex-plugin" title="Permalink to this heading"></a></h4>
 <ol class="arabic simple">
@@ -251,16 +161,8 @@ at the same time as the alt-ergo binary.</p></li>
 </section>
 <section id="the-ab-why3-parser-plugin">
 <h4>The AB-Why3 parser plugin<a class="headerlink" href="#the-ab-why3-parser-plugin" title="Permalink to this heading"></a></h4>
-<ol class="arabic simple">
-<li><p>Compile with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">AB-Why3</span></code></p></li>
-<li><p>The AB-Why3 plugin is currently built and installed
-at the same time as the alt-ergo binary.</p></li>
-</ol>
-<p>You can find more information in the <a class="reference internal" href="../Plugins/ab_why3.html"><span class="std std-doc">AB-Why3 README</span></a></p>
-</section>
-<section id="the-profiler-plugin">
-<h4>The profiler plugin<a class="headerlink" href="#the-profiler-plugin" title="Permalink to this heading"></a></h4>
-<p>This plugin has been “inlined” in Alt-Ergo sources.</p>
+<p>This plugin was deprecated in Alt-Ergo 2.6.0 and removed in Alt-Ergo
+2.7.0.</p>
 </section>
 </section>
 </section>
