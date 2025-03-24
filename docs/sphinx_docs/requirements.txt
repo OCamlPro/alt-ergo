@@ -5,5 +5,4 @@
 sphinx >= 4.4.0
 myst-parser
 sphinx_rtd_theme
-sphinx-markdown-tables
 #
