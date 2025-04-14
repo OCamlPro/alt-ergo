@@ -1248,32 +1248,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     if get_save_used_context () then fails "save_used_context";
     if get_unsat_core () then fails "unsat_core"
 
-  let create_guard env =
-    let expr_guard = E.fresh_name Ty.Tbool in
-    let ff, axs, new_vars =
-      FF.simplify env.ff_hcons_env expr_guard
-        (fun f -> ME.find f env.abstr_of_axs) []
-    in
-    assert (axs == []);
-    match FF.view ff, new_vars with
-    | FF.UNIT atom_guard, [v] ->
-      assert (Atom.eq_atom atom_guard v.pa);
-      let nbv = FF.nb_made_vars env.ff_hcons_env in
-      (* Need to use new_vars function to add the new_var corresponding to
-         the atom atom_guard in the satml env *)
-      let u, nu = SAT.new_vars env.satml ~nbv new_vars [] [] in
-      assert (u == [] && nu == []);
-      expr_guard, atom_guard
-    | _ -> assert false
-
   let declare env id =
     env.declare_top <- id :: env.declare_top
 
   let push env to_push =
     Util.loop ~f:(fun _n () () ->
         try
-          let expr_guard, atom_guard = create_guard env in
-          SAT.push env.satml atom_guard;
+          let expr_guard = SAT.push env.satml in
           Stack.push expr_guard env.guards.stack_guard;
           Steps.push_steps ();
           env.guards.current_guard <- expr_guard;

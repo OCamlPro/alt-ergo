@@ -112,6 +112,7 @@ module type ATOM = sig
   val add_atom :
     hcons_env -> Shostak.Literal.t -> var list -> atom * var list
   val add_expr_atom : hcons_env -> Expr.t -> var list -> atom * var list
+  val fresh_var : hcons_env -> Expr.t * var
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom

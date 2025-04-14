@@ -116,6 +116,7 @@ module type ATOM = sig
   val add_atom :
     hcons_env -> Shostak.Literal.t -> var list -> atom * var list
   val add_expr_atom : hcons_env -> E.t -> var list -> atom * var list
+  val fresh_var : hcons_env -> E.t * var
 
   module Set : Set.S with type elt = atom
   module Map : Map.S with type key = atom
@@ -288,45 +289,49 @@ module Atom : ATOM = struct
 
   type hcons_env = { tbl : var HT.t ; cpt : int ref }
 
+  let replace_var hcons lit =
+    let cpt = !(hcons.cpt) in
+    let cpt_fois_2 = cpt * 2 in
+    let rec var  =
+      { vid = cpt;
+        pa = pa;
+        na = na;
+        level = -1;
+        index = -1;
+        hindex = -1;
+        reason = None;
+        weight = 0.;
+        seen = false;
+        vpremise = [];
+      }
+    and pa =
+      { var = var;
+        lit = lit;
+        watched = Vec.make 10 ~dummy:dummy_clause;
+        neg = na;
+        is_true = false;
+        is_guard = false;
+        timp = 0;
+        aid = cpt_fois_2 (* aid = vid*2 *) }
+    and na =
+      { var = var;
+        lit = Shostak.Literal.neg lit;
+        watched = Vec.make ~dummy:dummy_clause 10;
+        neg = pa;
+        is_true = false;
+        is_guard = false;
+        timp = 0;
+        aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
+    HT.add hcons.tbl lit var;
+    incr hcons.cpt;
+    var
+
   let make_var =
     fun hcons lit acc ->
     let lit, negated = Shostak.Literal.normal_form lit in
     try HT.find hcons.tbl lit, negated, acc
     with Not_found ->
-      let cpt = !(hcons.cpt) in
-      let cpt_fois_2 = cpt * 2 in
-      let rec var  =
-        { vid = cpt;
-          pa = pa;
-          na = na;
-          level = -1;
-          index = -1;
-          hindex = -1;
-          reason = None;
-          weight = 0.;
-          seen = false;
-          vpremise = [];
-        }
-      and pa =
-        { var = var;
-          lit = lit;
-          watched = Vec.make 10 ~dummy:dummy_clause;
-          neg = na;
-          is_true = false;
-          is_guard = false;
-          timp = 0;
-          aid = cpt_fois_2 (* aid = vid*2 *) }
-      and na =
-        { var = var;
-          lit = Shostak.Literal.neg lit;
-          watched = Vec.make ~dummy:dummy_clause 10;
-          neg = pa;
-          is_true = false;
-          is_guard = false;
-          timp = 0;
-          aid = cpt_fois_2 + 1 (* aid = vid*2+1 *) } in
-      HT.add hcons.tbl lit var;
-      incr hcons.cpt;
+      let var = replace_var hcons lit in
       var, negated, var :: acc
 
   let add_atom hcons lit acc =
@@ -335,6 +340,10 @@ module Atom : ATOM = struct
 
   let add_expr_atom hcons lit acc =
     add_atom hcons (Shostak.Literal.make @@ LTerm lit) acc
+
+  let fresh_var hcons =
+    let expr = E.fresh_name Tbool in
+    expr, replace_var hcons (Shostak.Literal.make @@ LTerm expr)
 
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
