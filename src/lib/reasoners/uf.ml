@@ -474,6 +474,9 @@ module Env = struct
     let rec fixpoint () =
       Options.exec_thread_yield ();
       (try SetRL.iter apply_rule rls with Exit -> ());
+      (* AC(X) bugs can trigger an infinite loop here, so increment a steps
+         counter to be safe. *)
+      Steps.incr Ac;
       if !fp then !r, !ex else (fp := true; fixpoint ())
     in fixpoint()
 
