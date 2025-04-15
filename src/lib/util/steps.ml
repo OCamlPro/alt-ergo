@@ -114,11 +114,10 @@ let incr k =
   if !steps_bound <> -1
   && (!steps > !steps_bound || !naive_steps > !steps_bound) then
     begin
-      let n =
-        if !naive_steps > 0 then !naive_steps
-        else if !steps > 0 then !steps
-        else !steps_bound
-      in
+      let n = max !naive_steps !steps in
+      (* CR bclement: This is preserved legacy behavior, but figure out in
+         which situation we can have [n <= 0]. *)
+      let n = if n > 0 then n else !steps_bound in
       raise (Util.Step_limit_reached n)
     end
 
