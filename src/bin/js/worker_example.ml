@@ -84,11 +84,11 @@ let solve () =
           Worker_interface.file_to_json
             (Some ("dummy" ^ !extension)) (Some 42) file
         in
-        Firebug.console##log json_file;
+        Console.console##log json_file;
         let json_options = Worker_interface.options_to_json options in
-        Firebug.console##log json_options;
+        Console.console##log json_options;
         let%lwt results = exec worker json_file json_options in
-        Firebug.console##log results;
+        Console.console##log results;
         let res = Worker_interface.results_from_json results in
         Lwt.return res
       )
