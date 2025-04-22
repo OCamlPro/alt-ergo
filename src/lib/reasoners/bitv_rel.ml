@@ -136,8 +136,6 @@ module BV2Nat = struct
 
     let shift_right ~size:sz ofs = { ofs ; len = sz - ofs }
 
-    let full = shift_right 0
-
     let of_ae i j =
       assert (0 <= i && i <= j);
       { ofs = i ; len = j - i + 1 }
@@ -167,6 +165,9 @@ module BV2Nat = struct
         Bitv.extract (bitwidth bv) ofs (ofs + len - 1) @@
         Shostak.Bitv.embed bv
 
+      let shift_right bv ofs =
+        extract bv (Extraction.shift_right ~size:(bitwidth bv) ofs)
+
       let zero_extend_to sz r =
         let r_sz = bitwidth r in
         if sz < r_sz then invalid_arg "zero_extend";
@@ -183,7 +184,6 @@ module BV2Nat = struct
     end
   end
 
-
   (* Adds to [eqs] the inequalities [0 <= p < 2^sz]. *)
   let add_width_ineqs ~ex sz p eqs =
     T.Ints.(mkv_le zero p, ex) ::
@@ -191,19 +191,19 @@ module BV2Nat = struct
     eqs
 
   type t =
-    { bv2nat : (P.t * Ex.t) Extraction.Map.t MX.t
-    (** Map from bit-vector extractions to their integer representation.
+    { bv2nat : (P.t * Ex.t) Util.MI.t MX.t
+    (** Map from bit-vector right-shifts to their integer representation.
 
-        If [(bv, ext)] is associated with [(p, ex)] in this map, it means
-        that [p = bv2nat(bv<ext>)] is justified by [ex].
+        If [(bv, ofs)] is associated with [(p, ex)] in this map, it means
+        that [p = bv2nat(bv asr ofs)] is justified by [ex].
 
-        We maintain the invariant that if [(bv, ext)] maps to [(p, ex)] in
-        [bv2nat], then [p] maps to [(bv, ext, ex)] in [nat2bv] below. *)
-    ; nat2bv : (X.r * Extraction.t * Ex.t) P.Map.t
+        We maintain the invariant that if [(bv, ofs)] maps to [(p, ex)] in
+        [bv2nat], then [p] maps to [(bv, ofs, ex)] in [nat2bv] below. *)
+    ; nat2bv : (X.r * int * Ex.t) P.Map.t
     (** Map from integer polynomials to their bit-vector representation.
 
-        If [p] is associated with [(bv, ext, ex)] in this map, it means that
-        [p = bv2nat(bv<ext>)] is justified by [ex].
+        If [p] is associated with [(bv, ofs, ex)] in this map, it means that
+        [p = bv2nat(bv asr ofs)] is justified by [ex].
 
         Note that this is the inverse of the [bv2nat] mapping, not an
         implementation of the [int2bv] function (although both coincide for
@@ -213,7 +213,7 @@ module BV2Nat = struct
 
         This is used for integer substitutions because of our encoding of
         extractions in [bv2nat]: we encode [bv2nat(bv<i, j>)] in
-        terms of [bv2nat(bv<0, i>)] and [bv2nat(bv<0, j>)] which we create
+        terms of [bv2nat(bv asr i)] and [bv2nat(bv asr j)] which we create
         dynamically.
 
         This is done to reduce the number of variables introduced to represent
@@ -225,18 +225,89 @@ module BV2Nat = struct
     ; eqs : (X.r Xliteral.view * Ex.t) list
     }
 
-  let pp_bv2nat_ext ppf ((x, ext), (p, _ex)) =
-    Fmt.pf ppf "@[<2>bv2nat(%a<%d, %d>) =@ %a@]"
-      X.print x ext.ofs ext.len P.print p
+  let pp_bv2nat_ext ppf ((x, ofs), (p, _ex)) =
+    if ofs = 0 then
+      Fmt.pf ppf "@[<2>bv2nat(%a) =@ %a@]"
+        X.print x P.print p
+    else
+      Fmt.pf ppf "@[<2>bv2nat(%a asr %d) =@ %a@]"
+        X.print x ofs P.print p
 
   let iter_ext f t =
     MX.iter
-      (fun x m -> Extraction.Map.iter (fun ext -> f (x, ext)) m)
+      (fun x m -> Util.MI.iter (fun ofs -> f (x, ofs)) m)
       t.bv2nat
 
   let pp ppf t =
     Fmt.pf ppf "@;<2>@[<v>%a@]"
       (Fmt.iter_bindings iter_ext pp_bv2nat_ext) t
+
+  let add_use_p p use =
+    List.fold_left (fun use r ->
+        MX.update r (function
+            | None -> Some (P.Set.singleton p)
+            | Some sp -> Some (P.Set.add p sp)
+          ) use
+      ) use (P.leaves p)
+
+  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], or raises
+      [Not_found] if there is none. *)
+  let find_asr bv ofs t =
+    let sz = bitwidth bv in
+    if ofs >= sz then (T.Ints.(~$$Z.zero), Ex.empty)
+    else Util.MI.find ofs (MX.find bv t.bv2nat)
+
+  (* [bv asr ofs] and [p] must *NOT* be in [t]. *)
+  let add_asr ~ex bv ofs p t =
+    let use = add_use_p p t.use in
+    let bv2nat =
+      MX.update bv (function
+          | None -> Some (Util.MI.singleton ofs (p, ex))
+          | Some m -> Some (Util.MI.add ofs (p, ex) m)
+        ) t.bv2nat
+    in
+    let nat2bv = P.Map.add p (bv, ofs, ex) t.nat2bv in
+    let eqs = add_width_ineqs ~ex (bitwidth bv - ofs) p t.eqs in
+    { use; bv2nat; nat2bv; eqs }
+
+  let find_or_init_bv bv t =
+    try find_asr bv 0 t, t
+    with Not_found ->
+      let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
+      (k, Ex.empty), add_asr ~ex:Ex.empty bv 0 k t
+
+  let init_asr ~ex bv ofs p t =
+    if ofs = 0 then t
+    else
+      let (p_bv, ex_bv), t = find_or_init_bv bv t in
+      let delta_p = T.Ints.(p_bv - p *$$ Z.(one lsl ofs)) in
+      let eqs = add_width_ineqs ~ex:(Ex.union ex ex_bv) ofs delta_p t.eqs in
+      { t with eqs }
+
+  (* Return the polynomial associated with [bv2nat(bv asr ofs)], or create a
+     fresh variable for it and add its defining equation to [t].
+
+    The defining equation for [bv2nat(bv asr ofs)] is:
+
+        0 <= bv2nat(bv) - bv2nat(bv asr ofs) * 2^ofs < 2^ofs
+  *)
+  let find_or_init_asr bv ofs t =
+    match find_asr bv ofs t with
+    | (p, ex) -> (p, ex), t
+    | exception Not_found ->
+      let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
+      let t = add_asr ~ex:Ex.empty bv ofs k t in
+      (k, Ex.empty), init_asr ~ex:Ex.empty bv ofs k t
+
+  let find_or_init_bv bv t = find_or_init_asr bv 0 t
+
+  let find_or_init_ext bv ext t =
+    let (hi, ex_hi), t = find_or_init_asr bv (ext.ofs + ext.len) t in
+    let (lo, ex_lo), t = find_or_init_asr bv ext.ofs t in
+    let delta_p = T.Ints.(lo - hi *$$ Z.(one lsl ext.len)) in
+    let ex = Ex.union ex_lo ex_hi in
+    let eqs = add_width_ineqs ~ex ext.len delta_p t.eqs in
+    (delta_p, ex), { t with eqs }
 
   let empty =
     { bv2nat = MX.empty
@@ -244,10 +315,10 @@ module BV2Nat = struct
     ; use = MX.empty
     ; eqs = [] }
 
-  let fold_ext x f t acc =
+  let fold_asr x f t acc =
     match MX.find x t.bv2nat with
     | exception Not_found -> acc
-    | m -> Extraction.Map.fold (f x) m acc
+    | m -> Util.MI.fold f m acc
 
   let fold_use_p x f t acc =
     assert (X.is_a_leaf x);
@@ -261,14 +332,6 @@ module BV2Nat = struct
           f p v acc
         ) nps acc
 
-  let add_use_p p use =
-    List.fold_left (fun use r ->
-        MX.update r (function
-            | None -> Some (P.Set.singleton p)
-            | Some sp -> Some (P.Set.add p sp)
-          ) use
-      ) use (P.leaves p)
-
   let remove_use_p p use =
     List.fold_left (fun use r ->
         MX.update r (function
@@ -279,84 +342,18 @@ module BV2Nat = struct
           ) use
       ) use (P.leaves p)
 
-  let find_ext bv ext bv2nat =
-    Extraction.Map.find ext @@ MX.find bv @@ bv2nat
-
-  let add_ext ~ex bv ext p bv2nat =
-    MX.update bv (function
-        | None -> Some (Extraction.Map.singleton ext (p, ex))
-        | Some m -> Some (Extraction.Map.add ext (p, ex) m)
-      ) bv2nat
-
-  let remove_aux bv ext p t =
+  let remove_aux bv ofs p t =
     let use = remove_use_p p t.use in
     let nat2bv = P.Map.remove p t.nat2bv in
     let bv2nat =
       MX.update bv (function
           | None -> None
           | Some m ->
-            let m = Extraction.Map.remove ext m in
-            if Extraction.Map.is_empty m then None else Some m
+            let m = Util.MI.remove ofs m in
+            if Util.MI.is_empty m then None else Some m
         ) t.bv2nat
     in
     { use ; nat2bv ; bv2nat ; eqs = t.eqs }
-
-  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], or raises
-     [Not_found] if there is none. *)
-  let find_asr bv ofs t =
-    find_ext bv (Extraction.shift_right ~size:(bitwidth bv) ofs) t.bv2nat
-
-  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], creating a
-     fresh variable for it if it does not exist. *)
-  let find_or_create_asr bv ofs t =
-    let ext = Extraction.shift_right ~size:(bitwidth bv) ofs in
-    try find_ext bv ext t.bv2nat, t
-    with Not_found ->
-      if ofs >= bitwidth bv then
-        (T.Ints.zero, Ex.empty), t
-      else
-        let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
-        let use = add_use_p k t.use in
-        let bv2nat = add_ext ~ex:Ex.empty bv ext k t.bv2nat in
-        let nat2bv = P.Map.add k (bv, ext, Ex.empty) t.nat2bv in
-        (k, Ex.empty), { use ; bv2nat ; nat2bv ; eqs = t.eqs }
-
-  (* Add the definining equation for [bv2nat(bv asr ofs)] to [eqs].
-
-     The defining equation for [bv2nat(bv asr ofs)] is:
-
-        0 <= bv2nat(bv) - bv2nat(bv asr ofs) < 2^ofs
-  *)
-  let init_asr bv ofs t =
-    let (p, ex), t = find_or_create_asr bv 0 t in
-    if ofs = 0 then (p, ex), t
-    else
-      let (p_asr, ex_asr), t = find_or_create_asr bv ofs t in
-      let delta = T.Ints.(p - p_asr *$$ Z.(one lsl ofs)) in
-      let eqs = add_width_ineqs ~ex:(Ex.union ex ex_asr) ofs delta t.eqs in
-      (p_asr, ex_asr), { t with eqs }
-
-  (* Returns the polynomial associated with [bv2nat(bv asr ofs)].
-
-     If no such polynomial exists, create a fresh variable for it and adds its
-     defining equation to [t]. *)
-  let find_or_init_asr bv ofs t =
-    try find_asr bv ofs t, t with Not_found -> init_asr bv ofs t
-
-  (* Add the defining equation for [bv2nat(bv<ext>)] to [t].
-
-     We define [bv2nat(bv<ext>)] in terms of the shifts [bv asr ext.ofs] and
-     [bv asr ext.len]. *)
-  let init_ext bv ext t =
-    let (lo, ex_lo), t = find_or_init_asr bv ext.ofs t in
-    let (hi, ex_hi), t = find_or_init_asr bv (ext.ofs + ext.len) t in
-    let delta_p = T.Ints.(lo - hi *$$ Z.(one lsl ext.len)) in
-    let ex = Ex.union ex_lo ex_hi in
-    let eqs = add_width_ineqs ~ex ext.len delta_p t.eqs in
-    (delta_p, ex), { t with eqs }
-
-  let find_or_init_ext bv ext t =
-    try find_ext bv ext t.bv2nat, t with Not_found -> init_ext bv ext t
 
   let find_p p t =
     P.Map.find p t.nat2bv
@@ -367,25 +364,19 @@ module BV2Nat = struct
 
      Note that we still insert the new mapping in this situation so that we can
      reuse this function for substitutions. *)
-  let add ~ex bv ext p t =
+  let add ~ex bv ofs p t =
+    let ext = Extraction.shift_right ~size:(bitwidth bv) ofs in
     let t =
-      match P.Map.find p t.nat2bv with
+      (* Make sure to remove any existing entry for [bv asr ofs] *)
+      match find_asr bv ofs t with
       | exception Not_found -> t
-      | (bv', ext', ex') ->
-        let lit = T.BV.mkv_eq (bv, ext) (bv', ext') in
-        let eqs = (lit, Ex.union ex ex') :: t.eqs in
-        remove_aux bv' ext' p { t with eqs }
-    in
-    let is_new, t =
-      match find_ext bv ext t.bv2nat with
-      | exception Not_found ->
-        true, t
       | (p', ex') ->
         let eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs in
-        false, remove_aux bv ext p' { t with eqs }
+        remove_aux bv ofs p' { t with eqs }
     in
     match P.is_const p with
     | Some cte ->
+      (* NB: constants can't exist in [nat2bv]. *)
       assert (Z.equal Z.one @@ Q.den cte);
       let cte = Q.num cte in
       let lit =
@@ -395,84 +386,79 @@ module BV2Nat = struct
       in
       { t with eqs = (lit, ex) :: t.eqs }
     | None ->
-      let use = add_use_p p t.use in
-      let bv2nat = add_ext ~ex bv ext p t.bv2nat in
-      let nat2bv = P.Map.add p (bv, ext, ex) t.nat2bv in
-      let t = { use ; bv2nat ; nat2bv ; eqs = t.eqs } in
-      if is_new then
-        let (p', ex'), t = init_ext bv ext t in
-        { t with eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs }
-      else
-        t
+      let t =
+        match P.Map.find p t.nat2bv with
+        | exception Not_found -> t
+        | (bv', ofs', ex') ->
+          let ext' = Extraction.shift_right ~size:(bitwidth bv') ofs' in
+          let lit = T.BV.mkv_eq (bv, ext) (bv', ext') in
+          let eqs = (lit, Ex.union ex ex') :: t.eqs in
+          remove_aux bv' ofs' p { t with eqs }
+      in
+      let t = add_asr ~ex bv ofs p t in
+      init_asr ~ex bv ofs p t
 
   let lognot_p ~size p =
     (* ~x = 2^size - 1 - x *)
     T.Ints.(-p +$$ Z.extract Z.minus_one 0 size)
 
-  (* Compute [bv2nat(x)] where [x] is an arbitrary bit-vector composition.
+  let find_or_init_st (st : X.r Bitv.simple_term_aux) t =
+    match st with
+    | Cte n ->
+      (T.Ints.(~$$n), Ex.empty), t
+    | Other s ->
+      let (p, ex), t = find_or_init_bv s.value t in
+      let p = if s.negated then lognot_p ~size:(bitwidth s.value) p else p in
+      (p, ex), t
+    | Ext (s, _s_sz, i, j) ->
+      let ext = Extraction.of_ae i j in
+      let (p, ex), t = find_or_init_ext s.value ext t in
+      let p = if s.negated then lognot_p ~size:ext.len p else p in
+      (p, ex), t
 
-     This may require introducing new variables to represent unknown
-     extractions. *)
-  let composite bv t =
-    let rec loop p ex t = function
-      | [] -> (p, ex), t
-      | { Bitv.bv = Bitv.Cte n ; sz } :: bv' ->
-        let p = T.Ints.(p *$$ Z.(one lsl sz) +$$ n) in
-        loop p ex t bv'
-      | { bv = Other s ; sz } :: bv' ->
-        let p = T.Ints. (p *$$ Z.(one lsl sz)) in
-        let (p_value, ex_value), t =
-          find_or_init_ext
-            s.value (Extraction.full ~size:sz) t
-        in
-        let p_value =
-          if s.negated then lognot_p ~size:sz p_value
-          else p_value
-        in
-        loop T.Ints.(p + p_value) (Ex.union ex ex_value) t bv'
-      | { bv = Ext (s, _s_sz, i, j) ; sz } :: bv' ->
-        let p = T.Ints.(p *$$ Z.(one lsl sz)) in
-        let (p_value, ex_value), t =
-          find_or_init_ext
-            s.value (Extraction.of_ae i j) t
-        in
-        let p_value =
-          if s.negated then lognot_p ~size:sz p_value
-          else p_value
-        in
-        loop T.Ints.(p + p_value) (Ex.union ex ex_value) t bv'
-    in
-    loop T.Ints.zero Ex.empty t (Shostak.Bitv.embed bv)
+  let add_composite ~ex ~size bv p t =
+    let rec loop ~ex ~size (bv : _ Bitv.abstract) p t =
+      (* Invariant: bitwidth(bv) = size *)
+      (* Invariant: ex => bv2nat(bv) = p *)
+      match bv with
+      | [] ->
+        assert (size = 0);
+
+        let lit = T.Ints.mkv_eq p T.Ints.(~$$Z.zero) in
+        { t with eqs = (lit, ex) :: t.eqs }
+
+      | [ { bv = st ; sz } ] -> (
+        assert (size = sz);
+
+        match st with
+        | Cte n ->
+          let lit = T.Ints.mkv_eq p T.Ints.(~$$n) in
+          { t with eqs = (lit, ex) :: t.eqs }
+        | Other s ->
+          let p = if s.negated then lognot_p ~size p else p in
+          add ~ex s.value 0 p t
+        | Ext (s, _s_sz, i, j) ->
+          let p = if s.negated then lognot_p ~size p else p in
+          let ext = Extraction.of_ae i j in
+          let eqs = add_width_ineqs ~ex ext.len p t.eqs in
+          let t = { t with eqs } in
+          let (hi, ex_hi), t = find_or_init_asr s.value (ext.ofs + ext.len) t in
+          let p = T.Ints.(p + hi *$$ Z.(one lsl ext.len)) in
+          add ~ex:(Ex.union ex ex_hi) s.value ext.ofs p t
+      )
+
+      | { bv = st ; sz } :: bv' ->
+        (* bv2nat(st) * 2^(size - sz) + bv2nat(bv') = p *)
+        let (bv2nat_st, st_ex), t = find_or_init_st st t in
+        let size' = size - sz in
+        let p' = T.Ints.(p - bv2nat_st *$$ Z.(one lsl size')) in
+        loop ~ex:(Ex.union ex st_ex) ~size:size' bv' p' t
+    in loop ~ex ~size bv p t
 
   (* Add the equality [nat_r = bv2nat(bv_r)]. *)
   let add_bv2nat ~ex nat_r bv_r t =
-    match BitvNormalForm.normal_form bv_r with
-    | Constant cte ->
-      (* nat_r = bv2nat(cte) = cte *)
-      let lit = T.Ints.(mkv_eq (of_repr nat_r) ~$$cte) in
-      { t with eqs = (lit, ex) :: t.eqs }
-    | Atom (x, ofs) -> (
-        let p = Shostak.Arith.embed nat_r in
-        let p = T.Ints.(p +$$ Z.neg ofs) in
-        let eqs = add_width_ineqs ~ex (bitwidth x) p t.eqs in
-        add ~ex
-          x (Extraction.full ~size:(bitwidth x)) p { t with eqs }
-      )
-    | Composite (x, ofs) ->
-      let p = T.Ints.of_repr nat_r in
-      let p = T.Ints.(p +$$ Z.neg ofs) in
-      match Shostak.Bitv.embed x with
-      | [ { bv = Other s ; sz } ] ->
-        assert (s.negated); (* Otherwise we would be an atom *)
-        let p = lognot_p ~size:sz p in
-        add ~ex
-          s.value (Extraction.full ~size:sz) p t
-      | [ { bv = Ext (s, _s_sz, i, j) ; sz } ] ->
-        let p = if s.negated then lognot_p ~size:sz p else p in
-        add ~ex s.value (Extraction.of_ae i j) p t
-      | _ ->
-        let (p', ex'), t = composite x t in
-        { t with eqs = (T.Ints.mkv_eq p p', Ex.union ex ex') :: t.eqs }
+    add_composite ~ex ~size:(bitwidth bv_r)
+      (Shostak.Bitv.embed bv_r) (T.Ints.of_repr nat_r) t
 
   (* Add the equality [bv_r = int2bv(int_r)].
 
@@ -491,7 +477,8 @@ module BV2Nat = struct
     assert (X.is_a_leaf bv_r);
     let sz = bitwidth bv_r in
     match find_p (T.Ints.of_repr int_r) t with
-    | (bv', ext', ex') ->
+    | (bv', ofs', ex') ->
+      let ext' = Extraction.shift_right ~size:(bitwidth bv') ofs' in
       (* int_r is bv2nat(bv'[ext']) -> convert int2bv to extraction *)
       let lit =
         if sz <= ext'.len then
@@ -511,9 +498,7 @@ module BV2Nat = struct
       *)
       let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
       let p_k_2exp = T.Ints.(k *$$ Z.(one lsl sz)) in
-      add ~ex
-        bv_r (Extraction.full ~size:sz)
-        T.Ints.(of_repr int_r + p_k_2exp) t
+      add ~ex bv_r 0 T.Ints.(of_repr int_r + p_k_2exp) t
 
   let subst_int ~ex rr nrr t =
     (* We need to compute our own substitutions because we are tracking
@@ -522,25 +507,25 @@ module BV2Nat = struct
     if not (X.is_a_leaf rr) then t
     else
       let nrr_p = Shostak.Arith.embed nrr in
-      fold_use_p rr (fun p (bv, ext, ex_bv) t ->
-          let t = remove_aux bv ext p t in
+      fold_use_p rr (fun p (bv, ofs, ex_bv) t ->
+          let t = remove_aux bv ofs p t in
           let p' = P.subst rr nrr_p p in
-          add ~ex:(Ex.union ex ex_bv) bv ext p' t
+          add ~ex:(Ex.union ex ex_bv) bv ofs p' t
         ) t t
 
   let subst_bitv ~ex rr nrr t =
     match BitvNormalForm.normal_form rr with
     | Constant _ -> invalid_arg "subst: cannot substitute constant"
     | Composite _ -> t
-    | Atom (x, ofs) ->
-      fold_ext x (fun x ext (p, ex_p) t ->
-          let t = remove_aux x ext p t in
-          let ofs =
-            if ext.len < 0 then Z.shift_right ofs ext.ofs
-            else Z.extract ofs ext.ofs ext.len
-          in
-          let p = T.Ints.(p +$$ ofs) in
-          let nrr = T.BV.extract nrr ext in
+    | Atom (x, delta) ->
+      (* x + delta = nrr => x = nrr - delta *)
+      fold_asr x (fun ofs (p, ex_p) t ->
+          (* bv2nat(x asr ofs) = p =>
+             bv2nat(nrr asr ofs) = p + (delta asr ofs) *)
+          let t = remove_aux x ofs p t in
+          let delta = Z.shift_right delta ofs in
+          let p = T.Ints.(p +$$ delta) in
+          let nrr = T.BV.shift_right nrr ofs in
           add_bv2nat ~ex:(Ex.union ex ex_p) (T.Ints.to_repr p) nrr t
         ) t t
 
