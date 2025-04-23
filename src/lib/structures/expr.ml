@@ -997,7 +997,18 @@ let mk_or f1 f2 is_impl =
   else if equal f2 (faux) then f1
   else if (equal f1 (vrai)) || (equal f2 (vrai)) then vrai
   else
-    let f1, f2 = if is_impl || compare f1 f2 < 0 then f1, f2 else f2, f1 in
+    let f1, f2 =
+      (* Preserve order for implications, but otherwise order the smallest
+         formula first (break ties with an arbitrary total order). *)
+      if is_impl then f1, f2
+      else
+        let c =
+          let c = Int.compare (size f1) (size f2) in
+          if c <> 0 then c else compare f1 f2
+        in
+        if c < 0 then f1, f2 else f2, f1
+    in
+
     let d = (max f1.depth f2.depth) in (* the +1 causes regression *)
     let nb_nodes = f1.nb_nodes + f2.nb_nodes + 1 in
     let vars = merge_vars f1.vars f2.vars in

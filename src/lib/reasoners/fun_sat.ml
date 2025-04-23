@@ -79,11 +79,11 @@ module Make (Th : Theory.S) = struct
         if Options.get_no_decisions_on_is_empty () then delta, []
         else
           List.partition
-            (fun (a, _,_,_) -> Options.get_can_decide_on a.E.origin_name) delta
+            (fun (a, _,_) -> Options.get_can_decide_on a.E.origin_name) delta
       in
       let dec =
         List.rev_map
-          (fun ((a,_,_,_) as e) ->
+          (fun ((a,_,_) as e) ->
              e, (try (ME.find a.E.ff env.mp) with Not_found -> 0.), a.E.gf
           ) dec
       in
@@ -136,7 +136,7 @@ module Make (Th : Theory.S) = struct
     nb_related_to_both : int;
     nb_unrelated : int;
     tcp_cache : Th_util.answer ME.t;
-    delta : (E.gformula * E.gformula * Ex.t * bool) list;
+    delta : (E.gformula * E.gformula * Ex.t) list;
     decisions : int ME.t;
     dlevel : int;
     plevel : int;
@@ -599,7 +599,7 @@ module Make (Th : Theory.S) = struct
     let tcp = tcp && not (Options.get_no_tcp ()) in
     List.fold_left
       (fun (cl,u)
-        ((({ E.ff = f1; _ } as gf1), ({ E.ff = f2; _ } as gf2), d, _) as fd) ->
+        ((({ E.ff = f1; _ } as gf1), ({ E.ff = f2; _ } as gf2), d) as fd) ->
         Debug.elim gf1 gf2;
         if b_elim f1 env || b_elim f2 env then (cl,u)
         else
@@ -795,14 +795,11 @@ module Make (Th : Theory.S) = struct
             let lst = [{ff with E.ff=f1},dep ; {ff with E.ff=f2},dep] in
             asm_aux (env, true, tcp, ap_delta, lits) lst
 
-          | E.Clause(f1,f2,is_impl) ->
+          | E.Clause(f1, f2, _) ->
             Options.tool_req 2 "TR-Sat-Assume-C";
             let p1 = {ff with E.ff=f1} in
             let p2 = {ff with E.ff=f2} in
-            let p1, p2 =
-              if is_impl || E.size f1 <= E.size f2 then p1, p2 else p2, p1
-            in
-            env, true, tcp, (p1,p2,dep,is_impl)::ap_delta, lits
+            env, true, tcp, (p1,p2,dep)::ap_delta, lits
 
           | E.Lemma _ ->
             Options.tool_req 2 "TR-Sat-Assume-Ax";
@@ -1119,7 +1116,7 @@ module Make (Th : Theory.S) = struct
       in
       let prop, delt =
         List.fold_left
-          (fun (prop, new_delta) ((gf1, gf2, d, _) as e) ->
+          (fun (prop, new_delta) ((gf1, gf2, d) as e) ->
              let { E.ff = f1; _ } = gf1 in
              let { E.ff = f2; _ } = gf2 in
              let nf1 = E.neg f1 in
@@ -1189,7 +1186,7 @@ module Make (Th : Theory.S) = struct
     | Util.Timeout -> model_gen_on_timeout env
 
   and make_one_decision env =
-    let ({ E.ff = f; _ } as a,b,d,_is_impl), l =
+    let ({ E.ff = f; _ } as a,b,d), l =
       Heuristics.choose env.delta !(env.heuristics)
     in
     let new_level = env.dlevel + 1 in
