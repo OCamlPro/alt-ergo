@@ -114,7 +114,7 @@ module type S = sig
     Expr.t ->
     string ->
     Explanation.t ->
-    Dolmen.Std.Loc.loc ->
+    Loc.t ->
     unit
   (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 

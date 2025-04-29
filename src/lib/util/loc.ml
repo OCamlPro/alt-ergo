@@ -25,23 +25,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Sat entry *)
+type t = Dolmen.Std.Loc.loc
 
-type sat_decl_aux =
-  | Decl of Id.typed
-  | Assume of string * Expr.t * bool
-  | PredDef of Expr.t * string (*name of the predicate*)
-  | Optimize of Objective.Function.t
-  | Query of string *  Expr.t * Ty.goal_sort
-  | ThAssume of Expr.th_elt
-  | Push of int
-  | Pop of int
+let from_dolmen_loc l = l
 
-type sat_tdecl = {
-  st_loc : Loc.t;
-  st_decl : sat_decl_aux
-}
+let lexing_positions = Dolmen.Std.Loc.lexing_positions
 
-val src : Logs.src
+let dummy = Dolmen.Std.Loc.dummy
 
-val print : Format.formatter -> sat_tdecl -> unit
+let report = Dolmen.Std.Loc.fmt

@@ -30,7 +30,7 @@ module MS = Map.Make(String)
 module DStd = Dolmen.Std
 
 type inst_info = {
-  loc : DStd.Loc.loc;
+  loc : Loc.t;
   kept : int;
   ignored : int;
   all_insts : SE.t;
