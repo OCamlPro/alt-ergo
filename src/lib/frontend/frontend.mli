@@ -64,7 +64,7 @@ module type S = sig
       They catch the [Sat], [Unsat] and [I_dont_know] exceptions to update the
       frontend environment, but not the [Timeout] exception which is raised to
       the user. *)
-  type 'a process = ?loc:Dolmen.Std.Loc.loc -> 'a -> env -> unit
+  type 'a process = ?loc:Loc.t -> 'a -> env -> unit
 
   val push : int process
 

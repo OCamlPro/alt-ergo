@@ -495,7 +495,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     let vty = aux vty in
     Ty.Tfarray (ity, vty)
   | `Bitv n ->
-    if n <= 0 then Errors.typing_error (NonPositiveBitvType n) DStd.Loc.dummy;
+    if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
 
   | `App (`Builtin B.Unit, []) -> Ty.tunit
@@ -763,7 +763,7 @@ let arith_ty = function
    - [lb] is the (optional) lower bound for the variable [var]
    - [ub] is the (optional) upper bound for the variable [var]
 *)
-let parse_semantic_bound ?(loc = DStd.Loc.dummy) ~var b x y =
+let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
   let is_main_var { DE.term_descr; _ } =
     match term_descr with
     | DE.Var v -> DE.Id.equal v var
@@ -779,7 +779,7 @@ let parse_semantic_bound ?(loc = DStd.Loc.dummy) ~var b x y =
     | _ ->
       Fmt.failwith
         "%aInternal error: invalid semantic bound"
-        DStd.Loc.fmt loc
+        Loc.report loc
   in
   let sort = arith_ty t in
   let parse_bound_kind { DE.term_descr; _ } =
@@ -790,7 +790,7 @@ let parse_semantic_bound ?(loc = DStd.Loc.dummy) ~var b x y =
     | _ ->
       Fmt.failwith
         "%aInternal error: invalid semantic bound"
-        DStd.Loc.fmt loc
+        Loc.report loc
   in
   (* Parse [main_var `op` b] *)
   let parse_bound ?(flip = false) b =
@@ -869,7 +869,7 @@ let mk_rounding fpar =
     Builds an Alt-Ergo hashconsed expression from a dolmen term
 *)
 let rec mk_expr
-    ?(loc = DStd.Loc.dummy) ?(name_base = "") ?(toplevel = false)
+    ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
     ~decl_kind dt =
   let name_tag = ref 0 in
   let rec aux_mk_expr ?(toplevel = false)
@@ -984,7 +984,7 @@ let rec mk_expr
               | _ ->
                 Fmt.failwith
                   "%asemantic trigger should have at most one bound variable"
-                  DStd.Loc.fmt loc
+                  Loc.report loc
             in
             semantic_trigger ~loc ?var trigger
 
@@ -1400,7 +1400,7 @@ let rec mk_expr
       res
     | _ -> res
 
-  and semantic_trigger ?var ?(loc = DStd.Loc.dummy) t =
+  and semantic_trigger ?var ?(loc = Loc.dummy) t =
     let cst, args =
       match destruct_app t with
       | Some (cst, args) -> cst, args
@@ -1424,7 +1424,7 @@ let rec mk_expr
         | _ ->
           Fmt.failwith
             "%aMaps_to: expected a variable but got: %a"
-            DStd.Loc.fmt loc DE.Term.print x
+            Loc.report loc DE.Term.print x
       end
 
     (* open-ended in interval *)
@@ -1467,16 +1467,16 @@ let rec mk_expr
           E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
         | _ ->
           Fmt.failwith "%aInvalid semantic trigger: %a"
-            DStd.Loc.fmt loc DE.Term.print t
+            Loc.report loc DE.Term.print t
       end
 
     | _ ->
       Fmt.failwith "%aInvalid semantic trigger: %a"
-        DStd.Loc.fmt loc DE.Term.print t
+        Loc.report loc DE.Term.print t
 
   in aux_mk_expr ~toplevel dt
 
-and make_trigger ?(loc = DStd.Loc.dummy) ~name_base ~decl_kind
+and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind
     ~(in_theory: bool) (name: string) (hyp: E.t list)
     (e, from_user: DE.term * bool) =
   (* Dolmen adds an existential quantifier to bind the '?xxx' variables *)
@@ -1618,11 +1618,12 @@ let rec is_pure_term t =
 
 let make file acc stmt =
   let rec aux acc (stmt: _ Typer_Pipe.stmt) =
-    let st_loc = Dolmen.Std.Loc.loc file stmt.loc in
+    let loc = Dolmen.Std.Loc.loc file stmt.loc in
+    let st_loc = Loc.from_dolmen_loc loc in
     match stmt with
     (* Optimize terms *)
     | { contents = `Optimize (t, is_max); _ } ->
-      let e = mk_expr ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective t in
+      let e = mk_expr t ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective in
       let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e then
         begin
@@ -1760,7 +1761,7 @@ let make file acc stmt =
         | _ ->
           Fmt.failwith
             "%a: Internal error: multiple theories."
-            DStd.Loc.fmt st_loc
+            DStd.Loc.fmt loc
       in
       let decl_kind, assume =
         match theory with
@@ -1837,7 +1838,7 @@ let make file acc stmt =
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
                 let ff =
-                  E.mk_forall name_base DStd.Loc.dummy binders [] qb
+                  E.mk_forall name_base Loc.dummy binders [] qb
                     ~toplevel:true ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -1858,7 +1859,7 @@ let make file acc stmt =
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
                 let qb = E.mk_eq ~iff defn ff in
                 let ff =
-                  E.mk_forall name_base DStd.Loc.dummy binders [] qb
+                  E.mk_forall name_base Loc.dummy binders [] qb
                     ~toplevel:true ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));

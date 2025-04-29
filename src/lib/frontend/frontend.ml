@@ -135,7 +135,7 @@ module type S = sig
     mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : Dolmen.Std.Loc.loc -> 'a -> env -> unit
+  type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
   val init_env : ?selector_inst:(Expr.t -> bool) -> used_context -> env
 
@@ -221,7 +221,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     mutable expl : Explanation.t
   }
 
-  type 'a process = ?loc : DStd.Loc.loc -> 'a -> env -> unit
+  type 'a process = ?loc : Loc.t -> 'a -> env -> unit
 
   let init_env ?selector_inst used_context =
     {
@@ -294,20 +294,20 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     else Ex.empty
 
   let internal_decl
-      ?(loc = DStd.Loc.dummy) (id : Id.typed) (env : env) : unit =
+      ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->
       SAT.declare env.sat_env id
     | `Unsat -> ()
 
-  let internal_push ?(loc = DStd.Loc.dummy) (n : int) (env : env) : unit =
+  let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     Util.loop ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
       ~max:n ~elt:(env.res, env.expl) ~init:();
     Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n)
 
-  let internal_pop ?(loc = DStd.Loc.dummy) (n : int) (env : env) : unit =
+  let internal_pop ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     let res, expl =
       Util.loop ~f:(fun _n () _env -> Stack.pop env.consistent_dep_stack)
@@ -318,7 +318,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     env.expl <- expl
 
   let internal_assume
-      ?(loc = DStd.Loc.dummy)
+      ?(loc = Loc.dummy)
       ((name, f, mf) : string * E.t * bool)
       (env : env) =
     let is_hyp = try (Char.equal '@' name.[0]) with _ -> false in
@@ -350,13 +350,13 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | `Unsat ->
         env.expl <- expl
 
-  let internal_pred_def ?(loc = DStd.Loc.dummy) (name, f) env =
+  let internal_pred_def ?(loc = Loc.dummy) (name, f) env =
     if not (unused_context name env.used_context) then
       let expl = mk_root_dep name f loc in
       SAT.pred_def env.sat_env f name expl loc;
       env.expl <- expl
 
-  let internal_query ?(loc = DStd.Loc.dummy) (n, f, sort) env =
+  let internal_query ?(loc = Loc.dummy) (n, f, sort) env =
     ignore loc;
     let expl =
       match env.res with
@@ -385,7 +385,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     env.expl <- expl
 
   let internal_th_assume
-      ?(loc = DStd.Loc.dummy)
+      ?(loc = Loc.dummy)
       ({ Expr.ax_name; Expr.ax_form ; _ } as th_elt)
       env =
     if not (unused_context ax_name env.used_context) then
@@ -396,7 +396,7 @@ module Make(SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         env.expl <- expl
       | `Unsat -> ()
 
-  let internal_optimize ?(loc = DStd.Loc.dummy) fn env =
+  let internal_optimize ?(loc = Loc.dummy) fn env =
     ignore loc;
     match env.res with
     | `Sat | `Unknown ->

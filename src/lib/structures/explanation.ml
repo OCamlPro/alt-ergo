@@ -27,7 +27,7 @@
 
 module E = Expr
 
-type rootdep = { name : string; f : Expr.t; loc : Dolmen.Std.Loc.loc}
+type rootdep = { name : string; f : Expr.t; loc : Loc.t}
 
 type exp =
   | Literal of Satml_types.Atom.atom

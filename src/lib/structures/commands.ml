@@ -41,7 +41,7 @@ type sat_decl_aux =
   | Pop of int
 
 type sat_tdecl = {
-  st_loc : Dolmen.Std.Loc.loc;
+  st_loc : Loc.t;
   st_decl : sat_decl_aux
 }
 
@@ -68,4 +68,3 @@ let print_aux fmt = function
     Format.fprintf fmt "%s %a" s Expr.print e
 
 let print fmt decl = print_aux fmt decl.st_decl
-

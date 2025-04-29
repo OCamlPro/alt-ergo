@@ -25,23 +25,24 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* Sat entry *)
+(** Position in input files
 
-type sat_decl_aux =
-  | Decl of Id.typed
-  | Assume of string * Expr.t * bool
-  | PredDef of Expr.t * string (*name of the predicate*)
-  | Optimize of Objective.Function.t
-  | Query of string *  Expr.t * Ty.goal_sort
-  | ThAssume of Expr.th_elt
-  | Push of int
-  | Pop of int
+    This module defines a notion of location in files.
+    Note: this only specifies a position in an arbitrary file,
+          it does not contain information about the file itself.
+*)
 
-type sat_tdecl = {
-  st_loc : Loc.t;
-  st_decl : sat_decl_aux
-}
+type t
+(** The type of locations, a location is made up of two position in the file,
+    respectively corresponding to the beginning and end of the location. *)
 
-val src : Logs.src
+val from_dolmen_loc : Dolmen.Std.Loc.loc -> t
 
-val print : Format.formatter -> sat_tdecl -> unit
+val lexing_positions : t -> Lexing.position * Lexing.position
+
+val dummy : t
+(** A dummy location. *)
+
+val report : Format.formatter -> t -> unit
+(** Report a location on the given formatter, using standard
+    human-redable location reporting. *)

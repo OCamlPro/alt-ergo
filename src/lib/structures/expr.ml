@@ -71,7 +71,7 @@ and quantified = {
   binders : binders;
   sko_v : t list; (* This list has to be ordered for the skolemization. *)
   sko_vty : Ty.t list; (* This list has to be ordered for the skolemization. *)
-  loc : DStd.Loc.loc;
+  loc : Loc.t;
   kind : decl_kind;
 }
 

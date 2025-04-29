@@ -58,7 +58,7 @@ type model_error =
 
 (** All types of error that can be raised *)
 type error =
-  | Typing_error of Dolmen.Std.Loc.loc * typing_error
+  | Typing_error of Loc.t * typing_error
   (** Error used at typing *)
   | Run_error of run_error (** Error used during solving *)
   | Warning_as_error
@@ -81,7 +81,7 @@ exception Error of error
 val error : error -> 'a
 
 (** Raise the input {!typing_error} as {!Typing_error} *)
-val typing_error : typing_error -> Dolmen.Std.Loc.loc -> 'a
+val typing_error : typing_error -> Loc.t -> 'a
 
 (** Raise the input {!run_error} as {!Run_error} *)
 val run_error : run_error -> 'a
