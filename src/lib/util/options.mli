@@ -224,6 +224,10 @@ val set_input_format : input_format option -> unit
 *)
 val set_interpretation : interpretation -> unit
 
+(** [set_produce_models true] is [set_interpretation ILast], and
+    [set_produce_models false] is [set_interpretation INone]. *)
+val set_produce_models : bool -> unit
+
 (** Set [strict_mode] accessible with {!val:get_strict_mode}. *)
 val set_strict_mode : bool -> unit
 

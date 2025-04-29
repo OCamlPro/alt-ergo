@@ -372,6 +372,10 @@ let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_interpretation b = interpretation := b
+(* Temporary backport for Owi *)
+let set_produce_models b =
+  if b then interpretation := ILast
+  else interpretation := INone
 let set_strict_mode b = strict_mode := b
 let set_dump_models b = dump_models := b
 let set_interpretation_use_underscore b = interpretation_use_underscore := b
