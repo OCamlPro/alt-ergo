@@ -36,10 +36,11 @@ type t = Lexing.position * Lexing.position
 (** The type of locations, a location is made up of two position in the file,
     respectively corresponding to the beginning and end of the location. *)
 
+val from_dolmen_loc : Dolmen.Std.Loc.loc -> t
+
 val dummy : t
 (** A dummy location. *)
 
 val report : Format.formatter -> t -> unit
 (** Report a location on the given formatter, using standard
     human-redable location reporting. *)
-

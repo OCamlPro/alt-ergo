@@ -27,6 +27,8 @@
 
 type t = Lexing.position * Lexing.position
 
+let from_dolmen_loc = Dolmen.Std.Loc.lexing_positions
+
 let dummy = Lexing.dummy_pos, Lexing.dummy_pos
 
 let report fmt ((b, e) : t)  =
