@@ -47,7 +47,7 @@
   (modules
     ; frontend
     Cnf D_cnf D_loop D_state_option Input Frontend Parsed_interface Typechecker
-    Models
+    Models Translate
     ; reasoners
     Ac Arith Arrays_rel Bitv Ccx Shostak Relation
     Fun_sat Fun_sat_frontend Inequalities Bitv_rel Th_util Adt Adt_rel
