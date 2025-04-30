@@ -1,3 +1,8 @@
+## v2.6.2
+
+ - Expose some internal APIs for Owi (#1259)
+ - Provide forward-compatibility with future changes in Alt-Ergo 2.7
+
 ## v2.6.1
 
  - Consistent output of steps limit error (#1245)
