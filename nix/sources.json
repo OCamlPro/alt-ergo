@@ -26,15 +26,15 @@
         "version": "dev"
     },
     "nixpkgs": {
-        "branch": "release-24.05",
+        "branch": "nixos-25.05",
         "description": "Nix Packages collection",
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b260a95463a8f5f9094527c05329d79527e5a4aa",
-        "sha256": "0qlnwrha950kflbnfsl39mrdkkll3663bssjlxrrm7w1qnbbbp1n",
+        "rev": "36ab78dab7da2e4e27911007033713bab534187b",
+        "sha256": "072rx8y4bravd9163brjicqsb1i11f0n9v4bhikzbvc7wpb7kdds",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/b260a95463a8f5f9094527c05329d79527e5a4aa.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/36ab78dab7da2e4e27911007033713bab534187b.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "ocplib-simplex": {
