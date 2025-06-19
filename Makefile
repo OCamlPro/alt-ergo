@@ -227,7 +227,7 @@ dev-switch:
 
 js-deps:
 	opam install \
-		'js_of_ocaml>=5.4.0' \
+		'js_of_ocaml>=6.0.0' \
 		js_of_ocaml-lwt \
 		js_of_ocaml-ppx \
 		data-encoding \
