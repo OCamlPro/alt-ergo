@@ -36,6 +36,7 @@ depends: [
   "menhirCST" {= "20240715"}
   "menhirLib" {= "20240715"}
   "menhirSdk" {= "20240715"}
+  "ocaml-compiler-libs" {= "v0.12.4"}
   "ocaml-options-vanilla" {= "1"}
   "ocamlbuild" {= "0.16.1"}
   "ocamlfind" {= "1.9.8"}
