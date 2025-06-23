@@ -80,7 +80,7 @@ jobs:
           dune-cache: true
 
       - name: Install dependencies
-        run: opam exec -- make deps js-deps
+        run: opam exec -- make test-deps js-deps
 
       - name: Build the project
         run: opam exec -- dune build --profile ci @check
