@@ -98,7 +98,7 @@ jobs:
         run: git fetch --tags --force
 
       - name: Install static dependencies
-        run: sudo apk add zlib-static
+        run: sudo apk add zlib-static gmp-static
 
       - run: opam switch create . ocaml-system --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
