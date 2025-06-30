@@ -228,11 +228,12 @@ dev-switch:
 js-deps:
 	opam install \
 		'js_of_ocaml>=6.0.0' \
+		'js_of_ocaml<6.1.0' \
 		js_of_ocaml-lwt \
 		js_of_ocaml-ppx \
 		data-encoding \
 		'zarith_stubs_js>=v0.16.1' \
-		lwt_ppx -y
+		lwt_ppx
 
 deps:
 	opam install . --deps-only
