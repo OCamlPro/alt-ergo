@@ -100,6 +100,9 @@ jobs:
       - name: Install static dependencies
         run: sudo apk add zlib-static
 
+      - name: Update opam repository
+        run: opam update
+
       - run: opam switch create . ocaml-system --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
       - run: opam exec -- dune subst

@@ -65,7 +65,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   ppx_deriving
   (odoc :with-doc)
   ppx_deriving
-  (qcheck (and :with-test (= 0.22)))
+  (qcheck (and :with-test (= 0.25)))
  )
  (conflicts
   (ppxlib (< 0.30.0))

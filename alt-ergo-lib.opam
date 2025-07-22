@@ -29,7 +29,7 @@ depends: [
   "ppx_deriving"
   "odoc" {with-doc}
   "ppx_deriving"
-  "qcheck" {with-test & = "0.22"}
+  "qcheck" {with-test & = "0.25"}
 ]
 conflicts: [
   "ppxlib" {< "0.30.0"}
