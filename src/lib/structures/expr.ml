@@ -1095,7 +1095,7 @@ let[@inline always] is_value_term e =
 let mk_forall_ter =
   let env = F_Htbl.create 101 in
   fun new_q ->
-    let { name; main = f; _ } = new_q in
+    let { name = _name; main = f; _ } = new_q in
     (* when calling mk_forall_ter, binders should not contains
        ununsed binders. Eventual simplification is done in
        mk_forall_bis, which calls mk_forall_ter *)
@@ -1107,7 +1107,13 @@ let mk_forall_ter =
         let q = match form_view lem with Lemma q -> q | _ -> assert false in
         assert (equal q.main f (* should be true *));
         if compare_quant q new_q <> 0 then raise Exit;
-        Printer.print_wrn "(sub) axiom %s replaced with %s" name q.name;
+
+        (* CR bclement: the warning below could be re-introduced but only
+           conditionally (or at least have a maximum number of prints).
+
+           See https://github.com/OCamlPro/alt-ergo/issues/1287 *)
+        (* Printer.print_wrn "(sub) axiom %s replaced with %s" name q.name; *)
+
         lem
       with Not_found | Exit ->
         let d = new_q.main.depth in (* + 1 ?? *)
