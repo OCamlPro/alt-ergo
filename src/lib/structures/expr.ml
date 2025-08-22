@@ -890,8 +890,15 @@ let mk_trigger ?user:(from_user = false) ?depth ?(hyp = []) content =
 let mk_term s l ty =
   assert (match s with Sy.Lit _ | Sy.Form _ -> false | _ -> true);
   let d = match l with
-    | [] ->
-      1 (*no args ? depth = 1 (ie. current app s, ie constant)*)
+    | [] -> (
+        (* no args ? depth = 1 (ie. current app s, ie constant)
+
+           abstract constants must be smaller than other terms
+           so that they end up in models. *)
+        match s with
+        | Name { ns = Abstract; _ } -> 0 (* 3rd smallest depth *)
+        | _ -> 1
+      )
     | _ ->
       (* if args, d is 1 + max_depth of args (equals at least to 1 *)
       1 + List.fold_left (fun z t -> max z t.depth) 1 l
@@ -1077,7 +1084,8 @@ let rec is_model_term e =
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
-  | (True | False | Name _ | Int _ | Real _ | Bitv _), [] -> true
+  | Name { ns = Abstract; _ }, [] -> true
+  | (True | False | Int _ | Real _ | Bitv _), [] -> true
   | _ -> false
 
 let[@inline always] is_value_term e =

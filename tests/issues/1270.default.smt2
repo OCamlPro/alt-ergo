@@ -1,0 +1,8 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-sort t 0)
+(declare-fun q (t) Int)
+(declare-fun o (Int) t)
+(assert (forall ((i Int)) (or (> 0 0) (= i (q (o i))))))
+(check-sat)
+(get-model)
