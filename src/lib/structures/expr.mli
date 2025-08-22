@@ -437,7 +437,10 @@ val is_model_term : t -> bool
     A model term can be:
     - A constructor application involving only model terms,
     - A literal of a basic type (integer, real, boolean, unit or bitvector),
-    - A name. *)
+    - An abstract name, representing an abstract value (following SMT-LIB
+      terminology).
+
+    The definition of model term maps to value terms in the SMT-LIB standard. *)
 
 val save_cache: unit -> unit
 (** Saves the modules cache *)

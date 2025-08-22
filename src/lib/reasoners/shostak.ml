@@ -544,12 +544,6 @@ struct
       | _, Ty.Tint
       | _, Ty.Treal     -> ARITH.assign_value r distincts eq
       | _, Ty.Tbitv _   -> BITV.assign_value r distincts eq
-      | Term t, Ty.Tfarray _ ->
-        begin
-          if List.exists (fun (t,_) -> Expr.is_model_term t) eq then None
-          else
-            Some (Expr.fresh_name (Expr.type_info t), false)
-        end
 
       | _, Ty.Tadt _    when not (Options.get_disable_adts()) ->
         ADT.assign_value r distincts eq
@@ -575,7 +569,7 @@ struct
       | Term t, ty      -> (* case disable_adts() handled here *)
         if Expr.is_model_term t ||
            List.exists (fun (t,_) -> Expr.is_model_term t) eq then None
-        else Some (Expr.fresh_name ty, false) (* false <-> not a case-split *)
+        else Some (Expr.mk_abstract ty, false) (* false <-> not a case-split *)
       | _               ->
         (* There is no model-generation support for the AC symbols yet.
            The function [AC.assign_value] always returns [None]. *)

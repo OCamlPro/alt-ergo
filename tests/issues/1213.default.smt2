@@ -1,0 +1,18 @@
+(set-option :produce-models true)
+(set-logic ALL)
+(declare-datatypes ((List 1)) (
+  (par (T) (
+    (nil)
+    (cons (head T) (tail (List T)))
+  ))
+))
+(declare-sort T 0)
+(declare-const a (List T))
+(declare-const b (List T))
+(declare-const c (List T))
+(declare-const d (List T))
+(assert (= (tail a) b))
+(assert ((_ is cons) c))
+(assert (= (tail c) d))
+(check-sat)
+(get-model)
