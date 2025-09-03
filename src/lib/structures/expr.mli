@@ -610,9 +610,11 @@ module BV : sig
   val of_Z : size:int -> Z.t -> t
 
   (* Conversion from and to integers *)
-  val int2bv : int -> t -> t
+  val int_to_bv : int -> t -> t
 
-  val bv2nat : t -> t
+  val ubv_to_int : t -> t
+
+  val sbv_to_int : t -> t
 
   (* Constant symbols with all zeros and all ones *)
   val bvzero : int -> t

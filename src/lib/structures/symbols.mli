@@ -63,7 +63,8 @@ type operator =
   | BVshl
   | BVlshr
   | Int2BV of int
-  | BV2Nat
+  | Sbv_to_int
+  | Ubv_to_int
   (* FP *)
   | Float
   | FloatEbSb

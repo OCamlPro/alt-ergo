@@ -2991,21 +2991,26 @@ module BV = struct
       if i = 0 then t else concat (extract (i - 1) 0 t) (extract (m - 1) i t)
 
   (* int2bv and bv2nat *)
-  let int2bv n t =
-    (* Note: arith.ml calls [int2bv] in [make]. If additional simplifications
-       are added here, arith.ml must be updated as well. *)
+  let int_to_bv n t =
     match term_view t with
-    | { f = Op BV2Nat; xs = [t]; _ } ->
-      let m = match type_info t with Tbitv m -> m | _ -> assert false in
-      if m > n then extract (n - 1) 0 t else zero_extend (n - m) t
+    | { f = Op Ubv_to_int; xs = [s]; _ } ->
+      let m = match type_info s with Tbitv m -> m | _ -> assert false in
+      if m > n then extract (n - 1) 0 s else zero_extend (n - m) s
+    | { f = Op Sbv_to_int; xs = [s]; _ } ->
+      let m = match type_info s with Tbitv m -> m | _ -> assert false in
+      if m > n then extract (n - 1) 0 s else sign_extend (n - m) s
     | _ -> mk_term (Op (Int2BV n)) [t] (Tbitv n)
 
-  let bv2nat t =
-    (* Note: bitv.ml calls [bv2nat] in [make]. If additional simplifications are
-       added here, bitv.ml must be updated as well. *)
+  let ubv_to_int t =
     match term_view t with
     | { f = Op (Int2BV n); xs = [t]; _ } -> Ints.(t mod ~$$Z.(~$1 lsl n))
-    | _ -> mk_term (Op BV2Nat) [t] Tint
+    | _ -> mk_term (Op Ubv_to_int) [t] Tint
+
+  let sbv_to_int t =
+    (* No attempt at early simplification of [sbv_to_int (int_to_bv x)] since it
+       would introduce a disjunction. Note that theories will still simplify
+       constants. *)
+    mk_term (Op Sbv_to_int) [t] Tint
 
   (* Bit-wise operations *)
   let bvnot s = mk_term (Op BVnot) [s] (type_info s)
