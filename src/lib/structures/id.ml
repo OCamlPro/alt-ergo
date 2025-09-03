@@ -23,7 +23,7 @@ type typed = t * Ty.t list * Ty.t [@@deriving ord]
 let equal = Hstring.equal
 
 let pp ppf id =
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf
+  Dolmen.Smtlib2.Script.Poly.Print.symbol ppf
     (Dolmen.Std.Name.simple (Hstring.view id))
 
 let show id = Fmt.str "%a" pp id

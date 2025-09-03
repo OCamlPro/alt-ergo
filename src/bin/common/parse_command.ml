@@ -78,6 +78,7 @@ let format_parser s =
 let format_to_string = function
   | Native -> "native"
   | Smtlib2 `V2_6 -> "smtlib2-v2.6"
+  | Smtlib2 `V2_7 -> "smtlib2-v2.7"
   | Smtlib2 `Poly -> "psmt2"
   | Smtlib2 `Latest -> "smtlib2"
   | Why3 -> "why3"

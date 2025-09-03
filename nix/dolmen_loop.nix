@@ -1,13 +1,14 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage
+, gen, zarith, dolmen, dolmen_type }:
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   pname = "dolmen_loop";
-  inherit (ocamlPackages.dolmen) version src strictDeps;
+  inherit (dolmen) version src strictDeps;
 
   minimalOCamlVersion = "4.08";
   duneVersion = "3";
 
-  propagatedBuildInputs = [ ocamlPackages.gen ocamlPackages.dolmen_type ];
+  propagatedBuildInputs = [ gen dolmen_type zarith ];
 
-  meta = ocamlPackages.dolmen.meta;
+  meta = dolmen.meta;
 }

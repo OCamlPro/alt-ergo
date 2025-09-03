@@ -460,7 +460,7 @@ let smt_tag_builtins =
     | _ -> `Not_found
 
 let builtins =
-  fun _st (lang : Typer.lang) ->
+  fun _st (lang : Dolmen_loop.Typer_intf.lang) ->
   match lang with
   | `Logic Alt_ergo -> ae_fpa_builtins
   | `Logic (Smtlib2 _) ->
@@ -487,9 +487,9 @@ let clear_cache () = Cache.clear ()
 let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   let aux = dty_to_ty ~update ~is_var in
   match DT.view dty with
-  | `Prop | `App (`Builtin B.Prop, []) -> Ty.Tbool
-  | `Int  | `App (`Builtin B.Int, []) -> Ty.Tint
-  | `Real | `App (`Builtin B.Real, []) -> Ty.Treal
+  | `Prop | `App (`Builtin (B.Prop T), []) -> Ty.Tbool
+  | `Int  | `App (`Builtin (B.Arith Int), []) -> Ty.Tint
+  | `Real | `App (`Builtin (B.Arith Real), []) -> Ty.Treal
   | `Array (ity, vty) ->
     let ity = aux ity in
     let vty = aux vty in
@@ -665,7 +665,7 @@ end = struct
     match term_descr with
     | App (
         { term_descr =
-            Cst ({ builtin = B.Constructor { adt; case; }; _ } as cst); _
+            Cst ({ builtin = B.Adt Constructor { adt; case; }; _ } as cst); _
         }, _, pargs
       ) ->
       let vnames =
@@ -694,7 +694,7 @@ end = struct
       in
       Constr (cst, List.rev rev_args)
 
-    | Cst ({ builtin = B.Constructor _; _ } as cst) ->
+    | Cst ({ builtin = B.Adt Constructor _; _ } as cst) ->
       Constr (cst, [])
 
     | Var ({ builtin = B.Base; path; _ } as t_v) ->
@@ -772,10 +772,10 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
   assert (is_main_var x || is_main_var y);
   let op, t =
     match b with
-    | B.Lt t -> `Lt, t
-    | B.Leq t -> `Le, t
-    | B.Gt t -> `Gt, t
-    | B.Geq t -> `Ge, t
+    | B.Arith Lt t -> `Lt, t
+    | B.Arith Leq t -> `Le, t
+    | B.Arith Gt t -> `Gt, t
+    | B.Arith Geq t -> `Ge, t
     | _ ->
       Fmt.failwith
         "%aInternal error: invalid semantic bound"
@@ -784,7 +784,7 @@ let parse_semantic_bound ?(loc = Loc.dummy) ~var b x y =
   let sort = arith_ty t in
   let parse_bound_kind { DE.term_descr; _ } =
     match term_descr with
-    | Cst { builtin = (B.Integer s | B.Rational s | B.Decimal s); _ } ->
+    | Cst { builtin = B.Arith (Integer s | Rational s | Decimal s); _ } ->
       Sy.ValBnd (Numbers.Q.from_string s)
     | Var v -> Sy.VarBnd (Cache.find_var v)
     | _ ->
@@ -879,11 +879,11 @@ let rec mk_expr
       match term_descr with
       | Cst ({ builtin; _ } as tcst) ->
         begin match builtin with
-          | B.True -> E.vrai
-          | B.False -> E.faux
-          | B.Integer s -> E.int s
-          | B.Decimal s -> E.real s
-          | B.Bitvec s ->
+          | B.Prop True -> E.vrai
+          | B.Prop False -> E.faux
+          | B.Arith Integer s -> E.int s
+          | B.Arith Decimal s -> E.real s
+          | B.Bitv Binary_lit s ->
             let ty = dty_to_ty term_ty in
             E.bitv s ty
 
@@ -892,7 +892,7 @@ let rec mk_expr
             let ty = dty_to_ty term_ty in
             E.mk_term sy [] ty
 
-          | B.Constructor _ ->
+          | B.Adt Constructor _ ->
             let ty = dty_to_ty term_ty in
             E.mk_constr tcst [] ty
 
@@ -917,16 +917,16 @@ let rec mk_expr
         begin match builtin, args with
           (* Unary applications *)
 
-          | B.Neg, [x] ->
+          | B.Prop Neg, [x] ->
             E.neg (aux_mk_expr x)
 
-          | B.Minus mty, [x] ->
+          | B.Arith Minus mty, [x] ->
             let e1, ty =
               if mty == `Int then E.int "0", Ty.Tint else E.real "0",Ty.Treal
             in
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
 
-          | B.Destructor { case; field; adt; _ }, [x] ->
+          | B.Adt Destructor { case; field; adt; _ }, [x] ->
             begin match DT.definition adt with
               | Some (Adt { cases;  _ }) ->
                 begin match cases.(case).dstrs.(field) with
@@ -951,8 +951,8 @@ let rec mk_expr
                   DE.Ty.Const.print adt DE.Term.print app_term
             end
 
-          | B.Tester {
-              cstr = { builtin = B.Constructor { adt; _ }; _ } as cstr; _
+          | B.Adt Tester {
+              cstr = { builtin = B.Adt Constructor { adt; _ }; _ } as cstr; _
             }, [x] ->
             begin
               let ty_c =
@@ -989,64 +989,64 @@ let rec mk_expr
             semantic_trigger ~loc ?var trigger
 
           (* Unary functions from FixedSizeBitVectors theory *)
-          | B.Bitv_extract { i; j; _ }, [ x ] -> E.BV.extract i j (mk x)
-          | B.Bitv_not _, [ x ] -> E.BV.bvnot (mk x)
-          | B.Bitv_neg _, [ x ] -> E.BV.bvneg (mk x)
+          | B.Bitv Extract { i; j; _ }, [ x ] -> E.BV.extract i j (mk x)
+          | B.Bitv Not _, [ x ] -> E.BV.bvnot (mk x)
+          | B.Bitv Neg _, [ x ] -> E.BV.bvneg (mk x)
 
           (* Unary functions from QF_BV logic *)
-          | B.Bitv_repeat { k; _ }, [ x ] -> E.BV.repeat k (mk x)
-          | B.Bitv_zero_extend { k; _ }, [ x ] -> E.BV.zero_extend k (mk x)
-          | B.Bitv_sign_extend { k; _ }, [ x ] -> E.BV.sign_extend k (mk x)
-          | B.Bitv_rotate_left { i; _ }, [ x ] -> E.BV.rotate_left i (mk x)
-          | B.Bitv_rotate_right { i; _ }, [ x ] -> E.BV.rotate_right i (mk x)
+          | B.Bitv Repeat { k; _ }, [ x ] -> E.BV.repeat k (mk x)
+          | B.Bitv Zero_extend { k; _ }, [ x ] -> E.BV.zero_extend k (mk x)
+          | B.Bitv Sign_extend { k; _ }, [ x ] -> E.BV.sign_extend k (mk x)
+          | B.Bitv Rotate_left { i; _ }, [ x ] -> E.BV.rotate_left i (mk x)
+          | B.Bitv Rotate_right { i; _ }, [ x ] -> E.BV.rotate_right i (mk x)
 
           (* Binary applications *)
 
-          | B.Select, [ x; y ] ->
+          | B.Array Select, [ x; y ] ->
             let rty = dty_to_ty term_ty in
             E.mk_term (Sy.Op Sy.Get) [aux_mk_expr x; aux_mk_expr y] rty
 
           (* Binary functions from FixedSizeBitVectors theory *)
-          | B.Bitv_concat _, [ x; y ] -> E.BV.concat (mk x) (mk y)
-          | B.Bitv_and _, [ x; y ] -> E.BV.bvand (mk x) (mk y)
-          | B.Bitv_or _, [ x; y ] -> E.BV.bvor (mk x) (mk y)
-          | B.Bitv_add _, [ x; y ] -> E.BV.bvadd (mk x) (mk y)
-          | B.Bitv_mul _, [ x; y ] -> E.BV.bvmul (mk x) (mk y)
-          | B.Bitv_udiv _, [ x; y ] -> E.BV.bvudiv (mk x) (mk y)
-          | B.Bitv_urem _, [ x; y ] -> E.BV.bvurem (mk x) (mk y)
-          | B.Bitv_shl _, [ x; y ] -> E.BV.bvshl (mk x) (mk y)
-          | B.Bitv_lshr _, [ x; y ] -> E.BV.bvlshr (mk x) (mk y)
-          | B.Bitv_ult _, [ x; y ] -> E.BV.bvult (mk x) (mk y)
+          | B.Bitv Concat _, [ x; y ] -> E.BV.concat (mk x) (mk y)
+          | B.Bitv And _, [ x; y ] -> E.BV.bvand (mk x) (mk y)
+          | B.Bitv Or _, [ x; y ] -> E.BV.bvor (mk x) (mk y)
+          | B.Bitv Add _, [ x; y ] -> E.BV.bvadd (mk x) (mk y)
+          | B.Bitv Mul _, [ x; y ] -> E.BV.bvmul (mk x) (mk y)
+          | B.Bitv Udiv _, [ x; y ] -> E.BV.bvudiv (mk x) (mk y)
+          | B.Bitv Urem _, [ x; y ] -> E.BV.bvurem (mk x) (mk y)
+          | B.Bitv Shl _, [ x; y ] -> E.BV.bvshl (mk x) (mk y)
+          | B.Bitv Lshr _, [ x; y ] -> E.BV.bvlshr (mk x) (mk y)
+          | B.Bitv Ult _, [ x; y ] -> E.BV.bvult (mk x) (mk y)
 
           (* Binary functions from QF_BV logic *)
-          | B.Bitv_nand _, [ x; y ] -> E.BV.bvnand (mk x) (mk y)
-          | B.Bitv_nor _, [ x; y ] -> E.BV.bvnor (mk x) (mk y)
-          | B.Bitv_xor _, [ x; y ] -> E.BV.bvxor (mk x) (mk y)
-          | B.Bitv_xnor _, [ x; y ] -> E.BV.bvxnor (mk x) (mk y)
-          | B.Bitv_comp _, [ x; y ] -> E.BV.bvcomp (mk x) (mk y)
-          | B.Bitv_sub _, [ x; y ] -> E.BV.bvsub (mk x) (mk y)
-          | B.Bitv_sdiv _, [ x; y ] -> E.BV.bvsdiv (mk x) (mk y)
-          | B.Bitv_srem _, [ x; y ] -> E.BV.bvsrem (mk x) (mk y)
-          | B.Bitv_smod _, [ x; y ] -> E.BV.bvsmod (mk x) (mk y)
-          | B.Bitv_ashr _, [ x; y ] -> E.BV.bvashr (mk x) (mk y)
+          | B.Bitv Nand _, [ x; y ] -> E.BV.bvnand (mk x) (mk y)
+          | B.Bitv Nor _, [ x; y ] -> E.BV.bvnor (mk x) (mk y)
+          | B.Bitv Xor _, [ x; y ] -> E.BV.bvxor (mk x) (mk y)
+          | B.Bitv Xnor _, [ x; y ] -> E.BV.bvxnor (mk x) (mk y)
+          | B.Bitv Comp _, [ x; y ] -> E.BV.bvcomp (mk x) (mk y)
+          | B.Bitv Sub _, [ x; y ] -> E.BV.bvsub (mk x) (mk y)
+          | B.Bitv Sdiv _, [ x; y ] -> E.BV.bvsdiv (mk x) (mk y)
+          | B.Bitv Srem _, [ x; y ] -> E.BV.bvsrem (mk x) (mk y)
+          | B.Bitv Smod _, [ x; y ] -> E.BV.bvsmod (mk x) (mk y)
+          | B.Bitv Ashr _, [ x; y ] -> E.BV.bvashr (mk x) (mk y)
 
-          | B.Bitv_ule _, [ x; y ] -> E.BV.bvule (mk x) (mk y)
-          | B.Bitv_ugt _, [ x; y ] -> E.BV.bvugt (mk x) (mk y)
-          | B.Bitv_uge _, [ x; y ] -> E.BV.bvuge (mk x) (mk y)
-          | B.Bitv_slt _, [ x; y ] -> E.BV.bvslt (mk x) (mk y)
-          | B.Bitv_sle _, [ x; y ] -> E.BV.bvsle (mk x) (mk y)
-          | B.Bitv_sgt _, [ x; y ] -> E.BV.bvsgt (mk x) (mk y)
-          | B.Bitv_sge _, [ x; y ] -> E.BV.bvsge (mk x) (mk y)
+          | B.Bitv Ule _, [ x; y ] -> E.BV.bvule (mk x) (mk y)
+          | B.Bitv Ugt _, [ x; y ] -> E.BV.bvugt (mk x) (mk y)
+          | B.Bitv Uge _, [ x; y ] -> E.BV.bvuge (mk x) (mk y)
+          | B.Bitv Slt _, [ x; y ] -> E.BV.bvslt (mk x) (mk y)
+          | B.Bitv Sle _, [ x; y ] -> E.BV.bvsle (mk x) (mk y)
+          | B.Bitv Sgt _, [ x; y ] -> E.BV.bvsgt (mk x) (mk y)
+          | B.Bitv Sge _, [ x; y ] -> E.BV.bvsge (mk x) (mk y)
 
           (* Ternary applications *)
 
-          | B.Ite, [ x; y; z ] ->
+          | B.Prop Ite, [ x; y; z ] ->
             let e1 = aux_mk_expr x in
             let e2 = aux_mk_expr y in
             let e3 = aux_mk_expr z in
             E.mk_ite e1 e2 e3
 
-          | B.Store, [ x; y; z ] ->
+          | B.Array Store, [ x; y; z ] ->
             let ty = dty_to_ty term_ty in
             let e1 = aux_mk_expr x in
             let e2 = aux_mk_expr y in
@@ -1061,25 +1061,25 @@ let rec mk_expr
             let l = List.map (fun t -> aux_mk_expr t) args in
             E.mk_term sy l ty
 
-          | B.And, h :: (_ :: _ as t) ->
+          | B.Prop And, h :: (_ :: _ as t) ->
             List.fold_left (
               fun acc x ->
                 E.mk_and acc (aux_mk_expr x) false
             ) (aux_mk_expr h) t
 
-          | B.Or, h :: (_ :: _ as t) ->
+          | B.Prop Or, h :: (_ :: _ as t) ->
             List.fold_left (
               fun acc x ->
                 E.mk_or acc (aux_mk_expr x) false
             ) (aux_mk_expr h) t
 
-          | B.Xor, h :: (_ :: _ as t) ->
+          | B.Prop Xor, h :: (_ :: _ as t) ->
             List.fold_left (
               fun acc x ->
                 E.mk_xor acc (aux_mk_expr x)
             ) (aux_mk_expr h) t
 
-          | B.Imply, _ ->
+          | B.Prop Imply, _ ->
             begin match List.rev_map aux_mk_expr args with
               | h :: t ->
                 List.fold_left (
@@ -1089,13 +1089,13 @@ let rec mk_expr
               | _ -> assert false
             end
 
-          | B.Equiv, h :: (_ :: _ as t) ->
+          | B.Prop Equiv, h :: (_ :: _ as t) ->
             List.fold_left (
               fun acc x ->
                 E.mk_iff acc (aux_mk_expr x)
             ) (aux_mk_expr h) t
 
-          | B.Lt ty, h1 :: h2 :: t ->
+          | B.Arith Lt ty, h1 :: h2 :: t ->
             let (res, _) =
               List.fold_left (
                 fun (acc, curr) next ->
@@ -1105,7 +1105,7 @@ let rec mk_expr
               ) (mk_lt aux_mk_expr ty h1 h2, h2) t
             in res
 
-          | B.Gt ty, h1 :: h2 :: t ->
+          | B.Arith Gt ty, h1 :: h2 :: t ->
             let (res, _) =
               List.fold_left (
                 fun (acc, curr) next ->
@@ -1115,7 +1115,7 @@ let rec mk_expr
               ) (mk_gt aux_mk_expr ty h1 h2, h2) t
             in res
 
-          | B.Leq _, h1 :: h2 :: t ->
+          | B.Arith Leq _, h1 :: h2 :: t ->
             let (res, _) =
               List.fold_left (
                 fun (acc, curr) next ->
@@ -1131,7 +1131,7 @@ let rec mk_expr
               ) t
             in res
 
-          | B.Geq _, h1 :: h2 :: t ->
+          | B.Arith Geq _, h1 :: h2 :: t ->
             let (res, _) =
               List.fold_left (
                 fun (acc, curr) next ->
@@ -1147,45 +1147,45 @@ let rec mk_expr
               ) t
             in res
 
-          | B.Add ty, _ ->
+          | B.Arith Add ty, _ ->
             let rty = if ty == `Int then Ty.Tint else Treal in
             let sy = Sy.Op Sy.Plus in
             mk_add aux_mk_expr sy rty args
 
-          | B.Sub ty, h :: t ->
+          | B.Arith Sub ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
             let sy = Sy.Op Sy.Minus in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
-          | B.Mul ty, h :: t ->
+          | B.Arith Mul ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
             let sy = Sy.Op Sy.Mult in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
-          | (B.Div _ | B.Div_e (`Real | `Rat)), h :: t ->
+          | B.Arith (Div _ | Div_e (`Real | `Rat)), h :: t ->
             let sy = Sy.Op Sy.Div in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] Ty.Treal) (aux_mk_expr h) args
 
-          | B.Div_e `Int, h :: t ->
+          | B.Arith Div_e `Int, h :: t ->
             let sy = Sy.Op Sy.Div in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] Ty.Tint) (aux_mk_expr h) args
 
-          | B.Modulo_e ty, h :: t ->
+          | B.Arith Modulo_e ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
             let sy = Sy.Op Sy.Modulo in
             let args = List.rev_map aux_mk_expr (List.rev t) in
             List.fold_left
               (fun x y -> E.mk_term sy [x; y] rty) (aux_mk_expr h) args
 
-          | B.Pow ty, h :: t ->
+          | B.Arith Pow ty, h :: t ->
             let rty = if ty == `Int then Ty.Tint else Treal in
             let sy = Sy.Op Sy.Pow in
             let args = List.rev_map aux_mk_expr (List.rev t) in
@@ -1194,7 +1194,7 @@ let rec mk_expr
 
           | B.Equal, h1 :: h2 :: t ->
             begin match h1.term_ty.ty_descr with
-              | TyApp ({builtin = B.Prop; _ }, _) ->
+              | TyApp ({builtin = B.Prop T; _ }, _) ->
                 let (res, _) =
                   List.fold_left (
                     fun (acc, curr) next ->
@@ -1230,7 +1230,7 @@ let rec mk_expr
           | B.Distinct, _ ->
             E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
 
-          | B.Constructor _, _ ->
+          | B.Adt Constructor _, _ ->
             let ty = dty_to_ty term_ty in
             let sy = Sy.constr tcst in
             let l = List.map (fun t -> aux_mk_expr t) args in
@@ -1254,13 +1254,13 @@ let rec mk_expr
           | Integer_round, _ -> op Integer_round
           | Abs_real, _ -> op Abs_real
           | Sqrt_real, _ -> op Sqrt_real
-          | B.Bitv_of_int { n }, _ -> op (Int2BV n)
-          | B.Bitv_to_nat { n = _ }, _ -> op BV2Nat
+          | B.Bitv Of_int { n }, _ -> op (Int2BV n)
+          | B.Bitv To_int { n = _ ; signed = false }, _ -> op BV2Nat
           | Sqrt_real_default, _ -> op Sqrt_real_default
           | Sqrt_real_excess, _ -> op Sqrt_real_excess
-          | B.Abs, _ -> op Abs_int
-          | B.Floor_to_int `Real, _ -> op Int_floor
-          | B.Is_int `Real, _ -> op Real_is_int
+          | B.Arith Abs, _ -> op Abs_int
+          | B.Arith Floor_to_int `Real, _ -> op Int_floor
+          | B.Arith Is_int `Real, _ -> op Real_is_int
           | Ceiling_to_int `Real, _ -> op Int_ceil
           | Max_real, _ -> op Max_real
           | Min_real, _ -> op Min_real
@@ -1270,11 +1270,11 @@ let rec mk_expr
           | Not_theory_constant, _ -> op Not_theory_constant
           | Is_theory_constant, _ -> op Is_theory_constant
           | Linear_dependency, _ -> op Linear_dependency
-          | B.RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
-          | B.RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
-          | B.RoundTowardPositive, _ -> mk_rounding Up
-          | B.RoundTowardNegative, _ -> mk_rounding Down
-          | B.RoundTowardZero, _ -> mk_rounding ToZero
+          | B.Float RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
+          | B.Float RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
+          | B.Float RoundTowardPositive, _ -> mk_rounding Up
+          | B.Float RoundTowardNegative, _ -> mk_rounding Down
+          | B.Float RoundTowardZero, _ -> mk_rounding ToZero
           | _, _ -> unsupported "Application Term %a" DE.Term.print term
         end
 
@@ -1428,7 +1428,7 @@ let rec mk_expr
       end
 
     (* open-ended in interval *)
-    | (B.Lt _ | B.Leq _ | B.Gt _ | B.Geq _) as b, [x; y] ->
+    | B.Arith (Lt _ | Leq _ | Gt _ | Geq _) as b, [x; y] ->
       let main_var, main_expr = Option.get var in
       let qm = Sy.Unbounded in
       let sort, lb, ub = parse_semantic_bound ~loc ~var:main_var b x y in
@@ -1444,7 +1444,7 @@ let rec mk_expr
       E.mk_term (Sy.mk_in lb ub) [aux_mk_expr main_expr] Ty.Tbool
 
     (* conjunction *)
-    | B.And, [x; y] ->
+    | B.Prop And, [x; y] ->
       let main_var, main_expr = Option.get var in
       begin match destruct_app x, destruct_app y with
         | Some (b, [l; r]), Some (b', [l'; r']) ->
@@ -1544,27 +1544,27 @@ let pp_query ?(hyps =[]) t =
       elim_toplevel_forall bnot body
 
     | App (
-        { term_descr = Cst { builtin = B.Neg; _ }; _ },
+        { term_descr = Cst { builtin = B.Prop Neg; _ }; _ },
         _tyl, [x]
       ) ->
       elim_toplevel_forall (not bnot) x
 
     | App (
-        { term_descr = Cst { builtin = B.And; _ }; _ },
+        { term_descr = Cst { builtin = B.Prop And; _ }; _ },
         tyl, es
       ) when not bnot ->
       let es = List.map (elim_toplevel_forall false) es in
       DE.Term.apply_cst DE.Term.Const.and_ tyl es
 
     | App (
-        { term_descr = Cst { builtin = B.Or;  _ }; _ },
+        { term_descr = Cst { builtin = B.Prop Or;  _ }; _ },
         tyl, es
       ) when bnot ->
       let es = List.map (elim_toplevel_forall true) es in
       DE.Term.apply_cst DE.Term.Const.and_ tyl es
 
     | App (
-        { term_descr = Cst { builtin = B.Imply; _ }; _ },
+        { term_descr = Cst { builtin = B.Prop Imply; _ }; _ },
         tyl, [x; y]
       ) when bnot ->
       let e1 = elim_toplevel_forall false x in
@@ -1579,7 +1579,7 @@ let pp_query ?(hyps =[]) t =
   let rec intro_hypothesis DE.({ term_descr; _ } as t) =
     match term_descr with
     | App (
-        { term_descr = Cst { builtin = B.Imply; _ }; _ }, _, [x; y]
+        { term_descr = Cst { builtin = B.Prop Imply; _ }; _ }, _, [x; y]
       ) ->
       let nx = elim_toplevel_forall false x in
       let axioms, goal = intro_hypothesis y in
@@ -1787,7 +1787,8 @@ let make file acc stmt =
       C.{ st_decl; st_loc } :: acc
 
     (* Function and predicate definitions *)
-    | { contents = `Defs defs; _ } ->
+    | { contents = `Defs (_recursive, defs); _ } ->
+      (* CR bclement: Do not assume that all definitions are recursive. *)
       (* For a mutually recursive definition, we have to add all the function
          names in a row. *)
       List.iter (fun (def : Typer_Pipe.def) ->
@@ -1882,8 +1883,12 @@ let make file acc stmt =
             assert false
         ) defs
 
-    | {contents = `Decls [td]; _ } ->
+    | {contents = `Decls (_recursive, [td]); _ } ->
       begin match td with
+        | `Implicit_type_var ->
+          (* CR bclement: Ask guillaume *)
+          acc
+
         | `Type_decl (td, _def) ->
           mk_ty_decl td;
           acc
@@ -1892,7 +1897,7 @@ let make file acc stmt =
           C.{ st_decl = Decl (mk_term_decl td); st_loc } :: acc
       end
 
-    | {contents = `Decls dcl; _ } ->
+    | {contents = `Decls (_recursive, dcl); _ } ->
       let rec aux ty_decls tdl acc =
         (* for now, when acc has more than one element it is assumed that the
            types are mutually recursive. Which is not necessarily the case.
@@ -1910,6 +1915,9 @@ let make file acc stmt =
         | `Type_decl (td, _def) :: tl ->
           aux (td :: ty_decls) tl acc
 
+        | `Implicit_type_var :: tl ->
+          aux ty_decls tl acc
+
         | [] ->
           begin
             let () =
@@ -1923,7 +1931,7 @@ let make file acc stmt =
       in
       aux [] dcl acc
 
-    | { contents = `Set_logic _ | `Set_info _ | `Get_info _ ; _ } -> acc
+    | { contents = `Set_logic _ | `Set_info _ | `Get_info _ | `End; _ } -> acc
 
     | { contents = #Typer_Pipe.typechecked; _ } as stmt ->
       (* TODO:

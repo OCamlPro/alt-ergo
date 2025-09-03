@@ -50,6 +50,9 @@ type smtlib2_version =
   | `V2_6
   (** {{: https://smt-lib.org/papers/smt-lib-reference-v2.6-r2021-05-12.pdf }
       The SMT-LIB standard: Version 2.6} *)
+  | `V2_7
+  (** {{: https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf }
+      The SMT-LIB standard: Version 2.7} *)
   | `Poly
     (** Polymorphic extension of the SMT-LIB standard.
 

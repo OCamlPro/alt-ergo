@@ -1279,7 +1279,7 @@ let has_attached_order id =
 
 let mk_constr c xs ty =
   match c.DE.builtin with
-  | DStd.Builtin.Constructor _ ->
+  | DStd.Builtin.Adt Constructor _ ->
     (* This assertion ensures that the API of the [Nest] module have been
        correctly used, that is [Nest.attach_orders] have been called on
        the nest of [id] if [id] is a constructor of ADT. *)
@@ -1291,7 +1291,7 @@ let mk_constr c xs ty =
 
 let mk_tester c t =
   match c.DE.builtin with
-  | DStd.Builtin.Constructor _ ->
+  | DStd.Builtin.Adt Constructor _ ->
     mk_builtin ~is_pos:true (Sy.IsConstr c) [t]
   | _ ->
     Fmt.invalid_arg "expected a constructor, got %a" DE.Id.print c
