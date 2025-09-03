@@ -383,9 +383,9 @@ module Shostak (X : ALIEN) = struct
     match sy with
     | Sy.Bitv _
     | Op
-        ( Concat | Extract _ | Sign_extend _ | Repeat _ | BV2Nat | BVnot | BVand
-        | BVor | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl
-        | BVlshr ) ->
+        ( Concat | Extract _ | Sign_extend _ | Repeat _ | Sbv_to_int
+        | Ubv_to_int | BVnot | BVand | BVor | BVxor | BVadd | BVsub | BVmul
+        | BVudiv | BVurem | BVshl | BVlshr ) ->
       true
     | _ -> false
 
@@ -1371,7 +1371,7 @@ module Shostak (X : ALIEN) = struct
 
   let make t =
     match E.term_view t with
-    | { f = Op BV2Nat; _ } -> X.term_embed t, []
+    | { f = Op (Sbv_to_int | Ubv_to_int); _ } -> X.term_embed t, []
     | _ ->
       let r, ctx = Canon.make t in
       is_mine r, ctx

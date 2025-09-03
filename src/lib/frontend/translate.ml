@@ -1127,9 +1127,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               _ ) ->
             invalid_app_term ()
           (* Unary functions from SMT-LIB 2.7 *)
-          | Of_int { n }, _ -> op (Int2BV n)
-          | To_int { n = _; signed = false }, _ -> op BV2Nat
-          | To_int { n = _; signed = true }, _ -> unsupported_app_term ()
+          | Of_int { n }, [x] -> E.BV.int_to_bv n (mk x)
+          | To_int { n = _; signed }, [x] ->
+            if signed then E.BV.sbv_to_int (mk x) else E.BV.ubv_to_int (mk x)
+          | (Of_int _ | To_int _), _ -> invalid_app_term ()
           (* Binary functions from FixedSizeBitVectors theory *)
           | Concat _, [x; y] -> E.BV.concat (mk x) (mk y)
           | And _, [x; y] -> E.BV.bvand (mk x) (mk y)
