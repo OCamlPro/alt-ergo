@@ -54,5 +54,5 @@ val make :
 
 val builtins :
   Dolmen_loop.State.t ->
-  D_loop.Typer.lang ->
+  Dolmen_loop.Typer_intf.lang ->
   Dolmen_loop.Typer.T.builtin_symbols

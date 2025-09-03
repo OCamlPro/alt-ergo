@@ -138,7 +138,7 @@ let add_if_named
     ~(acc : DStd.Expr.term Util.MS.t)
     (stmt : Typer_Pipe.typechecked D_loop.Typer_Pipe.stmt) =
   match stmt.contents with
-  | `Defs [`Term_def ({name = Simple n; _}, id, _, _, t)] ->
+  | `Defs (_recursive, [`Term_def ({name = Simple n; _}, id, _, _, t)]) ->
     begin
       match DStd.Expr.Id.get_tag id DStd.Expr.Tags.named with
       | None -> acc
@@ -404,7 +404,7 @@ let process_source ?selector_inst ~print_status src =
       ~interactive_prompt
     |> Typer.init
       ~additional_builtins:Translate.builtins
-      ~extension_builtins:[Typer.Ext.bv2nat]
+      ~extension_builtins:[Dolmen_loop.Typer.Ext.bvconv]
     |> Typer_Pipe.init ~type_check
   in
 
@@ -608,7 +608,9 @@ let process_source ?selector_inst ~print_status src =
      issue in Dolmen, we can replace the [loc] argument by the [st_loc]
      value built in [handle_stmt]. *)
   let handle_custom_statement ~loc id args st =
-    let args = List.map Dolmen_type.Core.Smtlib2.sexpr_as_term args in
+    let args =
+      List.map (Dolmen_type.Core.Smtlib2.sexpr_as_term (`Script `Poly)) args
+    in
     let logic_file = State.get State.logic_file st in
     let st, terms = Typer.terms st ~input:(`Logic logic_file) ~loc args in
     match id, terms.ret with
@@ -638,46 +640,53 @@ let process_source ?selector_inst ~print_status src =
       st
   in
 
-  let handle_get_info ~loc (st : State.t) (name: string) =
-    let print_std =
-      fun (type a) (pp :a Fmt.t) (a : a) ->
-        Printer.print_std "(%s %a)" name pp a
-    in
-    let pp_reason_unknown st =
-      let err () =
-        recoverable_error ~loc "Invalid (get-info :reason-unknown)"
+  let handle_get_info ~loc (st : State.t) (info : DStd.Term.t) =
+    match info with
+    | { term = Builtin _ | App _ | Binder _ | Match _ | Colon _; _ }
+    | { term = Symbol { ns = (Var | Sort | Term | Decl | Track | Value _); _ }
+      ; _ }
+    | { term = Symbol { name = Indexed _ | Qualified _; ns = Attr }; _ } ->
+      unsupported_opt "get-info"
+    | { term = Symbol { name = Simple name; ns = Attr }; _ } ->
+      let print_std =
+        fun (type a) (pp :a Fmt.t) (a : a) ->
+          Printer.print_std "(%s %a)" name pp a
       in
-      match State.get partial_model_key st with
-      | None -> err ()
-      | Some Model ((module SAT), sat) ->
-        match SAT.get_unknown_reason sat with
+      let pp_reason_unknown st =
+        let err () =
+          recoverable_error ~loc "Invalid (get-info :reason-unknown)"
+        in
+        match State.get partial_model_key st with
         | None -> err ()
-        | Some ur ->
-          print_std Sat_solver_sig.pp_smt_unknown_reason ur
-    in
-    match name with
-    | ":authors" ->
-      print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo developers"
-    | ":error-behavior" ->
-      let behavior =
-        if Options.get_exit_on_error () then
-          "immediate-exit"
-        else
-          "continued-execution"
+        | Some Model ((module SAT), sat) ->
+          match SAT.get_unknown_reason sat with
+          | None -> err ()
+          | Some ur ->
+            print_std Sat_solver_sig.pp_smt_unknown_reason ur
       in
-      print_std Fmt.string behavior
-    | ":name" ->
-      print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo"
-    | ":reason-unknown" ->
-      pp_reason_unknown st
-    | ":version" ->
-      print_std Fmt.string Version._version
-    | ":all-statistics" ->
-      Printer.print_std "%t" Profiling.print_statistics
-    | ":assertion-stack-levels" ->
-      unsupported_opt name
-    | _ ->
-      unsupported_opt name
+      match name with
+      | ":authors" ->
+        print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo developers"
+      | ":error-behavior" ->
+        let behavior =
+          if Options.get_exit_on_error () then
+            "immediate-exit"
+          else
+            "continued-execution"
+        in
+        print_std Fmt.string behavior
+      | ":name" ->
+        print_std (fun fmt -> Fmt.pf fmt "%S") "Alt-Ergo"
+      | ":reason-unknown" ->
+        pp_reason_unknown st
+      | ":version" ->
+        print_std Fmt.string Version._version
+      | ":all-statistics" ->
+        Printer.print_std "%t" Profiling.print_statistics
+      | ":assertion-stack-levels" ->
+        unsupported_opt name
+      | _ ->
+        unsupported_opt name
   in
 
   (* Fetches the term value in the current model. *)
@@ -921,7 +930,18 @@ let process_source ?selector_inst ~print_status src =
       let preludes =
         theory_preludes @
         List.map (fun path ->
-            let dir, source = State.split_input (`File path) in
+            (* Using [`File] sources with preludes is currently broken,
+               see https://github.com/Gbury/dolmen/issues/248
+               and https://github.com/OCamlPro/alt-ergo/issues/1330 *)
+            let dir, source =
+              let content =
+                let ch = open_in_bin path in
+                let s = really_input_string ch (in_channel_length ch) in
+                close_in ch;
+                s
+              in
+              Filename.dirname path, (`Raw (Filename.basename path, content))
+            in
             State.mk_file dir source) (Options.get_preludes ())
       in
       let g =

@@ -1,23 +1,20 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage
+, menhir, hmap, menhirLib, fmt, uutf, dune-site }:
 
-let
-  dolmen = sources.dolmen;
-in
-
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "dolmen";
-  inherit (dolmen) version;
+  inherit (sources.dolmen) version;
 
   minimalOCamlVersion = "4.08";
   duneVersion = "3";
 
-  src = dolmen;
+  src = sources.dolmen;
 
-  nativeBuildInputs = [ ocamlPackages.menhir ];
-  propagatedBuildInputs = with ocamlPackages; [ hmap menhirLib fmt ];
+  nativeBuildInputs = [ menhir ];
+  propagatedBuildInputs = [ hmap menhirLib fmt uutf dune-site ];
 
   meta = with lib; {
-    inherit (dolmen) homepage description;
+    inherit (sources.dolmen) homepage description;
   };
 }

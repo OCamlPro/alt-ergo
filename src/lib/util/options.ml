@@ -111,7 +111,7 @@ end
 type instantiation_heuristic = INormal | IAuto | IGreedy
 
 (* As in Dolmen *)
-type smtlib2_version = [ `Latest | `V2_6 | `Poly ]
+type smtlib2_version = [ `Latest | `V2_6 | `V2_7 | `Poly ]
 
 type input_format =
   | Native

@@ -171,7 +171,7 @@ module Domains = struct
 
   let is_enum_constr DE.{ builtin; _ } =
     match builtin with
-    | B.Constructor { adt ; case } ->
+    | B.Adt (B.Adt.Constructor { adt ; case }) ->
       begin match DE.Ty.definition adt with
         | Some Adt { cases; _ } ->
           Array.length cases.(case).dstrs = 0

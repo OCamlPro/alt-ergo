@@ -320,7 +320,7 @@ let print_bound fmt b = Format.fprintf fmt "%s" (string_of_bound b)
 
 let pp_name ppf (_ns, s) =
   (* Names are pre-mangled *)
-  Dolmen.Smtlib2.Script.Poly.Print.id ppf (Dolmen.Std.Name.simple s)
+  Dolmen.Smtlib2.Script.Poly.Print.symbol ppf (Dolmen.Std.Name.simple s)
 
 module AEPrinter = struct
   let pp_operator ppf op =
@@ -492,7 +492,7 @@ module SmtPrinter = struct
     | Float -> Fmt.pf ppf "ae.round"
 
     (* Not in the SMT-LIB standard *)
-    | Int2BV n -> Fmt.pf ppf "(_ int2bv %d)" n
+    | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "ae.linear_dependency"
