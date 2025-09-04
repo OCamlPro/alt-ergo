@@ -238,29 +238,6 @@ module BV2Nat = struct
     Fmt.pf ppf "@;<2>@[<v>%a@]"
       (Fmt.iter_bindings iter_ext pp_bv2nat_ext) t
 
-  let empty =
-    { bv2nat = MX.empty
-    ; nat2bv = P.Map.empty
-    ; use = MX.empty
-    ; eqs = [] }
-
-  let fold_ext x f t acc =
-    match MX.find x t.bv2nat with
-    | exception Not_found -> acc
-    | m -> Extraction.Map.fold (f x) m acc
-
-  let fold_use_p x f t acc =
-    assert (X.is_a_leaf x);
-    match MX.find x t.use with
-    | exception Not_found -> acc
-    | nps ->
-      P.Set.fold (fun p acc ->
-          let v =
-            try P.Map.find p t.nat2bv with Not_found -> assert false
-          in
-          f p v acc
-        ) nps acc
-
   let add_use_p p use =
     List.fold_left (fun use r ->
         MX.update r (function
@@ -269,42 +246,19 @@ module BV2Nat = struct
           ) use
       ) use (P.leaves p)
 
-  let remove_use_p p use =
-    List.fold_left (fun use r ->
-        MX.update r (function
-            | None -> assert false
-            | Some ps ->
-              let ps = P.Set.remove p ps in
-              if P.Set.is_empty ps then None else Some ps
-          ) use
-      ) use (P.leaves p)
-
   let find_ext bv ext bv2nat =
     Extraction.Map.find ext @@ MX.find bv @@ bv2nat
+
+  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], or raises
+     [Not_found] if there is none. *)
+  let find_asr bv ofs t =
+    find_ext bv (Extraction.shift_right ~size:(bitwidth bv) ofs) t.bv2nat
 
   let add_ext ~ex bv ext p bv2nat =
     MX.update bv (function
         | None -> Some (Extraction.Map.singleton ext (p, ex))
         | Some m -> Some (Extraction.Map.add ext (p, ex) m)
       ) bv2nat
-
-  let remove_aux bv ext p t =
-    let use = remove_use_p p t.use in
-    let nat2bv = P.Map.remove p t.nat2bv in
-    let bv2nat =
-      MX.update bv (function
-          | None -> None
-          | Some m ->
-            let m = Extraction.Map.remove ext m in
-            if Extraction.Map.is_empty m then None else Some m
-        ) t.bv2nat
-    in
-    { use ; nat2bv ; bv2nat ; eqs = t.eqs }
-
-  (* Returns the polynomial associated with [bv2nat(bv asr ofs)], or raises
-     [Not_found] if there is none. *)
-  let find_asr bv ofs t =
-    find_ext bv (Extraction.shift_right ~size:(bitwidth bv) ofs) t.bv2nat
 
   (* Returns the polynomial associated with [bv2nat(bv asr ofs)], creating a
      fresh variable for it if it does not exist. *)
@@ -357,6 +311,53 @@ module BV2Nat = struct
 
   let find_or_init_ext bv ext t =
     try find_ext bv ext t.bv2nat, t with Not_found -> init_ext bv ext t
+
+
+  let empty =
+    { bv2nat = MX.empty
+    ; nat2bv = P.Map.empty
+    ; use = MX.empty
+    ; eqs = [] }
+
+  let fold_ext x f t acc =
+    match MX.find x t.bv2nat with
+    | exception Not_found -> acc
+    | m -> Extraction.Map.fold (f x) m acc
+
+  let fold_use_p x f t acc =
+    assert (X.is_a_leaf x);
+    match MX.find x t.use with
+    | exception Not_found -> acc
+    | nps ->
+      P.Set.fold (fun p acc ->
+          let v =
+            try P.Map.find p t.nat2bv with Not_found -> assert false
+          in
+          f p v acc
+        ) nps acc
+
+  let remove_use_p p use =
+    List.fold_left (fun use r ->
+        MX.update r (function
+            | None -> assert false
+            | Some ps ->
+              let ps = P.Set.remove p ps in
+              if P.Set.is_empty ps then None else Some ps
+          ) use
+      ) use (P.leaves p)
+
+  let remove_aux bv ext p t =
+    let use = remove_use_p p t.use in
+    let nat2bv = P.Map.remove p t.nat2bv in
+    let bv2nat =
+      MX.update bv (function
+          | None -> None
+          | Some m ->
+            let m = Extraction.Map.remove ext m in
+            if Extraction.Map.is_empty m then None else Some m
+        ) t.bv2nat
+    in
+    { use ; nat2bv ; bv2nat ; eqs = t.eqs }
 
   let find_p p t =
     P.Map.find p t.nat2bv
