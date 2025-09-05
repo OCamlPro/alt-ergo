@@ -693,6 +693,23 @@ module BV : sig
   val bvlshr : t -> t -> t
 
   val bvashr : t -> t -> t
+
+  (* Overflow predicates *)
+  val bvuaddo : t -> t -> t
+
+  val bvsaddo : t -> t -> t
+
+  val bvnego : t -> t
+
+  val bvusubo : t -> t -> t
+
+  val bvssubo : t -> t -> t
+
+  val bvumulo : t -> t -> t
+
+  val bvsmulo : t -> t -> t
+
+  val bvsdivo : t -> t -> t
 end
 
 (** Constructors from the smtlib theory of floating-point numbers.

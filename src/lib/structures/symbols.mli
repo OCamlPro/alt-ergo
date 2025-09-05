@@ -30,6 +30,10 @@ type builtin =
   | LT (* arithmetic *)
   | IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
+  | BVuaddo
+  | BVsaddo
+  | BVumulo
+  | BVsmulo
 
 type operator =
   | Tite
@@ -292,3 +296,9 @@ val string_of_bound : bound -> string
 module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
+
+module Print (_ : Printer.Output_format) : sig
+  val builtin : builtin Fmt.t
+
+  val builtin_app : builtin -> 'a Fmt.t -> 'a list Fmt.t
+end

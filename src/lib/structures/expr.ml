@@ -128,6 +128,9 @@ type form_view =
 (** pretty printing *)
 
 module SmtPrinter = struct
+  module Output_format = Printer.Smtlib2_format
+  module Sy_print = Sy.Print (Output_format)
+
   let is_zero sy =
     match sy with
     | Sy.Int i when Z.(equal i zero) -> true
@@ -216,6 +219,11 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" DE.Term.Const.print hs pp e
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))" DE.Term.Const.print hs pp e
+    (* CR bclement: Use [Sy_print] for all builtins. *)
+    | L_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Sy_print.builtin_app builtin pp ppf args
+    | L_neg_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Output_format.(print_not (Sy_print.builtin_app builtin pp)) ppf args
     | ( ( Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -288,6 +296,9 @@ module SmtPrinter = struct
 end
 
 module AEPrinter = struct
+  module Output_format = Printer.Native_format
+  module Sy_print = Sy.Print (Output_format)
+
   let pp_binder ppf (var, ty) = Fmt.pf ppf "%a:%a" Var.print var Ty.pp_smtlib ty
 
   let pp_binders ppf binders =
@@ -335,6 +346,11 @@ module AEPrinter = struct
       Fmt.pf ppf "(%a ? %a)" pp e DE.Term.Const.print hs
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "not (%a ? %a)" pp e DE.Term.Const.print hs
+    (* CR bclement: Use [Sy_print] for all builtins. *)
+    | L_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Sy_print.builtin_app builtin pp ppf args
+    | L_neg_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Output_format.(print_not (Sy_print.builtin_app builtin pp)) ppf args
     | ( ( Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -3125,6 +3141,63 @@ module BV = struct
   let bvsgt s t = bvslt t s
 
   let bvsge s t = bvsle t s
+
+  (* Overflow predicates *)
+
+  let builtin b args = mk_builtin ~is_pos:true b args
+
+  let bvuaddo s t =
+    (* [[(bvuaddo s t)]] := (bv2nat([[s]]) + bv2nat([[t]])) >= 2^m
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVuaddo [s; t]
+
+  let bvsaddo s t =
+    (* [[(bvsaddo s t)]] := (bv2int([[s]]) + bv2int([[t]])) >= 2^(m - 1) or
+       (bv2int([[s]]) + bv2int([[t]])) < -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVsaddo [s; t]
+
+  let bvnego s =
+    (* [[(bvnego s)]] := bv2int([[s]]) == -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    Core.eq s (of_Z ~size:(size s) (Z.shift_left Z.one (size s - 1)))
+
+  let bvumulo s t =
+    (* [[(bvumulo s t)]] := (bv2nat([[s]]) * bv2nat([[t]])) >= 2^m
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVumulo [s; t]
+
+  let bvsmulo s t =
+    (* [[(bvsmulo s t)]] := (bv2int([[s]]) * bv2int([[t]])) >= 2^(m - 1) or
+       (bv2int([[s]]) * bv2int([[t]])) < -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVsmulo [s; t]
+
+  let bvusubo s t =
+    (* (bvusubo s t) stands for (bvult s t)
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    bvult s t
+
+  let bvssubo s t =
+    (* (bvssubo s t) abbreviates (ite (bvnego t) (bvsge s (_ bv0 m)) (bvsaddo s
+       (bvneg t)))
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    Core.ite (bvnego t)
+      (bvsge s (of_bigint_like s Z.zero))
+      (bvsaddo s (bvneg t))
+
+  let bvsdivo s t =
+    (* (bvsdivo s t) abbreviates (and (bvnego s) (= t (bvnot (_ bv0 m))))
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    Core.and_ (bvnego s) (Core.eq t (of_bigint_like t Z.minus_one))
 end
 
 (** Constructors from the smtlib theory of floating-point numbers.

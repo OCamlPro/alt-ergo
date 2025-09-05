@@ -417,3 +417,64 @@ let reporter =
     msgf @@ fun ?header ?tags fmt -> with_header header tags k fmt
   in
   { Logs.report }
+
+module type Output_format = sig
+  val print_not : 'a Fmt.t -> 'a Fmt.t
+
+  val print_call : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_infix : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_suffix : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_tester : 'a Fmt.t -> 'a Fmt.t
+
+  val print_indexed : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val alias : native:'a -> smtlib:'a -> 'a
+end
+
+module Native_format = struct
+  let print_not pp = Fmt.(box (any "not" ++ sp ++ parens pp))
+
+  let print_call pp_f f pp_arg =
+    Fmt.(box (const pp_f f ++ cut ++ list ~sep:comma pp_arg))
+
+  let print_infix pp_op op pp_arg =
+    Fmt.(parens (list ~sep:(const pp_op op) pp_arg))
+
+  let print_indexed pp_f f pp_index =
+    Fmt.(box (const pp_f f ++ list ~sep:nop (brackets pp_index)))
+
+  let print_suffix pp_op op pp_arg = Fmt.(list pp_arg ++ const pp_op op)
+
+  let print_tester pp ppf c = Fmt.pf ppf "? %a" pp c
+
+  let alias ~native ~smtlib:_ = native
+end
+
+module Smtlib2_format = struct
+  let print_not pp = Fmt.(parens (any "not" ++ sp ++ pp))
+
+  let print_call pp_f f pp_arg ppf args =
+    match args with
+    | [] -> Fmt.parens pp_f ppf f
+    | _ :: _ ->
+      Fmt.(parens (const pp_f f ++ sp ++ list ~sep:sp pp_arg)) ppf args
+
+  let print_infix = print_call
+
+  let print_suffix = print_call
+
+  let print_indexed pp_f f pp_arg =
+    print_call Fmt.(const string "_" ++ sp ++ pp_f) f pp_arg
+
+  let print_tester pp ppf c = print_indexed Fmt.string "is" pp ppf [c]
+
+  let alias ~native:_ ~smtlib = smtlib
+end
+
+let output_format () =
+  if Options.get_output_smtlib ()
+  then (module Smtlib2_format : Output_format)
+  else (module Native_format : Output_format)

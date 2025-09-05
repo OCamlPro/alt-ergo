@@ -658,6 +658,7 @@ module Int = struct
     if ofs < 0 || len <= 0 then invalid_arg "extract";
     trace1 (Fmt.str "extract ~ofs:%d ~len:%d" ofs len) u
     @@
+    let min_val = Z.zero in
     let max_val = Z.extract Z.minus_one 0 len in
     let full = Interval.of_bounds (Closed Z.zero) (Closed max_val) in
     of_set_nonempty
@@ -682,7 +683,44 @@ module Int = struct
                else
                  union_set
                    (interval_set
-                   @@ Interval.of_bounds (Closed Z.zero) (Closed ub_mod))
+                   @@ Interval.of_bounds (Closed min_val) (Closed ub_mod))
+                   (interval_set
+                   @@ Interval.of_bounds (Closed lb_mod) (Closed max_val))
+             else
+               (* The image is too large; all values are possible. *)
+               interval_set full)
+         u
+
+  let signed_extract u ~ofs ~len =
+    if ofs < 0 || len <= 0 then invalid_arg "signed_extract";
+    trace1 (Fmt.str "signed_extract ~ofs:%d ~len:%d" ofs len) u
+    @@
+    let min_val = Z.signed_extract (Z.shift_left Z.one (len - 1)) 0 len in
+    let max_val = Z.extract Z.minus_one 0 (len - 1) in
+    let full = Interval.of_bounds (Closed min_val) (Closed max_val) in
+    of_set_nonempty
+    @@ map_to_set
+         (fun i ->
+           match i.lb, i.ub with
+           | ZEuclideanType.Neg_infinite, _ | _, Pos_infinite ->
+             interval_set full
+           | _, Neg_infinite | Pos_infinite, _ -> assert false
+           | Finite lb, Finite ub ->
+             let lb = Z.shift_right lb ofs in
+             let ub = Z.shift_right ub ofs in
+             if Z.(numbits (ub - lb)) <= len
+             then
+               (* The image spans an interval of length at most [len] *)
+               let lb_mod = Z.signed_extract lb 0 len in
+               let ub_mod = Z.signed_extract ub 0 len in
+               if Z.(compare lb_mod ub_mod) <= 0
+               then
+                 interval_set
+                 @@ Interval.of_bounds (Closed lb_mod) (Closed ub_mod)
+               else
+                 union_set
+                   (interval_set
+                   @@ Interval.of_bounds (Closed min_val) (Closed ub_mod))
                    (interval_set
                    @@ Interval.of_bounds (Closed lb_mod) (Closed max_val))
              else

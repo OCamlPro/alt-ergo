@@ -32,6 +32,10 @@ type builtin =
   | LT (* arithmetic *)
   | IsConstr of DE.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
+  | BVuaddo
+  | BVsaddo
+  | BVumulo
+  | BVsmulo
 
 type operator =
   | Tite
@@ -248,7 +252,9 @@ let compare_operators op1 op2 =
 let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2 (function
     | IsConstr tcst1, IsConstr tcst2 -> DE.Term.Const.compare tcst1 tcst2
-    | _, (LT | LE | BVULE | IsConstr _) -> assert false)
+    | _, (LT | LE | BVULE | IsConstr _ | BVuaddo | BVsaddo | BVumulo | BVsmulo)
+      ->
+      assert false)
 
 let compare_lits lit1 lit2 =
   Util.compare_algebraic lit1 lit2 (function
@@ -422,6 +428,14 @@ module AEPrinter = struct
     | L_neg_built BVULE -> Fmt.pf ppf ">"
     | L_built (IsConstr h) -> Fmt.pf ppf "? %a" DE.Term.Const.print h
     | L_neg_built (IsConstr h) -> Fmt.pf ppf "?not? %a" DE.Term.Const.print h
+    | L_built BVuaddo -> Fmt.pf ppf "bvuaddo"
+    | L_built BVsaddo -> Fmt.pf ppf "bvsaddo"
+    | L_built BVumulo -> Fmt.pf ppf "bvumulo"
+    | L_built BVsmulo -> Fmt.pf ppf "bvsmulo"
+    | L_neg_built BVuaddo -> Fmt.pf ppf "?not bvuaddo"
+    | L_neg_built BVsaddo -> Fmt.pf ppf "?not bvsaddo"
+    | L_neg_built BVumulo -> Fmt.pf ppf "?not bvumulo"
+    | L_neg_built BVsmulo -> Fmt.pf ppf "?not bvsmulo"
 
   let pp_form ppf f =
     match f with
@@ -549,3 +563,23 @@ module Map : Map.S with type key = t = Map.Make (struct
 
   let compare = compare
 end)
+
+module Print (Output_format : Printer.Output_format) = struct
+  open Output_format
+
+  let builtin ppf = function
+    | LE -> Fmt.pf ppf "<="
+    | LT -> Fmt.pf ppf "<"
+    | IsConstr c -> print_tester DE.Term.Const.print ppf c
+    | BVULE -> Fmt.pf ppf "bvule"
+    | BVuaddo -> Fmt.pf ppf "bvuaddo"
+    | BVsaddo -> Fmt.pf ppf "bvsaddo"
+    | BVumulo -> Fmt.pf ppf "bvumulo"
+    | BVsmulo -> Fmt.pf ppf "bvsmulo"
+
+  let builtin_app b pp =
+    match b with
+    | LE | LT -> print_infix builtin b pp
+    | IsConstr _ | BVULE | BVuaddo | BVsaddo | BVumulo | BVsmulo ->
+      print_call builtin b pp
+end
