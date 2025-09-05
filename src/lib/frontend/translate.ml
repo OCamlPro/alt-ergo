@@ -845,6 +845,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             (List.map (fun a -> aux_mk_expr a) args)
             (dty_to_ty term_ty)
         in
+        let unop unop =
+          match args with
+          | [x] -> unop (aux_mk_expr x)
+          | _ -> Util.internal_error "not an unary operator"
+        in
+        let binop binop =
+          match args with
+          | [x; y] -> binop (aux_mk_expr x) (aux_mk_expr y)
+          | _ -> Util.internal_error "not a binary operator"
+        in
         let invalid_app_term () =
           unsupported "Invalid application %a" DE.Term.print term
         in
@@ -1168,11 +1178,15 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               | Sgt _ | Sge _ ),
               _ ) ->
             invalid_app_term ()
-          (* Binary functions from SMT-LIB 2.7 *)
-          | ( ( Overflow_add _ | Overflow_neg _ | Overflow_sub _
-              | Overflow_mul _ | Overflow_div _ ),
-              _ ) ->
-            unsupported_app_term ()
+          (* Overflow functions from SMT-LIB 2.7 *)
+          | Overflow_add { n = _; signed }, _ ->
+            if signed then binop E.BV.bvsaddo else binop E.BV.bvuaddo
+          | Overflow_sub { n = _; signed }, _ ->
+            if signed then binop E.BV.bvssubo else binop E.BV.bvusubo
+          | Overflow_neg { n = _ }, _ -> unop E.BV.bvnego
+          | Overflow_mul { n = _; signed }, _ ->
+            if signed then binop E.BV.bvsmulo else binop E.BV.bvumulo
+          | Overflow_div { n = _ }, _ -> binop E.BV.bvsdivo
           (* Cannot be applied *)
           | (T _ | Binary_lit _), _ -> invalid_app_term ())
         (* Array builtins *)
