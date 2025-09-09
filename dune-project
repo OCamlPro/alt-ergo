@@ -66,9 +66,9 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (ocaml (>= 4.08.1))
   dune
   dune-build-info
-  (dolmen (>= 0.10))
-  (dolmen_type (>= 0.10))
-  (dolmen_loop (>= 0.10))
+  (dolmen (or (>= 0.10) (= dev)))
+  (dolmen_type (or (>= 0.10) (= dev)))
+  (dolmen_loop (or (>= 0.10) (= dev)))
   (ocplib-simplex (>= 0.5.1))
   (zarith (>= 1.11))
   seq
