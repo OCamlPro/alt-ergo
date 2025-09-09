@@ -27,9 +27,9 @@ depends: [
   "conf-zlib" {= "1"}
   "cppo" {= "1.8.0"}
   "csexp" {= "1.5.2"}
-  "dolmen" {= "0.11"}
-  "dolmen_loop" {= "0.11"}
-  "dolmen_type" {= "0.11"}
+  "dolmen" {= "dev"}
+  "dolmen_loop" {= "dev"}
+  "dolmen_type" {= "dev"}
   "dune" {= "3.22.0"}
   "dune-build-info" {= "3.22.0"}
   "dune-configurator" {= "3.22.0"}
@@ -100,15 +100,15 @@ conflicts: [
 ]
 pin-depends: [
   [
-    "dolmen.0.11"
+    "dolmen.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
   [
-    "dolmen_loop.0.11"
+    "dolmen_loop.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
   [
-    "dolmen_type.0.11"
+    "dolmen_type.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
 ]

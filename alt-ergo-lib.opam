@@ -17,9 +17,9 @@ depends: [
   "ocaml" {>= "4.08.1"}
   "dune" {>= "3.14"}
   "dune-build-info"
-  "dolmen" {>= "0.10"}
-  "dolmen_type" {>= "0.10"}
-  "dolmen_loop" {>= "0.10"}
+  "dolmen" {>= "0.10" | = "dev"}
+  "dolmen_type" {>= "0.10" | = "dev"}
+  "dolmen_loop" {>= "0.10" | = "dev"}
   "ocplib-simplex" {>= "0.5.1"}
   "zarith" {>= "1.11"}
   "seq"
@@ -63,15 +63,15 @@ license: [
 
 pin-depends: [
   [
-    "dolmen.0.11"
+    "dolmen.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
   [
-    "dolmen_loop.0.11"
+    "dolmen_loop.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
   [
-    "dolmen_type.0.11"
+    "dolmen_type.dev"
     "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
   ]
 ]
