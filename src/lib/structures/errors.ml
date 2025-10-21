@@ -134,3 +134,11 @@ let report fmt = function
       report_mode_error merr;
   | Model_error err ->
     Fmt.pf fmt "Model Error: %a" report_model_error err
+
+let () =
+  Printexc.register_printer (
+    function
+    | Error e ->
+      Some (Fmt.str "%a" report e)
+    | _ -> None
+  )
