@@ -3,7 +3,7 @@
 tags: "org:OCamlPro"
 
 license: [
-  "LicenseRef-OCamlpro-Non-Commercial"
+  "CECILL-C"
   "Apache-2.0"
   "LGPL-2.1-only"
 ]

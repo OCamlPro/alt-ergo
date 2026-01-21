@@ -65,8 +65,6 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 
 See more details on https://alt-ergo.ocamlpro.com/"
  )
- (license "OCamlPro Non-Commercial Purpose License, version 1")
-
  (depends
   (ocaml (>= 4.05.0))
   (alt-ergo-lib (= :version))
@@ -92,8 +90,6 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 
 See more details on http://alt-ergo.ocamlpro.com/"
  )
- (license "OCamlPro Non-Commercial Purpose License, version 1")
-
  (depends
   (ocaml (>= 4.05.0))
   (alt-ergo-lib (= :version))
@@ -117,8 +113,6 @@ Alt-Ergo is an automatic theorem prover of mathematical formulas. It was develop
 
 See more details on http://alt-ergo.ocamlpro.com/"
  )
- (license "OCamlPro Non-Commercial Purpose License, version 1")
-
  (depends
   (ocaml (>= 4.05.0))
   dune-configurator
