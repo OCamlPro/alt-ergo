@@ -1,12 +1,8 @@
 
-(documentation
-  (package alt-ergo)
-)
-
 (executable
   (name Main_text)
   (public_name alt-ergo)
-  (package alt-ergo)
+  (package alt-ergo-free)
   (libraries alt_ergo_common)
   (link_flags (:include flags.dune))
   (modules Main_text)
@@ -22,5 +18,5 @@
 (install
  (files    alt-ergo.1)
  (section  man)
- (package  alt-ergo)
+ (package  alt-ergo-free)
 )

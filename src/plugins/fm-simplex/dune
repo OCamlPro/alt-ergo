@@ -1,16 +1,11 @@
-(documentation
-  (package alt-ergo)
-    (mld_files :standard)
-)
-
 (library
   (name       FmSimplexPlugin)
-  (libraries  alt-ergo-lib)
+  (libraries  AltErgoLib)
   (modules    Simplex Simplex_cache FmSimplexIneqs)
 )
 
 (install
-  (package alt-ergo)
+  (package alt-ergo-free)
   (section share)
   (files
     (FmSimplexPlugin.cma as plugins/fm-simplex-plugin.cma)

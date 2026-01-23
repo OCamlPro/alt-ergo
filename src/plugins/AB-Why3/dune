@@ -1,8 +1,3 @@
-(documentation
-  (package alt-ergo)
-    (mld_files :standard)
-)
-
 (ocamllex (modules why3_lexer))
 
 (menhir
@@ -12,12 +7,12 @@
 
 (library
   (name       ABWhy3Plugin)
-  (libraries  alt-ergo-lib alt-ergo-parsers)
+  (libraries  AltErgoLib AltErgoParsers)
   (modules    Why3_lexer Why3_parser Why3_loc Why3_ptree)
 )
 
 (install
-  (package alt-ergo)
+  (package alt-ergo-free)
   (section share)
   (files
     (ABWhy3Plugin.cma as plugins/AB-Why3-plugin.cma)

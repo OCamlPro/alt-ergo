@@ -55,9 +55,12 @@
 (*********************************************************************************)
 
 let _version =
-  match Build_info.V1.version () with
-  | None -> "%%VERSION_NUM%%"
-  | Some v -> Build_info.V1.Version.to_string v
+  let s =
+    match Build_info.V1.version () with
+    | None -> "%%VERSION_NUM%%"
+    | Some v -> Build_info.V1.Version.to_string v
+  in
+  Format.sprintf "%s-free" s
 
 let _release_commit = "%%VCS_COMMIT_ID%%"
 
