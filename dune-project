@@ -24,7 +24,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
  (depends
   (ocaml (>= 4.05.0))
   menhir
-  (cmdliner (>= 1.1.0))
+  (cmdliner (and (>= 1.1.0) (< 2.0.0)))
   (psmt2-frontend (>= 0.4))
   (camlzip (>= 1.07))
   stdlib-shims
@@ -37,4 +37,9 @@ See more details on https://alt-ergo.ocamlpro.com/")
   stdlib-shims
   (odoc :with-doc)
  )
+ (conflicts
+   alt-ergo
+   alt-ergo-lib
+   alt-ergo-parsers
+   altgr-ergo)
 )
