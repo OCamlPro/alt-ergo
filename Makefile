@@ -108,14 +108,6 @@ fm-simplex:
 	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cma fm-simplex-plugin.cma
 	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/fm-simplex-plugin.cmxs fm-simplex-plugin.cmxs
 
-# Ab-Why3 plugin
-AB-Why3:
-	$(DUNE) build $(DUNE_FLAGS) \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma \
-		$(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cma AB-Why3-plugin.cma
-	ln -sf $(INSTALL_DIR)/default/share/alt-ergo/plugins/AB-Why3-plugin.cmxs AB-Why3-plugin.cmxs
-
 js: gen
 	$(DUNE) build $(DUNE_FLAGS) @$(BJS_DIR)/all
 
@@ -392,20 +384,15 @@ FILES_DEST=public-release/$(PUBLIC_RELEASE)
 	cp --parents -r \
 	docs \
 	examples \
-	licenses/Apache-License-2.0.txt \
 	licenses/OCamlPro-Non-Commercial-License.pdf \
 	licenses/OCamlPro-Non-Commercial-License.txt \
-	licenses/LGPL-License.txt \
 	non-regression \
 	rsc \
 	src \
 	tests \
 	configure \
 	configure.ml \
-	alt-ergo.opam \
-	alt-ergo-lib.opam \
-	alt-ergo-parsers.opam \
-	altgr-ergo.opam \
+	alt-ergo-free.opam \
 	dune-project \
 	Makefile \
 	README.md \
@@ -422,7 +409,6 @@ public-release: --prepare-release
 
 free-public-release: --prepare-release
 	cp licenses/CeCILL-C-License-v1.txt $(FILES_DEST)
-	find src/lib src/bin src/parsers -iname "*.ml*" -exec headache -h licenses/free-header.txt {} \;
 	cd public-release && tar cfz $(PUBLIC_TARGZ) $(PUBLIC_RELEASE)
 	git restore $(SRC_DIR)
 	rm -rf $(FILES_DEST)

@@ -38,5 +38,4 @@ The packages of the free releases are suffixed with `-free` on the opam reposito
 ## Plugins
 
 Please refer to the `LICENSE.md` of each plugins:
-- `AB-Why3`: src/plugins/AB-Why3/LICENSE.md
 - `fm-simplex`: src/plugins/fm-simplex/LICENSE.md

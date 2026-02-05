@@ -36,8 +36,6 @@ tags: "org:OCamlPro"
 
 license: [
   "CECILL-C"
-  "Apache-2.0"
-  "LGPL-2.1-only"
 ]
 
 build: [

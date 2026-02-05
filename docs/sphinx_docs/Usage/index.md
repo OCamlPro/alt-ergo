@@ -35,8 +35,6 @@ The status can be `Valid`, `Invalid` or `I don't know`. If the input file is in 
 
 ### Plugins
 
-See the [AB-Why3 README] file for the documentation of the AB-Why3 plugin
-
 The Fm-Simplex plugin can be used as follows:
 
         $ alt-ergo --inequalities-plugin fm-simplex-plugin.cmxs [other-options] file.<ext>
@@ -144,5 +142,4 @@ A small example of how to use the Alt-Ergo web worker can be build with the comm
 [Lwt]: https://ocsigen.org/lwt/
 [js_of_ocaml]: https://ocsigen.org/js_of_ocaml/
 [API documentation]: ../API/index.md
-[AB-Why3 README]: ../Plugins/ab_why3.md
 [Input section]: ../Input_file_formats/index
