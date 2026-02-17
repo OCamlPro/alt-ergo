@@ -26,7 +26,6 @@ pkgs.mkShell {
     bos
     dolmen_loop
     camlzip
-    psmt2-frontend
     stdlib-shims
     menhir
     dune-build-info
@@ -43,5 +42,6 @@ pkgs.mkShell {
     landmarks-ppx
     qcheck
     utop
+    dolmen_bin
   ];
 }

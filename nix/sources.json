@@ -5,10 +5,10 @@
         "homepage": "",
         "owner": "Gbury",
         "repo": "dolmen",
-        "rev": "3c77a22b2aac2eb85aca76f198797d40ca3ec4a3",
-        "sha256": "0qsl5f0mh4azmqvq99l24cna8brvw00x9703wyd98gm0pbmsc3pm",
+        "rev": "6c96de76c291c8159d5f954bfd19924e1e7d4530",
+        "sha256": "0krq5gcifxw5zljn9ljq78g673224vmln77fsavm50yns12g0s30",
         "type": "tarball",
-        "url": "https://github.com/Gbury/dolmen/archive/3c77a22b2aac2eb85aca76f198797d40ca3ec4a3.tar.gz",
+        "url": "https://github.com/Gbury/dolmen/archive/6c96de76c291c8159d5f954bfd19924e1e7d4530.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "0.10"
     },
@@ -26,16 +26,17 @@
         "version": "dev"
     },
     "nixpkgs": {
-        "branch": "nixos-25.05",
+        "branch": "nixos-25.11",
         "description": "Nix Packages collection",
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "36ab78dab7da2e4e27911007033713bab534187b",
-        "sha256": "072rx8y4bravd9163brjicqsb1i11f0n9v4bhikzbvc7wpb7kdds",
+        "rev": "fa56d7d6de78f5a7f997b0ea2bc6efd5868ad9e8",
+        "sha256": "0d8xd2rk1phikz7icawxkbdsg8yc5c71hs5aln0kg9hj73f50kaz",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/36ab78dab7da2e4e27911007033713bab534187b.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+        "url": "https://github.com/NixOS/nixpkgs/archive/fa56d7d6de78f5a7f997b0ea2bc6efd5868ad9e8.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "25.11"
     },
     "ocplib-simplex": {
         "branch": "v0.5.1",
