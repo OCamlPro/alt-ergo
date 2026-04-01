@@ -243,9 +243,11 @@ lock:
 dev-switch:
 	opam switch create . --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 
+# FIXME: the version 6.3.0 of js_of_ocaml contains a bug, see
+# https://github.com/ocsigen/js_of_ocaml/issues/2209
 js-deps:
 	opam install \
-		'js_of_ocaml>=5.4.0' \
+		'js_of_ocaml<=6.2.0' \
 		js_of_ocaml-lwt \
 		js_of_ocaml-ppx \
 		data-encoding \

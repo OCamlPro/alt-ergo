@@ -1,3 +1,7 @@
+## v2.6.3
+
+ - Bump minimal cmdliner version to 2.0 (#1340)
+
 ## v2.6.2
 
  - Expose some internal APIs for Owi (#1259)

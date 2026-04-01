@@ -35,7 +35,7 @@ pkgs.mkShell {
     lwt_ppx
     data-encoding
     zarith_stubs_js
-    cmdliner
+    cmdliner_2
     ppx_blob
     odoc
     ppx_deriving
