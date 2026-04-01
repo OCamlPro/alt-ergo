@@ -650,7 +650,7 @@ let process_source ?selector_inst ~print_status src =
     | { term = Symbol { name = Simple name; ns = Attr }; _ } ->
       let print_std =
         fun (type a) (pp :a Fmt.t) (a : a) ->
-          Printer.print_std "(%s %a)" name pp a
+        Printer.print_std "(%s %a)" name pp a
       in
       let pp_reason_unknown st =
         let err () =
