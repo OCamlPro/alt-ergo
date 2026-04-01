@@ -426,6 +426,10 @@ let smt_fpa_builtins =
       term_app env s (smt_round 53 1074)
     | Id { ns = Term ; name = Simple "ae.float128" } ->
       term_app env s (smt_round 113 16494)
+    | Id { ns = Term ; name = Simple "ae.pow_int" } ->
+      term_app env s DE.Term.Int.pow
+    | Id { ns = Term ; name = Simple "ae.pow_real" } ->
+      term_app env s DE.Term.Real.pow
     | Dl.Typer.T.Id id -> begin
         match DStd.Id.Map.find_exn id other_builtins env s with
         | e -> e
