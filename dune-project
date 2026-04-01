@@ -29,7 +29,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   dune
   (alt-ergo-lib (= :version))
   dune-site
-  (cmdliner (and (>= 1.1.0) (< 2.0)))
+  (cmdliner (>= 2.0))
   (odoc :with-doc)
   (camlzip (>= 1.07))
  )
@@ -62,7 +62,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   (fmt (>= 0.9.0))
   stdlib-shims
   (ppx_blob (>= 0.7.2))
-  ppx_deriving
+  (camlzip (>= 1.07))
   (odoc :with-doc)
   ppx_deriving
   (qcheck (and :with-test (= 0.25)))

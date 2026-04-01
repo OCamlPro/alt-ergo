@@ -1,4 +1,4 @@
-  $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | sed -e '/^[[:space:]]*>>/d'
+  $ echo '(check-sat)' | alt-ergo --inequalities-plugin does-not-exist -i smtlib2 -o smtlib2 2>&1 >/dev/null | tr -d '\n' | sed -e 's/[[:space:]]*>>.*//g'
   alt-ergo: Fatal Error: [Dynlink] Loading the plugin "does-not-exist" failed!
 
 Now we will have some tests for the models. Note that it is okay if the format

@@ -1,5 +1,9 @@
 ## unreleased
 
+ - Bump minimal cmdliner version to 2.0 (#1340)
+
+## v2.6.2
+
 ### Supported features
 
  - Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
