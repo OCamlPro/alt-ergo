@@ -27,6 +27,7 @@
 
 open Js_of_ocaml
 open Js_of_ocaml_lwt
+module Console = Js_of_ocaml.Console
 
 module Html = Dom_html
 
@@ -83,11 +84,11 @@ let solve () =
       (
         let file = String.split_on_char '\n' !file in
         let json_file = Worker_interface.file_to_json None (Some 42) file in
-        Firebug.console##log json_file;
+        Console.console##log json_file;
         let json_options = Worker_interface.options_to_json options in
-        Firebug.console##log json_options;
+        Console.console##log json_options;
         let%lwt results = exec worker json_file json_options in
-        Firebug.console##log results;
+        Console.console##log results;
         let res = Worker_interface.results_from_json results in
         Lwt.return res
       )
