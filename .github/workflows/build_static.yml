@@ -39,8 +39,11 @@ jobs:
 
       - uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 4.14.1
+          ocaml-compiler: 4.14.3
           dune-cache: true
+
+      - name: Update opam repository
+        run: opam update
 
       - run: opam install . --locked --deps-only --ignore-constraints-on alt-ergo-lib,alt-ergo-parsers
 

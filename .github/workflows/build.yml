@@ -8,7 +8,7 @@ on:
 permissions: {}
 
 env:
-  OCAML_DEFAULT_VERSION: 4.14.2
+  OCAML_DEFAULT_VERSION: 4.14.3
   # Add OPAMYES=true to the environment, this is usefill to replace `-y` option
   # in any opam call
   OPAMYES: true
@@ -28,8 +28,8 @@ jobs:
           - windows-latest
         ocaml-compiler:
           - 4.08.1
-          - 4.14.2
-          - 5.3.0
+          - 4.14.3
+          - 5.4.0
         exclude:
           # No longer seems to be available
           - os: macos-latest
