@@ -1,6 +1,8 @@
 ## v2.6.3
 
+ - Add support for ae.pow_int and ae.pow_real (#1342)
  - Bump minimal cmdliner version to 2.0 (#1340)
+ - Add an upper bound (< 0.11) for Dolmen (#1345)
 
 ## v2.6.2
 
