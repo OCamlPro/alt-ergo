@@ -12,9 +12,7 @@ META
 # Generated build artifacts
 _build
 alt-ergo
-altgr-ergo
-AB-Why3-plugin.cma
-AB-Why3-plugin.cmxs
+www
 fm-simplex-plugin.cma
 fm-simplex-plugin.cmxs
 rsc/extra/ocpchecker/ocp-checker
@@ -35,11 +33,6 @@ tmp/
 *.tmp
 alt-ergo/tmp/
 _opam
-
-# Generated javascript files
-alt-ergo.js
-alt-ergo-worker.js
-www/
 
 # Generated python files
 __pycache__

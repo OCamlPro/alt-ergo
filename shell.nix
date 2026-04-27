@@ -21,7 +21,7 @@ pkgs.mkShell {
     dune-site
   ];
 
-  buildInputs = with ocamlPackages; [
+  buildInputs = [ pkgs.nodejs ] ++ (with ocamlPackages; [
     ocplib-simplex
     bos
     dolmen_loop
@@ -43,5 +43,5 @@ pkgs.mkShell {
     landmarks-ppx
     qcheck
     utop
-  ];
+  ]);
 }

@@ -1,8 +1,10 @@
 ; Rule to build a js version runnable with node-js of Alt-Ergo
 (executable
+ (package alt-ergo-js)
+ (public_name alt-ergo.bc)
  (name main_text_js)
  (libraries
-   alt_ergo_common
+   alt-ergo.common
    zarith_stubs_js
  )
  (modules main_text_js)
@@ -11,6 +13,7 @@
 )
 
 (library
+ (package alt-ergo-js)
  (name worker_interface)
  (libraries
    js_of_ocaml
@@ -24,13 +27,13 @@
  (name worker_js)
  (libraries
    worker_interface
-   alt_ergo_common
+   alt-ergo.common
    zarith_stubs_js
    js_of_ocaml
    js_of_ocaml-lwt
  )
  (modules worker_js options_interface)
- (modes byte js)
+ (modes js)
  (js_of_ocaml (flags +toplevel.js +dynlink.js))
 )
 
@@ -44,6 +47,14 @@
    js_of_ocaml-lwt
  )
  (modules worker_example)
- (modes byte js)
+ (modes js)
  (preprocess (pps js_of_ocaml-ppx lwt_ppx))
 )
+
+(install
+  (package alt-ergo-js)
+  (section share)
+  (files
+    (main_text_js.bc.js as alt-ergo.js)
+    (worker_js.bc.js as alt-ergo-worker.js)
+    (worker_example.bc.js as alt-ergo-example.js)))
