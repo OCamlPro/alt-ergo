@@ -57,13 +57,7 @@ If you are using opam, you can set up a switch development for Alt-Ergo using:
 $ make dev-switch
 ```
 This command creates a local switch with all the dependencies required for
-building the Alt-Ergo binary and library.
-
-To install dependencies for the JavaScript artifacts of Alt-Ergo in the
-current switch, run:
-```shell
-$ make js-deps
-```
+building the Alt-Ergo binary, the library and the Alt-Ergo JavaScript worker.
 
 ## Build the project with Makefile
 

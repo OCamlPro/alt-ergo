@@ -21,6 +21,7 @@
 
 ; Rule to generate a man page for alt-ergo
 (rule
+  (package alt-ergo)
   (target alt-ergo.1)
   (action (with-stdout-to %{target} (run alt-ergo --help=groff))))
 

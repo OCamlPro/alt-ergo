@@ -38,6 +38,19 @@ See more details on https://alt-ergo.ocamlpro.com/")
 )
 
 (package
+ (name alt-ergo-js)
+ (synopsis "The Alt-Ergo JavaScript artifacts")
+ (depends
+  (alt-ergo (= :version))
+  (alt-ergo-lib (= :version))
+  (js_of_ocaml (and (>= 6.0.0) (<= 6.2.0)))
+  js_of_ocaml-lwt
+  js_of_ocaml-ppx
+  data-encoding
+  (zarith_stubs_js (>= 0.16.1))
+  lwt_ppx))
+
+(package
  (name alt-ergo-lib)
  (synopsis "The Alt-Ergo SMT prover library")
  (description "\

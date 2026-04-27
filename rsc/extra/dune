@@ -1,0 +1,4 @@
+(install
+  (package alt-ergo-js)
+  (section share)
+  (files (worker_example.html as index.html)))

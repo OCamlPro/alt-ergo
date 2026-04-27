@@ -51,7 +51,7 @@ jobs:
 
       # Install dependencies
       - name: Install deps
-        run: opam exec -- make test-deps js-deps
+        run: opam install . --deps-only
 
       # compile Alt-Ergo with Js_of_ocaml
       - name: Make alt-ergo.js
@@ -65,7 +65,7 @@ jobs:
       # Run simple test with node
       # TODO: use gentest to run more tests there.
       - name: Run simple example with node
-        run: opam exec -- node alt-ergo.js tests/everything/f1.ae
+        run: opam exec -- node www/alt-ergo.js tests/everything/f1.ae
 
       # Upload Alt-Ergo.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
@@ -75,7 +75,7 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
         with:
           name: alt-ergo-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
-          path: "alt-ergo.js"
+          path: "www/alt-ergo.js"
 
       # Upload Alt-Ergo-worker.js as an artifact
       # the artifact name contains the system is builded on and the ocaml
@@ -85,4 +85,4 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next'
         with:
           name: alt-ergo-worker-js-${{ runner.os }}-${{ env.OCAML_DEFAULT_VERSION }}
-          path: "alt-ergo-worker.js"
+          path: "www/alt-ergo-worker.js"
