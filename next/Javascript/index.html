@@ -1,0 +1,210 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alt-Ergo in JavaScript &mdash; Alt-Ergo Documentation  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/versions.css?v=21adeb6f" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+      <script src="../_static/doctools.js?v=888ff710"></script>
+      <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="../_static/js/versions.js?v=40211404"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Developer’s documentation" href="../Dev/index.html" />
+    <link rel="prev" title="Plugins" href="../Plugins/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Alt-Ergo Documentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install/index.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../SMT-LIB_language/index.html">SMT-LIB language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Alt_ergo_native/index.html">Alt-Ergo's native language</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Model_generation.html">Model generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Optimization.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../API/index.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Plugins/index.html">Plugins</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Alt-Ergo in JavaScript</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#worker-inputs-and-outpus">Worker inputs and outpus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#setup-development-environment">Setup development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Dev/index.html">Developer's documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../About/index.html">About</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Alt-Ergo Documentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Alt-Ergo in JavaScript</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="alt-ergo-in-javascript">
+<h1>Alt-Ergo in JavaScript<a class="headerlink" href="#alt-ergo-in-javascript" title="Permalink to this heading"></a></h1>
+<p>These available artifacts are:</p>
+<ul class="simple">
+<li><p>A JavaScript version of the Alt-Ergo binary named <code class="docutils literal notranslate"><span class="pre">alt-ergo.js</span></code>.</p></li>
+<li><p>A web worker and an example using <code class="docutils literal notranslate"><span class="pre">js_of_ocaml</span></code> and <code class="docutils literal notranslate"><span class="pre">Lwt</span></code>.</p></li>
+</ul>
+<blockquote>
+<div><p>The <code class="docutils literal notranslate"><span class="pre">--timeout</span></code> option is ignored due to a lack of JavaScript primitives.
+Zip files are not recognized as file extensions.</p>
+</div></blockquote>
+</section>
+<section id="worker-inputs-and-outpus">
+<h1>Worker inputs and outpus<a class="headerlink" href="#worker-inputs-and-outpus" title="Permalink to this heading"></a></h1>
+<p>The Web worker expects a JSON file containing a list of strings, where
+each string represents a line of an input file.</p>
+<p>This JSON file can also include:</p>
+<ul class="simple">
+<li><p>An optional worker identifier (integer),</p></li>
+<li><p>An optional filename.</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;filename&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;testfile&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;worker_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;goal g : true&quot;</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>The worker also accepts a JSON file to configure <code class="docutils literal notranslate"><span class="pre">Alt-Ergo</span></code>. For instance,</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;debug&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;sat_solver&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tableaux&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;steps_bound&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Upon completion, it returns a JSON file containing the results, debugging
+information, and statistics:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;worker_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;Unsat&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;Valid (0.1940) (0 steps) (goal g)&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;debugs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;[Debug][Sat_solver]&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;use Tableaux-like solver&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;[all-models] No SAT models found&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;unsat_core&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;unsat-core:&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;statistics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">],</span>
+<span class="w"> </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>The option and result formats are defined in the
+<code class="docutils literal notranslate"><span class="pre">Worker_interface.worker_interface</span></code> module. For more details, see
+<code class="docutils literal notranslate"><span class="pre">worker_json_example.json</span></code> in the resource directory <code class="docutils literal notranslate"><span class="pre">rsc</span></code>.</p>
+</section>
+<section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<p>To install the <code class="docutils literal notranslate"><span class="pre">Alt-Ergo</span></code> JavaScript artifacts, simply install the <code class="docutils literal notranslate"><span class="pre">alt-ergo-js</span></code>
+opam package. The artifacts will be available in <code class="docutils literal notranslate"><span class="pre">SHARE/alt-ergo-js</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">SHARE</span></code> refers to the share directory of your current opam switch.</p>
+<p>To execute Alt-Ergo JavaScript, use the following command:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">node SHARE/alt-ergo-js/alt-ergo.js &lt;options&gt; &lt;input_files&gt;</span>
+</pre></div>
+</div>
+<p>and to serve the example, type:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">python -m http.server -d SHARE/alt-ergo-js</span>
+</pre></div>
+</div>
+</section>
+<section id="setup-development-environment">
+<h1>Setup development environment<a class="headerlink" href="#setup-development-environment" title="Permalink to this heading"></a></h1>
+<p>Use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">dev-switch</span></code> to create a local opam switch with all necessary
+dependencies. Then, run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">js</span></code> to compile the JavaScript artifacts into the
+<code class="docutils literal notranslate"><span class="pre">www</span></code> directory at the project root.</p>
+<p>To execute Alt-Ergo JS locally:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">node www/alt-ergo.js &lt;options&gt; &lt;input_file&gt;</span>
+</pre></div>
+</div>
+<p>To serve the example:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">python -m http.server -d www</span>
+</pre></div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../Plugins/index.html" class="btn btn-neutral float-left" title="Plugins" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../Dev/index.html" class="btn btn-neutral float-right" title="Developer’s documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020 - 2023, Alt-Ergo developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="CURRENT_VERSION">{"slug": "next"}</script><script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

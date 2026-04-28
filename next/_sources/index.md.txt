@@ -31,6 +31,7 @@ Model generation           <Model_generation>
 Optimization               <Optimization>
 API documentation          <API/index>
 Plugins                    <Plugins/index>
+JavaScript                 <Javascript/index>
 Developer's documentation  <Dev/index>
 About                      <About/index>
 ```
