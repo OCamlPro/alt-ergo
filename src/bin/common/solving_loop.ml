@@ -158,6 +158,13 @@ type solve_res =
 
 exception StopProcessDecl
 
+let parse_solver_name s =
+  match s with
+  | "tableaux" -> Some Util.Tableaux
+  | "cdcl" | "satml" -> Some Util.CDCL
+  | "cdcl_tableaux" | "satml_tableaux" | "default" -> Some Util.CDCL_Tableaux
+  | _ -> None
+
 let interactive_prompt st =
   match D_loop.State.get D_loop.State.logic_file st with
   | { source = `Stdin; mode = (None | Some `Incremental); _ }
@@ -296,7 +303,6 @@ let process_source ?selector_inst ~print_status src =
     | Errors.Error e ->
       recoverable_error "%a" Errors.report e;
       st
-    | Exit -> raise (Exit_with_code 0)
     | _ as exn -> Printexc.raise_with_backtrace exn bt
   in
   let finally ~handle_exn st e =
@@ -492,26 +498,19 @@ let process_source ?selector_inst ~print_status src =
              after initialization";
           st
         ) else
-          try
-            let sat_solver =
-              match solver with
-              | "tableaux" -> Util.Tableaux
-              | "cdcl" | "satml" -> Util.CDCL
-              | "cdcl_tableaux" | "satml_tableaux" | "default" ->
-                Util.CDCL_Tableaux
-              | _ -> raise Exit
-            in
-            let is_cdcl_tableaux =
-              match sat_solver with CDCL_Tableaux -> true | _ -> false
-            in
-            Options.set_cdcl_tableaux_inst is_cdcl_tableaux;
-            Options.set_cdcl_tableaux_th is_cdcl_tableaux;
-            set_sat_solver sat_solver st
-          with Exit ->
-            recoverable_error ~loc
-              "error setting ':sat-solver', invalid option value '%s'"
-              solver;
-            st
+          (match parse_solver_name solver with
+           | Some sat_solver ->
+             let is_cdcl_tableaux =
+               match sat_solver with CDCL_Tableaux -> true | _ -> false
+             in
+             Options.set_cdcl_tableaux_inst is_cdcl_tableaux;
+             Options.set_cdcl_tableaux_th is_cdcl_tableaux;
+             set_sat_solver sat_solver st
+           | None ->
+             recoverable_error ~loc
+               "error setting ':sat-solver', invalid option value '%s'"
+               solver;
+             st)
       )
     | ":produce-assignments",  Symbol { name = Simple b; _ } ->
       begin
@@ -845,7 +844,7 @@ let process_source ?selector_inst ~print_status src =
         |> DO.init
         |> State.set named_terms Util.MS.empty
 
-      | {contents = `Exit; _} -> raise Exit
+      | {contents = `Exit; _} -> raise (Exit_with_code 0)
 
       | {contents = `Echo str; _} ->
         Fmt.pf
