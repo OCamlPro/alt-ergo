@@ -720,7 +720,10 @@ module Flat_Formula : FLAT_FORMULA = struct
                    not (Options.get_disable_flat_formulas_simplification ()) &&
                    a.Atom.var.Atom.level = 0 ->
                  begin
-                   if a.Atom.neg.Atom.is_true then (aaz a; raise Contradiction); (* XXX*)
+                   if a.Atom.neg.Atom.is_true then (
+                     aaz a;
+                     raise Contradiction
+                   ); (* XXX*)
                    if a.Atom.is_true then (aaz a; acc)
                    else so, e::nso
                  end
