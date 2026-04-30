@@ -32,10 +32,10 @@ module State = struct
     in
     match get report_style st with
     | Minimal ->
-      Format.kfprintf aux Format.err_formatter
+      Format.kfprintf aux (Options.Output.get_fmt_diagnostic ())
         "E:%s@." (Dl.Report.Error.mnemonic error)
     | Regular | Contextual ->
-      Format.kfprintf aux Format.err_formatter
+      Format.kfprintf aux (Options.Output.get_fmt_diagnostic ())
         ("@[<v>%a%a @[<hov>%a@]%a@]@.")
         (pp_loc ?file st) loc
         Fmt.(styled `Bold @@ styled (`Fg (`Hi `Red)) string) "Error"
