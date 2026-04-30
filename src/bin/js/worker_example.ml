@@ -33,11 +33,11 @@ module Html = Dom_html
 let document = Html.window##.document
 
 (* Example of the file to prove *)
-let file = ref "goal g : true"
+let file = ref "(set-logic ALL)\n(check-sat)"
 
 (* This is the extension needed for the parser and corresponding to the input
    file format*)
-let extension = ref ".ae"
+let extension = ref ".psmt2"
 
 (* Timeout *)
 let timeout = ref 100.
@@ -65,11 +65,11 @@ let solve () =
   let options =
     {(Worker_interface.init_options ()) with
      input_format = None;
-     debug = Some true;
-     verbose = Some true;
+     debug = Some false;
+     verbose = Some false;
      answers_with_loc = Some false;
-     sat_solver = Some Worker_interface.Tableaux;
-     unsat_core = Some true;
+     sat_solver = Some Worker_interface.CDCL_Tableaux;
+     unsat_core = Some false;
     } in
 
   let worker = Worker.create "./alt-ergo-worker.js" in
@@ -140,49 +140,23 @@ let process_results = function
     Some (String.concat "" r)
   | None -> None
 
-let result = document##createTextNode (Js.string "")
-(* update result text area *)
-let print_res = function
-  | Some res ->
-    result##.data := Js.string res
+let regular =
+  let div = Html.createDiv document in
+  div##.className := Js.string "regular";
+  div
+
+let print_regular v =
+  match v with
+  | Some s ->
+    regular##.innerText := Js.string s
   | None -> ()
 
-let error = document##createTextNode (Js.string "")
-(* update error text area *)
-let print_error = function
-  | Some err ->
-    error##.data := Js.string err
-  | None -> ()
-
-let warning = document##createTextNode (Js.string "")
-(* update warning text area *)
-let print_warning = function
-  | Some wrn ->
-    warning##.data := Js.string wrn
-  | None -> ()
-
-let debug = document##createTextNode (Js.string "")
-(* update error text area *)
-let print_debug = function
-  | Some dbg ->
-    debug##.data := Js.string dbg
-  | None -> ()
-
-let model = document##createTextNode (Js.string "")
-(* update model text area *)
-let print_model = function
-  | Some mdl ->
-    model##.data := Js.string mdl
-  | None -> ()
-
-let unsat_core = document##createTextNode (Js.string "")
-(* update unsat core text area *)
-let print_unsat_core = function
-  | Some usc ->  unsat_core##.data := Js.string usc
-  | None -> ()
+let diagnostic =
+  let div = Html.createDiv document in
+  div##.className := Js.string "diagnostic";
+  div
 
 let statistics = document##createTextNode (Js.string "")
-(* update statistics text area *)
 let print_statistics = function
   | None -> ()
   | Some l ->
@@ -197,75 +171,44 @@ let print_statistics = function
       ) "" l in
     statistics##.data := Js.string stats
 
+let print_diagnostic v =
+  match v with
+  | Some s ->
+    diagnostic##.innerText := Js.string s
+  | None -> ()
+
 let onload _ =
   let main = Js.Opt.get (document##getElementById (Js.string "main"))
       (fun () -> assert false) in
-  (* Create a text area for the input file *)
   Dom.appendChild main
     (string_input Html.createTextarea "Input file to solve" file);
   Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the extension format *)
   Dom.appendChild main (string_input Html.createInput "Extension" extension);
   Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the timeout value *)
   Dom.appendChild main (float_input "Timeout" timeout);
   Dom.appendChild main (Html.createBr document);
-  (* Create a button to start the solving *)
   Dom.appendChild
     main
     (button "Ask Alt-Ergo" (fun _ ->
          let div = Html.createDiv document in
          Dom.appendChild main div;
          Lwt_js_events.async (fun () ->
-             (* Print "solving" until the end of the solving
-                or until the timeout *)
-             print_res (Some "Solving");
-             print_error (Some "");
+             print_regular (Some "Solving");
+             print_diagnostic (Some "");
              let%lwt res = solve () in
-             (* Update results area *)
-             print_res (process_results res.regular);
-             (* Update errors area if errors occurs at solving *)
-             print_error  (process_results res.diagnostic);
-             (* Update warning area if warning occurs at solving *)
-             print_warning  (process_results res.diagnostic);
-             (* Update debug area *)
-             print_debug  (process_results res.diagnostic);
-             (* Update model *)
-             print_model  (process_results res.regular);
-             (* Update unsat core *)
-             print_unsat_core  (process_results res.regular);
-             (* Update statistics *)
+             print_regular (process_results res.regular);
+             print_diagnostic (process_results res.diagnostic);
              print_statistics res.statistics;
              Lwt.return_unit);
          Js._false));
   Dom.appendChild main (Html.createBr document);
   Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the results *)
-  Dom.appendChild main result;
+  Dom.appendChild main regular;
   Dom.appendChild main (Html.createBr document);
   Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the errors *)
-  Dom.appendChild main error;
+  Dom.appendChild main diagnostic;
   Dom.appendChild main (Html.createBr document);
   Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the warning *)
-  Dom.appendChild main warning;
-  Dom.appendChild main (Html.createBr document);
-  Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the debug *)
-  Dom.appendChild main debug;
-  Dom.appendChild main (Html.createBr document);
-  Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the model *)
-  Dom.appendChild main model;
-  Dom.appendChild main (Html.createBr document);
-  Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the unsat_core *)
-  Dom.appendChild main unsat_core;
-  Dom.appendChild main (Html.createBr document);
-  Dom.appendChild main (Html.createBr document);
-  (* Create a text area for the statistics *)
-  Dom.appendChild main statistics;
   Js._false
 
 let _ = Html.window##.onload := Html.handler onload
