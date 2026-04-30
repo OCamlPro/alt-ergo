@@ -707,48 +707,55 @@ module Flat_Formula : FLAT_FORMULA = struct
       then merge_rec l1 l2 h1
       else merge_rec l1 l2 h2
 
-  let mk_and =
-    let exception Contradiction in
-    fun hcons l ->
-      try
-        let so, nso =
+  exception Contradiction
+
+  let mk_and_aux hcons l =
+    let so, nso =
+      List.fold_left
+        (fun ((so,nso) as acc) e ->
+           match e.view with
+           | AND l -> merge_and_check so l, nso
+           | UNIT a when
+               not (Options.get_disable_flat_formulas_simplification ()) &&
+               a.Atom.var.Atom.level = 0 ->
+             begin
+               if a.Atom.neg.Atom.is_true then (
+                 aaz a;
+                 raise Contradiction
+               ); (* XXX*)
+               if a.Atom.is_true then (aaz a; acc)
+               else so, e::nso
+             end
+           | _     -> so, e::nso
+        )([],[]) l
+    in
+    let delta_inv = List.fast_sort (fun a b -> compare b a) nso in
+    let delta_u = match delta_inv with
+      | [] -> delta_inv
+      | e::l ->
+        let _, delta_u =
           List.fold_left
-            (fun ((so,nso) as acc) e ->
-               match e.view with
-               | AND l -> merge_and_check so l, nso
-               | UNIT a when
-                   not (Options.get_disable_flat_formulas_simplification ()) &&
-                   a.Atom.var.Atom.level = 0 ->
-                 begin
-                   if a.Atom.neg.Atom.is_true then (
-                     aaz a;
-                     raise Contradiction
-                   ); (* XXX*)
-                   if a.Atom.is_true then (aaz a; acc)
-                   else so, e::nso
-                 end
-               | _     -> so, e::nso
-            )([],[]) l
+            (fun ((c,l) as acc) e ->
+               if complements c e then raise Contradiction;
+               if equal c e then acc
+               else (e, e::l)
+            )(e,[e]) l
         in
-        let delta_inv = List.fast_sort (fun a b -> compare b a) nso in
-        let delta_u = match delta_inv with
-          | [] -> delta_inv
-          | e::l ->
-            let _, delta_u =
-              List.fold_left
-                (fun ((c,l) as acc) e ->
-                   if complements c e then raise Contradiction;
-                   if equal c e then acc
-                   else (e, e::l)
-                )(e,[e]) l
-            in
-            delta_u
-        in
-        match merge_and_check so delta_u with
-        | [] -> vrai
-        | [e]-> e
-        | l -> make hcons (AND l) (OR (List.rev (List.rev_map mk_not l)))
-      with Contradiction -> faux
+        delta_u
+    in
+    match merge_and_check so delta_u with
+    | [] -> vrai
+    | [e]-> e
+    | l -> make hcons (AND l) (OR (List.rev (List.rev_map mk_not l)))
+
+  let mk_and hcons l =
+    (* HOTFIX: Ensure that the exception cannot escape because of the
+       bug describe in https://github.com/OCamlPro/alt-ergo/issues/1348. *)
+    try
+      match mk_and_aux hcons l with
+      | exception Contradiction -> faux
+      | r -> r
+    with Contradiction -> faux
 
   (* res = l1 inter l2 *)
   let intersect_list l1 l2 =
@@ -835,62 +842,69 @@ module Flat_Formula : FLAT_FORMULA = struct
         try Some (common, List.rev_map (diff_list common) ands)
         with Not_included -> assert false
 
-  let rec mk_or =
-    let exception Tautology in
-    fun hcons l ->
-      try
-        let so, nso =
+  exception Tautology
+
+  let rec mk_or_aux hcons l =
+    let so, nso =
+      List.fold_left
+        (fun ((so,nso) as acc) e ->
+           match e.view with
+           | OR l  -> merge_and_check so l, nso
+           | UNIT a  when
+               not (Options.get_disable_flat_formulas_simplification ()) &&
+               a.Atom.var.Atom.level = 0 ->
+             begin
+               if a.Atom.is_true then (aaz a; raise Tautology); (* XXX *)
+               if a.Atom.neg.Atom.is_true then (aaz a; acc)
+               else so, e::nso
+             end
+           | _     -> so, e::nso
+        )([],[]) l
+    in
+    let delta_inv = List.fast_sort (fun a b -> compare b a) nso in
+    let delta_u = match delta_inv with
+      | [] -> delta_inv
+      | e::l ->
+        let _, delta_u =
           List.fold_left
-            (fun ((so,nso) as acc) e ->
-               match e.view with
-               | OR l  -> merge_and_check so l, nso
-               | UNIT a  when
-                   not (Options.get_disable_flat_formulas_simplification ()) &&
-                   a.Atom.var.Atom.level = 0 ->
-                 begin
-                   if a.Atom.is_true then (aaz a; raise Tautology); (* XXX *)
-                   if a.Atom.neg.Atom.is_true then (aaz a; acc)
-                   else so, e::nso
-                 end
-               | _     -> so, e::nso
-            )([],[]) l
+            (fun ((c,l) as acc) e ->
+               if complements c e then raise Tautology;
+               if equal c e then acc
+               else (e, e::l)
+            )(e,[e]) l
         in
-        let delta_inv = List.fast_sort (fun a b -> compare b a) nso in
-        let delta_u = match delta_inv with
-          | [] -> delta_inv
-          | e::l ->
-            let _, delta_u =
-              List.fold_left
-                (fun ((c,l) as acc) e ->
-                   if complements c e then raise Tautology;
-                   if equal c e then acc
-                   else (e, e::l)
-                )(e,[e]) l
-            in
-            delta_u
-        in
-        match merge_and_check so delta_u with
-        | [] -> faux
-        | [e]-> e
-        | l  ->
-          match extract_common l with
-          | None ->
-            begin match l with
-              | [{ view = UNIT _; _ } as fa; { view = AND ands; _ }] ->
-                begin
-                  try
-                    mk_or hcons
-                      [fa ; (mk_and hcons (remove_elt (mk_not fa) ands))]
-                  with Not_included ->
-                    make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
-                end
-              | _ ->
+        delta_u
+    in
+    match merge_and_check so delta_u with
+    | [] -> faux
+    | [e]-> e
+    | l  ->
+      match extract_common l with
+      | None ->
+        begin match l with
+          | [{ view = UNIT _; _ } as fa; { view = AND ands; _ }] ->
+            begin
+              try
+                mk_or hcons
+                  [fa ; (mk_and hcons (remove_elt (mk_not fa) ands))]
+              with Not_included ->
                 make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
             end
-          | Some (com,ands) ->
-            let ands = List.rev_map (mk_and hcons) ands in
-            mk_and hcons ((mk_or hcons ands) :: com)
-      with Tautology -> vrai
+          | _ ->
+            make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
+        end
+      | Some (com,ands) ->
+        let ands = List.rev_map (mk_and hcons) ands in
+        mk_and hcons ((mk_or hcons ands) :: com)
+
+  and mk_or hcons l =
+    (* HOTFIX: Ensure that the exception cannot escape because of the
+       bug describe in https://github.com/OCamlPro/alt-ergo/issues/1348. *)
+    try
+      match mk_or_aux hcons l with
+      | exception Tautology -> vrai
+      | r -> r
+    with Tautology -> vrai
 
   (* translation from E.t *)
 
