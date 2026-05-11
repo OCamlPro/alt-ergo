@@ -7,9 +7,41 @@ function unix_times () {
     var utime = caml_unix_gettimeofday ();
     return BLOCK(0, utime, utime, utime, utime)
 }
+
 //Provides: unix_setitimer
+//Version: < 5.0
 function unix_setitimer () {
   return BLOCK(0, 0, 0, 0)
+}
+
+//Provides: caml_unix_setitimer
+//Version: >= 5.0
+function caml_unix_setitimer () {
+  return BLOCK(0, 0, 0, 0)
+}
+
+//Provides: unix_getpid
+//Version: < 5.0
+function unix_getpid() {
+  return 0;
+}
+
+//Provides: caml_unix_getpid
+//Version: >= 5.0
+function caml_unix_getpid() {
+  return 0;
+}
+
+//Provides: unix_kill
+//Version: < 5.0
+function unix_kill() {
+  return 0;
+}
+
+//Provides: caml_unix_kill
+//Version: >= 5.0
+function caml_unix_kill() {
+  return 0;
 }
 
 // Camlzip primitives
@@ -28,14 +60,4 @@ function camlzip_inflate_bytecode () {
 //Provides: camlzip_update_crc32
 function camlzip_update_crc32 () {
   return BLOCK(0, 0, 0, 0)
-}
-
-//Provides: unix_getpid
-function unix_getpid() {
-  return 0;
-}
-
-//Provides: unix_kill
-function unix_kill() {
-  return 0;
 }
