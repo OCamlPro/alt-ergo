@@ -39,8 +39,8 @@ let file = ref "(set-logic ALL)\n(check-sat)"
    file format*)
 let extension = ref ".psmt2"
 
-(* Timeout *)
 let timeout = ref 100.
+let steps_bound = ref 10000
 
 (* Function that run the worker. *)
 let exec worker file options =
@@ -61,12 +61,13 @@ let exec worker file options =
 (* Create the web worker and launch 2 threads.
    The first one for the timeout,
    the second on for the call to Alt-Ergo through his web worker *)
-let solve () =
+let solve ?steps_bound () =
   let options =
     {(Worker_interface.init_options ()) with
      input_format = None;
      debug = Some false;
      verbose = Some false;
+     steps_bound;
      answers_with_loc = Some false;
      sat_solver = Some Worker_interface.CDCL_Tableaux;
      unsat_core = Some false;
@@ -111,21 +112,29 @@ let string_input f area_name area =
   Dom.appendChild res (Html.createBr document);
   res
 
-let float_input name value =
+type 'a parser = { of_string : string -> 'a; to_string : 'a -> string }
+
+let generic_input { of_string; to_string } name value =
   let res = document##createDocumentFragment in
   Dom.appendChild res (document##createTextNode (Js.string name));
   Dom.appendChild res (Html.createBr document);
   let input = Html.createInput document in
-  input##.value := Js.string (string_of_float !value);
+  input##.value := Js.string (to_string !value);
   input##.onchange :=
     Html.handler (fun _ ->
-        (try value := float_of_string (Js.to_string input##.value)
+        (try value := of_string (Js.to_string input##.value)
          with Invalid_argument _ -> ());
-        input##.value := Js.string (string_of_float !value);
+        input##.value := Js.string (to_string !value);
         Js._false);
   Dom.appendChild res input;
   Dom.appendChild res (Html.createBr document);
   res
+
+let float_input =
+  generic_input { of_string = float_of_string; to_string = string_of_float }
+
+let int_input =
+  generic_input { of_string = int_of_string; to_string = string_of_int }
 
 let button name callback =
   let res = document##createDocumentFragment in
@@ -187,6 +196,8 @@ let onload _ =
   Dom.appendChild main (Html.createBr document);
   Dom.appendChild main (float_input "Timeout" timeout);
   Dom.appendChild main (Html.createBr document);
+  Dom.appendChild main (int_input "Steps bound" steps_bound);
+  Dom.appendChild main (Html.createBr document);
   Dom.appendChild
     main
     (button "Ask Alt-Ergo" (fun _ ->
@@ -195,7 +206,7 @@ let onload _ =
          Lwt_js_events.async (fun () ->
              print_regular (Some "Solving");
              print_diagnostic (Some "");
-             let%lwt res = solve () in
+             let%lwt res = solve ~steps_bound:!steps_bound () in
              print_regular (process_results res.regular);
              print_diagnostic (process_results res.diagnostic);
              print_statistics res.statistics;
