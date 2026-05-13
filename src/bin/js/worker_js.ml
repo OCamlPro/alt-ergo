@@ -63,7 +63,9 @@ let main ~worker_id input =
     let diagnostic = check_buffer_content buf_diagnostic in
     Worker_interface.{ worker_id; status; regular; diagnostic; statistics }
   in
-  let return_error fmt = Format.kasprintf (fun s -> return_answer (Error s)) fmt in
+  let return_error fmt =
+    Format.kasprintf (fun s -> return_answer (Error s)) fmt
+  in
 
   let tbl = Hashtbl.create 53 in
   (* Aux function used to record axioms used in instantiations *)
