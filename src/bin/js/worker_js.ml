@@ -140,6 +140,7 @@ let main ~worker_id input =
 let () =
   Worker.set_onmessage (fun (json_file, json_options) ->
       Lwt_js_events.async (fun () ->
+          Steps.reinit_steps ();
           let filename, worker_id, content =
             Worker_interface.file_from_json json_file
           in
