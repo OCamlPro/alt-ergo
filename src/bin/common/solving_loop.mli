@@ -29,8 +29,12 @@ exception Exit_with_code of int
 (** Exception raised to notify that [process_source] cannot continue. The
     integer corresponds to an error code. *)
 
+type limits = { reproducible_resource_limit : int }
+
 type parse_result =
-  { path : [`Stdin | `File of string]  (** Path to the input file. *) }
+  { path : [`Stdin | `File of string];  (** Path to the input file. *)
+    limits : limits
+  }
 
 val main : parse_result -> unit
 (** [main path] solves the input problem [path]. *)
@@ -38,6 +42,7 @@ val main : parse_result -> unit
 val process_source :
   ?selector_inst:(AltErgoLib.Expr.t -> bool) ->
   print_status:(AltErgoLib.Frontend.status -> int -> unit) ->
+  ?limits:limits ->
   Dolmen_loop.State.source ->
   unit
 (** [process_source ?selector_inst ~print_status src] processes the input source

@@ -443,7 +443,7 @@ let mk_internal_opt disable_weaks enable_assertions warning_as_error
   `Ok gc_policy
 
 let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation steps_bound
-    timelimit timelimit_per_goal =
+    reproducible_resource_limit timelimit timelimit_per_goal =
   let set_limit t d =
     match t with
     | Some t ->
@@ -467,7 +467,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation steps_bound
     Steps.set_steps_bound steps_bound;
     set_timelimit timelimit;
     set_timelimit_per_goal timelimit_per_goal;
-    `Ok ()
+    `Ok Solving_loop.{ reproducible_resource_limit }
 
 let mk_output_opt produce_models objectives_in_interpretation unsat_core
     output_format model_type () () () () =
@@ -599,7 +599,7 @@ let get_verbose_t =
   Arg.(value & flag & info ["v"; "verbose"] ~doc)
 
 let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace rule ()
-    halt_opt gc () () () () () () () () =
+    halt_opt gc limits () () () () () () () =
   Debug.mk ~verbosity:1 debug_flags;
   Debug.mk ~verbosity:2 ddebug_flags;
   Debug.mk ~verbosity:3 dddebug_flags;
@@ -621,7 +621,7 @@ let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace rule ()
       set_used_context_file base_file
     | _ -> ());
     Gc.set { (Gc.get ()) with Gc.allocation_policy = gc };
-    `Ok (Some path)
+    `Ok (Some Solving_loop.{ path; limits })
   end
 
 let mk_output_channel_opt regular_output diagnostic_output =
@@ -918,6 +918,11 @@ let parse_limit_opt =
       & opt int (get_steps_bound ())
       & info ["S"; "steps-bound"] ~docv ~doc)
   in
+  let reproducible_resource_limit =
+    let doc = "Set the reproducible resource limit." in
+    let docv = "LIMIT" in
+    Arg.(value & opt int 0 & info ["reproducible-resource-limit"] ~docv ~doc)
+  in
   let timelimit =
     let doc =
       "Set the time limit to $(docv) seconds (not supported on Windows)."
@@ -937,7 +942,8 @@ let parse_limit_opt =
   Term.(
     ret
       (const mk_limit_opt $ age_bound $ fm_cross_limit
-     $ timelimit_interpretation $ steps_bound $ timelimit $ timelimit_per_goal))
+     $ timelimit_interpretation $ steps_bound $ reproducible_resource_limit
+     $ timelimit $ timelimit_per_goal))
 
 let parse_output_opt =
   let docs = s_output in
@@ -1562,7 +1568,7 @@ let parse_cmdline_arguments () =
   at_exit Options.Output.close_all;
   let r = Cmd.eval_value main in
   match r with
-  | Ok (`Ok (Some path)) -> Solving_loop.{ path }
+  | Ok (`Ok (Some result)) -> result
   | Ok (`Ok None) -> raise (Exit_parse_command 0)
   | Ok `Version | Ok `Help -> exit 0
   | Error `Parse -> exit Cmd.Exit.cli_error
