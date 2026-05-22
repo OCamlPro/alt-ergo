@@ -5,6 +5,21 @@
  - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
    that enables the support for the SMT-LIB FPA Theory, and that can be used
    with the cmdline option `--enable-theory smt.float` (#1358)
+
+ - Added support for the `:reproducible-resource-limit` and
+   `--reproducible-resource-limit` options, following the SMT-LIB standard
+   (#1353)
+
+   The reproducible resource limit was previously using a time-based limit,
+   which does not respect the reproducibility criterion outlined in the SMT-LIB
+   standard. It now defines a per-goal step limit, which apply in addition to
+   the **global** step limit (defined with `--steps-bound`), if any.
+
+   We encourage users of the global step limit (`--steps-bound`) to switch to
+   the reproducible resource limit instead.
+
+## v2.6.3
+
  - Bump minimal cmdliner version to 2.0 (#1340)
 
 ## v2.6.2

@@ -31,7 +31,14 @@ module DO = D_state_option
 module Sy = Symbols
 module O = Options
 
-type parse_result = { path : [`Stdin | `File of string] }
+type limits = { reproducible_resource_limit : int }
+
+let empty_limits = { reproducible_resource_limit = 0 }
+
+type parse_result =
+  { path : [`Stdin | `File of string];
+    limits : limits
+  }
 
 exception Exit_with_code of int
 
@@ -158,7 +165,7 @@ let interactive_prompt st =
     Some "alt-ergo>"
   | _ -> None
 
-let process_source ?selector_inst ~print_status src =
+let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let () = Dolmen_loop.Code.init [] in
   let hook_on_status status i =
     print_status status i;
@@ -167,7 +174,8 @@ let process_source ?selector_inst ~print_status src =
       exit_as_timeout ()
     | _ -> raise StopProcessDecl
   in
-  let solve (module SAT : Sat_solver_sig.S) all_context (cnf, goal_name) =
+  let solve (module SAT : Sat_solver_sig.S) ~limit all_context (cnf, goal_name)
+      =
     let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands ()
     then
@@ -186,7 +194,13 @@ let process_source ?selector_inst ~print_status src =
       SAT.reset_refs ();
       let ftdn_env = FE.init_env ?selector_inst used_context in
       let () =
-        try List.iter (FE.process_decl ~hook_on_status ftdn_env) cnf
+        try
+          (* At the moment we ignore the [Error] case here: the unknown reason
+             should have already been set internally by the solver when the
+             [Util.Step_limit_reached] exception was raised. *)
+          let ( let& ) f scope = f ~scope in
+          let& () = Steps.with_step_limit limit in
+          List.iter (FE.process_decl ~hook_on_status ftdn_env) cnf
         with StopProcessDecl -> ()
       in
       if Options.get_timelimit_per_goal () then Options.Time.unset_timeout ();
@@ -238,6 +252,9 @@ let process_source ?selector_inst ~print_status src =
   in
   let named_terms : DStd.Expr.term Util.MS.t State.key =
     State.create_key ~pipe:"" "named_terms"
+  in
+  let reproducible_resource_limit : int State.key =
+    State.create_key ~pipe:"" ":reproducible-resource-limit"
   in
   let set_steps_bound i st =
     try DO.Steps.set i st
@@ -417,22 +434,14 @@ let process_source ?selector_inst ~print_status src =
       | None | Some _ -> print_wrn_opt ~loc ~name:":verbosity" "integer" value
       end;
       st
-    | ":reproducible-resource-limit", Symbol { name = Simple level; _ } ->
-      begin if Sys.unix
-      then
-        match int_of_string_opt level with
-        | Some i when i > 0 ->
-          Options.set_timelimit_per_goal true;
-          Options.set_timelimit (float_of_int i /. 1000.)
-        | Some 0 ->
-          Options.set_timelimit_per_goal false;
-          Options.set_timelimit 0.
-        | None | Some _ ->
-          print_wrn_opt ~loc ~name:":reproducible-resource-limit"
-            "nonnegative integer" value
-      else warning ~loc "reproducible-resource-limit is only supported on Unix"
-      end;
-      st
+    | ":reproducible-resource-limit", Symbol { name = Simple level; _ } -> begin
+      match int_of_string_opt level with
+      | Some i when i >= 0 -> State.set reproducible_resource_limit i st
+      | None | Some _ ->
+        print_wrn_opt ~loc ~name:":reproducible-resource-limit"
+          "nonnegative integer" value;
+        st
+    end
     | ":sat-solver", Symbol { name = Simple solver; _ } -> (
       if not (is_solver_ctx_empty (State.get solver_ctx_key st))
       then (
@@ -687,7 +696,12 @@ let process_source ?selector_inst ~print_status src =
           | _ -> assert false
         in
         let solve_res =
-          solve (DO.SatSolverModule.get st) all_context (cnf, name)
+          solve
+            ~limit:
+              (State.get_or ~default:limits.reproducible_resource_limit
+                 reproducible_resource_limit st)
+            (DO.SatSolverModule.get st)
+            all_context (cnf, name)
         in
         if is_thm
         then
@@ -857,8 +871,8 @@ let process_source ?selector_inst ~print_status src =
   in
   d_fe src
 
-let main { path } =
+let main { path; limits } =
   try
-    process_source ~print_status:Frontend.print_status
+    process_source ~limits ~print_status:Frontend.print_status
       (path :> D_loop.State.source)
   with Exit_with_code code -> exit code
