@@ -201,14 +201,24 @@ let empty_inst_info loc =
     _new  = SE.empty;
   }
 
+let find_inst_info ~loc axiom instances_map =
+  match MS.find axiom instances_map with
+  | exception Not_found -> empty_inst_info loc
+  | ii ->
+    if ii.loc != loc
+    then
+      Errors.internal_error
+        "Instances for axiom '%s' have incompatible locations.@ @ \
+         @[<v 2>Previous location was:@ %a@]@ \
+         @[<v 2>Now registering at location:@ %a@]\
+        "
+        axiom Loc.report ii.loc Loc.report loc;
+    ii
+
 let new_instance_of axiom inst loc kept =
   if_profiling @@ fun state ->
   let () = state.instances_map_printed <- false in
-  let ii =
-    try MS.find axiom state.instances_map
-    with Not_found -> empty_inst_info loc
-  in
-  assert (ii.loc == loc);
+  let ii = find_inst_info ~loc axiom state.instances_map in
   let ii =
     if kept then
       {ii with kept = ii.kept + 1; all_insts = SE.add inst ii.all_insts}
@@ -255,11 +265,7 @@ let decision d origin =
 
 let register_produced_terms axiom loc consumed all produced _new =
   if_profiling @@ fun state ->
-  let ii =
-    try MS.find axiom state.instances_map
-    with Not_found -> empty_inst_info loc
-  in
-  assert (ii.loc == loc);
+  let ii = find_inst_info ~loc axiom state.instances_map in
   let ii =
     {ii with
      consumed = SE.union ii.consumed consumed;

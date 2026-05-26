@@ -1947,7 +1947,7 @@ let make dloc_file acc stmt =
                 in
                 let qb = E.mk_eq ~iff:true defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                  E.mk_forall name_base st_loc binders [] qb ~toplevel:true
                     ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -1968,7 +1968,7 @@ let make dloc_file acc stmt =
                 let iff = Ty.equal (Expr.type_info defn) (Ty.Tbool) in
                 let qb = E.mk_eq ~iff defn ff in
                 let ff =
-                  E.mk_forall name_base Loc.dummy binders [] qb ~toplevel:true
+                  E.mk_forall name_base st_loc binders [] qb ~toplevel:true
                     ~decl_kind
                 in
                 assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
