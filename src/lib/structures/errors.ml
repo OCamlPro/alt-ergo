@@ -77,6 +77,17 @@ let invalid_set_option mode opt_key =
 let forbidden_command mode cmd_name =
   error (Mode_error (mode, Forbidden_command cmd_name))
 
+exception Internal_error
+
+let internal_error fmt =
+  let ppf = Options.Output.get_fmt_diagnostic () in
+  Fmt.pf ppf "@[<v>Internal error:@ @[";
+  Fmt.kpf
+    (fun ppf ->
+       Fmt.pf ppf "@]@]@.";
+       raise Internal_error)
+    ppf fmt
+
 let report_typing_error fmt = function
   | NonPositiveBitvType(n) ->
     fprintf fmt "non positive bitvector size (%d)" n
