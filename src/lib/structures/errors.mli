@@ -103,3 +103,9 @@ val forbidden_command : Util.mode -> string -> 'a
 
 (** Print a message on the formatter corresponding to the error *)
 val report : Format.formatter -> error -> unit
+
+(** {2 Internal error } *)
+
+exception Internal_error
+
+val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
