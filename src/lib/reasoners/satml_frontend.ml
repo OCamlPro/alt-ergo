@@ -1392,6 +1392,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
     Inst.reinit_em_cache ();
+    Matching.Triggers.reinit_caches ();
     Expr.reinit_cache ();
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();

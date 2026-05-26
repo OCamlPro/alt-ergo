@@ -33,6 +33,132 @@ module SubstE = Var.Map
 let src = Logs.Src.create ~doc:"Matching" __MODULE__
 module Log = (val Logs.src_log src : Logs.LOG)
 
+module HEI = Hashtbl.Make (
+  struct
+    open Util
+    type t = E.t * Util.matching_env
+    let hash (e, mc) =
+      abs @@
+      E.hash e *
+      (mc.nb_triggers +
+       (if mc.triggers_var then 10 else -10) +
+       (if mc.greedy then 50 else - 50)
+      )
+
+    let equal (e1, mc1) (e2, mc2) =
+      E.equal e1 e2 &&
+      mc1.nb_triggers == mc2.nb_triggers &&
+      mc1.triggers_var == mc2.triggers_var &&
+      mc1.greedy == mc2.greedy
+
+  end)
+
+module HE = Hashtbl.Make (E)
+
+module Triggers = struct
+  type t =
+    { pats : Matching_types.trigger_info list }
+  [@@unboxed]
+
+  let empty =
+    { pats = [] }
+
+  let add p triggers =
+    { pats = p :: triggers.pats }
+
+  let triggers_of, clear_triggers_of_trs_tbl =
+    let trs_tbl = HEI.create 101 in
+    let triggers_of q mconf =
+      match q.E.user_trs with
+      | _::_ as l -> l
+      | [] ->
+        try HEI.find trs_tbl (q.E.main, mconf)
+        with Not_found ->
+          let trs =
+            E.make_triggers q.E.main q.E.binders q.E.kind mconf
+          in
+          HEI.add trs_tbl (q.E.main, mconf) trs;
+          trs
+    in
+    let clear_triggers_of_trs_tbl () =
+      HEI.clear trs_tbl
+    in
+    triggers_of, clear_triggers_of_trs_tbl
+
+  let backward_triggers, clear_backward_triggers_trs_tbl =
+    let trs_tbl = HE.create 101 in
+    let backward_triggers q =
+      try HE.find trs_tbl q.E.main
+      with Not_found ->
+        let trs =
+          E.resolution_triggers ~is_back:true q
+        in
+        HE.add trs_tbl q.E.main trs;
+        trs
+    in
+    let clear_backward_triggers_trs_tbl () =
+      HE.clear trs_tbl
+    in
+    backward_triggers, clear_backward_triggers_trs_tbl
+
+  let forward_triggers, clear_forward_triggers_trs_tbl =
+    let trs_tbl = HE.create 101 in
+    let forward_triggers q =
+      try HE.find trs_tbl q.E.main
+      with Not_found ->
+        let trs =
+          E.resolution_triggers ~is_back:false q
+        in
+        HE.add trs_tbl q.E.main trs;
+        trs
+    in
+    let clear_forward_triggers_trs_tbl () =
+      HE.clear trs_tbl
+    in
+    forward_triggers, clear_forward_triggers_trs_tbl
+
+  let add_triggers_of_formulas mconf env formulas =
+    ME.fold
+      (fun lem (guard, age, dep) env ->
+         match E.form_view lem with
+         | E.Lemma ({ E.main = f; name; _ } as q) ->
+           let tgs, kind =
+             match mconf.Util.backward with
+             | Util.Normal   -> triggers_of q mconf, "Normal"
+             | Util.Backward -> backward_triggers q, "Backward"
+             | Util.Forward  -> forward_triggers q, "Forward"
+           in
+           if Options.get_debug_triggers () then
+             Printer.print_dbg
+               ~module_name:"Matching" ~function_name:"add_triggers"
+               "@[<v 2>%s triggers of %s are:@ %a@]"
+               kind name E.print_triggers tgs;
+           List.fold_left
+             (fun triggers tr ->
+                let info =
+                  Matching_types.{ trigger = tr;
+                                   trigger_age = age ;
+                                   trigger_orig = lem ;
+                                   trigger_formula = f ;
+                                   trigger_dep = dep;
+                                   trigger_increm_guard = guard
+                                 }
+                in
+                add info triggers
+             ) env tgs
+
+         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
+         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
+      ) formulas env
+
+
+  let reinit_caches () =
+    clear_triggers_of_trs_tbl ();
+    clear_backward_triggers_trs_tbl ();
+    clear_forward_triggers_trs_tbl ()
+end
+
+
 module type S = sig
   type t
   type theory
@@ -43,16 +169,13 @@ module type S = sig
     max_t_depth:int ->
     Matching_types.info ME.t ->
     E.t list ME.t Symbols.Map.t ->
-    Matching_types.trigger_info list ->
     t
 
   val add_term : Matching_types.term_info -> E.t -> t -> t
   val max_term_depth : t -> int -> t
-  val add_triggers :
-    Util.matching_env -> t -> (Expr.t * int * Explanation.t) ME.t -> t
   val terms_info : t -> Matching_types.info ME.t * E.t list ME.t Symbols.Map.t
   val query :
-    Util.matching_env -> t -> theory ->
+    Util.matching_env -> t -> Triggers.t -> theory ->
     (Matching_types.trigger_info * Matching_types.gsubst list) list
 
   val reinit_caches : unit -> unit
@@ -74,7 +197,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
     fils : E.t list ME.t Symbols.Map.t ;
     info : Matching_types.info ME.t ;
     max_t_depth : int;
-    pats : Matching_types.trigger_info list
   }
 
   exception Echec
@@ -82,11 +204,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
   let empty = {
     fils = Symbols.Map.empty ;
     info = ME.empty ;
-    pats = [ ];
     max_t_depth = 0;
   }
 
-  let make ~max_t_depth info fils pats = { fils; info; pats; max_t_depth }
+  let make ~max_t_depth info fils =
+    { fils; info; max_t_depth }
 
   let age_limite = Options.get_age_bound
   (* l'age limite des termes, au dela ils ne sont pas consideres par le
@@ -228,8 +350,6 @@ module Make (X : Arg) : S with type theory = X.t = struct
         List.fold_left add_rec env xs
     in
     if info.term_age > age_limite () then env else add_rec env t
-
-  let add_trigger p env = { env with pats = p :: env.pats }
 
   let all_terms
       f ty env tbox
@@ -530,10 +650,12 @@ module Make (X : Arg) : S with type theory = X.t = struct
     cache_are_equal_light := MT2.empty;
     cache_are_equal_full  := MT2.empty
 
-  let query mconf env tbox =
+  let query mconf env triggers tbox =
     reset_cache_refs ();
     try
-      let res = List.rev_map (matching mconf env tbox) env.pats in
+      let res =
+        List.rev_map (matching mconf env tbox) triggers.Triggers.pats
+      in
       reset_cache_refs ();
       res
     with e ->
@@ -576,119 +698,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
       )[] triggers |> List.rev
   *)
 
-  module HEI = Hashtbl.Make (
-    struct
-      open Util
-      type t = E.t * Util.matching_env
-      let hash (e, mc) =
-        abs @@
-        E.hash e *
-        (mc.nb_triggers +
-         (if mc.triggers_var then 10 else -10) +
-         (if mc.greedy then 50 else - 50)
-        )
-
-      let equal (e1, mc1) (e2, mc2) =
-        E.equal e1 e2 &&
-        mc1.nb_triggers == mc2.nb_triggers &&
-        mc1.triggers_var == mc2.triggers_var &&
-        mc1.greedy == mc2.greedy
-
-    end)
-
-  module HE = Hashtbl.Make (E)
-
-  let triggers_of, clear_triggers_of_trs_tbl =
-    let trs_tbl = HEI.create 101 in
-    let triggers_of q mconf =
-      match q.E.user_trs with
-      | _::_ as l -> l
-      | [] ->
-        try HEI.find trs_tbl (q.E.main, mconf)
-        with Not_found ->
-          let trs =
-            E.make_triggers q.E.main q.E.binders q.E.kind mconf
-          in
-          HEI.add trs_tbl (q.E.main, mconf) trs;
-          trs
-    in
-    let clear_triggers_of_trs_tbl () =
-      HEI.clear trs_tbl
-    in
-    triggers_of, clear_triggers_of_trs_tbl
-
-  let backward_triggers, clear_backward_triggers_trs_tbl =
-    let trs_tbl = HE.create 101 in
-    let backward_triggers q =
-      try HE.find trs_tbl q.E.main
-      with Not_found ->
-        let trs =
-          E.resolution_triggers ~is_back:true q
-        in
-        HE.add trs_tbl q.E.main trs;
-        trs
-    in
-    let clear_backward_triggers_trs_tbl () =
-      HE.clear trs_tbl
-    in
-    backward_triggers, clear_backward_triggers_trs_tbl
-
-  let forward_triggers, clear_forward_triggers_trs_tbl =
-    let trs_tbl = HE.create 101 in
-    let forward_triggers q =
-      try HE.find trs_tbl q.E.main
-      with Not_found ->
-        let trs =
-          E.resolution_triggers ~is_back:false q
-        in
-        HE.add trs_tbl q.E.main trs;
-        trs
-    in
-    let clear_forward_triggers_trs_tbl () =
-      HE.clear trs_tbl
-    in
-    forward_triggers, clear_forward_triggers_trs_tbl
-
-  let add_triggers mconf env formulas =
-    ME.fold
-      (fun lem (guard, age, dep) env ->
-         match E.form_view lem with
-         | E.Lemma ({ E.main = f; name; _ } as q) ->
-           let tgs, kind =
-             match mconf.Util.backward with
-             | Util.Normal   -> triggers_of q mconf, "Normal"
-             | Util.Backward -> backward_triggers q, "Backward"
-             | Util.Forward  -> forward_triggers q, "Forward"
-           in
-           if Options.get_debug_triggers () then
-             Printer.print_dbg
-               ~module_name:"Matching" ~function_name:"add_triggers"
-               "@[<v 2>%s triggers of %s are:@ %a@]"
-               kind name E.print_triggers tgs;
-           List.fold_left
-             (fun env tr ->
-                let info =
-                  Matching_types.{ trigger = tr;
-                                   trigger_age = age ;
-                                   trigger_orig = lem ;
-                                   trigger_formula = f ;
-                                   trigger_dep = dep;
-                                   trigger_increm_guard = guard
-                                 }
-                in
-                add_trigger info env
-             ) env tgs
-
-         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _
-         | E.Let _ | E.Iff _ | E.Xor _ -> assert false
-      ) formulas env
-
   let terms_info env = env.info, env.fils
 
   let reinit_caches () =
-    clear_triggers_of_trs_tbl ();
-    clear_backward_triggers_trs_tbl ();
-    clear_forward_triggers_trs_tbl ();
     reset_cache_refs ()
 
 end

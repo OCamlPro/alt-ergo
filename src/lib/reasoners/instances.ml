@@ -366,13 +366,15 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
   let mround env axs tbox selector ilvl kind mconf =
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
-    let env =
-      {env with matching = EM.add_triggers mconf env.matching axs} in
+    let triggers =
+      Matching.Triggers.add_triggers_of_formulas
+        mconf Matching.Triggers.empty axs
+    in
     let ccx_tbox =
       if mconf.Util.use_cs || mconf.Util.greedy then X.get_case_split_env tbox
       else X.get_real_env tbox
     in
-    let substs = EM.query mconf env.matching ccx_tbox in
+    let substs = EM.query mconf env.matching triggers ccx_tbox in
     let insts = new_facts env tbox selector substs in
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd

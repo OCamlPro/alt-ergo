@@ -27,6 +27,18 @@
 
 val src : Logs.src
 
+module Triggers : sig
+  type t
+
+  val empty : t
+
+  val add_triggers_of_formulas :
+    Util.matching_env -> t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
+
+  val reinit_caches : unit -> unit
+  (** Empties the e-matching caches *)
+end
+
 module type S = sig
   type t
   type theory
@@ -38,16 +50,17 @@ module type S = sig
     max_t_depth:int ->
     Matching_types.info Expr.Map.t ->
     Expr.t list Expr.Map.t Symbols.Map.t ->
-    Matching_types.trigger_info list ->
     t
 
   val add_term : term_info -> Expr.t -> t -> t
   val max_term_depth : t -> int -> t
-  val add_triggers :
-    Util.matching_env -> t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
   val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
   val query :
-    Util.matching_env -> t -> theory -> (trigger_info * gsubst list) list
+    Util.matching_env ->
+    t ->
+    Triggers.t ->
+    theory ->
+    (trigger_info * gsubst list) list
 
   val reinit_caches : unit -> unit
   (** Empties the e-matching caches *)
