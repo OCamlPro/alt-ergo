@@ -173,8 +173,8 @@ module TimerTable : sig
       stored, returns 0.. *)
   val get : t -> ty_module -> ty_function -> float
 
-  (** Sets the time spend to a given function in a given module.. *)
-  val set : t -> ty_module -> ty_function -> float -> unit
+  (** Add to the time spend in a given module and function. *)
+  val add : t -> ty_module -> ty_function -> float -> unit
 
   (** Gets the total time spent in a given module. *)
   val get_sum : t -> ty_module -> float
@@ -192,8 +192,10 @@ end = struct
   let get t m f =
     t.(ty_module_to_enum m).(ty_function_to_enum f)
 
-  let set t m f v =
-    t.(ty_module_to_enum m).(ty_function_to_enum f) <- v
+  let add t m f v =
+    let mi = ty_module_to_enum m in
+    let fi = ty_function_to_enum f in
+    t.(mi).(fi) <- t.(mi).(fi) +. v
 
   let get_sum t m =
     Array.fold_left (+.) 0. t.(ty_module_to_enum m)
@@ -234,7 +236,7 @@ let reset env =
   cpt_id := 0
 
 let accumulate env cur m f =
-  TimerTable.set env.z m f (cur -. env.cur_u)
+  TimerTable.add env.z m f (cur -. env.cur_u)
 
 let accumulate_cumulative_mode name env m f cur =
   if Options.get_cumulative_time_profiling() then
