@@ -273,7 +273,7 @@ let start env m f =
   begin
     match env.cur_t with
     | (M_None, _, _) -> ()
-    | kd ->
+    | (m, f, _) as kd ->
       accumulate env cur m f;
       env.stack <- kd :: env.stack
   end;
