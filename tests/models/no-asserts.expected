@@ -1,0 +1,6 @@
+
+unknown
+(
+  (define-fun a () Int 0)
+  (define-fun b () Real 0.0)
+)
