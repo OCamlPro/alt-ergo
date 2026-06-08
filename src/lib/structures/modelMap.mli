@@ -32,19 +32,15 @@ val add : Id.typed -> Expr.t list -> Expr.t -> t -> t
 (** [add sy args ret mdl] adds the binding [args -> ret] to the partial graph
     associated with the symbol [sy]. *)
 
-val empty : t
-(** An empty model. *)
+val empty : suspicious:bool -> t
+(** An empty model. The [suspicious] flag is used to remember that this
+    model may be wrong as it involves symbols from theories for which the
+    model generation is known to be incomplete. *)
 
 val set_free_defval : Id.typed -> Expr.t -> t -> t
 (** [set_free_defval sy v m] sets the value of [sy] to [v] in [m] if [sy] is
     uncontrained [Free _] in [m] or if it is absent. Does nothing if [sy] is
     contrained [C _]. *)
-
-val set_suspicious : bool -> t -> t
-(** [set_suspicious b m] sets the [suspicious] flag of [m] to [b].
-    The [suspicious] flag is used to remember that this
-    model may be wrong as it involves symbols from theories for which the
-    model generation is known to be incomplete.*)
 
 val find : Id.typed -> t -> graph
 (** [find sy mdl] returns the graph associated with the symbol [sy] in the model
