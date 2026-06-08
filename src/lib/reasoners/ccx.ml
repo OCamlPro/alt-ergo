@@ -88,7 +88,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
-    model:ModelMap.t ->
+    defaults:(Id.typed * Expr.t) list ->
     t -> Models.t
 
 end
@@ -760,6 +760,6 @@ module Main : S = struct
     in
     Uf.term_repr env.uf t
 
-  let extract_concrete_model ~prop_model ~model env =
-    Uf.extract_concrete_model ~prop_model ~model env.uf
+  let extract_concrete_model ~prop_model ~defaults env =
+    Uf.extract_concrete_model ~prop_model ~defaults env.uf
 end

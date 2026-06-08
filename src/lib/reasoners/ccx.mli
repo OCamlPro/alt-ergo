@@ -78,7 +78,7 @@ module type S = sig
 
   val extract_concrete_model :
     prop_model:Expr.Set.t ->
-    model:ModelMap.t ->
+    defaults:(Id.typed * Expr.t) list ->
     t -> Models.t
 
 end

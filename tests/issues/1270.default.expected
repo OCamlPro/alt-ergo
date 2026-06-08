@@ -2,7 +2,7 @@
 unknown
 (
   (define-fun q ((arg_0 t)) Int
-   (ite (= arg_0 (as @a3 t)) 1 (ite (= arg_0 (as @a2 t)) 0 (- 1))))
+   (ite (= arg_0 (as @a1 t)) 1 (ite (= arg_0 (as @a0 t)) 0 (- 1))))
   (define-fun o ((arg_0 Int)) t
-   (ite (= arg_0 0) (as @a2 t) (ite (= arg_0 1) (as @a3 t) (as @a4 t))))
+   (ite (= arg_0 0) (as @a0 t) (ite (= arg_0 1) (as @a1 t) (as @a2 t))))
 )

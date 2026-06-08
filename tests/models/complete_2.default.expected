@@ -2,5 +2,4 @@
 unknown
 (
   (define-fun x () Int 0)
-  (define-fun f ((_arg_0 Int)) Int 0)
 )

@@ -144,15 +144,8 @@ let find k {values; _ } =
 let fold f {values;_} acc  =
   P.fold f values acc
 
-let empty ~suspicious declared_ids =
-  let values =
-    List.fold_left
-      (fun values ((_, _, ret_ty) as sy) ->
-         P.add sy (Free (Expr.mk_abstract ret_ty)) values
-      )
-      P.empty declared_ids
-  in
-  { values; suspicious }
+let empty = { values = P.empty; suspicious = false }
+
 
 let set_free_defval sy v { values; suspicious } =
   let values =

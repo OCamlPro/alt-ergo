@@ -1230,12 +1230,18 @@ let compute_concrete_model_of_val cache =
 
 let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
-  fun ~prop_model ~model env ->
+  fun ~prop_model ~defaults env ->
     let terms, suspicious = terms env in
-    let model = ModelMap.set_suspicious suspicious model in
+    let mrepr = ModelMap.set_suspicious suspicious ModelMap.empty in
+    let model, mrepr =
+      List.fold_left (fun (model, mrepr) (sy, fresh_t) ->
+          let v, mrepr = model_repr_of_term fresh_t env mrepr in
+          ModelMap.set_free_defval sy v model, mrepr
+        ) (mrepr, ME.empty) defaults
+    in
     let model, mrepr =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
-        terms (model, ME.empty)
+        terms (model, mrepr)
     in
     let model =
       E.Table.fold (fun t vals mdl ->
@@ -1274,17 +1280,8 @@ let extract_concrete_model cache =
           ModelMap.subst id arr_val mdl
         ) cache.array_selects model
     in
-    let model =
-      ModelMap.fold (fun sy graph mdl ->
-          match graph with
-          | ModelMap.Free fresh ->
-            let v, _ = model_repr_of_term fresh env mrepr in
-            ModelMap.set_free_defval sy v mdl
-          | _ -> mdl
-        ) model model
-    in
     { Models.propositional = prop_model; model; term_values = mrepr }
 
-let extract_concrete_model ~prop_model ~model =
+let extract_concrete_model ~prop_model ~defaults =
   let cache : cache = { array_selects = E.Table.create 17 } in
-  fun env -> extract_concrete_model cache ~prop_model ~model env
+  fun env -> extract_concrete_model cache ~prop_model ~defaults env
