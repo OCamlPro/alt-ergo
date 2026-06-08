@@ -1235,7 +1235,7 @@ let extract_concrete_model cache =
     let model, mrepr =
       List.fold_left (fun (model, mrepr) (sy, fresh_t) ->
           let v, mrepr = model_repr_of_term fresh_t env mrepr in
-          ModelMap.set_free_defval sy v model, mrepr
+          ModelMap.add_free_defval sy v model, mrepr
         ) (ModelMap.empty ~suspicious, ME.empty) defaults
     in
     let model, mrepr =

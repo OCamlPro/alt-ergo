@@ -147,11 +147,16 @@ let fold f {values;_} acc  =
 let empty ~suspicious = { values = P.empty; suspicious }
 
 
-let set_free_defval sy v { values; suspicious } =
+let add_free_defval sy v { values; suspicious } =
   let values =
     match P.find_opt sy values with
-    | None | Some (Free _) -> P.add sy (Free v) values
-    | Some (C _) -> values
+    | None -> P.add sy (Free v) values
+    | Some _ ->
+      let hs, _, _ = sy in
+      Errors.internal_error
+        "add_free_defval: can't add default value to the symbol %a as it is \
+         already present in the model"
+        Hstring.print hs
   in
   { values; suspicious }
 

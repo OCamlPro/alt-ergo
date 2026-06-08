@@ -37,10 +37,9 @@ val empty : suspicious:bool -> t
     model may be wrong as it involves symbols from theories for which the
     model generation is known to be incomplete. *)
 
-val set_free_defval : Id.typed -> Expr.t -> t -> t
-(** [set_free_defval sy v m] sets the value of [sy] to [v] in [m] if [sy] is
-    uncontrained [Free _] in [m] or if it is absent. Does nothing if [sy] is
-    contrained [C _]. *)
+val add_free_defval : Id.typed -> Expr.t -> t -> t
+(** [add_free_defval sy v m] associated the value [v] to [sy] in [m] if [sy] is
+    absent from it. Raises `Internal_error` if [sy] is already in [m]. *)
 
 val find : Id.typed -> t -> graph
 (** [find sy mdl] returns the graph associated with the symbol [sy] in the model
