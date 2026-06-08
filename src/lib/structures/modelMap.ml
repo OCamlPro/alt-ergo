@@ -144,21 +144,11 @@ let find k {values; _ } =
 let fold f {values;_} acc  =
   P.fold f values acc
 
-(* Unconstrained uninterpreted symbols of type bool, int, real and bitv, are
-   given concrete default values, while others are given abstract values. *)
-let uninterpreted_sym_def_val ret_ty =
-  match ret_ty with
-  | Ty.Tbool -> Expr.faux
-  | Ty.Tint -> Expr.int "0"
-  | Ty.Treal -> Expr.real "0"
-  | Ty.Tbitv n -> Expr.bitv (String.make n '0') ret_ty
-  | _ -> Expr.mk_abstract ret_ty
-
 let empty ~suspicious declared_ids =
   let values =
     List.fold_left
       (fun values ((_, _, ret_ty) as sy) ->
-         P.add sy (Free (uninterpreted_sym_def_val ret_ty)) values
+         P.add sy (Free (Expr.mk_abstract ret_ty)) values
       )
       P.empty declared_ids
   in
