@@ -869,15 +869,18 @@ module Main_Default : S = struct
       ()
 
   let extract_concrete_model ~declared_ids env =
-    let env =
+    let env, defaults =
       List.fold_left
-        (fun env (id, arg_tys, ret_ty) ->
+        (fun (env, defaults) ((id, arg_tys, ret_ty) as ty_id) ->
            match arg_tys with
-           | _ :: _ -> env
            | [] ->
              let t = E.mk_term (Sy.name (Hstring.view id)) [] ret_ty in
-             add_term env t ~add_in_cs:true)
-        env declared_ids
+             add_term env t ~add_in_cs:true, defaults
+           | _ :: _ ->
+             let t = E.fresh_name ret_ty in
+             let env = add_term env t ~add_in_cs:true in
+             env, (ty_id, t) :: defaults)
+        (env, []) declared_ids
     in
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
@@ -886,6 +889,7 @@ module Main_Default : S = struct
       CC_X.extract_concrete_model
         ~prop_model:assumed_set
         ~declared_ids
+        ~defaults
         gamma_finite
     ), objectives
 
