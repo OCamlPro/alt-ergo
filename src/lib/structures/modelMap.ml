@@ -144,7 +144,7 @@ let find k {values; _ } =
 let fold f {values;_} acc  =
   P.fold f values acc
 
-let empty = { values = P.empty; suspicious = false }
+let empty ~suspicious = { values = P.empty; suspicious }
 
 
 let set_free_defval sy v { values; suspicious } =
@@ -154,8 +154,6 @@ let set_free_defval sy v { values; suspicious } =
     | Some (C _) -> values
   in
   { values; suspicious }
-
-let set_suspicious suspicious mdl = { mdl with suspicious }
 
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in

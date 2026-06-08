@@ -1232,12 +1232,11 @@ let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
   fun ~prop_model ~defaults env ->
     let terms, suspicious = terms env in
-    let mrepr = ModelMap.set_suspicious suspicious ModelMap.empty in
     let model, mrepr =
       List.fold_left (fun (model, mrepr) (sy, fresh_t) ->
           let v, mrepr = model_repr_of_term fresh_t env mrepr in
           ModelMap.set_free_defval sy v model, mrepr
-        ) (mrepr, ME.empty) defaults
+        ) (ModelMap.empty ~suspicious, ME.empty) defaults
     in
     let model, mrepr =
       MED.fold (fun t _mk acc -> compute_concrete_model_of_val env t acc)
