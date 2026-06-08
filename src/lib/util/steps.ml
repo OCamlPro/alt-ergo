@@ -72,6 +72,9 @@ let pop_steps () =
   mult_a := p_mult_a;
   mult_cp := p_mult_cp
 
+let step_limit_reached n =
+  raise (Util.Step_limit_reached n)
+
 (* Multipliers are here to homogeneize the global step counter *)
 let incr k =
   begin
@@ -118,7 +121,7 @@ let incr k =
       (* CR bclement: This is preserved legacy behavior, but figure out in
          which situation we can have [n <= 0]. *)
       let n = if n > 0 then n else !steps_bound in
-      raise (Util.Step_limit_reached n)
+      step_limit_reached n
     end
 
 let reset_steps () =
@@ -168,6 +171,45 @@ let incr_cs_steps () = Stdlib.incr cs_steps_cpt
 let set_steps_bound i =
   if get_steps () > i  && i >= 0 then invalid_arg "Steps.set_steps_bound";
   steps_bound := i
+
+let with_step_limit limit ~scope =
+  if limit < 0 then invalid_arg "with_step_limit: limit must be nonnegative";
+  (* Note that we may not guaranteed that calling [with_step_limit] with a
+      given value inside two distinct context will result in exactly the same
+      limit. What we do guarantee is that calling [with_step_limit] with the
+      same value and within the same context will result in the same limit.
+      This is consistent with the requirements of the
+      [:reproducible-resource-limit] SMT-LIB option:
+
+      > the returned result should depend deterministically on n; specifically,
+      > it should be the same every time the solver is run with the same
+      > sequence of previous commands on the same machine (and with an
+      > arbitrarily long external time out). *)
+  let old_steps_bound = !steps_bound in
+  let bound_for_limit =
+    (* SMT-LIB standard: 0 disables the limit *)
+    if limit = 0
+    then old_steps_bound
+    else get_steps () + limit
+  in
+  steps_bound :=
+    (* It is not allowed to bypass an existing limit. *)
+    if old_steps_bound < 0
+    then bound_for_limit
+    else min old_steps_bound bound_for_limit;
+  match scope () with
+  | result ->
+    steps_bound := old_steps_bound;
+    result
+  | exception e ->
+    match Printexc.get_raw_backtrace () with
+    | bt ->
+      steps_bound := old_steps_bound;
+      Printexc.raise_with_backtrace e bt
+    | exception Out_of_memory ->
+      steps_bound := old_steps_bound;
+      raise e
+
 
 let get_steps_bound () = !steps_bound
 

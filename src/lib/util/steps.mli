@@ -81,6 +81,19 @@ val incr_cs_steps : unit -> unit
 (** Disables the step limit during the execution of the continuation. *)
 val apply_without_step_limit : (unit -> 'a) -> 'a
 
+(** [with_step_limit limit ~scope] calls scope with the provided [limit]. The
+    [limit] is local: only steps performed during the call to [scope] are
+    counted towards the [limit] (in particular, any steps that have already been
+    recorded are *NOT* counted towards the [limit]).
+
+    [with_step_limit] is not guaranteed to raise if the limit is reached, as the
+    [Util.Step_limit_reached] exception might be catched by [scope].
+
+    [with_step_limit] respects any current limit enforced by [set_steps_bound]
+    or another call to [with_step_limit] higher in the call stack: if a parent
+    limit would be reached, then this limit is also considered as reached. *)
+val with_step_limit : int -> scope:(unit -> 'a) -> 'a
+
 (** {2 Incrementality} *)
 
 val push_steps : unit -> unit
