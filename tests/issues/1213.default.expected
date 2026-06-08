@@ -3,6 +3,6 @@ unknown
 (
   (define-fun a () (List T) nil)
   (define-fun b () (List T) nil)
-  (define-fun c () (List T) (cons (as @a4 T) nil))
+  (define-fun c () (List T) (cons (as @a0 T) nil))
   (define-fun d () (List T) nil)
 )
