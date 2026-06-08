@@ -160,8 +160,7 @@ val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 (** Compute a counterexample using the Uf environment *)
 val extract_concrete_model :
   prop_model:Expr.Set.t ->
-  declared_ids:Id.typed list ->
-  defaults:(Id.typed * Expr.t) list ->
+  model:ModelMap.t ->
   t ->
   Models.t
 
