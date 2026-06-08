@@ -32,6 +32,11 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (cmdliner (>= 2.0))
   (odoc :with-doc)
   (camlzip (>= 1.07))
+  lwt_ppx
+  js_of_ocaml-lwt
+  js_of_ocaml-ppx
+  data-encoding
+  zarith_stubs_js
  )
 
  (sites (share preludes) (lib plugins))
