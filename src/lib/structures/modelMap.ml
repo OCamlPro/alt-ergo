@@ -150,8 +150,8 @@ let empty = { values = P.empty; suspicious = false }
 let set_free_defval sy v { values; suspicious } =
   let values =
     match P.find_opt sy values with
-    | Some (Free _) -> P.add sy (Free v) values
-    | _ -> values
+    | None | Some (Free _) -> P.add sy (Free v) values
+    | Some (C _) -> values
   in
   { values; suspicious }
 

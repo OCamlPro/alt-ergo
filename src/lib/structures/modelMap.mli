@@ -36,8 +36,9 @@ val empty : t
 (** An empty model. *)
 
 val set_free_defval : Id.typed -> Expr.t -> t -> t
-(** [set_free_defval sy v m] sets the value of [sy] to [v] in [m], if [sy] is
-    uncontrained [Free _] in [m]. Does nothing otherwise. *)
+(** [set_free_defval sy v m] sets the value of [sy] to [v] in [m] if [sy] is
+    uncontrained [Free _] in [m] or if it is absent. Does nothing if [sy] is
+    contrained [C _]. *)
 
 val set_suspicious : bool -> t -> t
 (** [set_suspicious b m] sets the [suspicious] flag of [m] to [b].
