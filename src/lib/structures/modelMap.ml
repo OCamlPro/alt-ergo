@@ -154,6 +154,14 @@ let empty ~suspicious declared_ids =
   in
   { values; suspicious }
 
+let set_free_defval sy v { values; suspicious } =
+  let values =
+    match P.find_opt sy values with
+    | Some (Free _) -> P.add sy (Free v) values
+    | _ -> values
+  in
+  { values; suspicious }
+
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
