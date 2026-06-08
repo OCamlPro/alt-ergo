@@ -869,6 +869,16 @@ module Main_Default : S = struct
       ()
 
   let extract_concrete_model ~declared_ids env =
+    let env =
+      List.fold_left
+        (fun env (id, arg_tys, ret_ty) ->
+           match arg_tys with
+           | _ :: _ -> env
+           | [] ->
+             let t = E.mk_term (Sy.name (Hstring.view id)) [] ret_ty in
+             add_term env t ~add_in_cs:true)
+        env declared_ids
+    in
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
     in
