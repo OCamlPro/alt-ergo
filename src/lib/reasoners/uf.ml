@@ -1284,4 +1284,5 @@ let extract_concrete_model cache =
 
 let extract_concrete_model ~prop_model ~declared_ids ~defaults =
   let cache : cache = { array_selects = E.Table.create 17 } in
-  fun env -> extract_concrete_model cache ~prop_model ~declared_ids ~defaults env
+  fun env ->
+    extract_concrete_model cache ~prop_model ~declared_ids ~defaults env
