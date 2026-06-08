@@ -869,18 +869,19 @@ module Main_Default : S = struct
       ()
 
   let extract_concrete_model ~declared_ids env =
-    let env, defaults =
+    let model = ModelMap.empty ~suspicious:false declared_ids in
+    let env, model =
       List.fold_left
-        (fun (env, defaults) ((id, arg_tys, ret_ty) as ty_id) ->
+        (fun (env, model) ((id, arg_tys, ret_ty) as ty_id) ->
            match arg_tys with
            | [] ->
              let t = E.mk_term (Sy.name (Hstring.view id)) [] ret_ty in
-             add_term env t ~add_in_cs:true, defaults
+             add_term env t ~add_in_cs:true, model
            | _ :: _ ->
              let t = E.fresh_name ret_ty in
              let env = add_term env t ~add_in_cs:true in
-             env, (ty_id, t) :: defaults)
-        (env, []) declared_ids
+             env, ModelMap.set_free_defval ty_id t model)
+        (env, model) declared_ids
     in
     let { gamma_finite; assumed_set; objectives; _ }, _ =
       do_case_split_aux env ~for_model:true
@@ -888,8 +889,7 @@ module Main_Default : S = struct
     lazy (
       CC_X.extract_concrete_model
         ~prop_model:assumed_set
-        ~declared_ids
-        ~defaults
+        ~model
         gamma_finite
     ), objectives
 

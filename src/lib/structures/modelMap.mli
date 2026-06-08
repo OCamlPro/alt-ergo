@@ -41,6 +41,9 @@ val set_free_defval : Id.typed -> Expr.t -> t -> t
 (** [set_free_defval sy v m] sets the value of [sy] to [v] in [m], if [sy] is
     uncontrained [Free _] in [m]. Does nothing otherwise. *)
 
+val set_suspicious : bool -> t -> t
+(** [set_suspicious b m] sets the [suspicious] flag of [m] to [b]. *)
+
 val find : Id.typed -> t -> graph
 (** [find sy mdl] returns the graph associated with the symbol [sy] in the model
     [mdl], raises [Not_found] if it doesn't exist. *)

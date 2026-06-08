@@ -162,6 +162,8 @@ let set_free_defval sy v { values; suspicious } =
   in
   { values; suspicious }
 
+let set_suspicious suspicious mdl = { mdl with suspicious }
+
 let rec subst_in_term id e c =
   let Expr.{ f; xs; ty = ty'; _ } = Expr.term_view c in
   match f, xs with
