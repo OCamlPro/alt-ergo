@@ -2452,11 +2452,14 @@ let new_facts_for_axiom
 
 let syntactic_matching menv env uf _selector =
   let mconf =
-    {Util.nb_triggers = get_nb_triggers ();
-     no_ematching = get_no_ematching();
-     triggers_var = get_triggers_var ();
+    {Util.no_ematching = get_no_ematching();
      use_cs = false;
      backward = Util.Normal;
+    }
+  in
+  let tconf =
+    {Util.nb_triggers = get_nb_triggers ();
+     triggers_var = get_triggers_var ();
      greedy = get_greedy ();
     }
   in
@@ -2467,7 +2470,7 @@ let syntactic_matching menv env uf _selector =
          let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in
          let triggers =
            Matching.Triggers.add_triggers_of_formulas
-             mconf Matching.Triggers.empty forms
+             mconf tconf Matching.Triggers.empty forms
          in
          let res = EM.query mconf menv triggers uf in
          if get_debug_fpa () >= 2 then begin

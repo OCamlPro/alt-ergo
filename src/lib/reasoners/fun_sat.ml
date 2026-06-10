@@ -400,16 +400,16 @@ module Make (Th : Theory.S) = struct
       | E.Let _ | E.Iff _ | E.Xor _ -> true
     end
 
-  let inst_predicates mconf env inst tbox selector ilvl =
-    try Inst.m_predicates mconf inst tbox selector ilvl
+  let inst_predicates mconf tconf env inst tbox selector ilvl =
+    try Inst.m_predicates mconf tconf inst tbox selector ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
       env.heuristics := Heuristics.bump_activity !(env.heuristics) expl;
       raise (IUnsat (expl, classes))
 
-  let inst_lemmas mconf env inst tbox selector ilvl =
-    try Inst.m_lemmas mconf inst tbox selector ilvl
+  let inst_lemmas mconf tconf env inst tbox selector ilvl =
+    try Inst.m_lemmas mconf tconf inst tbox selector ilvl
     with Ex.Inconsistent (expl, classes) ->
       Debug.inconsistent expl env;
       Options.tool_req 2 "TR-Sat-Conflict-2";
@@ -880,9 +880,9 @@ module Make (Th : Theory.S) = struct
     update_instances_cache, clear_instances_cache
 
   (* returns the (new) env and true if some new instances are made *)
-  let inst_and_assume mconf env inst_function inst_env =
+  let inst_and_assume mconf tconf env inst_function inst_env =
     let gd, ngd =
-      inst_function mconf env inst_env env.tbox (selector env) env.ilevel
+      inst_function mconf tconf env inst_env env.tbox (selector env) env.ilevel
     in
     let l = List.rev_append (List.rev gd) ngd in
 
@@ -1052,6 +1052,46 @@ module Make (Th : Theory.S) = struct
       let nb_ok = ref 0 in
       aux_rec ~rm_clauses env inst loop nb_ok, !nb_ok > 0
 
+  let greedy_mconf () =
+    {Util.no_ematching = false;
+     use_cs = true;
+     backward = Util.Normal;
+    }
+
+  let normal_mconf () =
+    let open Options in
+    {Util.no_ematching = get_no_ematching();
+     use_cs = false;
+     backward = Util.Normal;
+    }
+
+  let backward_mconf ()  =
+    let open Options in
+    {Util.no_ematching = get_no_ematching();
+     use_cs = false;
+     backward = Util.Backward;
+    }
+
+  let greedy_tconf () =
+    {Util.nb_triggers = max 10 (Options.get_nb_triggers () * 10);
+     triggers_var = true;
+     greedy = true;
+    }
+
+  let normal_tconf () =
+    let open Options in
+    {Util.nb_triggers = get_nb_triggers ();
+     triggers_var = get_triggers_var ();
+     greedy = get_greedy ();
+    }
+
+  let backward_tconf ()  =
+    let open Options in
+    {Util.nb_triggers = get_nb_triggers ();
+     triggers_var = get_triggers_var ();
+     greedy = get_greedy ();
+    }
+
   let greedy_instantiation env =
     match Options.get_instantiation_heuristic () with
     | INormal ->
@@ -1066,17 +1106,10 @@ module Make (Th : Theory.S) = struct
           env.gamma env.inst
       in
       let env = new_inst_level env in
-      let mconf =
-        {Util.nb_triggers = max 10 (Options.get_nb_triggers () * 10);
-         no_ematching = false;
-         triggers_var = true;
-         use_cs = true;
-         backward = Util.Normal;
-         greedy = true;
-        }
-      in
-      let env, ok1 = inst_and_assume mconf env inst_predicates gre_inst in
-      let env, ok2 = inst_and_assume mconf env inst_lemmas gre_inst in
+      let mconf = greedy_mconf () in
+      let tconf = greedy_tconf () in
+      let env, ok1 = inst_and_assume mconf tconf env inst_predicates gre_inst in
+      let env, ok2 = inst_and_assume mconf tconf env inst_lemmas gre_inst in
       let env, ok3 = syntactic_th_inst env gre_inst ~rm_clauses:false in
       let env, ok4 =
         semantic_th_inst  env gre_inst ~rm_clauses:false ~loop:4 in
@@ -1090,17 +1123,10 @@ module Make (Th : Theory.S) = struct
     Debug.print_nb_related env;
     let env = do_case_split env Util.BeforeMatching in
     let env = new_inst_level env in
-    let mconf =
-      {Util.nb_triggers = Options.get_nb_triggers ();
-       no_ematching = Options.get_no_ematching();
-       triggers_var = Options.get_triggers_var ();
-       use_cs = false;
-       backward = Util.Normal;
-       greedy = Options.get_greedy ();
-      }
-    in
-    let env, ok1 = inst_and_assume mconf env inst_predicates env.inst in
-    let env, ok2 = inst_and_assume mconf env inst_lemmas env.inst in
+    let mconf = normal_mconf () in
+    let tconf = normal_tconf () in
+    let env, ok1 = inst_and_assume mconf tconf env inst_predicates env.inst in
+    let env, ok2 = inst_and_assume mconf tconf env inst_lemmas env.inst in
     let env, ok3 = syntactic_th_inst env env.inst ~rm_clauses:false in
     let env, ok4 = semantic_th_inst  env env.inst ~rm_clauses:false ~loop:4 in
     let env = do_case_split env Util.AfterMatching in
@@ -1255,18 +1281,12 @@ module Make (Th : Theory.S) = struct
           ~module_name:"Fun_sat"
           ~function_name:"backward_instantiation_rec"
           "round %d / %d@ " rnd max_rnd;
-      let mconf =
-        let open Options in
-        {Util.nb_triggers = get_nb_triggers ();
-         no_ematching = get_no_ematching();
-         triggers_var = get_triggers_var ();
-         use_cs = false;
-         greedy = get_greedy ();
-         backward = Util.Backward;
-        }
+      let mconf = backward_mconf () in
+      let tconf = backward_tconf () in
+      let env, new_i1 =
+        inst_and_assume mconf tconf env inst_predicates env.inst
       in
-      let env, new_i1 = inst_and_assume mconf env inst_predicates env.inst in
-      let env, new_i2 = inst_and_assume mconf env inst_lemmas env.inst in
+      let env, new_i2 = inst_and_assume mconf tconf env inst_lemmas env.inst in
       let nb2 = env.nb_related_to_goal in
       let nc2 = env.nb_related_to_hypo in
       if Options.(get_verbose () || get_debug_sat ()) then
@@ -1433,24 +1453,16 @@ module Make (Th : Theory.S) = struct
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
-      let mconf =
-        let open Options in
-        {Util.nb_triggers = get_nb_triggers ();
-         no_ematching = get_no_ematching();
-         triggers_var = get_triggers_var ();
-         use_cs = false;
-         backward = Util.Normal;
-         greedy = get_greedy ();
-        }
-      in
-      let env, _ = inst_and_assume mconf env inst_predicates env.inst in
+      let mconf = normal_mconf () in
+      let tconf = normal_tconf () in
+      let env, _ = inst_and_assume mconf tconf env inst_predicates env.inst in
 
       let env, _ = syntactic_th_inst env env.inst ~rm_clauses:true in
       let env, _ = semantic_th_inst  env env.inst ~rm_clauses:true ~loop:4 in
 
       (* goal directed for lemmas *)
       let gd, _ =
-        inst_lemmas mconf  env env.inst env.tbox (selector env) env.ilevel
+        inst_lemmas mconf tconf env env.inst env.tbox (selector env) env.ilevel
       in
       if Options.get_profiling() then Profiling.instances gd;
       let env = assume env gd in

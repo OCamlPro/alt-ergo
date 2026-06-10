@@ -33,7 +33,11 @@ module Triggers : sig
   val empty : t
 
   val add_triggers_of_formulas :
-    Util.matching_env -> t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
+    Util.matching_env ->
+    Util.triggers_env ->
+    t ->
+    (Expr.t * int * Explanation.t) Expr.Map.t ->
+    t
 
   val reinit_caches : unit -> unit
   (** Empties the e-matching caches *)

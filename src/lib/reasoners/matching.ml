@@ -36,7 +36,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module HEI = Hashtbl.Make (
   struct
     open Util
-    type t = E.t * Util.matching_env
+    type t = E.t * Util.triggers_env
     let hash (e, mc) =
       abs @@
       E.hash e *
@@ -117,14 +117,14 @@ module Triggers = struct
     in
     forward_triggers, clear_forward_triggers_trs_tbl
 
-  let add_triggers_of_formulas mconf env formulas =
+  let add_triggers_of_formulas mconf tconf env formulas =
     ME.fold
       (fun lem (guard, age, dep) env ->
          match E.form_view lem with
          | E.Lemma ({ E.main = f; name; _ } as q) ->
            let tgs, kind =
              match mconf.Util.backward with
-             | Util.Normal   -> triggers_of q mconf, "Normal"
+             | Util.Normal   -> triggers_of q tconf, "Normal"
              | Util.Backward -> backward_triggers q, "Backward"
              | Util.Forward  -> forward_triggers q, "Forward"
            in

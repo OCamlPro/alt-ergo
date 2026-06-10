@@ -55,6 +55,7 @@ module type S = sig
 
   val m_lemmas :
     Util.matching_env ->
+    Util.triggers_env ->
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
@@ -63,6 +64,7 @@ module type S = sig
 
   val m_predicates :
     Util.matching_env ->
+    Util.triggers_env ->
     t ->
     tbox ->
     (E.t -> E.t -> bool) ->
@@ -363,15 +365,15 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     Timers.with_timer Timers.M_Match Timers.F_new_facts @@ fun () ->
     new_facts env tbox selector substs
 
-  let mround env axs tbox selector ilvl kind mconf =
+  let mround env axs tbox selector ilvl kind mconf tconf =
     Debug.new_mround ilvl kind;
     Options.tool_req 2 "TR-Sat-Mround";
     let triggers =
       Matching.Triggers.add_triggers_of_formulas
-        mconf Matching.Triggers.empty axs
+        mconf tconf Matching.Triggers.empty axs
     in
     let ccx_tbox =
-      if mconf.Util.use_cs || mconf.Util.greedy then X.get_case_split_env tbox
+      if mconf.Util.use_cs || tconf.Util.greedy then X.get_case_split_env tbox
       else X.get_real_env tbox
     in
     let substs = EM.query mconf env.matching triggers ccx_tbox in
@@ -379,11 +381,11 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     let gd, ngd = split_and_filter_insts env insts in
     sort_facts gd, sort_facts ngd
 
-  let m_lemmas env tbox selector ilvl mconf =
-    mround env env.lemmas tbox selector ilvl "axioms" mconf
+  let m_lemmas env tbox selector ilvl mconf tconf =
+    mround env env.lemmas tbox selector ilvl "axioms" mconf tconf
 
-  let m_predicates env tbox selector ilvl mconf =
-    mround env env.predicates tbox selector ilvl "predicates" mconf
+  let m_predicates env tbox selector ilvl mconf tconf =
+    mround env env.predicates tbox selector ilvl "predicates" mconf tconf
 
   let add_lemma env gf dep =
     let guard = E.vrai in
@@ -415,12 +417,12 @@ module Make(X : Theory.S) : S with type tbox = X.t = struct
     Timers.with_timer Timers.M_Match Timers.F_add_predicate @@ fun () ->
     add_predicate env ~guard ~name gf
 
-  let m_lemmas mconf env tbox selector ilvl =
+  let m_lemmas mconf tconf env tbox selector ilvl =
     Timers.with_timer Timers.M_Match Timers.F_m_lemmas @@ fun () ->
-    m_lemmas env tbox selector ilvl mconf
+    m_lemmas env tbox selector ilvl mconf tconf
 
-  let m_predicates mconf env tbox selector ilvl =
+  let m_predicates mconf tconf env tbox selector ilvl =
     Timers.with_timer Timers.M_Match Timers.F_m_predicates @@ fun () ->
-    m_predicates env tbox selector ilvl mconf
+    m_predicates env tbox selector ilvl mconf tconf
 
 end

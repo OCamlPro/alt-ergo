@@ -50,6 +50,7 @@ module type S = sig
 
   val m_lemmas :
     Util.matching_env ->
+    Util.triggers_env ->
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
@@ -58,6 +59,7 @@ module type S = sig
 
   val m_predicates :
     Util.matching_env ->
+    Util.triggers_env ->
     t ->
     tbox ->
     (Expr.t -> Expr.t -> bool) ->
