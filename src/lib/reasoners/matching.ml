@@ -117,17 +117,12 @@ module Triggers = struct
     in
     forward_triggers, clear_forward_triggers_trs_tbl
 
-  let add_triggers_of_formulas mconf tconf env formulas =
+  let add_triggers_of_formulas0 env formulas compute_triggers kind =
     ME.fold
       (fun lem (guard, age, dep) env ->
          match E.form_view lem with
          | E.Lemma ({ E.main = f; name; _ } as q) ->
-           let tgs, kind =
-             match mconf.Util.backward with
-             | Util.Normal   -> triggers_of q tconf, "Normal"
-             | Util.Backward -> backward_triggers q, "Backward"
-             | Util.Forward  -> forward_triggers q, "Forward"
-           in
+           let tgs = compute_triggers q in
            if Options.get_debug_triggers () then
              Printer.print_dbg
                ~module_name:"Matching" ~function_name:"add_triggers"
@@ -151,6 +146,15 @@ module Triggers = struct
          | E.Let _ | E.Iff _ | E.Xor _ -> assert false
       ) formulas env
 
+  let add_triggers_of_formulas tconf env formulas =
+    add_triggers_of_formulas0
+      env formulas (fun q -> triggers_of q tconf) "Normal"
+
+  let add_backward_triggers_of_formulas env formulas =
+    add_triggers_of_formulas0 env formulas backward_triggers "Backward"
+
+  let add_forward_triggers_of_formulas env formulas =
+    add_triggers_of_formulas0 env formulas forward_triggers "Forward"
 
   let reinit_caches () =
     clear_triggers_of_trs_tbl ();
@@ -175,7 +179,7 @@ module type S = sig
   val max_term_depth : t -> int -> t
   val terms_info : t -> Matching_types.info ME.t * E.t list ME.t Symbols.Map.t
   val query :
-    Util.matching_env -> t -> Triggers.t -> theory ->
+    use_ematching:bool -> t -> Triggers.t -> theory ->
     (Matching_types.trigger_info * Matching_types.gsubst list) list
 
   val reinit_caches : unit -> unit
@@ -454,8 +458,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
            | Util.Cmp n -> n
     end)
 
-  let filter_classes mconf cl tbox =
-    if mconf.Util.no_ematching then cl
+  let filter_classes ~use_ematching cl tbox =
+    if not use_ematching then cl
     else
       let mtl =
         List.fold_left
@@ -491,7 +495,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         else if E.is_ground p1 then [minus_of_plus t p1 ty] else []
       | _ -> []
 
-  let rec match_term mconf env tbox
+  let rec match_term ~use_ematching env tbox
       ({ sty = s_ty; gen = g; goal = b; _ } as sg : Matching_types.gsubst)
       pat t =
     Options.exec_thread_yield ();
@@ -527,7 +531,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         if ignore_match then
           [gsb]
         else
-          let cl = if mconf.Util.no_ematching then E.Set.singleton t
+          let cl = if not use_ematching then E.Set.singleton t
             else X.class_of tbox t
           in
           Debug.match_class_of t cl;
@@ -539,33 +543,33 @@ module Make (X : Arg) : S with type theory = X.t = struct
                  else l
               ) cl []
           in
-          let cl = filter_classes mconf cl tbox in
+          let cl = filter_classes ~use_ematching cl tbox in
           let cl =
             if cl != [] then cl
             else linear_arithmetic_matching f_pat pats ty_pat t
           in
           List.fold_left
             (fun acc xs ->
-               try (match_list mconf env tbox gsb pats xs) -@ acc
+               try (match_list ~use_ematching env tbox gsb pats xs) -@ acc
                with Echec -> acc
             ) [] cl
       with Ty.TypeClash _ -> raise Echec
 
-  and match_list mconf env tbox sg pats xs =
+  and match_list ~use_ematching env tbox sg pats xs =
     Debug.match_list sg pats xs;
     try
       List.fold_left2
         (fun sb_l pat arg ->
            List.fold_left
              (fun acc sg ->
-                let aux = match_term mconf env tbox sg pat arg in
+                let aux = match_term ~use_ematching env tbox sg pat arg in
                 (*match aux with [] -> raise Echec | _  -> BUG !! *)
                 List.rev_append aux acc
              ) [] sb_l
         ) [sg] pats xs
     with Invalid_argument _ -> raise Echec
 
-  let match_one_pat mconf env tbox pat0 lsbt_acc sg =
+  let match_one_pat ~use_ematching env tbox pat0 lsbt_acc sg =
     Steps.incr (Steps.Matching);
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
@@ -588,18 +592,18 @@ module Make (X : Arg) : S with type theory = X.t = struct
                 sty = s_ty; gen = gen; goal = but;
                 s_term_orig = t::sg.s_term_orig }
             in
-            let aux = match_list mconf env tbox sg pats xs in
+            let aux = match_list ~use_ematching env tbox sg pats xs in
             List.rev_append aux lsbt
           with Echec | Ty.TypeClash _ -> lsbt
       in
       try ME.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
       with Not_found -> lsbt_acc
 
-  let match_pats_modulo mconf env tbox lsubsts pat =
+  let match_pats_modulo ~use_ematching env tbox lsubsts pat =
     Debug.match_pats_modulo pat lsubsts;
-    List.fold_left (match_one_pat mconf env tbox pat) [] lsubsts
+    List.fold_left (match_one_pat ~use_ematching env tbox pat) [] lsubsts
 
-  let matching mconf env tbox pat_info =
+  let matching ~use_ematching env tbox pat_info =
     let open Matching_types in
     let pats = pat_info.trigger in
     let pats_list = pats.E.content in
@@ -620,7 +624,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
       | []  -> pat_info, []
       | [_] ->
         let res =
-          List.fold_left (match_pats_modulo mconf env tbox) [egs] pats_list in
+          List.fold_left
+            (match_pats_modulo ~use_ematching env tbox) [egs] pats_list
+        in
         Debug.candidate_substitutions pat_info res;
         pat_info, res
       | _ ->
@@ -629,12 +635,15 @@ module Make (X : Arg) : S with type theory = X.t = struct
           List.iter
             (fun pat ->
                cpt := !cpt *
-                      List.length (match_pats_modulo mconf env tbox [egs] pat);
+                      List.length
+                        (match_pats_modulo ~use_ematching env tbox [egs] pat);
                (* TODO: put an adaptive limit *)
                if !cpt = 0 || !cpt > 10_000 then raise Exit
             ) (List.rev pats_list);
           let res =
-            List.fold_left (match_pats_modulo mconf env tbox) [egs] pats_list
+            List.fold_left
+              (match_pats_modulo ~use_ematching env tbox)
+              [egs] pats_list
           in
           Debug.candidate_substitutions pat_info res;
           pat_info, res
@@ -650,11 +659,11 @@ module Make (X : Arg) : S with type theory = X.t = struct
     cache_are_equal_light := MT2.empty;
     cache_are_equal_full  := MT2.empty
 
-  let query mconf env triggers tbox =
+  let query ~use_ematching env triggers tbox =
     reset_cache_refs ();
     try
       let res =
-        List.rev_map (matching mconf env tbox) triggers.Triggers.pats
+        List.rev_map (matching ~use_ematching env tbox) triggers.Triggers.pats
       in
       reset_cache_refs ();
       res
@@ -662,9 +671,9 @@ module Make (X : Arg) : S with type theory = X.t = struct
       reset_cache_refs ();
       raise e
 
-  let query env tbox =
+  let query ~use_ematching env triggers tbox =
     Timers.with_timer Timers.M_Match Timers.F_query @@ fun () ->
-    query env tbox
+    query ~use_ematching env triggers tbox
 
   let max_term_depth env mx = {env with max_t_depth = max env.max_t_depth mx}
 

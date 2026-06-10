@@ -33,11 +33,13 @@ module Triggers : sig
   val empty : t
 
   val add_triggers_of_formulas :
-    Util.matching_env ->
-    Util.triggers_env ->
-    t ->
-    (Expr.t * int * Explanation.t) Expr.Map.t ->
-    t
+    Util.triggers_env -> t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
+
+  val add_backward_triggers_of_formulas :
+    t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
+
+  val add_forward_triggers_of_formulas :
+    t -> (Expr.t * int * Explanation.t) Expr.Map.t -> t
 
   val reinit_caches : unit -> unit
   (** Empties the e-matching caches *)
@@ -60,7 +62,7 @@ module type S = sig
   val max_term_depth : t -> int -> t
   val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
   val query :
-    Util.matching_env ->
+    use_ematching:bool ->
     t ->
     Triggers.t ->
     theory ->
