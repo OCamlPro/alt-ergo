@@ -38,6 +38,7 @@ type t =
   | Tbool
   | Tvar of tvar
   | Tbitv of int
+  | Tfloat of int * int
   | Text of t list * DE.ty_cst
   | Tfarray of t * t
   | Tadt of DE.ty_cst * t list
@@ -48,6 +49,7 @@ module Smtlib = struct
     | Treal -> Fmt.pf ppf "Real"
     | Tbool -> Fmt.pf ppf "Bool"
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
+    | Tfloat (eb, sb) -> Fmt.pf ppf "(_ FloatingPoint %d %d)" eb sb
     | Tfarray (a_t, r_t) ->
       Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
     | Text ([], name) | Tadt (name, []) ->
@@ -93,6 +95,7 @@ let print_generic body_of =
       | Treal -> fprintf fmt "real"
       | Tbool -> fprintf fmt "bool"
       | Tbitv n -> fprintf fmt "bitv[%d]" n
+      | Tfloat (eb, sb) -> fprintf fmt "float[%d,%d]" eb sb
       | Tvar tv -> fprintf fmt "'a_%a" DE.Ty.Var.print tv
       | Text(l, s) when l == [] ->
         fprintf fmt "<ext>%a" DE.Ty.Const.print s
@@ -185,6 +188,9 @@ let rec compare t1 t2 =
   | Tbool, _ -> -1 | _, Tbool -> 1
 
   | Tbitv sz1, Tbitv sz2 -> Int.compare sz1 sz2
+  | Tbitv _, _ -> -1 | _, Tbitv _ -> 1
+
+  | Tfloat _, Tfloat _ -> 0
 
 and compare_list l1 l2 = match l1, l2 with
   | [] , [] -> 0
@@ -205,6 +211,8 @@ let rec equal t1 t2 =
     equal ta1 tb1 && equal ta2 tb2
   | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
+  | Tfloat (eb1, sb1), Tfloat (eb2, sb2) ->
+    eb1 = eb2 && sb1 = sb2
 
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
     begin
@@ -234,6 +242,7 @@ let rec matching s pat t =
     matching (matching s ta1 tb1) ta2 tb2
   | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
+  | Tfloat _ , Tfloat _ -> s
   | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->
@@ -259,7 +268,7 @@ let apply_subst =
       ->
       Tadt (name, List.map (apply_subst s) params)
 
-    | Tint | Treal | Tbool | Tbitv _ -> ty
+    | Tint | Treal | Tbool | Tbitv _ | Tfloat _ -> ty
   in
   fun s ty -> if TvMap.is_empty s then ty else apply_subst s ty
 
@@ -433,6 +442,8 @@ let rec hash t =
     in
     abs h
 
+  | Tfloat _ -> 17
+
   | _ -> Hashtbl.hash t
 
 let compare_subst = TvMap.compare compare
@@ -457,7 +468,7 @@ let vty_of t =
     | Tadt(_, args) ->
       List.fold_left vty_of_rec acc args
 
-    | Tint | Treal | Tbool | Tbitv _ ->
+    | Tint | Treal | Tbool | Tbitv _ | Tfloat _ ->
       acc
   in
   vty_of_rec TvSet.empty t

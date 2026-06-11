@@ -109,6 +109,14 @@ type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 type bound = (* private *)
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
+type fp_val =
+  | Plus_infinity
+  | Minus_infinity
+  | Plus_zero
+  | Minus_zero
+  | NaN
+  | Finite of { neg : bool; biased_exp : int; significand : Z.t }
+
 type t =
   | True
   | False
@@ -120,6 +128,7 @@ type t =
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
+  | Fp of fp_val
   | Op of operator
   | Lit of lit
   | Form of form
@@ -183,6 +192,19 @@ let compare_kinds k1 k2 =
     (function
       | _, (Ac | Other) -> assert false
     )
+
+let compare_fp_val v1 v2 =
+  Util.compare_algebraic v1 v2
+    (function
+      | Finite f1, Finite f2 ->
+        let c = Bool.compare f1.neg f2.neg in
+        if c <> 0 then c else
+          let c = Int.compare f1.biased_exp f2.biased_exp in
+          if c <> 0 then c else
+            Z.compare f1.significand f2.significand
+      | _, (Plus_infinity | Minus_infinity | Plus_zero
+           | Minus_zero | NaN | Finite _) ->
+        assert false)
 
 let compare_operators op1 op2 =
   Util.compare_algebraic op1 op2
@@ -271,6 +293,7 @@ let compare s1 s2 =
       | Bitv (n1, s1), Bitv (n2, s2) ->
         let c = Int.compare n1 n2 in
         if c <> 0 then c else Z.compare s1 s2
+      | Fp v1, Fp v2 -> compare_fp_val v1 v2
       | Op op1, Op op2 -> compare_operators op1 op2
       | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
       | Form f1, Form f2 -> compare_forms f1 f2
@@ -278,7 +301,7 @@ let compare s1 s2 =
         let c = compare_bounds b1 b1' in
         if c <> 0 then c else compare_bounds b2 b2'
       | _ ,
-        (True | False | Name _ | Int _ | Real _ | Bitv _
+        (True | False | Name _ | Int _ | Real _ | Bitv _ | Fp _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
         assert false
     )
@@ -303,6 +326,7 @@ let hash x =
   | Op op -> 19 * Hashtbl.hash op + 10
   | Lit lit -> 19 * Hashtbl.hash lit + 11
   | Form x -> 19 * Hashtbl.hash x + 12
+  | Fp v -> 19 * Hashtbl.hash v + 13
 
 let string_of_bound_kind x = match x with
   | Unbounded -> "?"
@@ -414,6 +438,15 @@ module AEPrinter = struct
     | F_Iff -> Fmt.pf ppf "<->"
     | F_Xor -> Fmt.pf ppf "xor"
 
+  let pp_fp_val ppf = function
+    | Plus_infinity  -> Fmt.pf ppf "+oo"
+    | Minus_infinity -> Fmt.pf ppf "-oo"
+    | Plus_zero      -> Fmt.pf ppf "+zero"
+    | Minus_zero     -> Fmt.pf ppf "-zero"
+    | NaN            -> Fmt.pf ppf "NaN"
+    | (Finite { neg; biased_exp; significand; _ }) ->
+      Fmt.pf ppf "fp[%b;%d;%s]" neg biased_exp (Z.to_string significand)
+
   let pp ?(show_vars = true) ppf sy =
     match sy with
     | Lit lit -> pp_lit ppf lit
@@ -440,6 +473,7 @@ module AEPrinter = struct
     | In (lb, rb) ->
       Fmt.pf ppf "%s, %s" (string_of_bound lb) (string_of_bound rb)
     | MapsTo v -> Fmt.pf ppf "%a |->" Var.print v
+    | Fp fp -> pp_fp_val ppf fp
 end
 
 module SmtPrinter = struct
@@ -512,6 +546,21 @@ end
 
 let pp_ae_operator = AEPrinter.pp_operator
 let pp_smtlib_operator = SmtPrinter.pp_operator
+
+let pp_fp_val_smtlib eb sb ppf = function
+  | Plus_infinity  -> Fmt.pf ppf "(_ +oo %d %d)" eb sb
+  | Minus_infinity -> Fmt.pf ppf "(_ -oo %d %d)" eb sb
+  | Plus_zero      -> Fmt.pf ppf "(_ +zero %d %d)" eb sb
+  | Minus_zero     -> Fmt.pf ppf "(_ -zero %d %d)" eb sb
+  | NaN            -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
+  | Finite { neg; biased_exp; significand } ->
+    let bfmt n = Fmt.str "%%0%db" n in
+    let sign_s = if neg then "1" else "0" in
+    let exp_s = Z.format (bfmt eb) (Z.of_int biased_exp) in
+    let sig_bits = sb - 1 in
+    let sig_z = Z.(significand land (shift_left one sig_bits - one)) in
+    let sig_s = Z.format (bfmt sig_bits) sig_z in
+    Fmt.pf ppf "(fp #b%s #b%s #b%s)" sign_s exp_s sig_s
 
 let print_clean = AEPrinter.pp ~show_vars:false
 let print = AEPrinter.pp ~show_vars:true

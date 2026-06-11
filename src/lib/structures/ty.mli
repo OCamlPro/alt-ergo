@@ -48,6 +48,8 @@ type t =
   (** Type variables *)
   | Tbitv of int
   (** Bitvectors of a given length *)
+  | Tfloat of int * int
+  (** The IEEE 754 Floationg-Point sort [(_ FloatingPoint eb sb)]. *)
   | Text of t list * Dolmen.Std.Expr.ty_cst
   (** Abstract types applied to arguments. [Text (args, s)] is
       the application of the abstract type constructor [s] to

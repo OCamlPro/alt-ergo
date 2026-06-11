@@ -501,6 +501,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n ->
     if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
+  | `Float (e, s) -> Ty.Tfloat (e, s)
 
   | `App (`Builtin B.Unit, []) -> Ty.tunit
   | `App (`Builtin _, [ty]) -> aux ty
@@ -899,6 +900,17 @@ let rec mk_expr
           | B.Adt Constructor _ ->
             let ty = dty_to_ty term_ty in
             E.mk_constr tcst [] ty
+
+          | B.Float Plus_infinity { e; s } ->
+            E.fp Sy.Plus_infinity e s
+          | B.Float Minus_infinity { e; s } ->
+            E.fp Sy.Minus_infinity e s
+          | B.Float Plus_zero { e; s } ->
+            E.fp Sy.Plus_zero e s
+          | B.Float Minus_zero { e; s } ->
+            E.fp Sy.Minus_zero e s
+          | B.Float NaN { e; s } ->
+            E.fp Sy.NaN e s
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1379,6 +1391,39 @@ let rec mk_expr
               | RoundTowardPositive, _ -> mk_rounding Up
               | RoundTowardNegative, _ -> mk_rounding Down
               | RoundTowardZero, _ -> mk_rounding ToZero
+
+              | Fp { e; s }, [sign_t; exp_t; sig_t] ->
+                let bv_z DE.{ term_descr; _ } =
+                  (* TODO: does Dolmen guarantee that the term is a bitvector
+                     literal? *)
+                  match term_descr with
+                  | DE.Cst { builtin = B.Bitv (Binary_lit bs); _ } ->
+                    Z.of_string ("0b" ^ bs)
+                  | _ -> invalid_app_term ()
+                in
+                let neg = Z.equal (bv_z sign_t) Z.one in
+                let biased_exp = Z.to_int (bv_z exp_t) in
+                let trail = bv_z sig_t in
+                let max_exp = (1 lsl e) - 1 in
+                let fp_val =
+                  (* TODO: doesn't Dolmen avoid that? *)
+                  if biased_exp = max_exp then
+                    (* all-ones exponent: infinity or NaN *)
+                    if Z.equal trail Z.zero then
+                      (if neg then Sy.Minus_infinity else Sy.Plus_infinity)
+                    else Sy.NaN
+                  else if biased_exp = 0 && Z.equal trail Z.zero then
+                    (* zero exponent + zero significand: signed zero *)
+                    (if neg then Sy.Minus_zero else Sy.Plus_zero)
+                  else
+                    let hidden_bit = s - 1 in
+                    let significand =
+                      if biased_exp = 0 then trail
+                      else Z.(trail lor (one lsl hidden_bit))
+                    in
+                    Sy.Finite { neg; biased_exp; significand }
+                in
+                E.fp fp_val e s
 
               | (RoundingMode | T _ | Fp _), _
               | (Plus_infinity _ | Minus_infinity _ |

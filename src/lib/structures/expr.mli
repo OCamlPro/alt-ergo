@@ -252,6 +252,7 @@ val void : t
 val int : string -> t
 val real : string -> t
 val bitv : string -> Ty.t -> t
+val fp : Symbols.fp_val -> int -> int -> t
 val fresh_name : Ty.t -> t
 
 (** Special names used for AC(X) abstraction.
