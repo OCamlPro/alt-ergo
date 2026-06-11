@@ -130,6 +130,7 @@ let set_options r =
   set_options_opt Options.set_age_bound r.age_bound;
   set_options_opt Options.set_fm_cross_limit (get_numbers r.fm_cross_limit);
   set_options_opt Options.set_steps_bound r.steps_bound;
+  set_options_opt Steps.set_steps_bound r.steps_bound;
 
   set_options_opt Options.set_output_format
     (get_output_format r.output_format);
