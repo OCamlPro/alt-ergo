@@ -34,14 +34,14 @@ fi
 
 errors=0
 
-# Reindent files using ocp-indent
+# Reindent files using ocamlformat
 # Keep the pattern in sync with check_indentation.sh used by CI
 files=$(git diff --cached --name-only --diff-filter=ACMR -z HEAD | grep -Ez '\.ml[i]?$' | xargs -0)
 for f in $files; do
-	cmp -s <(git show ":$f") <(git show ":$f" | ocp-indent)
+	cmp -s <(git show ":$f") <(git show ":$f" | ocamlformat)
 	if [[ $? -ne 0 ]]; then
 		echo "File $f: indentation errors."
-		ocp-indent -i "$f"
+		ocamlformat -i "$f"
 		git diff -- "$f"
 		errors=$((errors+1))
 	fi
