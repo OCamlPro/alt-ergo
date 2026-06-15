@@ -59,7 +59,9 @@ let check_buffer file_opt cin =
         | None       -> Queue.push line  lines; line
         | Some line2 -> Queue.push line2 lines; spacesRemoved := true; line2
       in
-      if String.length line > 80 then begin
+      (* We'd really want 80 but that's the target we give to ocamlformat and
+         sometimes it does a little bit more, so we give some leeway here. *)
+      if String.length line > 90 then begin
         print_err file_opt "line %d too long@." !cpt;
         longLines := true;
       end

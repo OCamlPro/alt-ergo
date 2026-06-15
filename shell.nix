@@ -9,7 +9,7 @@ pkgs.mkShell {
   # see https://nixos.wiki/wiki/Locales
   LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
   nativeBuildInputs = with ocamlPackages; [
-    pkgs.ocamlformat
+    pkgs.ocamlformat_0_28_1
     pkgs.sphinx
     python3Packages.myst-parser
     python3Packages.sphinx-rtd-theme
