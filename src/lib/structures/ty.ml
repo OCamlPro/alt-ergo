@@ -190,7 +190,9 @@ let rec compare t1 t2 =
   | Tbitv sz1, Tbitv sz2 -> Int.compare sz1 sz2
   | Tbitv _, _ -> -1 | _, Tbitv _ -> 1
 
-  | Tfloat _, Tfloat _ -> 0
+  | Tfloat (eb1, sb1), Tfloat (eb2, sb2) ->
+    let c = Int.compare eb1 eb2 in
+    if c <> 0 then c else Int.compare sb1 sb2
 
 and compare_list l1 l2 = match l1, l2 with
   | [] , [] -> 0
@@ -242,7 +244,7 @@ let rec matching s pat t =
     matching (matching s ta1 tb1) ta2 tb2
   | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
   | Tbitv n , Tbitv m when n=m -> s
-  | Tfloat _ , Tfloat _ -> s
+  | Tfloat (eb1, sb1), Tfloat (eb2, sb2) when eb1 = eb2 && sb1 = sb2 -> s
   | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
   | _ , _ ->

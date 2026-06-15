@@ -548,6 +548,13 @@ let process_source ?selector_inst ~print_status src =
         | None -> print_wrn_opt ~loc ~name "integer" value; st
         | Some i -> set_steps_bound i st
       end
+    | ":smt-lib-fpa", Symbol { name = Simple "true"; _ } ->
+      (* TODO: while this "works" for now, its not correct, activating the
+         smt-lib fpa theory should tell AE to load its prelude, but loading
+         preludes is done before these in-file options are processed, so
+         supporting a proper in-file option setting would require making sure
+         that preludes are loaded after parsing these options.  *)
+      Options.set_smt_lib_fpa true; st
     | _ ->
       unsupported_opt ~loc name; st
   in

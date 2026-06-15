@@ -501,7 +501,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n ->
     if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
-  | `Float (e, s) -> Ty.Tfloat (e, s)
+  | `Float (e, s) when Options.get_smt_lib_fpa () -> Ty.Tfloat (e, s)
 
   | `App (`Builtin B.Unit, []) -> Ty.tunit
   | `App (`Builtin _, [ty]) -> aux ty
@@ -901,16 +901,17 @@ let rec mk_expr
             let ty = dty_to_ty term_ty in
             E.mk_constr tcst [] ty
 
-          | B.Float Plus_infinity { e; s } ->
-            E.fp Sy.Plus_infinity e s
-          | B.Float Minus_infinity { e; s } ->
-            E.fp Sy.Minus_infinity e s
-          | B.Float Plus_zero { e; s } ->
-            E.fp Sy.Plus_zero e s
-          | B.Float Minus_zero { e; s } ->
-            E.fp Sy.Minus_zero e s
-          | B.Float NaN { e; s } ->
-            E.fp Sy.NaN e s
+          | B.Float cst when Options.get_smt_lib_fpa () ->
+            begin match cst with
+              | Plus_infinity { e; s } -> E.fp Sy.Plus_infinity e s
+              | Minus_infinity { e; s } -> E.fp Sy.Minus_infinity e s
+              | Plus_zero { e; s } -> E.fp Sy.Plus_zero e s
+              | Minus_zero { e; s } -> E.fp Sy.Minus_zero e s
+              | NaN { e; s } -> E.fp Sy.NaN e s
+              | _ ->
+                unsupported "Constant Floating-Point Arithmetic literal %a"
+                  DE.Term.print term
+            end
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1392,13 +1393,14 @@ let rec mk_expr
               | RoundTowardNegative, _ -> mk_rounding Down
               | RoundTowardZero, _ -> mk_rounding ToZero
 
-              | Fp { e; s }, [sign_t; exp_t; sig_t] ->
+              | Fp { e; s }, [sign_t; exp_t; sig_t]
+                when Options.get_smt_lib_fpa () ->
                 let bv_z DE.{ term_descr; _ } =
                   (* TODO: does Dolmen guarantee that the term is a bitvector
                      literal? *)
                   match term_descr with
                   | DE.Cst { builtin = B.Bitv (Binary_lit bs); _ } ->
-                    Z.of_string ("0b" ^ bs)
+                    Z.of_string_base 2 bs
                   | _ -> invalid_app_term ()
                 in
                 let neg = Z.equal (bv_z sign_t) Z.one in

@@ -18,17 +18,19 @@
 
 (* Note: keep the constructors in the same order as in the definition in
    [prelude_to_int] so that it gets simplified to the identity. *)
-type prelude = Nra | Ria | Fpa
+type prelude = Nra | Ria | Fpa | SmtFloat
 
 let[@inline] prelude_to_int = function
   | Nra -> 0
   | Ria -> 1
   | Fpa -> 2
+  | SmtFloat -> 3
 
 let pp_prelude ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
   | Ria -> Format.fprintf ppf "ria"
   | Nra -> Format.fprintf ppf "nra"
+  | SmtFloat -> Format.fprintf ppf "smt.float"
 
 let equal_prelude prelude1 prelude2 =
   Int.equal
@@ -70,8 +72,9 @@ let pp ppf = function
   | ADT -> Format.fprintf ppf "adt"
   | AC -> Format.fprintf ppf "ac"
 
-let filename =
-  Format.asprintf "<builtins>/%a.ae" pp_prelude
+let filename = function
+  | SmtFloat -> failwith "smt.float prelude not yet implemented"
+  | p -> Format.asprintf "<builtins>/%a.ae" pp_prelude p
 
 let get_prelude name =
   match Preludes.read name with
@@ -86,14 +89,21 @@ let content = function
   | Fpa -> fpa_prelude
   | Ria -> ria_prelude
   | Nra -> nra_prelude
+  | SmtFloat -> failwith "smt.float prelude not yet implemented"
 
-let all_preludes = [ Fpa; Ria; Nra ]
+let all_preludes = [ Fpa; Ria; Nra; SmtFloat ]
+
+(* SmtFloat is only activated when the user passes --enable-theories smt.float.
+*)
+let default_preludes = [ Fpa; Ria; Nra ]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-let default_preludes = all_preludes
+let default = ADT :: AC :: List.map (fun p -> Prelude p) default_preludes
 
-let default = all
+let theory_enum =
+  ("smt.floating_point", Prelude SmtFloat) ::
+  List.map (fun t -> Format.asprintf "%a" pp t, t) all
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)
