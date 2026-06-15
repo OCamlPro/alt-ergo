@@ -17,14 +17,17 @@
 (**************************************************************************)
 
 let src = Logs.Src.create ~doc:"Sat" __MODULE__
+
 module Log = (val Logs.src_log src : Logs.LOG)
 
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   exception Sat
+
   exception Unsat of Explanation.t
+
   exception I_dont_know
 
-  module FS = Fun_sat.Make(Th)
+  module FS = Fun_sat.Make (Th)
 
   type t = FS.t ref
 
@@ -32,12 +35,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let exn_handler f env =
     try f !env with
-    | FS.Sat e -> env := e; raise Sat
+    | FS.Sat e ->
+      env := e;
+      raise Sat
     | FS.Unsat expl -> raise (Unsat expl)
-    | FS.I_dont_know e -> env := e; raise I_dont_know
+    | FS.I_dont_know e ->
+      env := e;
+      raise I_dont_know
 
-  let declare t id =
-    t := FS.declare !t id
+  let declare t id = t := FS.declare !t id
 
   let push t i = exn_handler (fun env -> t := FS.push env i) t
 
@@ -51,8 +57,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let pred_def t expr n expl loc =
     exn_handler (fun env -> t := FS.pred_def env expr n expl loc) t
 
-  let unsat t g =
-    exn_handler (fun env -> FS.unsat env g) t
+  let unsat t g = exn_handler (fun env -> FS.unsat env g) t
 
   let optimize _env _fn =
     raise (Util.Not_implemented "optimization is not supported by FunSAT.")

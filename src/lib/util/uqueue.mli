@@ -59,4 +59,4 @@ module type S = sig
   (** Discard all elements from the queue. *)
 end
 
-module Make(H : Hashtbl.HashedType) : S with type elt = H.t
+module Make (H : Hashtbl.HashedType) : S with type elt = H.t

@@ -29,45 +29,42 @@ open AltErgoLib
 
 let init_sigterm_6 () =
   (* what to do with Ctrl+C ? *)
-  Sys.set_signal Sys.sigint(*-6*)
-    (Sys.Signal_handle (fun _ ->
-         if Options.get_profiling() then
-           Profiling.switch (Options.Output.get_fmt_diagnostic ())
+  Sys.set_signal Sys.sigint (*-6*)
+    (Sys.Signal_handle
+       (fun _ ->
+         if Options.get_profiling ()
+         then Profiling.switch (Options.Output.get_fmt_diagnostic ())
          else begin
            Printer.print_wrn "User wants me to stop.";
            Printer.print_std "unknown";
            exit 1
-         end
-       )
-    )
+         end))
 
 let init_sigterm_11_9 () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
-  if Options.get_profiling() then
+  if Options.get_profiling ()
+  then
     List.iter
       (fun sign ->
-         Sys.set_signal sign
-           (Sys.Signal_handle
-              (fun _ ->
-                 Profiling.print true (Steps.get_steps ())
-                   (Options.Output.get_fmt_diagnostic ());
-                 exit 1
-              )
-           )
-      )[ Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
+        Sys.set_signal sign
+          (Sys.Signal_handle
+             (fun _ ->
+               Profiling.print true (Steps.get_steps ())
+                 (Options.Output.get_fmt_diagnostic ());
+               exit 1)))
+      [Sys.sigterm (*-11*); Sys.sigquit (*-9*)]
 
 let init_sigterm_21 () =
   (* put the test here because Windows does not handle Sys.Signal_handle
      correctly *)
-  if Options.get_profiling() then
+  if Options.get_profiling ()
+  then
     Sys.set_signal Sys.sigprof (*-21*)
       (Sys.Signal_handle
          (fun _ ->
-            Profiling.print false (Steps.get_steps ())
-              (Options.Output.get_fmt_diagnostic ());
-         )
-      )
+           Profiling.print false (Steps.get_steps ())
+             (Options.Output.get_fmt_diagnostic ())))
 
 let init_sigalarm () =
   try
@@ -76,9 +73,10 @@ let init_sigalarm () =
   with Invalid_argument _ -> ()
 
 let init_profiling () =
-  if Options.get_profiling () then begin
-    assert (Options.get_timers());
-    Profiling.init ();
+  if Options.get_profiling ()
+  then begin
+    assert (Options.get_timers ());
+    Profiling.init ()
   end
 
 let init_signals () =

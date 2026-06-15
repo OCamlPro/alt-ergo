@@ -47,20 +47,25 @@ end
 
 module type S = sig
   type t
+
   type theory
+
   open Matching_types
 
   val empty : t
 
-  val make:
+  val make :
     max_t_depth:int ->
     Matching_types.info Expr.Map.t ->
     Expr.t list Expr.Map.t Symbols.Map.t ->
     t
 
   val add_term : term_info -> Expr.t -> t -> t
+
   val max_term_depth : t -> int -> t
+
   val terms_info : t -> info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t
+
   val query :
     use_ematching:bool ->
     t ->
@@ -70,16 +75,16 @@ module type S = sig
 
   val reinit_caches : unit -> unit
   (** Empties the e-matching caches *)
-
 end
-
 
 module type Arg = sig
   type t
+
   val term_repr : t -> Expr.t -> init_term:bool -> Expr.t
+
   val are_equal : t -> Expr.t -> Expr.t -> init_terms:bool -> Th_util.answer
+
   val class_of : t -> Expr.t -> Expr.Set.t
 end
-
 
 module Make (X : Arg) : S with type theory = X.t

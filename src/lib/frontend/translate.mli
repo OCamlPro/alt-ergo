@@ -26,31 +26,25 @@ val dty_to_ty : ?update:bool -> ?is_var:bool -> D_loop.DStd.Expr.ty -> Ty.t
     - If [update] is [true] then for each type variable of type [DE.Ty.Var.t],
       if it was not encountered before, a new type variable of type [Ty.t] is
       created and added to the cache.
-    - If [dty] is a type application, or an arrow type, only its return type
-      is converted since those have no counterpart in AE's [Ty] module. The
+    - If [dty] is a type application, or an arrow type, only its return type is
+      converted since those have no counterpart in AE's [Ty] module. The
       function arguments' types or the type paramters ought to be converted
-      individually.
-*)
+      individually. *)
 
 val make_form :
-  string ->
-  D_loop.DStd.Expr.term ->
-  Loc.t ->
-  decl_kind:Expr.decl_kind ->
-  Expr.t
+  string -> D_loop.DStd.Expr.term -> Loc.t -> decl_kind:Expr.decl_kind -> Expr.t
 
 val make :
   D_loop.DStd.Loc.file ->
   Commands.sat_tdecl list ->
   [< D_loop.Typer_Pipe.typechecked
   | `Optimize of Dolmen.Std.Expr.term * bool
-  | `Goal  of Dolmen.Std.Expr.term
-  | `Check of Dolmen.Std.Expr.term list
-         > `Hyp ] D_loop.Typer_Pipe.stmt ->
+  | `Goal of Dolmen.Std.Expr.term
+  | `Check of Dolmen.Std.Expr.term list > `Hyp ]
+  D_loop.Typer_Pipe.stmt ->
   Commands.sat_tdecl list
-(** [make acc stmt] Makes one or more [Commands.sat_tdecl] from the
-    type-checked statement [stmt] and appends them to [acc].
-*)
+(** [make acc stmt] Makes one or more [Commands.sat_tdecl] from the type-checked
+    statement [stmt] and appends them to [acc]. *)
 
 val builtins :
   Dolmen_loop.State.t ->

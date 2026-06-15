@@ -30,4 +30,4 @@ open Intervals_intf
 (** This module implements union of intervals with explanations. See the
     {!Intervals_intf.Core} signature. *)
 
-module Make(Ex : Explanations) : Core with type explanation = Ex.t
+module Make (Ex : Explanations) : Core with type explanation = Ex.t

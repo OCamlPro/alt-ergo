@@ -16,13 +16,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Open this module in every module to hide polymorphic versions of
-    the Stdlib. **)
-let (<>) (a: int) (b: int) = a <> b
-let (=)  (a: int) (b: int) = a = b
-let (<)  (a: int) (b: int) = a < b
-let (>)  (a: int) (b: int) = a > b
-let (<=) (a: int) (b: int) = a <= b
-let (>=) (a: int) (b: int) = a >= b
+(** Open this module in every module to hide polymorphic versions of the Stdlib.
+    **)
+let ( <> ) (a : int) (b : int) = a <> b
 
-let compare  (a: int) (b: int) = Stdlib.compare a b
+let ( = ) (a : int) (b : int) = a = b
+
+let ( < ) (a : int) (b : int) = a < b
+
+let ( > ) (a : int) (b : int) = a > b
+
+let ( <= ) (a : int) (b : int) = a <= b
+
+let ( >= ) (a : int) (b : int) = a >= b
+
+let compare (a : int) (b : int) = Stdlib.compare a b

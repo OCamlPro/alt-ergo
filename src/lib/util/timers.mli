@@ -64,29 +64,29 @@ type ty_function =
   | F_apply_subst
   | F_instantiate
 
-(** environment of internal timers **)
 type t
+(** environment of internal timers **)
 
-(** return a new empty env **)
 val empty : unit -> t
+(** return a new empty env **)
 
-(** reset the given env to empty *)
 val reset : t -> unit
+(** reset the given env to empty *)
 
-(** save the current timer and start the timer "ty_module x ty_function" **)
 val start : t -> ty_module -> ty_function -> unit
+(** save the current timer and start the timer "ty_module x ty_function" **)
 
-(** pause the timer "ty_module x ty_function" and restore the former timer **)
 val pause : t -> ty_module -> ty_function -> unit
+(** pause the timer "ty_module x ty_function" and restore the former timer **)
 
-(** update the value of the current timer **)
 val update : t -> unit
+(** update the value of the current timer **)
 
-(** get the value of the timer "ty_module x ty_function" **)
 val get_value : t -> ty_module -> ty_function -> float
+(** get the value of the timer "ty_module x ty_function" **)
 
-(** get the sum of the "ty_function" timers for the given "ty_module" **)
 val get_sum : t -> ty_module -> float
+(** get the sum of the "ty_function" timers for the given "ty_module" **)
 
 val current_timer : t -> ty_module * ty_function * int
 
@@ -100,11 +100,11 @@ val all_modules : ty_module list
 
 val all_functions : ty_function list
 
-(** This functions assumes (asserts) that timers() yields true **)
 val set_timer_start : (ty_module -> ty_function -> unit) -> unit
-
 (** This functions assumes (asserts) that timers() yields true **)
+
 val set_timer_pause : (ty_module -> ty_function -> unit) -> unit
+(** This functions assumes (asserts) that timers() yields true **)
 
 val with_timer : ty_module -> ty_function -> (unit -> 'a) -> 'a
 (** [with_timer mod_ fun_ f] wraps the call [f ()] with the timer

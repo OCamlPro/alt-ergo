@@ -27,11 +27,11 @@
 
 let rec assoc eq x = function
   | [] -> raise Not_found
-  | (a,b)::l -> if eq a x then b else assoc eq x l
+  | (a, b) :: l -> if eq a x then b else assoc eq x l
 
 let rec assoc_opt eq x = function
-    [] -> None
-  | (a,b)::l -> if eq a x then Some b else assoc_opt eq x l
+  | [] -> None
+  | (a, b) :: l -> if eq a x then Some b else assoc_opt eq x l
 
 let rec mem_assoc eq x = function
   | [] -> false
@@ -39,16 +39,15 @@ let rec mem_assoc eq x = function
 
 let rec remove_assoc eq x = function
   | [] -> []
-  | (a, _ as pair) :: l ->
-    if eq a x then l else pair :: remove_assoc eq x l
+  | ((a, _) as pair) :: l -> if eq a x then l else pair :: remove_assoc eq x l
 
 let apply f l =
   let res, same =
     List.fold_left
       (fun (acc, same) a ->
-         let b = f a in
-         b :: acc, same && a == b
-      )([], true) l
+        let b = f a in
+        b :: acc, same && a == b)
+      ([], true) l
   in
   (if same then l else List.rev res), same
 
@@ -56,9 +55,9 @@ let apply_right f l =
   let res, same =
     List.fold_left
       (fun (acc, same) (v, a) ->
-         let b = f a in
-         (v, b) :: acc, same && a == b
-      )([], true) l
+        let b = f a in
+        (v, b) :: acc, same && a == b)
+      ([], true) l
   in
   (if same then l else List.rev res), same
 
@@ -67,8 +66,7 @@ let rec try_map f l =
   | [] -> Some []
   | x :: xs ->
     Option.bind (f x) @@ fun y ->
-    Option.bind (try_map f xs) @@ fun ys ->
-    Some (y :: ys)
+    Option.bind (try_map f xs) @@ fun ys -> Some (y :: ys)
 
 let rec is_sorted cmp l =
   match l with

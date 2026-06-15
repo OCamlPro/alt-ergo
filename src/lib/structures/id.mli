@@ -25,9 +25,13 @@ type typed = t * Ty.t list * Ty.t
     - The returned type. *)
 
 val compare_typed : typed -> typed -> int
+
 val compare : t -> t -> int
+
 val equal : t -> t -> bool
+
 val show : t -> string
+
 val pp : t Fmt.t
 
 module Namespace : sig
@@ -36,7 +40,9 @@ module Namespace : sig
   end
 
   module Internal : S
+
   module Skolem : S
+
   module Abstract : S
 
   val reinit : unit -> unit

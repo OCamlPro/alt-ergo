@@ -27,7 +27,11 @@
 
 type t
 
-type rootdep = { name : string; f : Expr.t; loc : Loc.t }
+type rootdep =
+  { name : string;
+    f : Expr.t;
+    loc : Loc.t
+  }
 
 type exp =
   | Literal of Satml_types.Atom.atom
@@ -50,9 +54,9 @@ val union : t -> t -> t
 
 val merge : t -> t -> t
 
-val iter_atoms : (exp -> unit)  -> t -> unit
+val iter_atoms : (exp -> unit) -> t -> unit
 
-val fold_atoms : (exp -> 'a -> 'a )  -> t -> 'a -> 'a
+val fold_atoms : (exp -> 'a -> 'a) -> t -> 'a -> 'a
 
 val fresh_exp : unit -> exp
 

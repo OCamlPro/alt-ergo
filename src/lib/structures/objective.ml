@@ -19,11 +19,11 @@
 module Function = struct
   type index = int
 
-  type t = {
-    e : Expr.t;
-    is_max : bool;
-    index : index;
-  }
+  type t =
+    { e : Expr.t;
+      is_max : bool;
+      index : index
+    }
 
   let cnt = ref 0
 
@@ -62,46 +62,48 @@ module Value = struct
 end
 
 module Model = struct
-  module M =  Map.Make (Function)
+  module M = Map.Make (Function)
 
   type t = Value.t M.t
 
   let empty = M.empty
+
   let is_empty = M.is_empty
+
   let fold = M.fold
+
   let add = M.add
 
-  let pp_binding ppf (fn, v) =
-    Fmt.pf ppf "(%a %a)" Function.pp fn Value.pp v
+  let pp_binding ppf (fn, v) = Fmt.pf ppf "(%a %a)" Function.pp fn Value.pp v
 
   let pp ppf mdl =
-    if M.is_empty mdl then
-      Fmt.pf ppf "@[<v 2>(objectives @]@,)"
+    if M.is_empty mdl
+    then Fmt.pf ppf "@[<v 2>(objectives @]@,)"
     else
       Fmt.pf ppf "@[<v 2>(objectives @,%a@]@,)"
-        (Fmt.iter_bindings ~sep:Fmt.cut M.iter pp_binding) mdl
+        (Fmt.iter_bindings ~sep:Fmt.cut M.iter pp_binding)
+        mdl
 
-  let functions mdl =
-    M.bindings mdl
-    |> List.map (fun (fn, _) -> fn)
+  let functions mdl = M.bindings mdl |> List.map (fun (fn, _) -> fn)
 
   let has_no_limit mdl =
     M.for_all
       (fun _ v ->
-         match (v : Value.t) with
-         | Pinfinity | Minfinity | Limit _ -> false
-         | Value _ | Unknown -> true
-      ) mdl
+        match (v : Value.t) with
+        | Pinfinity | Minfinity | Limit _ -> false
+        | Value _ | Unknown -> true)
+      mdl
 
   exception Found of Function.t
 
   let next_unknown mdl =
     try
-      M.iter (fun fn v ->
+      M.iter
+        (fun fn v ->
           match (v : Value.t) with
           | Unknown -> raise (Found fn)
-          | Value _ | Limit _ | Pinfinity | Minfinity -> ()
-        ) mdl;
+          | Value _ | Limit _ | Pinfinity | Minfinity -> ())
+        mdl;
       None
     with
     | Found fn -> Some fn

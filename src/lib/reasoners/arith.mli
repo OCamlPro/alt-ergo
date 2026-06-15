@@ -27,26 +27,19 @@
 
 val src : Logs.src
 
-(** [calc_power x y t] Compute x^y. Raise Exit if y is not an Int
-    (castable in Int). *)
 val calc_power : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t
+(** [calc_power x y t] Compute x^y. Raise Exit if y is not an Int (castable in
+    Int). *)
 
-(** Same as calc_power but return an option.
-    Return None if the exception Exit is raised by calc_power *)
 val calc_power_opt : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t option
+(** Same as calc_power but return an option. Return None if the exception Exit
+    is raised by calc_power *)
 
-module Type (X : Sig.X ): Polynome.T with type r = X.r
+module Type (X : Sig.X) : Polynome.T with type r = X.r
 
-module Shostak
-    (X : Sig.X)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r) : Sig.SHOSTAK
-  with type r = X.r and type t = P.t
+module Shostak (X : Sig.X) (P : Polynome.EXTENDED_Polynome with type r = X.r) :
+  Sig.SHOSTAK with type r = X.r and type t = P.t
 
-(*
-module Relation
-    (X : Sig.X)
-    (Uf : Uf.S with type r = X.r)
-    (P : Polynome.EXTENDED_Polynome with type r = X.r)
-  : Sig.RELATION
-    with type r = X.r and type uf = Uf.t
-*)
+(* module Relation (X : Sig.X) (Uf : Uf.S with type r = X.r) (P :
+   Polynome.EXTENDED_Polynome with type r = X.r) : Sig.RELATION with type r =
+   X.r and type uf = Uf.t *)

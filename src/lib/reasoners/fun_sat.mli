@@ -32,7 +32,9 @@ module Make (_ : Theory.S) : sig
   type t
 
   exception Sat of t
+
   exception Unsat of Explanation.t
+
   exception I_dont_know of t
 
   val empty : ?selector:(Expr.t -> bool) -> unit -> t
@@ -50,8 +52,7 @@ module Make (_ : Theory.S) : sig
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
 
-  val pred_def :
-    t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
 
   val unsat : t -> Expr.gformula -> Explanation.t
 
@@ -59,7 +60,7 @@ module Make (_ : Theory.S) : sig
 
   val reinit_ctx : unit -> unit
 
-  val get_model: t -> Models.t option
+  val get_model : t -> Models.t option
 
   val get_unknown_reason : t -> Sat_solver_sig.unknown_reason option
 

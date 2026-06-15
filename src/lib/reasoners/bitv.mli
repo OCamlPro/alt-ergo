@@ -27,23 +27,26 @@
 
 val src : Logs.src
 
-type 'a alpha_term = {
-  bv : 'a;
-  sz : int;
-}
+type 'a alpha_term =
+  { bv : 'a;
+    sz : int
+  }
 
 val pp_alpha_term : 'a Fmt.t -> 'a alpha_term Fmt.t
 
+type 'a signed =
+  { value : 'a;
+    negated : bool
+  }
 (** The ['a signed] type represents possibly negated values of type ['a]. It is
     used for [bvnot] at the leaves ([Other] and [Ext] below). *)
-type 'a signed = { value : 'a ; negated : bool }
 
 type 'a simple_term_aux =
   | Cte of Z.t
   | Other of 'a signed
   | Ext of 'a signed * int * int * int (*// id * size * i * j //*)
 
-type 'a simple_term = ('a simple_term_aux) alpha_term
+type 'a simple_term = 'a simple_term_aux alpha_term
 
 type 'a abstract = 'a simple_term list
 
@@ -58,21 +61,23 @@ val zero_extend : int -> 'a abstract -> 'a abstract
 
 val lognot : 'a abstract -> 'a abstract
 
-(** [to_Z_opt r] evaluates [r] to an integer if possible. *)
 val to_Z_opt : 'a abstract -> Z.t option
+(** [to_Z_opt r] evaluates [r] to an integer if possible. *)
 
+val int2bv_const : int -> Z.t -> 'a abstract
 (** [int2bv_const n z] evaluates [z] as a constant [n]-bits bitvector.
 
     If [z] is out of the [0 .. 2^n] range, only the first [n] bits of [z] in
-    binary representation are considered, i.e.  [int2bv_const n z] is always
+    binary representation are considered, i.e. [int2bv_const n z] is always
     equal to [int2bv_const n (erem z (1 lsl n))]. *)
-val int2bv_const : int -> Z.t -> 'a abstract
 
 module type ALIEN = sig
   include Sig.X
+
   val embed : r abstract -> r
-  val extract : r -> (r abstract) option
+
+  val extract : r -> r abstract option
 end
 
-module Shostak
-    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+module Shostak (X : ALIEN) :
+  Sig.SHOSTAK with type r = X.r and type t = X.r abstract

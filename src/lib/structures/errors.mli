@@ -27,10 +27,10 @@
 
 (** {1 Errors module} *)
 
-(** This module aims to regroup all exception that can be raised
-    by the Alt-Ergo-lib *)
+(** This module aims to regroup all exception that can be raised by the
+    Alt-Ergo-lib *)
 
-(** {2 Error types } *)
+(** {2 Error types} *)
 
 (** Error that can be raised by the typechecker *)
 type typing_error =
@@ -58,53 +58,48 @@ type model_error =
 
 (** All types of error that can be raised *)
 type error =
-  | Typing_error of Loc.t * typing_error
-  (** Error used at typing *)
-  | Run_error of run_error (** Error used during solving *)
+  | Typing_error of Loc.t * typing_error  (** Error used at typing *)
+  | Run_error of run_error  (** Error used during solving *)
   | Warning_as_error
   | Dolmen_error of (int * string)
-  (** Error code + description raised by dolmen. *)
-
+      (** Error code + description raised by dolmen. *)
   | Mode_error of Util.mode * mode_error
-  (** Error used when performing actions forbidden in some modes. *)
+      (** Error used when performing actions forbidden in some modes. *)
+  | Model_error of model_error  (** Error raised while using models. *)
 
-  | Model_error of model_error
-  (** Error raised while using models. *)
-
-(** {2 Exceptions } *)
+(** {2 Exceptions} *)
 
 exception Error of error
 
-(** {3 Raising exceptions functions } *)
+(** {3 Raising exceptions functions} *)
 
-(** Raise the input error as {!Error} *)
 val error : error -> 'a
+(** Raise the input error as {!Error} *)
 
-(** Raise the input {!typing_error} as {!Typing_error} *)
 val typing_error : typing_error -> Loc.t -> 'a
+(** Raise the input {!typing_error} as {!Typing_error} *)
 
-(** Raise the input {!run_error} as {!Run_error} *)
 val run_error : run_error -> 'a
+(** Raise the input {!run_error} as {!Run_error} *)
 
-(** Raise [Warning_as_error] as {!Error}
-    if the option warning-as-error is set
-    This function can be use after warning *)
 val warning_as_error : unit -> unit
+(** Raise [Warning_as_error] as {!Error} if the option warning-as-error is set
+    This function can be use after warning *)
 
+val invalid_set_option : Util.mode -> string -> 'a
 (** Raise [Mode_error (Invalid_set_option str)] as {!Error} if an option is
     being set when it should be immutable. *)
-val invalid_set_option : Util.mode -> string -> 'a
 
-(** Raise [Mode_error (Forbidden_command str)] as {!Error} if a command is
-    being used in a mode where it should not be available. *)
 val forbidden_command : Util.mode -> string -> 'a
+(** Raise [Mode_error (Forbidden_command str)] as {!Error} if a command is being
+    used in a mode where it should not be available. *)
 
-(** {2 Printing } *)
+(** {2 Printing} *)
 
-(** Print a message on the formatter corresponding to the error *)
 val report : Format.formatter -> error -> unit
+(** Print a message on the formatter corresponding to the error *)
 
-(** {2 Internal error } *)
+(** {2 Internal error} *)
 
 exception Internal_error
 

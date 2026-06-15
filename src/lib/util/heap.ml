@@ -35,7 +35,7 @@ module type RankedType = sig
   val compare : t -> t -> int
 end
 
-module MakeRanked(Rank : RankedType) = struct
+module MakeRanked (Rank : RankedType) = struct
   type elt = Rank.t
 
   type t = { heap : elt Vec.t } [@@unboxed]
@@ -46,7 +46,9 @@ module MakeRanked(Rank : RankedType) = struct
   let create sz dummy = { heap = Vec.make ~dummy sz }
 
   let[@inline] left i = (i lsl 1) + 1 (* i*2 + 1 *)
+
   let[@inline] right i = (i + 1) lsl 1 (* (i + 1) * 2*)
+
   let[@inline] parent i = (i - 1) asr 1 (* (i - 1) / 2 *)
 
   let percolate_up { heap } x =
@@ -55,7 +57,7 @@ module MakeRanked(Rank : RankedType) = struct
     while !i <> 0 && Rank.compare x (Vec.get heap !pi) < 0 do
       Vec.set heap !i (Vec.get heap !pi);
       Rank.set_index (Vec.get heap !i) !i;
-      i  := !pi;
+      i := !pi;
       pi := parent !i
     done;
     Vec.set heap !i x;
@@ -76,31 +78,36 @@ module MakeRanked(Rank : RankedType) = struct
          if not (Rank.compare (Vec.get heap child) x < 0) then raise Exit;
          Vec.set heap !i (Vec.get heap child);
          Rank.set_index (Vec.get heap !i) !i;
-         i  := child;
+         i := child;
          li := left !i;
          ri := right !i
-       done;
+       done
      with Exit -> ());
     Vec.set heap !i x;
     Rank.set_index x !i
 
   let[@inline] in_heap x = Rank.index x >= 0
 
-  let[@inline] decrease s x = assert (in_heap x); percolate_up s x
+  let[@inline] decrease s x =
+    assert (in_heap x);
+    percolate_up s x
 
-  let[@inline] increase s x = assert (in_heap x); percolate_down s x
+  let[@inline] increase s x =
+    assert (in_heap x);
+    percolate_down s x
 
   let filter ({ heap } as s) filt =
     let j = ref 0 in
     let lim = Vec.size heap in
     for i = 0 to lim - 1 do
       let elt = Vec.get heap i in
-      if filt elt then begin
+      if filt elt
+      then begin
         Vec.set heap !j elt;
         Rank.set_index elt !j;
-        incr j;
+        incr j
       end
-      else Rank.set_index elt absent;
+      else Rank.set_index elt absent
     done;
     Vec.shrink heap !j;
     for i = (lim / 2) - 1 downto 0 do
@@ -112,15 +119,14 @@ module MakeRanked(Rank : RankedType) = struct
   let[@inline] is_empty s = Vec.is_empty s.heap
 
   let insert s x =
-    if not (in_heap x) then
-      begin
-        Rank.set_index x (Vec.size s.heap);
-        Vec.push s.heap x;
-        percolate_up s x
-      end
+    if not (in_heap x)
+    then begin
+      Rank.set_index x (Vec.size s.heap);
+      Vec.push s.heap x;
+      percolate_up s x
+    end
 
-  let[@inline] grow_to_by_double { heap } sz =
-    Vec.grow_to_by_double heap sz
+  let[@inline] grow_to_by_double { heap } sz = Vec.grow_to_by_double heap sz
 
   let pop_min ({ heap } as s) =
     match Vec.size heap with
@@ -148,27 +154,33 @@ module type OrderedTypeDefault = sig
   val default : t
 end
 
-module MakeOrdered(V : OrderedTypeDefault) = struct
-  type entry = { value : V.t ; mutable index : int }
+module MakeOrdered (V : OrderedTypeDefault) = struct
+  type entry =
+    { value : V.t;
+      mutable index : int
+    }
+
   type elt = V.t
 
-  module H = MakeRanked
-      (struct
-        type t = entry
+  module H = MakeRanked (struct
+    type t = entry
 
-        let index e = e.index
+    let index e = e.index
 
-        let set_index e i = e.index <- i
+    let set_index e i = e.index <- i
 
-        let compare x y = V.compare x.value y.value
-      end)
+    let compare x y = V.compare x.value y.value
+  end)
 
-  let entry value = { value ; index = -1 }
+  let entry value = { value; index = -1 }
 
   type t = H.t
 
   let create n = H.create n (entry V.default)
+
   let is_empty = H.is_empty
+
   let insert h v = H.insert h (entry v)
+
   let pop_min h = (H.pop_min h).value
 end

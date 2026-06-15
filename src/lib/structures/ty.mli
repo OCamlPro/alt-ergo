@@ -35,46 +35,38 @@ type tvar = Dolmen.Std.Expr.ty_var
 (** Type of type variable. *)
 
 module TvSet : Set.S with type elt = tvar
+
 module TvMap : Map.S with type key = tvar
 
 type t =
-  | Tint
-  (** Integer numbers *)
-  | Treal
-  (** Real numbers *)
-  | Tbool
-  (** Booleans *)
-  | Tvar of tvar
-  (** Type variables *)
-  | Tbitv of int
-  (** Bitvectors of a given length *)
+  | Tint  (** Integer numbers *)
+  | Treal  (** Real numbers *)
+  | Tbool  (** Booleans *)
+  | Tvar of tvar  (** Type variables *)
+  | Tbitv of int  (** Bitvectors of a given length *)
   | Tfloat of int * int
-  (** The IEEE 754 Floationg-Point sort [(_ FloatingPoint eb sb)]. *)
+      (** The IEEE 754 Floationg-Point sort [(_ FloatingPoint eb sb)]. *)
   | Text of t list * Dolmen.Std.Expr.ty_cst
-  (** Abstract types applied to arguments. [Text (args, s)] is
-      the application of the abstract type constructor [s] to
-      arguments [args]. *)
-
+      (** Abstract types applied to arguments. [Text (args, s)] is the
+          application of the abstract type constructor [s] to arguments [args].
+      *)
   | Tfarray of t * t
-  (** Functional arrays. [TFarray (src,dst)] maps values of type [src]
-      to values of type [dst]. *)
-
+      (** Functional arrays. [TFarray (src,dst)] maps values of type [src] to
+          values of type [dst]. *)
   | Tadt of Dolmen.Std.Expr.ty_cst * t list
-  (** Application of algebraic data types. [Tadt (a, params)] denotes
-      the application of the polymorphic datatype [a] to the types parameters
-      [params].
+      (** Application of algebraic data types. [Tadt (a, params)] denotes the
+          application of the polymorphic datatype [a] to the types parameters
+          [params].
 
-      For instance the type of integer lists can be represented by the
-      value [Tadt (Hstring.make "list", [Tint]] where the identifier
-      {e list} denotes a polymorphic ADT defined by the user with [t_adt]. *)
+          For instance the type of integer lists can be represented by the value
+          [Tadt (Hstring.make "list", [Tint]] where the identifier {e list}
+          denotes a polymorphic ADT defined by the user with [t_adt]. *)
 
 type adt_constr =
-  { constr : Dolmen.Std.Expr.term_cst ;
-    (** constructor of an ADT type *)
-
+  { constr : Dolmen.Std.Expr.term_cst;  (** constructor of an ADT type *)
     destrs : (Dolmen.Std.Expr.term_cst * t) list
-    (** the list of destructors associated with the constructor and
-        their respective types *)
+        (** the list of destructors associated with the constructor and their
+            respective types *)
   }
 
 type type_body = adt_constr list
@@ -89,7 +81,7 @@ val assoc_destrs :
   (Dolmen.Std.Expr.term_cst * t) list
 (** [assoc_destrs cons cases] returns the list of destructors associated with
     the constructor [cons] in the ADT defined by [cases].
-    @raises Not_found if the constructor is not in the given list. *)
+    @raise Not_found if the constructor is not in the given list. *)
 
 val type_body : Dolmen.Std.Expr.ty_cst -> t list -> type_body
 
@@ -108,19 +100,18 @@ val pp_smtlib : Format.formatter -> t -> unit
 (** Printing function for types in smtlib2 format. *)
 
 val print : Format.formatter -> t -> unit
-(** Printing function for types (does not print
-    the type of each fields for records). *)
+(** Printing function for types (does not print the type of each fields for
+    records). *)
 
 val print_list : Format.formatter -> t list -> unit
-(** Print function for lists of types (does not print
-    the type of each fields for records). *)
+(** Print function for lists of types (does not print the type of each fields
+    for records). *)
 
 val print_full : Format.formatter -> t -> unit
 (** Print function including the record fields. *)
 
 val vty_of : t -> TvSet.t
 (** Returns the set of type variables that occur in a given type. *)
-
 
 (** {2 Building types} *)
 
@@ -134,27 +125,25 @@ val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
 val text : t list -> Dolmen.Std.Expr.ty_cst -> t
-(** Apply the abstract type constructor to the list of type arguments
-    given. *)
+(** Apply the abstract type constructor to the list of type arguments given. *)
 
 val t_adt :
-  ?body:((Dolmen.Std.Expr.term_cst *
-          (Dolmen.Std.Expr.term_cst * t) list) list) option ->
+  ?body:
+    (Dolmen.Std.Expr.term_cst * (Dolmen.Std.Expr.term_cst * t) list) list option ->
   Dolmen.Std.Expr.ty_cst ->
   t list ->
   t
-(** Create an algebraic datatype. The body is a list of
-    constructors, where each constructor is associated with the list of
-    its destructors with their respective types. If [body] is none,
-    then no definition will be registered for this type. The second
-    argument is the name of the type. The third one provides its list
-    of arguments. *)
+(** Create an algebraic datatype. The body is a list of constructors, where each
+    constructor is associated with the list of its destructors with their
+    respective types. If [body] is none, then no definition will be registered
+    for this type. The second argument is the name of the type. The third one
+    provides its list of arguments. *)
 
 (** {2 Substitutions} *)
 
 type subst = t TvMap.t
-(** The type of substitution, i.e. maps
-    from type variables identifiers to types.*)
+(** The type of substitution, i.e. maps from type variables identifiers to
+    types.*)
 
 val compare_subst : subst -> subst -> int
 (** Comparison of substitutions. *)
@@ -162,7 +151,7 @@ val compare_subst : subst -> subst -> int
 val equal_subst : subst -> subst -> bool
 (** Equality of substitutions. *)
 
-val print_subst: Format.formatter -> subst -> unit
+val print_subst : Format.formatter -> subst -> unit
 (** Print function for substitutions. *)
 
 val esubst : subst
@@ -174,38 +163,33 @@ val apply_subst : subst -> t -> t
 (** {2 Matching} *)
 
 exception TypeClash of t * t
-(** Exception raised during matching.
-    [TypeClash (u, v)] is raised when [u] and [v] could not be
-    matched ([u] and [v] may be sub-types of the types being actually
-    matched). *)
+(** Exception raised during matching. [TypeClash (u, v)] is raised when [u] and
+    [v] could not be matched ([u] and [v] may be sub-types of the types being
+    actually matched). *)
 
 val matching : subst -> t -> t -> subst
-(** Matching of types (non-destructive). [matching pat t] returns a
-    substitution [subst] such that [apply_subst subst pat] is
-    equal to [t]. *)
+(** Matching of types (non-destructive). [matching pat t] returns a substitution
+    [subst] such that [apply_subst subst pat] is equal to [t]. *)
 
+(** Goal sort. Used in typed declarations. *)
 type goal_sort =
   | Cut
-  (** Introduce a cut in a goal. Once the cut proved,
-      it's added as a hypothesis. *)
-  | Check
-  (** Check if some intermediate assertion is prouvable *)
-  | Thm
-  (** The goal to be proved valid *)
-  | Sat
-  (** The goal to be proved satisfiable *)
-(** Goal sort. Used in typed declarations. *)
+      (** Introduce a cut in a goal. Once the cut proved, it's added as a
+          hypothesis. *)
+  | Check  (** Check if some intermediate assertion is prouvable *)
+  | Thm  (** The goal to be proved valid *)
+  | Sat  (** The goal to be proved satisfiable *)
 
 val fresh_hypothesis_name : goal_sort -> string
 (** create a fresh hypothesis name given a goal sort. *)
 
 val is_local_hyp : string -> bool
-(** Assuming a name generated by {!fresh_hypothesis_name},
-    answers whether the name design a local hypothesis ? *)
+(** Assuming a name generated by {!fresh_hypothesis_name}, answers whether the
+    name design a local hypothesis ? *)
 
 val is_global_hyp : string -> bool
-(** Assuming a name generated by {!fresh_hypothesis_name},
-    does the name design a global hypothesis ? *)
+(** Assuming a name generated by {!fresh_hypothesis_name}, does the name design
+    a global hypothesis ? *)
 
 val print_goal_sort : Format.formatter -> goal_sort -> unit
 (** Print a goal sort *)

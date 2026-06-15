@@ -22,13 +22,15 @@ open Numbers
 open Simplex
 
 module MAKE (C : sig
-    type t
-    val compare : t -> t -> int
-    val print : formatter -> t -> unit
-  end) = struct
+  type t
 
+  val compare : t -> t -> int
+
+  val print : formatter -> t -> unit
+end) =
+struct
   module MI = Util.MI
-  module MD = Map.Make(C)
+  module MD = Map.Make (C)
 
   let ppprint fmt p =
     MI.iter (fun i q -> fprintf fmt "%s*L%d + " (Q.to_string q) i) p;
@@ -37,60 +39,64 @@ module MAKE (C : sig
   let print_sum id sum =
     Printer.print_dbg ~flushed:false "@[<v 2>sum %d@ " id;
     MD.iter
-      (fun x (lp,ln,q) ->
-         Printer.print_dbg ~flushed:false ~header:false
-           "%a -> (%a) + (%a) + %s = 0@ "
-           C.print x ppprint lp ppprint ln (Q.to_string q)) sum;
+      (fun x (lp, ln, q) ->
+        Printer.print_dbg ~flushed:false ~header:false
+          "%a -> (%a) + (%a) + %s = 0@ " C.print x ppprint lp ppprint ln
+          (Q.to_string q))
+      sum;
     Printer.print_dbg ~header:false "@]"
 
-  module SM = Map.Make
-      (struct
-        type t1 = (Q.t MI.t * Q.t MI.t * Q.t) MD.t
-        type t2 = Q.t MI.t
-        type t3 = Q.t MI.t
-        type t  = t1 * t2 * t3
+  module SM = Map.Make (struct
+    type t1 = (Q.t MI.t * Q.t MI.t * Q.t) MD.t
 
-        let cmp (m1,n1,q1) (m2,n2,q2) =
-          let c = Q.compare q1 q2 in
-          if c <> 0 then c
-          else
-            let c = MI.compare Q.compare m1 m2 in
-            if c <> 0 then c
-            else MI.compare Q.compare n1 n2
+    type t2 = Q.t MI.t
 
-        let compare (sum1, _, lambdas1) (sum2, _, lambdas2) =
-          let c = MD.compare cmp sum1 sum2 in
-          if c <> 0 then c
-          else
-            let c = MI.compare Q.compare lambdas1 lambdas2 in
-            if c <> 0 then(
-              print_sum 1 sum1;
-              print_sum 2 sum2;
-              Printer.print_dbg "l1 = %a" ppprint lambdas1;
-              Printer.print_dbg "l2 = %a" ppprint lambdas2);
-            assert (c = 0);
-            c
-      end)
+    type t3 = Q.t MI.t
 
+    type t = t1 * t2 * t3
 
-  let (m :  (int * result * Q.t MI.t) SM.t ref)      = ref SM.empty
+    let cmp (m1, n1, q1) (m2, n2, q2) =
+      let c = Q.compare q1 q2 in
+      if c <> 0
+      then c
+      else
+        let c = MI.compare Q.compare m1 m2 in
+        if c <> 0 then c else MI.compare Q.compare n1 n2
+
+    let compare (sum1, _, lambdas1) (sum2, _, lambdas2) =
+      let c = MD.compare cmp sum1 sum2 in
+      if c <> 0
+      then c
+      else
+        let c = MI.compare Q.compare lambdas1 lambdas2 in
+        if c <> 0
+        then (
+          print_sum 1 sum1;
+          print_sum 2 sum2;
+          Printer.print_dbg "l1 = %a" ppprint lambdas1;
+          Printer.print_dbg "l2 = %a" ppprint lambdas2);
+        assert (c = 0);
+        c
+  end)
+
+  let (m : (int * result * Q.t MI.t) SM.t ref) = ref SM.empty
+
   let (mm : (int * result * Q.t MI.t) SM.t MD.t ref) = ref MD.empty
 
-  let mi_of_l l = List.fold_left (fun m (i,q) -> MI.add i q m) MI.empty l
+  let mi_of_l l = List.fold_left (fun m (i, q) -> MI.add i q m) MI.empty l
 
   let make_repr max_ctt equas s_neq =
     let max_ctt = mi_of_l max_ctt in
-    let s_neq   = mi_of_l s_neq in
+    let s_neq = mi_of_l s_neq in
     let equas =
       List.fold_left
         (fun mp (x, (lp, ln, q)) ->
-           let lp = mi_of_l lp in
-           let ln = mi_of_l ln in
-           MD.add x (lp, ln, q) mp
-        )MD.empty equas
+          let lp = mi_of_l lp in
+          let ln = mi_of_l ln in
+          MD.add x (lp, ln, q) mp)
+        MD.empty equas
     in
     max_ctt, equas, s_neq
-
 
   let already_registered max_ctt equas s_neq =
     let repr = equas, max_ctt, s_neq in
@@ -100,7 +106,8 @@ module MAKE (C : sig
     with Not_found -> None
 
   let register max_ctt equas s_neq cpt sim_res =
-    if already_registered max_ctt equas s_neq == None then begin
+    if already_registered max_ctt equas s_neq == None
+    then begin
       let repr = equas, max_ctt, s_neq in
       m := SM.add repr (cpt, sim_res, max_ctt) !m
     end
@@ -114,10 +121,10 @@ module MAKE (C : sig
     with Not_found -> None
 
   let register_mon x max_ctt equas s_neq cpt sim_res =
-    if already_registered_mon x max_ctt equas s_neq == None then begin
+    if already_registered_mon x max_ctt equas s_neq == None
+    then begin
       let m = try MD.find x !mm with Not_found -> SM.empty in
       let repr = equas, max_ctt, s_neq in
       mm := MD.add x (SM.add repr (cpt, sim_res, max_ctt) m) !mm
     end
-
 end

@@ -26,36 +26,64 @@
 (**************************************************************************)
 
 type builtin =
-    LE | LT (* arithmetic *)
+  | LE
+  | LT (* arithmetic *)
   | IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
 type operator =
   | Tite
   (* Arithmetic *)
-  | Plus | Minus | Mult | Div | Modulo | Pow
+  | Plus
+  | Minus
+  | Mult
+  | Div
+  | Modulo
+  | Pow
   (* ADTs *)
   | Constr of Dolmen.Std.Expr.term_cst
   | Destruct of Dolmen.Std.Expr.term_cst
   (* Arrays *)
-  | Get | Set
+  | Get
+  | Set
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
   | Sign_extend of int
   | Repeat of int
-  | BVnot | BVand | BVor | BVxor
-  | BVadd | BVsub | BVmul | BVudiv | BVurem
-  | BVshl | BVlshr
-  | Int2BV of int | BV2Nat
+  | BVnot
+  | BVand
+  | BVor
+  | BVxor
+  | BVadd
+  | BVsub
+  | BVmul
+  | BVudiv
+  | BVurem
+  | BVshl
+  | BVlshr
+  | Int2BV of int
+  | BV2Nat
   (* FP *)
   | Float
   | Integer_round
-  | Sqrt_real | Sqrt_real_default | Sqrt_real_excess
-  | Abs_int | Abs_real | Real_of_int | Real_is_int
-  | Int_floor | Int_ceil | Integer_log2
-  | Max_real | Max_int | Min_real | Min_int
-  | Not_theory_constant | Is_theory_constant | Linear_dependency
+  | Sqrt_real
+  | Sqrt_real_default
+  | Sqrt_real_excess
+  | Abs_int
+  | Abs_real
+  | Real_of_int
+  | Real_is_int
+  | Int_floor
+  | Int_ceil
+  | Integer_log2
+  | Max_real
+  | Max_int
+  | Min_real
+  | Min_int
+  | Not_theory_constant
+  | Is_theory_constant
+  | Linear_dependency
 
 type lit =
   (* literals *)
@@ -74,7 +102,9 @@ type form =
   | F_Lemma
   | F_Skolem
 
-type name_kind = Ac | Other
+type name_kind =
+  | Ac
+  | Other
 
 (** The [name_space] type discriminates the different types of names. The same
     string in different name spaces is considered as different names.
@@ -84,76 +114,84 @@ type name_kind = Ac | Other
     name space. *)
 type name_space =
   | User
-  (** This symbol was defined by the user, and appears as is somewhere in a
-      source file.
+      (** This symbol was defined by the user, and appears as is somewhere in a
+          source file.
 
-      As an exception, if the name we got from the user starts with either "."
-      or "@" (which are prefixes reserved for solver use in the SMT-LIB
-      standard), the name will be printed with an extra ".". So if the user
-      writes ".x" or "@x", it will be printed as "..x" and ".@x" instead.
+          As an exception, if the name we got from the user starts with either
+          "." or "@" (which are prefixes reserved for solver use in the SMT-LIB
+          standard), the name will be printed with an extra ".". So if the user
+          writes ".x" or "@x", it will be printed as "..x" and ".@x" instead.
 
-      Normally, this shouldn't occur, but we do this to ensure no confusion
-      even if invalid names ever sneak through. *)
+          Normally, this shouldn't occur, but we do this to ensure no confusion
+          even if invalid names ever sneak through. *)
   | Internal
-  (** This symbol is an internal implementation detail of the solver, such as
-      a proxy formula or the abstracted counterpart of AC symbols.
+      (** This symbol is an internal implementation detail of the solver, such
+          as a proxy formula or the abstracted counterpart of AC symbols.
 
-      Internal names are printed with a ".!" prefix. *)
+          Internal names are printed with a ".!" prefix. *)
   | Fresh
-  (** This symbol is a "fresh" internal name. Fresh internal names play a
-      similar role as internal names, but they always represent a constant
-      that was introduced during solving as part of some kind of purification
-      or abstraction procedure.
+      (** This symbol is a "fresh" internal name. Fresh internal names play a
+          similar role as internal names, but they always represent a constant
+          that was introduced during solving as part of some kind of
+          purification or abstraction procedure.
 
-      In order to correctly implement AC(X) in the presence of distributive
-      symbols, symbols generated for AC(X) abstraction use a special
-      namespace, [Fresh_ac] below.
+          In order to correctly implement AC(X) in the presence of distributive
+          symbols, symbols generated for AC(X) abstraction use a special
+          namespace, [Fresh_ac] below.
 
-      To ensure uniqueness, fresh names must always be generated using
-      [Id.Namespace.Internal.fresh ()].
+          To ensure uniqueness, fresh names must always be generated using
+          [Id.Namespace.Internal.fresh ()].
 
-      In particular, fresh names are only used to denote constants, not
-      arbitrary functions. *)
+          In particular, fresh names are only used to denote constants, not
+          arbitrary functions. *)
   | Fresh_ac
-  (** This symbol has been introduced as part of the AC(X) abstraction process.
-      This is notably used by some parts of AC(X) that check if terms contains
-      fresh symbols (see [contains_a_fresh_alien] in the [Arith] module for an
-      example).
+      (** This symbol has been introduced as part of the AC(X) abstraction
+          process. This is notably used by some parts of AC(X) that check if
+          terms contains fresh symbols (see [contains_a_fresh_alien] in the
+          [Arith] module for an example).
 
-      These correspond to the K sort in the AC(X) paper. They use a different
-      name space from other fresh symbols because we need to be able to know
-      whether a fresh symbol comes from the AC(X) abstraction procedure in order
-      to prevent loops.
+          These correspond to the K sort in the AC(X) paper. They use a
+          different name space from other fresh symbols because we need to be
+          able to know whether a fresh symbol comes from the AC(X) abstraction
+          procedure in order to prevent loops.
 
-      To ensure uniqueness, AC abstraction names must always be generated using
-      [Id.Namespace.Internal.fresh ()]. *)
+          To ensure uniqueness, AC abstraction names must always be generated
+          using [Id.Namespace.Internal.fresh ()]. *)
   | Skolem
-  (** This symbol has been introduced as part of skolemization, and represents
-      the (dependent) variable of an existential quantifier. Skolem names can
-      have arbitrary arity to depend on previous skolem names in binding order
-      (so if you have `(exists (x y) e)` then there will be a skolem variable
-      `sko_x` and a skolem function `(sko_y sko_x)`). *)
+      (** This symbol has been introduced as part of skolemization, and
+          represents the (dependent) variable of an existential quantifier.
+          Skolem names can have arbitrary arity to depend on previous skolem
+          names in binding order (so if you have `(exists (x y) e)` then there
+          will be a skolem variable `sko_x` and a skolem function `(sko_y
+          sko_x)`). *)
   | Abstract
-  (** This symbol has been introduced as part of model generation, and
-      represents an abstract value.
+      (** This symbol has been introduced as part of model generation, and
+          represents an abstract value.
 
-      To ensure uniqueness, abstract names must always be generated using
-      [Id.Namespace.Abstract.fresh ()]. *)
+          To ensure uniqueness, abstract names must always be generated using
+          [Id.Namespace.Abstract.fresh ()]. *)
 
-type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
+type bound_kind =
+  | Unbounded
+  | VarBnd of Var.t
+  | ValBnd of Numbers.Q.t
 
 type bound = private
-  { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
+  { kind : bound_kind;
+    sort : Ty.t;
+    is_open : bool;
+    is_lower : bool
+  }
 
 type t =
   | True
   | False
   | Name of
-      { hs : Id.t
-      (** Note: [hs] is prefixed according to [ns]. *)
-      ; kind : name_kind
-      ; defined : bool
-      ; ns : name_space }
+      { hs : Id.t;  (** Note: [hs] is prefixed according to [ns]. *)
+        kind : name_kind;
+        defined : bool;
+        ns : name_space
+      }
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
@@ -166,6 +204,7 @@ type t =
   | MapsTo of Var.t
   | Let
 
+val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
 (** Create a new symbol with the given name.
 
     By default, names are created in the [User] name space.
@@ -174,16 +213,23 @@ type t =
     not be exactly the name that was passed to this function (however, calling
     `name` with the same string but two different name spaces is guaranteed to
     return two [Name]s with distinct [hs] fields). *)
-val name : ?kind:name_kind -> ?defined:bool -> ?ns:name_space -> string -> t
 
 val var : Var.t -> t
+
 val int : string -> t
+
 val bitv : string -> t
+
 val real : string -> t
+
 val constr : Dolmen.Std.Expr.term_cst -> t
+
 val destruct : Dolmen.Std.Expr.term_cst -> t
+
 val mk_bound : bound_kind -> Ty.t -> is_open:bool -> is_lower:bool -> bound
+
 val mk_in : bound -> bound -> t
+
 val mk_maps_to : Var.t -> t
 
 val is_ac : t -> bool
@@ -193,39 +239,48 @@ val is_internal : t -> bool
     regular output. *)
 
 val equal : t -> t -> bool
+
 val compare : t -> t -> int
+
 val compare_bounds : bound -> bound -> int
+
 val compare_operators : operator -> operator -> int
+
 val hash : t -> int
 
 val to_string : t -> string
+
 val print : t Fmt.t
 (* Printer used by debugging messages. *)
 
 val to_string_clean : t -> string
+
 val print_clean : t Fmt.t
 
 val pp_name : (name_space * string) Fmt.t
 
 val pp_ae_operator : operator Fmt.t
-(* [pp_ae_operator ppf op] prints the operator symbol [op] on the
-   formatter [ppf] using the Alt-Ergo native format. *)
+(* [pp_ae_operator ppf op] prints the operator symbol [op] on the formatter
+   [ppf] using the Alt-Ergo native format. *)
 
 val pp_smtlib_operator : operator Fmt.t
-(* [pp_smtlib_operator ppf op] prints the operator symbol [op] on the
-   formatter [ppf] using the SMT-LIB format. *)
+(* [pp_smtlib_operator ppf op] prints the operator symbol [op] on the formatter
+   [ppf] using the SMT-LIB format. *)
 
 (*val dummy : t*)
 
 val fresh_skolem_var : string -> Var.t
+
 val fresh_skolem_name : string -> t
 
 (** Resets to 0 the fresh symbol counter *)
 
 val is_get : t -> bool
+
 val is_set : t -> bool
 
 val print_bound : Format.formatter -> bound -> unit
+
 val string_of_bound : bound -> string
 
 (** Empties the labels Hashtable *)

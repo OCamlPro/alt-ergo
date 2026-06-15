@@ -42,13 +42,13 @@ module Rel5 : Sig_rel.RELATION = Ite_rel
 (* This value is unused. *)
 let timer = Timers.M_None
 
-type t = {
-  r1: Rel1.t;
-  r2: Rel2.t;
-  r3: Rel3.t;
-  r4: Rel4.t;
-  r5: Rel5.t;
-}
+type t =
+  { r1 : Rel1.t;
+    r2 : Rel2.t;
+    r3 : Rel3.t;
+    r4 : Rel4.t;
+    r5 : Rel5.t
+  }
 
 let empty uf =
   let r1, doms1 = Rel1.empty uf in
@@ -56,40 +56,39 @@ let empty uf =
   let r3, doms3 = Rel3.empty (Uf.set_domains uf doms2) in
   let r4, doms4 = Rel4.empty (Uf.set_domains uf doms3) in
   let r5, doms5 = Rel5.empty (Uf.set_domains uf doms4) in
-  {r1; r2; r3; r4; r5}, doms5
+  { r1; r2; r3; r4; r5 }, doms5
 
-let (|@|) l1 l2 =
-  if l1 == [] then l2
-  else if l2 == [] then l1
-  else List.rev_append l1 l2
+let ( |@| ) l1 l2 =
+  if l1 == [] then l2 else if l2 == [] then l1 else List.rev_append l1 l2
 
 let assume env uf sa =
   Options.exec_thread_yield ();
-  let env1, doms1, ({ assume = a1; remove = rm1}:_ Sig_rel.result) =
+  let env1, doms1, ({ assume = a1; remove = rm1 } : _ Sig_rel.result) =
     Timers.with_timer Rel1.timer Timers.F_assume @@ fun () ->
     Rel1.assume env.r1 uf sa
   in
-  let env2, doms2, ({ assume = a2; remove = rm2}:_ Sig_rel.result) =
+  let env2, doms2, ({ assume = a2; remove = rm2 } : _ Sig_rel.result) =
     Timers.with_timer Rel2.timer Timers.F_assume @@ fun () ->
     Rel2.assume env.r2 (Uf.set_domains uf doms1) sa
   in
-  let env3, doms3, ({ assume = a3; remove = rm3}:_ Sig_rel.result) =
+  let env3, doms3, ({ assume = a3; remove = rm3 } : _ Sig_rel.result) =
     Timers.with_timer Rel3.timer Timers.F_assume @@ fun () ->
     Rel3.assume env.r3 (Uf.set_domains uf doms2) sa
   in
-  let env4, doms4, ({ assume = a4; remove = rm4}:_ Sig_rel.result) =
+  let env4, doms4, ({ assume = a4; remove = rm4 } : _ Sig_rel.result) =
     Timers.with_timer Rel4.timer Timers.F_assume @@ fun () ->
     Rel4.assume env.r4 (Uf.set_domains uf doms3) sa
   in
-  let env5, doms5, ({ assume = a5; remove = rm5}:_ Sig_rel.result) =
+  let env5, doms5, ({ assume = a5; remove = rm5 } : _ Sig_rel.result) =
     Timers.with_timer Rel5.timer Timers.F_assume @@ fun () ->
     Rel5.assume env.r5 (Uf.set_domains uf doms4) sa
   in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5},
-  doms5,
-  ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5;
-     remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 }
-   : _ Sig_rel.result)
+  ( { r1 = env1; r2 = env2; r3 = env3; r4 = env4; r5 = env5 },
+    doms5,
+    ({ assume = a1 |@| a2 |@| a3 |@| a4 |@| a5;
+       remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5
+     }
+      : _ Sig_rel.result) )
 
 let assume_th_elt env th_elt dep =
   Options.exec_thread_yield ();
@@ -98,12 +97,13 @@ let assume_th_elt env th_elt dep =
   let env3 = Rel3.assume_th_elt env.r3 th_elt dep in
   let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
   let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
-  {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5}
+  { r1 = env1; r2 = env2; r3 = env3; r4 = env4; r5 = env5 }
 
-let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a
-    k =
-  match Timers.with_timer R.timer Timers.F_query
-    @@ fun () -> R.query env uf a with
+let try_query (type a) (module R : Sig_rel.RELATION with type t = a) env uf a k
+    =
+  match
+    Timers.with_timer R.timer Timers.F_query @@ fun () -> R.query env uf a
+  with
   | Th_util.Entailed _ as r -> r
   | Th_util.Unknown -> k ()
 
@@ -123,56 +123,56 @@ let case_split env uf ~for_model =
   let seq4 = Rel4.case_split env.r4 uf ~for_model in
   let seq5 = Rel5.case_split env.r5 uf ~for_model in
   let splits = [seq1; seq2; seq3; seq4; seq5] in
-  let splits = List.fold_left (|@|) [] splits in
+  let splits = List.fold_left ( |@| ) [] splits in
   List.fast_sort
-    (fun (_ ,_ , sz1) (_ ,_ , sz2) ->
-       match sz1, sz2 with
-       | Th_util.CS (_ , sz1), Th_util.CS (_ , sz2) ->
-         Numbers.Q.compare sz1 sz2
-       | _ -> assert false
-    ) splits
+    (fun (_, _, sz1) (_, _, sz2) ->
+      match sz1, sz2 with
+      | Th_util.CS (_, sz1), Th_util.CS (_, sz2) -> Numbers.Q.compare sz1 sz2
+      | _ -> assert false)
+    splits
 
 let rec optimizing_dispatcher s l =
   match l with
   | [] -> None
-  | f :: l ->
-    begin match f s with
-      | Some u -> Some u
-      | None -> optimizing_dispatcher s l
-    end
+  | f :: l -> begin
+    match f s with Some u -> Some u | None -> optimizing_dispatcher s l
+  end
 
 let optimizing_objective env uf o =
   Options.exec_thread_yield ();
-  optimizing_dispatcher o [
-    Rel1.optimizing_objective env.r1 uf;
-    Rel2.optimizing_objective env.r2 uf;
-    Rel3.optimizing_objective env.r3 uf;
-    Rel4.optimizing_objective env.r4 uf
-  ]
+  optimizing_dispatcher o
+    [ Rel1.optimizing_objective env.r1 uf;
+      Rel2.optimizing_objective env.r2 uf;
+      Rel3.optimizing_objective env.r3 uf;
+      Rel4.optimizing_objective env.r4 uf ]
 
 let add env uf r t =
   Options.exec_thread_yield ();
-  let r1, doms1, eqs1 =Rel1.add env.r1 uf r t in
-  let r2, doms2, eqs2 =Rel2.add env.r2 (Uf.set_domains uf doms1) r t in
-  let r3, doms3, eqs3 =Rel3.add env.r3 (Uf.set_domains uf doms2) r t in
-  let r4, doms4, eqs4 =Rel4.add env.r4 (Uf.set_domains uf doms3) r t in
-  let r5, doms5, eqs5 =Rel5.add env.r5 (Uf.set_domains uf doms4) r t in
-  {r1;r2;r3;r4;r5}, doms5, eqs1|@|eqs2|@|eqs3|@|eqs4|@|eqs5
+  let r1, doms1, eqs1 = Rel1.add env.r1 uf r t in
+  let r2, doms2, eqs2 = Rel2.add env.r2 (Uf.set_domains uf doms1) r t in
+  let r3, doms3, eqs3 = Rel3.add env.r3 (Uf.set_domains uf doms2) r t in
+  let r4, doms4, eqs4 = Rel4.add env.r4 (Uf.set_domains uf doms3) r t in
+  let r5, doms5, eqs5 = Rel5.add env.r5 (Uf.set_domains uf doms4) r t in
+  { r1; r2; r3; r4; r5 }, doms5, eqs1 |@| eqs2 |@| eqs3 |@| eqs4 |@| eqs5
 
 let instantiate ~do_syntactic_matching t_match env uf selector =
   Options.exec_thread_yield ();
   let r1, l1 =
-    Rel1.instantiate ~do_syntactic_matching t_match env.r1 uf selector in
+    Rel1.instantiate ~do_syntactic_matching t_match env.r1 uf selector
+  in
   let r2, l2 =
-    Rel2.instantiate ~do_syntactic_matching t_match env.r2 uf selector in
+    Rel2.instantiate ~do_syntactic_matching t_match env.r2 uf selector
+  in
   let r3, l3 =
-    Rel3.instantiate ~do_syntactic_matching t_match env.r3 uf selector in
+    Rel3.instantiate ~do_syntactic_matching t_match env.r3 uf selector
+  in
   let r4, l4 =
-    Rel4.instantiate ~do_syntactic_matching t_match env.r4 uf selector in
+    Rel4.instantiate ~do_syntactic_matching t_match env.r4 uf selector
+  in
   let r5, l5 =
-    Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
-  {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5},
-  l5 |@| l4 |@| l3 |@| l2 |@| l1
+    Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector
+  in
+  { r1; r2; r3; r4; r5 }, l5 |@| l4 |@| l3 |@| l2 |@| l1
 
 let new_terms env =
   Rel1.new_terms env.r1

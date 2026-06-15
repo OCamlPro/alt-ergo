@@ -34,17 +34,17 @@ type 'a input =
 
 type 'a fact = 'a literal * Explanation.t * Th_util.lit_origin
 
-type 'a facts = {
-  equas     : 'a fact Queue.t;
-  diseqs  : 'a fact Queue.t;
-  ineqs   : 'a fact Queue.t;
-  mutable touched : 'a Util.MI.t;
-}
+type 'a facts =
+  { equas : 'a fact Queue.t;
+    diseqs : 'a fact Queue.t;
+    ineqs : 'a fact Queue.t;
+    mutable touched : 'a Util.MI.t
+  }
 
-type 'a result = {
-  assume: 'a fact list;
-  remove: Expr.t list;
-}
+type 'a result =
+  { assume : 'a fact list;
+    remove : Expr.t list
+  }
 
 module type RELATION = sig
   type t
@@ -58,8 +58,10 @@ module type RELATION = sig
       The second component of the pair should be [Uf.domains uf] with any
       domains that the relation requires added. *)
 
-  val assume : t ->
-    Uf.t -> (Shostak.Combine.r input) list ->
+  val assume :
+    t ->
+    Uf.t ->
+    Shostak.Combine.r input list ->
     t * Uf.GlobalDomains.t * Shostak.Combine.r result
   (** [assume env uf la] adds and processes the literals in [la] to the
       environment [env].
@@ -67,10 +69,9 @@ module type RELATION = sig
       The second value returned by this function can be used to update any
       relevant domain. *)
 
-  val query  : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
+  val query : t -> Uf.t -> Shostak.Combine.r input -> Th_util.answer
 
-  val case_split :
-    t -> Uf.t -> for_model:bool -> Th_util.case_split list
+  val case_split : t -> Uf.t -> for_model:bool -> Th_util.case_split list
   (** case_split env returns a list of equalities
 
       The returned case splits *must* have a [CS] origin; see the doc of
@@ -80,42 +81,44 @@ module type RELATION = sig
       generating a model; the case split may need to be more aggressive in this
       case to ensure completeness.
 
-      Note: not always equalities (e.g. the arrays theory returns
-      disequalities) *)
+      Note: not always equalities (e.g. the arrays theory returns disequalities)
+  *)
 
   val optimizing_objective :
     t -> Uf.t -> Objective.Function.t -> Th_util.optimized_split option
-  (** [optimizing_split env uf o] tries to optimize objective [o].
-      Returns [None] if no theory knows how to optimize the objective.
+  (** [optimizing_split env uf o] tries to optimize objective [o]. Returns
+      [None] if no theory knows how to optimize the objective.
 
-      If the function returns [Some o] then the value of the optimized split
-      [o] is never [Unknown] because all the theories that support
-      optimization will always produce an answer even if this answer is not
-      the best value.
+      If the function returns [Some o] then the value of the optimized split [o]
+      is never [Unknown] because all the theories that support optimization will
+      always produce an answer even if this answer is not the best value.
 
-      For instance, if the objective is a nonlinear arithmetical
-      expressions of the form:
-        5 * x * x + 2 * y + 3,
-      the arithmetic theory will translate this function into the linear
-      objective function:
-        5 * U + 2 * y + 3 where U = x * x
-      and send it to Ocplib-simplex. *)
+      For instance, if the objective is a nonlinear arithmetical expressions of
+      the form: 5 * x * x + 2 * y + 3, the arithmetic theory will translate this
+      function into the linear objective function: 5 * U + 2 * y + 3 where U = x
+      * x and send it to Ocplib-simplex. *)
 
-  val add : t -> Uf.t -> Shostak.Combine.r -> Expr.t ->
-    t * Uf.GlobalDomains.t *
-    (Shostak.Combine.r Xliteral.view * Explanation.t) list
+  val add :
+    t ->
+    Uf.t ->
+    Shostak.Combine.r ->
+    Expr.t ->
+    t
+    * Uf.GlobalDomains.t
+    * (Shostak.Combine.r Xliteral.view * Explanation.t) list
   (** add a representant to take into account *)
 
   val instantiate :
     do_syntactic_matching:bool ->
     Matching_types.info Expr.Map.t * Expr.t list Expr.Map.t Symbols.Map.t ->
-    t -> Uf.t -> (Expr.t -> Expr.t -> bool) ->
+    t ->
+    Uf.t ->
+    (Expr.t -> Expr.t -> bool) ->
     t * instances
 
   val new_terms : t -> Expr.Set.t
-  (** [new_terms env] returns all the new terms created by the theory.
-      These terms can be used to instantiate axiomes. *)
+  (** [new_terms env] returns all the new terms created by the theory. These
+      terms can be used to instantiate axiomes. *)
 
   val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
-
 end

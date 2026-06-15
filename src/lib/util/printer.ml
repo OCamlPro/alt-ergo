@@ -30,12 +30,10 @@ module DStd = Dolmen.Std
 (*********** Colors ***********)
 type style =
   | Normal
-
   | Bold
   | Bold_off
   | Underline
   | Underline_off
-
   | FG_Black
   | FG_Red
   | FG_Green
@@ -44,7 +42,6 @@ type style =
   | FG_Magenta
   | FG_Cyan
   | FG_Default
-
   | BG_Black
   | BG_Red
   | BG_Green
@@ -54,16 +51,14 @@ type style =
   | BG_Cyan
   | BG_Default
 
-(* See https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
-   for some values *)
+(* See https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters for some
+   values *)
 let to_value = function
   | Normal -> "0"
-
   | Bold -> "1"
   | Bold_off -> "22"
   | Underline -> "4"
   | Underline_off -> "24"
-
   | FG_Black -> "30"
   | FG_Red -> "31"
   | FG_Green -> "32"
@@ -72,7 +67,6 @@ let to_value = function
   | FG_Magenta -> "35"
   | FG_Cyan -> "36"
   | FG_Default -> "39"
-
   | BG_Black -> "40"
   | BG_Red -> "41"
   | BG_Green -> "42"
@@ -82,9 +76,7 @@ let to_value = function
   | BG_Cyan -> "46"
   | BG_Default -> "49"
 
-let get_stag = function
-  | Format.String_tag s -> s
-  | _ -> raise Not_found
+let get_stag = function Format.String_tag s -> s | _ -> raise Not_found
 
 let style_of_tag t =
   match get_stag t with
@@ -93,7 +85,6 @@ let style_of_tag t =
   | "/bold" -> Bold_off
   | "underline" -> Underline
   | "/underline" -> Underline_off
-
   | "fg_black" -> FG_Black
   | "fg_red" -> FG_Red
   | "fg_green" -> FG_Green
@@ -102,7 +93,6 @@ let style_of_tag t =
   | "fg_magenta" -> FG_Magenta
   | "fg_cyan" -> FG_Cyan
   | "fg_default" -> FG_Default
-
   | "bg_black" -> BG_Black
   | "bg_red" -> BG_Red
   | "bg_green" -> BG_Green
@@ -111,7 +101,6 @@ let style_of_tag t =
   | "bg_magenta" -> BG_Magenta
   | "bg_cyan" -> BG_Cyan
   | "bg_default" -> BG_Default
-
   | _ -> raise Not_found
 
 let close_tag = function
@@ -131,9 +120,7 @@ let stop_stag t =
 
 let update_stag_functions funs start_stag stop_stag =
   let open Format in
-  { funs with
-    mark_open_stag = start_stag;
-    mark_close_stag = stop_stag }
+  { funs with mark_open_stag = start_stag; mark_close_stag = stop_stag }
 
 let add_colors formatter =
   Format.pp_set_tags formatter true;
@@ -142,22 +129,29 @@ let add_colors formatter =
     (update_stag_functions old_fs start_stag stop_stag)
 
 let init_colors () =
-  if Options.get_output_with_colors () then begin
+  if Options.get_output_with_colors ()
+  then begin
     add_colors (Options.Output.get_fmt_regular ());
     add_colors (Options.Output.get_fmt_diagnostic ())
   end
 
 (************** Output Format *************)
 let clean_dbg_print = ref true
+
 let clean_wrn_print = ref true
 
 let pp_smt clean_print =
-  let smt = match Options.get_output_format () with
+  let smt =
+    match Options.get_output_format () with
     | Smtlib2 _ -> true
     | Native | Why3 | Unknown _ -> false
-  in Format.sprintf
-    (if smt && !clean_print then
-       begin clean_print := false; "@,; " end
+  in
+  Format.sprintf
+    (if smt && !clean_print
+     then begin
+       clean_print := false;
+       "@,; "
+     end
      else "")
 
 let pp_std_smt () =
@@ -177,8 +171,7 @@ let pp_std_smt () =
 let add_smt formatter =
   let old_fs = Format.pp_get_formatter_out_functions formatter () in
   let out_newline () = old_fs.out_string "\n; " 0 3 in
-  Format.pp_set_formatter_out_functions formatter
-    { old_fs with out_newline }
+  Format.pp_set_formatter_out_functions formatter { old_fs with out_newline }
 
 let remove_formatting formatter =
   let old_fs = Format.pp_get_formatter_out_functions formatter () in
@@ -190,67 +183,70 @@ let remove_formatting formatter =
 (* This function is used to force a newline when the option removing the
    formatting is enable *)
 let force_new_line formatter =
-  if not (Options.get_output_with_formatting ()) then
+  if not (Options.get_output_with_formatting ())
+  then (
     let old_fs = Format.pp_get_formatter_out_functions formatter () in
     let out_newline () = old_fs.out_string "\n" 0 1 in
-    Format.pp_set_formatter_out_functions formatter
-      { old_fs with out_newline };
+    Format.pp_set_formatter_out_functions formatter { old_fs with out_newline };
     Format.fprintf formatter "@.";
-    remove_formatting formatter
+    remove_formatting formatter)
 
 let init_output_format () =
   match Options.get_output_format () with
-  | Smtlib2 _ ->
-    add_smt (Options.Output.get_fmt_diagnostic ())
+  | Smtlib2 _ -> add_smt (Options.Output.get_fmt_diagnostic ())
   | Native | Why3 | Unknown _ -> ()
-
 
 (************** Printers *************)
 let flush fmt = Format.fprintf fmt "@."
 
-let print_std ?(flushed=true) s =
+let print_std ?(flushed = true) s =
   pp_std_smt ();
   let fmt = Options.Output.get_fmt_regular () in
   if flushed || Options.get_output_with_forced_flush ()
-  then Format.kfprintf flush fmt s else Format.fprintf fmt s
+  then Format.kfprintf flush fmt s
+  else Format.fprintf fmt s
 
-let print_err ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
-    ?(error=true) s =
-  if error then begin
+let print_err ?(flushed = true) ?(header = Options.get_output_with_headers ())
+    ?(error = true) s =
+  if error
+  then begin
     let fmt = Options.Output.get_fmt_diagnostic () in
     Format.fprintf fmt "@[<v 0>";
-    if header then
-      if Options.get_output_with_colors () then
-        Format.fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}"
-      else
-        Format.fprintf fmt "@[<v 7>[Error]";
+    if header
+    then
+      if Options.get_output_with_colors ()
+      then Format.fprintf fmt "@[<v 7>@{<fg_red>@{<bold>[Error]@}@}"
+      else Format.fprintf fmt "@[<v 7>[Error]";
     if flushed || Options.get_output_with_forced_flush ()
-    then Format.kfprintf flush fmt s else Format.fprintf fmt s
+    then Format.kfprintf flush fmt s
+    else Format.fprintf fmt s
   end
   else Format.ifprintf Format.err_formatter s
 
-let print_wrn ?(flushed=true) ?(header=(Options.get_output_with_headers ())) s =
-  if Options.get_warning_as_error () then
-    print_err ~flushed ~header ~error:true s
+let print_wrn ?(flushed = true) ?(header = Options.get_output_with_headers ()) s
+    =
+  if Options.get_warning_as_error ()
+  then print_err ~flushed ~header ~error:true s
   else
     let fmt = Options.Output.get_fmt_diagnostic () in
     Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_wrn_print);
-    if header then
-      if Options.get_output_with_colors () then
-        Format.fprintf fmt "@[<v 10>@{<fg_orange>@{<bold>[Warning]@}@} "
-      else
-        Format.fprintf fmt "@[<v 10>[Warning] " ;
+    if header
+    then
+      if Options.get_output_with_colors ()
+      then Format.fprintf fmt "@[<v 10>@{<fg_orange>@{<bold>[Warning]@}@} "
+      else Format.fprintf fmt "@[<v 10>[Warning] ";
     if flushed || Options.get_output_with_forced_flush ()
-    then Format.kfprintf flush fmt s else Format.fprintf fmt s
+    then Format.kfprintf flush fmt s
+    else Format.fprintf fmt s
 
-let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
-    ?(module_name="") ?(function_name="") s =
+let print_dbg ?(flushed = true) ?(header = Options.get_output_with_headers ())
+    ?(module_name = "") ?(function_name = "") s =
   let fmt = Options.Output.get_fmt_diagnostic () in
-  if header then
-    Format.fprintf fmt "@[%s" (pp_smt clean_dbg_print)
-  else
-    Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
-  if header then begin
+  if header
+  then Format.fprintf fmt "@[%s" (pp_smt clean_dbg_print)
+  else Format.fprintf fmt "@[<v 0>%s" (pp_smt clean_dbg_print);
+  if header
+  then begin
     let fname =
       if String.equal function_name ""
       then ""
@@ -263,22 +259,21 @@ let print_dbg ?(flushed=true) ?(header=(Options.get_output_with_headers ()))
     in
     (* we force a newline to split the print at every print with header *)
     force_new_line fmt;
-    if Options.get_output_with_colors () then
-      Format.fprintf fmt
-        "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@ @[<v 0>"
-        mname fname
-    else
-      Format.fprintf fmt
-        "[Debug]%s%s@ @[<v 0>" mname fname
+    if Options.get_output_with_colors ()
+    then
+      Format.fprintf fmt "@{<fg_blue>@{<bold>[Debug]%s%s@}@}@ @[<v 0>" mname
+        fname
+    else Format.fprintf fmt "[Debug]%s%s@ @[<v 0>" mname fname
   end;
   if flushed || Options.get_output_with_forced_flush ()
-  then Format.kfprintf flush fmt s else Format.fprintf fmt s
+  then Format.kfprintf flush fmt s
+  else Format.fprintf fmt s
 
-
-let print_fmt ?(flushed=true) fmt s =
+let print_fmt ?(flushed = true) fmt s =
   pp_std_smt ();
-  if flushed || Options.get_output_with_forced_flush () then
-    Format.kfprintf flush fmt s else Format.fprintf fmt s
+  if flushed || Options.get_output_with_forced_flush ()
+  then Format.kfprintf flush fmt s
+  else Format.fprintf fmt s
 
 (* Utils *)
 
@@ -289,118 +284,100 @@ let pp_list_no_space f fmt l =
 
 let pp_sep_space fmt () = Format.fprintf fmt " "
 
-let pp_list_space f fmt l =
-  Format.pp_print_list ~pp_sep:pp_sep_space f fmt l
+let pp_list_space f fmt l = Format.pp_print_list ~pp_sep:pp_sep_space f fmt l
 
 (******** Status printers *********)
 let status_time t =
-  match t with
-    None -> ""
-  | Some t -> Format.sprintf " (%2.4f)" t
+  match t with None -> "" | Some t -> Format.sprintf " (%2.4f)" t
 
 let status_steps s =
-  match s with
-    None -> ""
-  | Some s -> Format.sprintf " (%d steps)" s
+  match s with None -> "" | Some s -> Format.sprintf " (%d steps)" s
 
 let status_goal g =
-  match g with
-    None -> ""
-  | Some g -> Format.sprintf " (goal %s)" g
+  match g with None -> "" | Some g -> Format.sprintf " (goal %s)" g
 
 let print_status_loc fmt loc =
   match loc with
   | None -> ()
   | Some loc ->
-    if Options.get_answers_with_locs () then
-      Format.fprintf fmt "%a " Loc.report loc
+    if Options.get_answers_with_locs ()
+    then Format.fprintf fmt "%a " Loc.report loc
 
-let print_status_value fmt (v,color) =
-  if Options.get_output_with_colors () then
-    Format.fprintf fmt  "@{<%s>@{<bold>%s@}@}" color v
-  else
-    Format.fprintf fmt "%s" v
+let print_status_value fmt (v, color) =
+  if Options.get_output_with_colors ()
+  then Format.fprintf fmt "@{<%s>@{<bold>%s@}@}" color v
+  else Format.fprintf fmt "%s" v
 
-let print_status ?(validity_mode=true)
-    ?(formatter=Options.Output.get_fmt_regular ())
-    (validity_status,unsat_status,color) loc time steps goal =
+let print_status ?(validity_mode = true)
+    ?(formatter = Options.Output.get_fmt_regular ())
+    (validity_status, unsat_status, color) loc time steps goal =
   pp_std_smt ();
   let native_output_fmt, comment_if_smt2 =
-    if validity_mode then formatter, ""
-    else (Options.Output.get_fmt_diagnostic ()), (pp_smt clean_dbg_print)
+    if validity_mode
+    then formatter, ""
+    else Options.Output.get_fmt_diagnostic (), pp_smt clean_dbg_print
   in
   (* print validity status. Commented and in debug fmt if in unsat mode *)
-  Format.fprintf native_output_fmt
-    "%s%a%a%s%s%s@."
-    comment_if_smt2
-    print_status_loc loc
-    print_status_value (validity_status,color)
-    (status_time time)
-    (status_steps steps)
-    (status_goal goal);
-  if not validity_mode && String.length unsat_status > 0 then begin
+  Format.fprintf native_output_fmt "%s%a%a%s%s%s@." comment_if_smt2
+    print_status_loc loc print_status_value (validity_status, color)
+    (status_time time) (status_steps steps) (status_goal goal);
+  if (not validity_mode) && String.length unsat_status > 0
+  then begin
     pp_std_smt ();
     (* print SMT2 status if not in validity mode *)
-    Format.fprintf formatter "%a@." print_status_value (unsat_status,color)
+    Format.fprintf formatter "%a@." print_status_value (unsat_status, color)
   end
 
-let print_status_unsat ?(validity_mode=true) loc
-    time steps goal =
-  print_status ~validity_mode ("Valid","unsat","fg_green") loc
-    time steps goal
+let print_status_unsat ?(validity_mode = true) loc time steps goal =
+  print_status ~validity_mode ("Valid", "unsat", "fg_green") loc time steps goal
 
-let print_status_sat ?(validity_mode=true) loc
-    time steps goal =
-  print_status ~validity_mode ("Invalid","sat","fg_blue") loc
-    time steps goal
+let print_status_sat ?(validity_mode = true) loc time steps goal =
+  print_status ~validity_mode ("Invalid", "sat", "fg_blue") loc time steps goal
 
-let print_status_inconsistent ?(validity_mode=true) loc
-    time steps goal =
+let print_status_inconsistent ?(validity_mode = true) loc time steps goal =
   print_status ~validity_mode
     ~formatter:(Options.Output.get_fmt_diagnostic ())
-    ("Inconsistent assumption","","fg_red") loc
-    time steps goal
+    ("Inconsistent assumption", "", "fg_red")
+    loc time steps goal
 
-let print_status_unknown ?(validity_mode=true) loc
-    time steps goal =
+let print_status_unknown ?(validity_mode = true) loc time steps goal =
   print_status ~validity_mode
-    ("I don't know","unknown","fg_cyan") loc
-    time steps goal
+    ("I don't know", "unknown", "fg_cyan")
+    loc time steps goal
 
-(* TODO: The timeout answer doesn't exist in the SMT-LIB standard.
-   See issue https://github.com/OCamlPro/alt-ergo/issues/834. *)
-let print_status_timeout ?(validity_mode=true) loc
-    time steps goal =
+(* TODO: The timeout answer doesn't exist in the SMT-LIB standard. See issue
+   https://github.com/OCamlPro/alt-ergo/issues/834. *)
+let print_status_timeout ?(validity_mode = true) loc time steps goal =
   print_status ~validity_mode
-    ("Timeout","unknown","fg_orange") loc
-    time steps goal
+    ("Timeout", "unknown", "fg_orange")
+    loc time steps goal
 
 (* Version of [kfprintf] that escapes its input. *)
 let ekfprintf k ppf fmt =
   let buf = Buffer.create 1024 in
   let buf_ppf = Format.formatter_of_buffer buf in
-  Format.kfprintf (fun buf_ppf ->
+  Format.kfprintf
+    (fun buf_ppf ->
       Format.pp_print_flush buf_ppf ();
       let s =
         String.concat "\"\"" (String.split_on_char '"' (Buffer.contents buf))
       in
       Format.pp_print_string ppf s;
-      k ppf
-    ) buf_ppf fmt
+      k ppf)
+    buf_ppf fmt
 
 let pp_smtlib_string ppf s =
   Format.fprintf ppf "\"";
   ekfprintf (fun ppf -> Format.fprintf ppf "\"") ppf "%s" s
 
-let print_smtlib_err ?(flushed=true) s =
+let print_smtlib_err ?(flushed = true) s =
   (* The smtlib error messages are printed on the regular output. *)
   pp_std_smt ();
   let fmt = Options.Output.get_fmt_regular () in
   let k fmt =
-    if flushed || Options.get_output_with_forced_flush () then
-      Format.fprintf fmt "\")@."
-    else
-      Format.fprintf fmt "\")"
+    if flushed || Options.get_output_with_forced_flush ()
+    then Format.fprintf fmt "\")@."
+    else Format.fprintf fmt "\")"
   in
   Format.fprintf fmt "(error \"";
   ekfprintf k fmt s
@@ -416,22 +393,26 @@ let pp_smtlib_header ppf level =
 
 let reporter =
   let report src level ~over k msgf =
-    let k _ = over (); k () in
+    let k _ =
+      over ();
+      k ()
+    in
     let with_header h _tags k fmt =
-      if Logs.Src.equal src Logs.default then
-        Fmt.kpf k (Options.Output.get_fmt_regular ())
+      if Logs.Src.equal src Logs.default
+      then
+        Fmt.kpf k
+          (Options.Output.get_fmt_regular ())
           ("%a@[" ^^ fmt ^^ "@]@.")
           pp_smtlib_header level
-      else if Logs.Src.equal src Options.Sources.model then
-        Fmt.kpf k (Options.Output.get_fmt_models ())
-          ("@[" ^^ fmt ^^ "@]@.")
+      else if Logs.Src.equal src Options.Sources.model
+      then Fmt.kpf k (Options.Output.get_fmt_models ()) ("@[" ^^ fmt ^^ "@]@.")
       else
         let ppf = Options.Output.get_fmt_diagnostic () in
-        if Options.get_output_with_colors () then
-          Fmt.set_style_renderer ppf `Ansi_tty;
-        Fmt.kpf k ppf ("%a[%a] @[" ^^ fmt ^^ "@]@.")
-          Logs_fmt.pp_header (level, h)
-          pp_source src
+        if Options.get_output_with_colors ()
+        then Fmt.set_style_renderer ppf `Ansi_tty;
+        Fmt.kpf k ppf
+          ("%a[%a] @[" ^^ fmt ^^ "@]@.")
+          Logs_fmt.pp_header (level, h) pp_source src
     in
     msgf @@ fun ?header ?tags fmt -> with_header header tags k fmt
   in

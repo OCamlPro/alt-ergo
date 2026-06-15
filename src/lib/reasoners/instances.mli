@@ -27,24 +27,23 @@
 
 module type S = sig
   type t
+
   type tbox
+
   type instances = (Expr.gformula * Explanation.t) list
 
   val empty : t
-  val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
-  val add_lemma : t -> Expr.gformula -> Explanation.t -> t
-  val add_predicate :
-    t ->
-    guard:Expr.t ->
-    name:string ->
-    Expr.gformula ->
-    Explanation.t ->
-    t
 
-  (* the first returned expr is the guard (incremental mode),
-     the second one is the defn of the given predicate *)
-  val ground_pred_defn:
-    Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
+  val add_terms : t -> Expr.Set.t -> Expr.gformula -> t
+
+  val add_lemma : t -> Expr.gformula -> Explanation.t -> t
+
+  val add_predicate :
+    t -> guard:Expr.t -> name:string -> Expr.gformula -> Explanation.t -> t
+
+  (* the first returned expr is the guard (incremental mode), the second one is
+     the defn of the given predicate *)
+  val ground_pred_defn : Expr.t -> t -> (Expr.t * Expr.t * Explanation.t) option
 
   val pop : t -> guard:Expr.t -> t
 
@@ -73,7 +72,6 @@ module type S = sig
 
   val reinit_em_cache : unit -> unit
   (** Reinitializes the E-matching functor instance's inner cache *)
-
 end
 
 module Make (X : Theory.S) : S with type tbox = X.t

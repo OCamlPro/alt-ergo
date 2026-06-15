@@ -26,51 +26,64 @@
 (**************************************************************************)
 
 type builtin = Symbols.builtin =
-    LE | LT | (* arithmetic *)
+  | LE
+  | LT
+  | (* arithmetic *)
     IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
 
-type 'a view = (*private*)
+type 'a view =
+  (*private*)
   | Eq of 'a * 'a
   | Distinct of bool * 'a list
   | Builtin of bool * builtin * 'a list
   | Pred of 'a * bool
 
 type 'a atom_view
-(* We do not need to export internal representation
-   of literals !
-   =
-   | EQ of 'a * 'a
-   | BT of builtin * 'a list
-   | PR of 'a
-   | EQ_LIST of 'a list*)
+(* We do not need to export internal representation of literals ! = | EQ of 'a *
+   'a | BT of builtin * 'a list | PR of 'a | EQ_LIST of 'a list*)
 
 module type OrderedType = sig
   type t
+
   val compare : t -> t -> int
-  val hash :  t -> int
+
+  val hash : t -> int
+
   val print : Format.formatter -> t -> unit
+
   val top : t
+
   val bot : t
+
   val type_info : t -> Ty.t
 end
 
 module type S = sig
   type elt
+
   type t
 
   val make : elt view -> t
+
   val view : t -> elt view
+
   val atom_view : t -> elt atom_view * bool (* is_negated ? *)
 
   val mk_eq : elt -> elt -> t
+
   val mk_distinct : bool -> elt list -> t
+
   val mk_builtin : bool -> builtin -> elt list -> t
+
   val mk_pred : elt -> bool -> t
 
   val mkv_eq : elt -> elt -> elt view
+
   val mkv_distinct : bool -> elt list -> elt view
+
   val mkv_builtin : bool -> builtin -> elt list -> elt view
+
   val mkv_pred : elt -> bool -> elt view
 
   val neg : t -> t
@@ -78,21 +91,26 @@ module type S = sig
   val print : Format.formatter -> t -> unit
 
   val compare : t -> t -> int
+
   val equal : t -> t -> bool
+
   val hash : t -> int
+
   val uid : t -> int
+
   val elements : t -> elt list
 
   val save_cache : unit -> unit
-  (** Saves the modules cache  *)
+  (** Saves the modules cache *)
 
-  val reinit_cache: unit -> unit
+  val reinit_cache : unit -> unit
   (** Reinitializes the module's cache *)
 
   module Map : Map.S with type key = t
+
   module Set : Set.S with type elt = t
 end
 
 val print_view : 'a Fmt.t -> 'a view Fmt.t
 
-module Make ( X : OrderedType ) : S with type elt = X.t
+module Make (X : OrderedType) : S with type elt = X.t

@@ -33,7 +33,7 @@ val of_hstring : Hstring.t -> t
     Calling [of_hstring] twice with the same [Hstring.t] as argument will result
     in *distinct* variables. *)
 
-val of_string  : string -> t
+val of_string : string -> t
 (** Convenient alias for [of_hstring (Hstring.make s)]. *)
 
 val local : string -> t
@@ -62,10 +62,10 @@ val print : Format.formatter -> t -> unit
 
 val to_string : t -> string
 
-val save_cnt: unit -> unit
-(** Saves the values of the counter  *)
+val save_cnt : unit -> unit
+(** Saves the values of the counter *)
 
-val reinit_cnt: unit -> unit
+val reinit_cnt : unit -> unit
 (** Reinitializes the counter to the saved value with [save_cnt], 1 if no value
     is saved, since after the initialization of the modules [cnt] is set to 1
     when initializing the [underscore] constant in the Symbols module *)
@@ -74,5 +74,6 @@ module Set : Set.S with type elt = t
 
 module Map : sig
   include Map.S with type key = t
+
   val pp : 'a Fmt.t -> 'a t Fmt.t
 end

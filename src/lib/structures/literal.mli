@@ -29,10 +29,12 @@
     contain both syntaxic literals (expressions) and semantic literals (that
     contain semantic values, see also the {!Xliteral} module). *)
 
-type 'a view = LTerm of Expr.t | LSem of 'a
-(** View over literals, parameterized by the type of semantic literals. Used for
-    both pattern-matching and creation of literals (through the [make] and
-    [view] functions). *)
+type 'a view =
+  | LTerm of Expr.t
+  | LSem of 'a
+      (** View over literals, parameterized by the type of semantic literals.
+          Used for both pattern-matching and creation of literals (through the
+          [make] and [view] functions). *)
 
 val pp_view : 'a Fmt.t -> 'a view Fmt.t
 (** Pretty-printer for views. *)
@@ -99,4 +101,4 @@ module type S = sig
   (** Maps over literals. *)
 end
 
-module Make(Sem : Xliteral.S) : S with type elt = Sem.t
+module Make (Sem : Xliteral.S) : S with type elt = Sem.t

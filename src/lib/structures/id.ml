@@ -26,12 +26,11 @@ type typed = t * Ty.t list * Ty.t
 
 let compare_typed (t1, xs1, ty1) (t2, xs2, ty2) =
   let c = compare t1 t2 in
-  if c <> 0 then c
+  if c <> 0
+  then c
   else
     let c = Compat.List.compare Ty.compare xs1 xs2 in
-    if c <> 0 then c
-    else
-      Ty.compare ty1 ty2
+    if c <> 0 then c else Ty.compare ty1 ty2
 
 let pp ppf id =
   Dolmen.Smtlib2.Script.Poly.Print.symbol ppf
@@ -48,20 +47,16 @@ module Namespace = struct
     let fresh, reset_fresh_cpt =
       let cpt = ref 0 in
       let fresh_string ?(base = "") () =
-        let res = base ^ (string_of_int !cpt) in
+        let res = base ^ string_of_int !cpt in
         incr cpt;
         res
       in
-      let reset_fresh_string_cpt () =
-        cpt := 0
-      in
+      let reset_fresh_string_cpt () = cpt := 0 in
       fresh_string, reset_fresh_string_cpt
   end
 
   module Internal = Make ()
-
   module Skolem = Make ()
-
   module Abstract = Make ()
 
   let reinit () =

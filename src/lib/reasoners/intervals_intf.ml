@@ -27,22 +27,25 @@
 
 (** Interface for union-of-interval modules. *)
 
-type 'a interval = { lb : 'a ; ub : 'a }
+type 'a interval =
+  { lb : 'a;
+    ub : 'a
+  }
 (** The type of {b closed} intervals over type ['a].
 
     An interval [{ lb ; ub }] represents the closed interval {m [lb, ub]}, i.e.
     a value [v] is in the interval iff [lb <= v <= ub]. *)
 
-type 'a bound =
-  | Open of 'a (** An open (strict) finite bound. *)
-  | Closed of 'a (** A closed (large) finite bound. *)
-  | Unbounded (** An infinite bound. *)
 (** The type ['a bound] is used to create and inspect intervals; see
     {!OrderedType.view} and {!Interval.of_bounds}. *)
+type 'a bound =
+  | Open of 'a  (** An open (strict) finite bound. *)
+  | Closed of 'a  (** A closed (large) finite bound. *)
+  | Unbounded  (** An infinite bound. *)
 
 (** Type signature for explanations. This is mostly intended for Alt-Ergo's
-    built-in {!Explanation} module, but it can be convenient to use a
-    different module for debugging. *)
+    built-in {!Explanation} module, but it can be convenient to use a different
+    module for debugging. *)
 module type Explanations = sig
   type t
   (** The type of explanations.
@@ -87,15 +90,11 @@ module type OrderedType = sig
       transform open bounds in the {!type-finite} type into closed bounds on the
       extended type {!t}, with the equivalence:
 
-      {math
-        y <= x - \epsilon \Leftrightarrow y < x
-      }
+      {math y <= x - \epsilon \Leftrightarrow y < x}
 
       and
 
-      {math
-        x + \epsilon <= y \Leftrightarrow y < x
-      }
+      {math x + \epsilon <= y \Leftrightarrow y < x}
 
       This signature does not expose {m x + \epsilon} and {m x - \epsilon}
       values directly; instead, we use {m \mathrm{succ}} and {m \mathrm{pred}}
@@ -141,12 +140,10 @@ module type OrderedType = sig
   (** [value_opt] is the partial inverse of [finite]. *)
 
   val succ : t -> t
-  (** Each element of the ordered type [t] has a successor. The successor
-      of an element is always greater than the element itself:
+  (** Each element of the ordered type [t] has a successor. The successor of an
+      element is always greater than the element itself:
 
-      {math
-        \forall x, x \le \mathrm{succ}(x)
-      }
+      {math \forall x, x \le \mathrm{succ}(x)}
 
       We say that {m x} is a {e finite upper bound} if it is {e strictly}
       smaller than its successor, i.e. if {m x < \mathrm{succ}(x)}, and we
@@ -156,12 +153,10 @@ module type OrderedType = sig
       [succ] must be the inverse of [pred] below. *)
 
   val pred : t -> t
-  (** Each element of the ordered type [t] has a predecessor. The predecessor
-      of an element is always smaller than the element itself:
+  (** Each element of the ordered type [t] has a predecessor. The predecessor of
+      an element is always smaller than the element itself:
 
-      {math
-        \forall x, \mathrm{pred}(x) \le x
-      }
+      {math \forall x, \mathrm{pred}(x) \le x}
 
       We say that {m x} is a {e finite lower bound} if it is {e strictly}
       greater than its predecessor, i.e. if {m \mathrm{pred}(x) < x}, and we
@@ -189,16 +184,12 @@ module type Interval = sig
       We say that an extended value {m x} is a {b valid lower bound} if it
       satisfies:
 
-      {math
-        \forall y, y < x \Rightarrow \mathrm{pred}(x) < x
-      }
+      {math \forall y, y < x \Rightarrow \mathrm{pred}(x) < x}
 
       Similarly, we say that an extended value {m x} is a {b valid upper bound}
       if it satisfies:
 
-      {math
-        \forall y, x < y \Rightarrow x < \mathrm{succ}(x)
-      }
+      {math \forall y, x < y \Rightarrow x < \mathrm{succ}(x)}
 
       Remark that valid lower bounds are either {m -\infty} or finite lower
       bounds, and valid upper bounds are either {m +\infty} or finite upper
@@ -216,8 +207,8 @@ module type Interval = sig
   val of_bounds : value bound -> value bound -> t
   (** Build an interval from a pair of lower and upper bounds.
 
-      @raises Invalid_argument if the upper bound is smaller than the lower
-      bound. *)
+      @raise Invalid_argument
+        if the upper bound is smaller than the lower bound. *)
 
   val view : t -> value bound interval
   (** Returns a view of the interval using the [bound] type for convenient
@@ -238,9 +229,6 @@ module type Interval = sig
       value; otherwise, returns [None]. *)
 end
 
-type ('a, 'b) kind =
-  | NonEmpty of 'a (** A {b non-empty} value of type ['a]. *)
-  | Empty of 'b (** An empty value with additional justification. *)
 (** The [kind] type is an equivalent to the [result] type from the standard
     library with more appropriate constructor names.
 
@@ -248,6 +236,9 @@ type ('a, 'b) kind =
     current context (with an explanation abstracting a set of model where the
     union is also empty) and unions of intervals that have at least one value in
     the current context. *)
+type ('a, 'b) kind =
+  | NonEmpty of 'a  (** A {b non-empty} value of type ['a]. *)
+  | Empty of 'b  (** An empty value with additional justification. *)
 
 module type Union = sig
   (** Signature for union-of-intervals implementations {b with explanations}. *)
@@ -264,9 +255,9 @@ module type Union = sig
       forbidden by an union of explanations in {m C}, and that it is {e allowed}
       otherwise.
 
-      It is always sound to weaken a forbidden interval interval: if {m M(e_1)
-      \Rightarrow M(e_2)} and {m I} is forbidden by [e_2], it is also forbidden
-      by [e_1].
+      It is always sound to weaken a forbidden interval interval: if
+      {m M(e_1) \Rightarrow M(e_2)} and {m I} is forbidden by [e_2], it is also
+      forbidden by [e_1].
 
       (Note that in terms of explanations, this means adding more terms in the
       explanation, since [Explanation.empty] is true in all contexts and since
@@ -304,10 +295,8 @@ module type Union = sig
   type t = bnd union
   (** The type of unions. *)
 
-  module Interval : Interval
-    with type value = value
-     and type bnd = bnd
   (** Intervals over the [value] type. *)
+  module Interval : Interval with type value = value and type bnd = bnd
 
   val pp : t Fmt.t
   (** Pretty-printer for unions. *)
@@ -316,8 +305,7 @@ module type Union = sig
 
       The following functions are used to create unions. *)
 
-  val of_interval :
-    ?ex:explanation -> bnd interval -> t
+  val of_interval : ?ex:explanation -> bnd interval -> t
   (** Build an union from an interval.
 
       [of_interval ?ex:None i] evaluates to [i] in all contexts.
@@ -325,13 +313,11 @@ module type Union = sig
       [of_interval ~ex i] evaluates to [i] in contexts where [ex] holds
       (including the current context) and to the full set otherwise. *)
 
-  val of_bounds :
-    ?ex:explanation -> value bound -> value bound -> t
+  val of_bounds : ?ex:explanation -> value bound -> value bound -> t
   (** [of_bounds ?ex lb ub] is a shortcut for
       [of_interval ?ex @@ Interval.of_bounds lb ub] *)
 
-  val of_complement :
-    ?ex:explanation -> bnd interval -> (t, explanation) kind
+  val of_complement : ?ex:explanation -> bnd interval -> (t, explanation) kind
   (** Build an union from the complement of an interval.
 
       The explanation, if provided, justifies that the value is {b not} in the
@@ -344,8 +330,8 @@ module type Union = sig
 
   (** {1 Inspection}
 
-      The following functions are used to inspect the global bounds of an
-      union of intervals. *)
+      The following functions are used to inspect the global bounds of an union
+      of intervals. *)
 
   val lower_bound : t -> value bound * explanation
   (** [lower_bound u] returns a pair [lb, ex] of a global lower bound and an
@@ -366,7 +352,7 @@ module type Union = sig
   (** {1 Iteration}
 
       The following functions are used to iterate over the maximal disjoint
-      intervals composing the union {b in the current context}.  *)
+      intervals composing the union {b in the current context}. *)
 
   val to_seq : t -> bnd interval Seq.t
   (** Convert an union of interval to a sequence of maximal disjoint and
@@ -381,24 +367,24 @@ module type Union = sig
 
   val fold : ('a -> bnd interval -> 'a) -> 'a -> t -> 'a
   (** [fold f acc u] folds [f] over each of the maximal disjoint and
-      non-adjacent intervals that make up the union [u] {b in the current
-      context}. *)
+      non-adjacent intervals that make up the union [u]
+      {b in the current context}. *)
 
   (** {1 Comparison}
 
-      The following functions are used to compare intervals {b in the current
-      context}. *)
+      The following functions are used to compare intervals
+      {b in the current context}. *)
 
   val subset : ?strict:bool -> t -> t -> bool
-  (** [subset ?strict u1 u2] returns [true] if [u1] is a subset of [u2] {b in
-      the current context}. [subset] ignores all explanations.
+  (** [subset ?strict u1 u2] returns [true] if [u1] is a subset of [u2]
+      {b in the current context}. [subset] ignores all explanations.
 
       If set, the [strict] flag ([false] by default) checks for strict
       inclusion. *)
 
   val equal : t -> t -> bool
-  (** [equal u1 u2] returns [true] if [u1] is equal to [u2] {b in the current
-      context}. [equal] ignores all explanations. *)
+  (** [equal u1 u2] returns [true] if [u1] is equal to [u2]
+      {b in the current context}. [equal] ignores all explanations. *)
 
   (** {1 Set manipulation} *)
 
@@ -419,14 +405,14 @@ module type Union = sig
       function on bounds. *)
 
   val map_strict_inc : ('a -> bnd) -> 'a union -> t
-  (** [map_strict_inc f u] computes the image of [u] by the {b strictly
-      increasing} function [f].
+  (** [map_strict_inc f u] computes the image of [u] by the
+      {b strictly increasing} function [f].
 
       This function is very efficient and should be used when possible. *)
 
   val map_strict_dec : ('a -> bnd) -> 'a union -> t
-  (** [map_strict_dec f u] computes the image of [u] by the {b strictly
-      decreasing} function [f].
+  (** [map_strict_dec f u] computes the image of [u] by the
+      {b strictly decreasing} function [f].
 
       This function is very efficient and should be used when possible. *)
 
@@ -436,8 +422,8 @@ module type Union = sig
       (weakly) increasing function [f].
 
       [f] is represented by the pair [(f_lb, f_ub)] of functions that are such
-      that for any [x], [f_lb x = f x = f_ub x] if [x] is in the domain of
-      [f], and [f_ub x < f_lb x] otherwise.
+      that for any [x], [f_lb x = f x = f_ub x] if [x] is in the domain of [f],
+      and [f_ub x < f_lb x] otherwise.
 
       {b Warning}: The functions [f_lb] and [f_ub] must themselve be (weakly)
       increasing. Moreover, the inequality [f_ub x <= f_lb x] must hold
@@ -450,8 +436,8 @@ module type Union = sig
       (weakly) decreasing function [f].
 
       [f] is represented by the pair [(f_lb, f_ub)] of functions that are such
-      that for any [x], [f_lb x = f x = f_ub x] if [x] is in the domain of
-      [f], and [f_ub x < f_lb x] otherwise.
+      that for any [x], [f_lb x = f x = f_ub x] if [x] is in the domain of [f],
+      and [f_ub x < f_lb x] otherwise.
 
       {b Warning}: The functions [f_lb] and [f_ub] must themselve be (weakly)
       decreasing. Moreover, the inequality [f_ub x <= f_lb x] must hold
@@ -502,8 +488,9 @@ module type Union = sig
   (** Converts a [set] to an union, assuming that it is nonempty in the current
       context.
 
-      @raise Invalid_argument if the [set] represents an union that is empty in
-      the current context. *)
+      @raise Invalid_argument
+        if the [set] represents an union that is empty in the current context.
+  *)
 
   val map_to_set : ('a interval -> set) -> 'a union -> set
   (** [map_to_set f u] computes the image of [u] by [f].
@@ -520,13 +507,12 @@ module type Union = sig
       also on some intervals that are currently impossible but would be possible
       in other contexts (depending on explanations).
 
-      When possible, prefer using a more specialized variant of
-      [map_to_set] that use properties of the function [f] to avoid
-      certain calls to [f]. *)
+      When possible, prefer using a more specialized variant of [map_to_set]
+      that use properties of the function [f] to avoid certain calls to [f]. *)
 
   val map_mon_to_set : ('a interval -> set) -> 'a union -> set
-  (** [map_mon_to_set] is a variant of [map_to_set] when the
-      function [f] is monotone.
+  (** [map_mon_to_set] is a variant of [map_to_set] when the function [f] is
+      monotone.
 
       More precisely, we require that for any pair of intervals [(i1, i2)] the
       interval hull of [f i1] and [f i2] is included in the image of the
@@ -577,14 +563,14 @@ module type Union = sig
 
   val trisection_map_to_set :
     bnd -> t -> (t -> set) -> (unit -> set) -> (t -> set) -> set
-    (** [trisection_map_to_set v u f_lt f_eq f_gt] constructs an union of
-        intervals by combining the image of [f_lt] on the fragment of [u] that
-        only contains values strictly less than [v], the image of [f_gt] on the
-        fragment of [u] that only contains values strictly greater than [v], and
-        the image of [f_eq] if [v] is contained in [u].
+  (** [trisection_map_to_set v u f_lt f_eq f_gt] constructs an union of
+      intervals by combining the image of [f_lt] on the fragment of [u] that
+      only contains values strictly less than [v], the image of [f_gt] on the
+      fragment of [u] that only contains values strictly greater than [v], and
+      the image of [f_eq] if [v] is contained in [u].
 
-        It is helpful to build piecewise monotone functions such as
-        multiplication, where trisection around [0] can be used. *)
+      It is helpful to build piecewise monotone functions such as
+      multiplication, where trisection around [0] can be used. *)
 end
 
 (** Polymorphic {!module-type-Union} implementations. *)
@@ -595,11 +581,12 @@ module type Core = sig
   type 'a union
   (** Normalized non-empty union of intervals over ['a] values. *)
 
-  module Union(OT : OrderedType) : Union
-    with type 'a union = 'a union
-     and type value := OT.finite
-     and type bnd = OT.t
-     and type explanation := explanation
+  module Union (OT : OrderedType) :
+    Union
+      with type 'a union = 'a union
+       and type value := OT.finite
+       and type bnd = OT.t
+       and type explanation := explanation
 end
 
 module type RingType = sig
@@ -620,15 +607,15 @@ module type RingType = sig
   (** Inverse for addition: for all [u], [add u (neg u) = zero]. *)
 
   val mul : t -> t -> t
-  (** [mul] will be only be called with values that are compatible with
-      its monotonicity: its arguments can be two bounds with the same sign
-      and kind (upper or lower), or two bounds with opposite signs and
-      opposite kinds (upper or lower), but never two bounds with the same
-      sign and opposite kinds or opposite signs and the same kind.
+  (** [mul] will be only be called with values that are compatible with its
+      monotonicity: its arguments can be two bounds with the same sign and kind
+      (upper or lower), or two bounds with opposite signs and opposite kinds
+      (upper or lower), but never two bounds with the same sign and opposite
+      kinds or opposite signs and the same kind.
 
-      It is recommended to program defensively and raise an assertion
-      failure if [mul] is ever called with two bounds of the same sign and
-      opposite kinds or opposite signs and the same kind. *)
+      It is recommended to program defensively and raise an assertion failure if
+      [mul] is ever called with two bounds of the same sign and opposite kinds
+      or opposite signs and the same kind. *)
 
   val pow : int -> t -> t
   (** [pow n x] raises [x] to the [n]-th power.
@@ -638,7 +625,8 @@ end
 
 (** Union-of-intervals over a {!RingType}. *)
 module type Ring = sig
-  include Union (** @inline *)
+  include Union
+  (** @inline *)
 
   (** {1 Ring interface} *)
 
@@ -685,7 +673,8 @@ end
 
 (** Union-of-intervals over a {!FieldType}. *)
 module type Field = sig
-  include Ring (** @inline *)
+  include Ring
+  (** @inline *)
 
   (** {1 Field interface} *)
 
@@ -718,7 +707,8 @@ end
 
 (** Union-of-intervals over an {!AlgebraicType}. *)
 module type AlgebraicField = sig
-  include Field (** @inline *)
+  include Field
+  (** @inline *)
 
   (** {1 Algebraic operations} *)
 
@@ -746,7 +736,8 @@ end
 
 (** Union-of-intervals over an {!EuclideanType}. *)
 module type EuclideanRing = sig
-  include Ring (** @inline *)
+  include Ring
+  (** @inline *)
 
   (** {1 Euclidean division} *)
 

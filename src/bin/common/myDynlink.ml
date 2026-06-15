@@ -31,38 +31,37 @@ open AltErgoLib
     generate a static (native) binary **)
 
 [@@@ocaml.warning "-60"]
-module DummyDL = struct
 
+module DummyDL = struct
   type error = string
 
   [@@@ocaml.warning "-38"]
+
   exception Error of error
 
   [@@@ocaml.warning "-32"]
+
   let error_message s = s
 
   [@@@ocaml.warning "-32"]
-  let loadfile _ = ()
 
+  let loadfile _ = ()
 end
 
 include Dynlink
 
 let load verbose p msg =
   let p = Option.value ~default:p (Config.lookup_plugin p) in
-  if verbose then
+  if verbose
+  then
     Printer.print_dbg ~flushed:false ~module_name:"Dynlink"
       "Loading the %s in %S ..." msg p;
   try
     loadfile p;
-    if verbose then
-      Printer.print_dbg ~header:false
-        "Success!"
-  with
-  | Error m ->
+    if verbose then Printer.print_dbg ~header:false "Success!"
+  with Error m ->
     Errors.run_error
       (Dynlink_error
          (Format.asprintf
-            "@[<v>Loading the %s plugin in %S failed!@,\
-             >> Failure message: %s"
+            "@[<v>Loading the %s plugin in %S failed!@,>> Failure message: %s"
             msg p (error_message m)))

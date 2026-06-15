@@ -25,17 +25,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type 'a t = {
-  mutable data : 'a array;
-  mutable sz : int;
-  dummy: 'a;
-}
+type 'a t =
+  { mutable data : 'a array;
+    mutable sz : int;
+    dummy : 'a
+  }
 
 let[@inline] size vec = vec.sz
 
-let make n ~dummy = {data = Array.make n dummy; sz = 0; dummy}
+let make n ~dummy = { data = Array.make n dummy; sz = 0; dummy }
 
-let[@inline] create ~dummy = {data = [||]; sz = 0; dummy}
+let[@inline] create ~dummy = { data = [||]; sz = 0; dummy }
 
 let[@inline] clear vec =
   for i = 0 to size vec - 1 do
@@ -68,15 +68,13 @@ let[@inline] is_full vec = Array.length vec.data = vec.sz
 
 let[@inline] copy vec : _ t =
   let data = Array.copy vec.data in
-  {vec with data}
+  { vec with data }
 
 (* grow the array *)
 
 let[@inline never] grow_to vec cap : unit =
   assert (Array.length vec.data < Sys.max_array_length);
-  let cap =
-    min Sys.max_array_length (max 4 cap)
-  in
+  let cap = min Sys.max_array_length (max 4 cap) in
   assert (cap > vec.sz);
   let arr' = Array.make cap vec.dummy in
   assert (Array.length arr' > vec.sz);
@@ -89,7 +87,9 @@ let[@inline never] grow_to_double_size vec : unit =
 let[@inline never] grow_to_by_double vec cap =
   let cap = max 1 cap in
   let c = ref (max 1 (Array.length vec.data)) in
-  while !c < cap do c := 2 * !c done;
+  while !c < cap do
+    c := 2 * !c
+  done;
   grow_to vec !c
 
 let[@inline] push vec x : unit =
@@ -103,7 +103,7 @@ let[@inline] get vec i =
 
 let[@inline] set vec i elt =
   vec.data.(i) <- elt;
-  vec.sz <- max vec.sz (i+1)
+  vec.sz <- max vec.sz (i + 1)
 
 let[@inline] replace f vec i =
   assert (0 <= i && i < vec.sz);
@@ -111,7 +111,7 @@ let[@inline] replace f vec i =
   Array.unsafe_set vec.data i (f n)
 
 let[@inline] fast_remove vec i =
-  assert (i>= 0 && i < vec.sz);
+  assert (i >= 0 && i < vec.sz);
   Array.unsafe_set vec.data i @@ Array.unsafe_get vec.data (vec.sz - 1);
   Array.unsafe_set vec.data (vec.sz - 1) vec.dummy;
   vec.sz <- vec.sz - 1
@@ -145,6 +145,7 @@ let fold f acc vec =
   !acc
 
 let to_array a = Array.sub a.data 0 a.sz
+
 let to_list vec = Array.to_seq (to_array vec) |> List.of_seq
 
 let to_rev_list { data; sz; _ } =
@@ -158,7 +159,7 @@ let of_list l ~dummy : _ t =
   match l with
   | [] -> create ~dummy
   | _ :: tl ->
-    let v = make (List.length tl+1) ~dummy in
+    let v = make (List.length tl + 1) ~dummy in
     List.iter (push v) l;
     v
 
@@ -167,5 +168,4 @@ let sort vec f : unit =
   Array.fast_sort f arr;
   vec.data <- arr
 
-let pp pp_elt =
-  Fmt.iter ~sep:Fmt.comma iter pp_elt |> Fmt.box
+let pp pp_elt = Fmt.iter ~sep:Fmt.comma iter pp_elt |> Fmt.box

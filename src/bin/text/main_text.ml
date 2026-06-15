@@ -27,8 +27,7 @@
 
 open Alt_ergo_common
 
-(* done here to initialize options,
-   before the instantiations of functors *)
+(* done here to initialize options, before the instantiations of functors *)
 let parse_cmdline () =
   try Parse_command.parse_cmdline_arguments ()
   with Parse_command.Exit_parse_command i -> exit i
@@ -38,5 +37,5 @@ let () =
   AltErgoLib.Printer.init_colors ();
   AltErgoLib.Printer.init_output_format ();
   Signals_profiling.init_signals ();
-  Logs.set_reporter (AltErgoLib.Printer.reporter);
+  Logs.set_reporter AltErgoLib.Printer.reporter;
   Solving_loop.main path

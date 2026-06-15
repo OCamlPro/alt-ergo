@@ -16,8 +16,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Bit-lists provide a domain on bit-vectors that represent the known bits
-    sets to [1] and [0], respectively.
+(** Bit-lists provide a domain on bit-vectors that represent the known bits sets
+    to [1] and [0], respectively.
 
     This module provides an implementation of bitlists and related operators.
     The bitlists provided by this module do not have a fixed width, and can
@@ -85,8 +85,8 @@ val value : t -> Z.t
 
 val intersect : t -> t -> t
 (** [intersect b1 b2] returns a new bitlist [b] that subsumes both [b1] and
-    [b2]. Any explanation justifying that [b1] and [b2] apply to the same
-    value must have been added to [b1] and [b2].
+    [b2]. Any explanation justifying that [b1] and [b2] apply to the same value
+    must have been added to [b1] and [b2].
 
     Raises [Inconsistent] if [b1] and [b2] are not compatible (i.e. there are
     bits set in one bitlist and cleared in the other). *)
@@ -168,8 +168,8 @@ val ( asr ) : t -> int -> t
 
 (**/**)
 
+val fold_domain : (Z.t -> 'a -> 'a) -> t -> 'a -> 'a
 (** [fold_finite_domain f i acc] accumulates [f] on all the elements of [i] (in
     an unspecified order). Intended for testing purposes only.
 
     @raise Invalid_argument if the bitlist is [empty]. *)
-val fold_domain : (Z.t -> 'a -> 'a) -> t -> 'a -> 'a

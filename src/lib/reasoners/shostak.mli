@@ -31,28 +31,27 @@ module Combine : sig
   val src : Logs.src
 
   val top : r
+
   val bot : r
 end
 
-module Polynome : Polynome.T
-  with type r = Combine.r
+module Polynome : Polynome.T with type r = Combine.r
 
-module Arith : Sig.SHOSTAK
-  with type r = Combine.r and type t = Polynome.t
+module Arith : Sig.SHOSTAK with type r = Combine.r and type t = Polynome.t
 
-module Bitv : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Bitv.abstract
+module Bitv :
+  Sig.SHOSTAK with type r = Combine.r and type t = Combine.r Bitv.abstract
 
-module Adt : Sig.SHOSTAK
-  with type r = Combine.r and type t = Combine.r Adt.abstract
+module Adt :
+  Sig.SHOSTAK with type r = Combine.r and type t = Combine.r Adt.abstract
 
 module Ac : Ac.S with type r = Combine.r and type t = Combine.r Sig.ac
 
-(** map of semantic values using Combine.hash_cmp *)
 module MXH : Map.S with type key = Combine.r
+(** map of semantic values using Combine.hash_cmp *)
 
-(** set of semantic values using Combine.hash_cmp *)
 module SXH : Set.S with type elt = Combine.r
+(** set of semantic values using Combine.hash_cmp *)
 
 module L : Xliteral.S with type elt = Combine.r
 

@@ -28,6 +28,7 @@
 type used_context
 
 val init_all_used_context : unit -> used_context
+
 val choose_used_context : used_context -> goal_name:string -> used_context
 
 type status =
@@ -40,31 +41,28 @@ type status =
 val print_status : status -> int -> unit
 
 module type S = sig
-
-  (** The SAT working environment. *)
   type sat_env
+  (** The SAT working environment. *)
 
-  type res = [
-    | `Sat
+  type res =
+    [ `Sat
     | `Unknown
-    | `Unsat
-  ]
+    | `Unsat ]
 
-  type env = private {
-    used_context : used_context;
-    consistent_dep_stack: (res * Explanation.t) Stack.t;
-    sat_env : sat_env;
-    mutable res : res;
-    mutable expl : Explanation.t
-  }
+  type env = private
+    { used_context : used_context;
+      consistent_dep_stack : (res * Explanation.t) Stack.t;
+      sat_env : sat_env;
+      mutable res : res;
+      mutable expl : Explanation.t
+    }
 
   val init_env : ?selector_inst:(Expr.t -> bool) -> used_context -> env
 
-  (** Process are wrappers of calls to the SAT solver.
-      They catch the [Sat], [Unsat] and [I_dont_know] exceptions to update the
-      frontend environment, but not the [Timeout] exception which is raised to
-      the user. *)
   type 'a process = ?loc:Loc.t -> 'a -> env -> unit
+  (** Process are wrappers of calls to the SAT solver. They catch the [Sat],
+      [Unsat] and [I_dont_know] exceptions to update the frontend environment,
+      but not the [Timeout] exception which is raised to the user. *)
 
   val push : int process
 
@@ -80,13 +78,10 @@ module type S = sig
 
   val optimize : Objective.Function.t process
 
-  val process_decl:
-    ?hook_on_status:(status -> int -> unit) ->
-    env ->
-    Commands.sat_tdecl ->
-    unit
+  val process_decl :
+    ?hook_on_status:(status -> int -> unit) -> env -> Commands.sat_tdecl -> unit
 
-  val print_model: sat_env Fmt.t
+  val print_model : sat_env Fmt.t
 end
 
-module Make (SAT: Sat_solver_sig.S) : S with type sat_env = SAT.t
+module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t

@@ -27,10 +27,9 @@
 
 (** Position in input files
 
-    This module defines a notion of location in files.
-    Note: this only specifies a position in an arbitrary file,
-          it does not contain information about the file itself.
-*)
+    This module defines a notion of location in files. Note: this only specifies
+    a position in an arbitrary file, it does not contain information about the
+    file itself. *)
 
 type t
 (** The type of locations, a location is made up of two position in the file,
@@ -44,5 +43,5 @@ val dummy : t
 (** A dummy location. *)
 
 val report : Format.formatter -> t -> unit
-(** Report a location on the given formatter, using standard
-    human-redable location reporting. *)
+(** Report a location on the given formatter, using standard human-redable
+    location reporting. *)

@@ -28,8 +28,7 @@
 (** Heaps.
 
     This modules define intrusive priority heaps (i.e. priority heaps where the
-    index of a given element in the map is stored on the element itself).
-*)
+    index of a given element in the map is stored on the element itself). *)
 
 (** {2 Ranked types}
 
@@ -46,23 +45,22 @@ module type RankedType = sig
   (** The type of the heap elements. *)
 
   val index : t -> int
-  (** Index of the element in the heap. Returns -1 if the element is not in
-      the heap. *)
+  (** Index of the element in the heap. Returns -1 if the element is not in the
+      heap. *)
 
   val set_index : t -> int -> unit
   (** Update the element's index in the heap. *)
 
   val compare : t -> t -> int
-  (** A total ordering function over the set elements.
-      This is a two-argument function [f] such that
-      [f e1 e2] is zero if the elements [e1] and [e2] are equal,
-      [f e1 e2] is strictly negative if [e1] is smaller than [e2],
-      and [f e1 e2] is strictly positive if [e1] is greater than [e2]. *)
+  (** A total ordering function over the set elements. This is a two-argument
+      function [f] such that [f e1 e2] is zero if the elements [e1] and [e2] are
+      equal, [f e1 e2] is strictly negative if [e1] is smaller than [e2], and
+      [f e1 e2] is strictly positive if [e1] is greater than [e2]. *)
 end
 
 (** {2 Priority heaps} *)
 
-module MakeRanked(Rank : RankedType) : sig
+module MakeRanked (Rank : RankedType) : sig
   type elt = Rank.t
   (** The type of elements of the heap. *)
 
@@ -90,9 +88,9 @@ module MakeRanked(Rank : RankedType) : sig
   val insert : t -> elt -> unit
   (** Insert a new element in the heap. *)
 
-  val grow_to_by_double: t -> int -> unit
-  (** Grow the size of the heap by multiplying it by 2
-      until it is at least the size specified. *)
+  val grow_to_by_double : t -> int -> unit
+  (** Grow the size of the heap by multiplying it by 2 until it is at least the
+      size specified. *)
 
   val pop_min : t -> elt
   (** Remove the minimum element from the heap and return it.
@@ -114,7 +112,7 @@ module type OrderedTypeDefault = sig
   (** Dummy value used in the heap. *)
 end
 
-module MakeOrdered(V : OrderedTypeDefault) : sig
+module MakeOrdered (V : OrderedTypeDefault) : sig
   type elt = V.t
   (** The type of elements of the heap. *)
 

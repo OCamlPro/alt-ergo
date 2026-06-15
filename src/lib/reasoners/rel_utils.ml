@@ -22,15 +22,13 @@ module SX = Shostak.SXH
 module HX = Shostak.HX
 module L = Xliteral
 module LR = Uf.LX
-module HLR = Hashtbl.Make(LR)
+module HLR = Hashtbl.Make (LR)
 
 (** [assume_nontrivial_eqs eqs la] can be used by theories to remove from the
     equations [eqs] both duplicates and those that are implied by the
     assumptions in [la]. *)
-let assume_nontrivial_eqs
-    (eqs : X.r Sig_rel.input list)
-    (la : X.r Sig_rel.input list)
-  : X.r Sig_rel.fact list =
+let assume_nontrivial_eqs (eqs : X.r Sig_rel.input list)
+    (la : X.r Sig_rel.input list) : X.r Sig_rel.fact list =
   match eqs with
   | [] -> []
   | eqs ->
@@ -39,13 +37,13 @@ let assume_nontrivial_eqs
     let eqs =
       List.fold_left
         (fun eqs ((sa, _, _, _) as e) ->
-           let sa = LR.make sa in
-           if HLR.mem table sa then eqs
-           else (
-             HLR.replace table sa ();
-             e :: eqs
-           )
-        ) [] eqs
+          let sa = LR.make sa in
+          if HLR.mem table sa
+          then eqs
+          else (
+            HLR.replace table sa ();
+            e :: eqs))
+        [] eqs
     in
     List.rev_map (fun (sa, _, ex, orig) -> Literal.LSem sa, ex, orig) eqs
 
@@ -60,22 +58,18 @@ type delayed_fn =
   Uf.t -> Symbols.operator -> Expr.t list -> (X.r * Explanation.t) option
 
 let delay1 embed is_mine f uf op = function
-  | [ t ] -> (
-      let r, ex = Uf.find uf t in
-      match f op (embed r) with
-      | Some v -> Some (is_mine v, ex)
-      | None -> None
-    )
+  | [t] -> (
+    let r, ex = Uf.find uf t in
+    match f op (embed r) with Some v -> Some (is_mine v, ex) | None -> None)
   | _ -> assert false
 
 let delay2 embed is_mine f uf op = function
-  | [ t1; t2 ] -> (
-      let r1, ex1 = Uf.find uf t1 in
-      let r2, ex2 = Uf.find uf t2 in
-      match f op (embed r1) (embed r2) with
-      | Some v -> Some (is_mine v, Explanation.union ex1 ex2)
-      | None -> None
-    )
+  | [t1; t2] -> (
+    let r1, ex1 = Uf.find uf t1 in
+    let r2, ex2 = Uf.find uf t2 in
+    match f op (embed r1) (embed r2) with
+    | Some v -> Some (is_mine v, Explanation.union ex1 ex2)
+    | None -> None)
   | _ -> assert false
 
 (** The [Delayed] module can be used by relations that deal with partially
@@ -83,11 +77,13 @@ let delay2 embed is_mine f uf op = function
     and its interpreted value as soon as the value of its arguments become
     known.
 
-    To avoid issues with eager splitting, functions are not computed
-    on case splits unless model generation is enabled. *)
+    To avoid issues with eager splitting, functions are not computed on case
+    splits unless model generation is enabled. *)
 module Delayed : sig
   type t
 
+  val create :
+    is_ready:(X.r -> bool) -> (Symbols.operator -> delayed_fn option) -> t
   (** [create ~is_ready dispatch] creates a new delayed structure for the
       symbols handled by [dispatch].
 
@@ -95,9 +91,8 @@ module Delayed : sig
       of [dispatch] before we actually know their arguments.
 
       [dispatch] must be pure. *)
-  val create :
-    is_ready:(X.r -> bool) -> (Symbols.operator -> delayed_fn option) -> t
 
+  val add : t -> Uf.t -> X.r -> Expr.t -> t * (X.r L.view * Explanation.t) list
   (** [add env uf r t] checks whether the term [t] is a delayed function and if
       so either adds it to the structure or evaluates it immediately if
       possible, in which case a new equality with corresponding explanation is
@@ -107,8 +102,15 @@ module Delayed : sig
 
       [add] can be called directly with the arguments passed to a relation's
       [add] function. *)
-  val add : t -> Uf.t -> X.r -> Expr.t -> t * (X.r L.view * Explanation.t) list
 
+  val update :
+    t ->
+    Uf.t ->
+    X.r ->
+    X.r ->
+    Th_util.lit_origin ->
+    X.r Sig_rel.input list ->
+    X.r Sig_rel.input list
   (** [update env uf r orig eqs] checks whether [r] is an argument of a
       registered delayed function and, if so, tries to compute the corresponding
       delayed function. If all the function's arguments are constants, the
@@ -116,28 +118,25 @@ module Delayed : sig
 
       [update] should be called with the left-hand side of [Eq] literals that
       are [assume]d by a relation. *)
-  val update :
-    t -> Uf.t -> X.r -> X.r -> Th_util.lit_origin ->
-    X.r Sig_rel.input list -> X.r Sig_rel.input list
 
+  val assume : t -> Uf.t -> X.r Sig_rel.input list -> t * X.r Sig_rel.result
   (** [assume] is a simple wrapper for [update] that is compatible with the
       [assume] signature of a relation. *)
-  val assume : t -> Uf.t -> X.r Sig_rel.input list -> t * X.r Sig_rel.result
 
-  (** [iter_delayed f t] iterates on the delayed applications of [t]. *)
   val iter_delayed : (X.r -> Symbols.operator -> Expr.t -> unit) -> t -> unit
+  (** [iter_delayed f t] iterates on the delayed applications of [t]. *)
 end = struct
-  module OMap = Map.Make(struct
-      type t = Symbols.operator
+  module OMap = Map.Make (struct
+    type t = Symbols.operator
 
-      let compare = Symbols.compare_operators
-    end)
+    let compare = Symbols.compare_operators
+  end)
 
-  type t = {
-    dispatch : Symbols.operator -> delayed_fn option ;
-    used_by : Expr.Set.t OMap.t MX.t ;
-    is_ready : X.r -> bool ;
-  }
+  type t =
+    { dispatch : Symbols.operator -> delayed_fn option;
+      used_by : Expr.Set.t OMap.t MX.t;
+      is_ready : X.r -> bool
+    }
 
   let create ~is_ready dispatch = { dispatch; used_by = MX.empty; is_ready }
 
@@ -146,46 +145,56 @@ end = struct
        a separate constructor for explicitely delayed terms. *)
     match Expr.term_view t with
     | { f = Op f; xs; _ } -> (
-        match dispatch f with
-        | None -> env, []
-        | Some fn ->
-          match fn uf f xs with
-          | Some (r', ex) ->
-            if X.equal r' r then
-              (* already simplified by [X.make] *)
-              env, []
-            else
-              env, [L.Eq(r', r), ex]
-          | None ->
-            let used_by =
-              List.fold_left (fun used_by x ->
-                  MX.update (Uf.make uf x) (fun sm ->
-                      let sm = Option.value ~default:OMap.empty sm in
-                      Option.some @@
-                      OMap.update f (fun se ->
-                          let se = Option.value ~default:Expr.Set.empty se in
-                          Some (Expr.Set.add t se)) sm) used_by) used_by xs
-            in { env with used_by }, []
-      )
+      match dispatch f with
+      | None -> env, []
+      | Some fn -> (
+        match fn uf f xs with
+        | Some (r', ex) ->
+          if X.equal r' r
+          then
+            (* already simplified by [X.make] *)
+            env, []
+          else env, [L.Eq (r', r), ex]
+        | None ->
+          let used_by =
+            List.fold_left
+              (fun used_by x ->
+                MX.update (Uf.make uf x)
+                  (fun sm ->
+                    let sm = Option.value ~default:OMap.empty sm in
+                    Option.some
+                    @@ OMap.update f
+                         (fun se ->
+                           let se = Option.value ~default:Expr.Set.empty se in
+                           Some (Expr.Set.add t se))
+                         sm)
+                  used_by)
+              used_by xs
+          in
+          { env with used_by }, []))
     | _ -> env, []
 
   let update { dispatch; used_by; _ } uf r1 eqs =
     match MX.find r1 used_by with
     | exception Not_found -> eqs
     | sm ->
-      OMap.fold (fun sy se eqs ->
+      OMap.fold
+        (fun sy se eqs ->
           let fn =
-            (* The [fn] must be present because we only add symbols to
-               [used_by] if they are in the dispatch table. *)
+            (* The [fn] must be present because we only add symbols to [used_by]
+               if they are in the dispatch table. *)
             Option.get (dispatch sy)
           in
-          Expr.Set.fold (fun t eqs ->
+          Expr.Set.fold
+            (fun t eqs ->
               let { Expr.xs; f; _ } = Expr.term_view t in
               assert (Symbols.equal (Op sy) f);
               match fn uf sy xs with
               | Some (r, ex) ->
                 (L.Eq (X.term_embed t, r), None, ex, Th_util.Other) :: eqs
-              | None -> eqs) se eqs) sm eqs
+              | None -> eqs)
+            se eqs)
+        sm eqs
 
   let update env uf r1 r2 orig eqs =
     (* The `Subst` origin is used when `r1 -> r2` is added in the union-find, so
@@ -196,14 +205,14 @@ end = struct
     | Th_util.Subst when env.is_ready r2 -> update env uf r1 eqs
     | _ -> eqs
 
-
   let assume env uf la =
     let eqs =
-      List.fold_left (fun eqs (a, _root, _expl, orig) ->
+      List.fold_left
+        (fun eqs (a, _root, _expl, orig) ->
           match a with
           | Xliteral.Eq (r1, r2) -> update env uf r1 r2 orig eqs
-          | _ -> eqs
-        ) [] la
+          | _ -> eqs)
+        [] la
     in
     env, { Sig_rel.assume = assume_nontrivial_eqs eqs la; remove = [] }
 
@@ -224,8 +233,6 @@ module XComparable = struct
   let compare = X.hash_cmp
 
   module Set = SX
-
   module Map = MX
-
   module Table = HX
 end

@@ -27,8 +27,8 @@
 
 (** {1 Options interface module} *)
 
-(** This module aims to set options of the Alt-Ergo's lib that are set in
-    the worker_interface options type *)
+(** This module aims to set options of the Alt-Ergo's lib that are set in the
+    worker_interface options type *)
 
-(** Function use to set Alt-Ergo's options from worker_interface options type *)
 val set_options : Worker_interface.options -> unit
+(** Function use to set Alt-Ergo's options from worker_interface options type *)

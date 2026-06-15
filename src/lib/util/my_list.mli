@@ -25,9 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Lists utilies
-    This modules defines some helper functions on lists
-*)
+(** Lists utilies This modules defines some helper functions on lists *)
 
 (** {3 Misc functions} *)
 
@@ -44,18 +42,17 @@ val remove_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> ('a * 'b) list
 (** Similar to [List.remove_assoc] but use a monomorphic comparison function. *)
 
 val apply : ('a -> 'a) -> 'a list -> 'a list * bool
-(** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same]
-    same such that: (1) "same" is true if and only if a_i == a_i for
-    each i; and (2) if same is true, then the resulting list is
-    physically equal to the argument **)
+(** [apply f [a_1; ...; a_n]] returns a couple [[f a_1; ...; f a_n], same] same
+    such that: (1) "same" is true if and only if a_i == a_i for each i; and (2)
+    if same is true, then the resulting list is physically equal to the argument
+    **)
 
 val apply_right : ('a -> 'a) -> ('b * 'a) list -> ('b * 'a) list * bool
-(** similar to function apply, but the elements of the list are
-    couples **)
+(** similar to function apply, but the elements of the list are couples **)
 
 val try_map : ('a -> 'b option) -> 'a list -> 'b list option
-(** [try_map f l] is similar to [List.map f l] but the function [f]
-    may fail and the iterator shortcuts the computation. *)
+(** [try_map f l] is similar to [List.map f l] but the function [f] may fail and
+    the iterator shortcuts the computation. *)
 
 val is_sorted : ('a -> 'a -> int) -> 'a list -> bool
 (** [is_sorted cmp l] checks that [l] is sorted for the comparison function

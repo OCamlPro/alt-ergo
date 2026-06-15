@@ -18,7 +18,11 @@
 
 (* Note: keep the constructors in the same order as in the definition in
    [prelude_to_int] so that it gets simplified to the identity. *)
-type prelude = Nra | Ria | Fpa | SmtFloat
+type prelude =
+  | Nra
+  | Ria
+  | Fpa
+  | SmtFloat
 
 let[@inline] prelude_to_int = function
   | Nra -> 0
@@ -33,12 +37,9 @@ let pp_prelude ppf = function
   | SmtFloat -> Format.fprintf ppf "smt.float"
 
 let equal_prelude prelude1 prelude2 =
-  Int.equal
-    (prelude_to_int prelude1)
-    (prelude_to_int prelude2)
+  Int.equal (prelude_to_int prelude1) (prelude_to_int prelude2)
 
-let compare_prelude p1 p2 =
-  Int.compare (prelude_to_int p1) (prelude_to_int p2)
+let compare_prelude p1 p2 = Int.compare (prelude_to_int p1) (prelude_to_int p2)
 
 type t =
   | Prelude of prelude
@@ -47,24 +48,18 @@ type t =
 
 let equal t1 t2 =
   match t1, t2 with
-  | Prelude p1, Prelude p2 ->
-    equal_prelude p1 p2
-  | ADT, ADT
-  | AC, AC ->
-    true
-  | (Prelude _ | ADT | AC), _ ->
-    false
+  | Prelude p1, Prelude p2 -> equal_prelude p1 p2
+  | ADT, ADT | AC, AC -> true
+  | (Prelude _ | ADT | AC), _ -> false
 
 let compare t1 t2 =
   match t1, t2 with
   | Prelude p1, Prelude p2 -> compare_prelude p1 p2
   | Prelude _, _ -> -1
   | _, Prelude _ -> 1
-
   | ADT, ADT -> 0
   | ADT, _ -> -1
   | _, ADT -> 1
-
   | AC, AC -> 0
 
 let pp ppf = function
@@ -72,8 +67,7 @@ let pp ppf = function
   | ADT -> Format.fprintf ppf "adt"
   | AC -> Format.fprintf ppf "ac"
 
-let filename =
-  Format.asprintf "<builtins>/%a.ae" pp_prelude
+let filename = Format.asprintf "<builtins>/%a.ae" pp_prelude
 
 let get_prelude name =
   match Preludes.read name with
@@ -81,7 +75,9 @@ let get_prelude name =
   | None -> failwith (Fmt.str "Missing internal prelude: %s" name)
 
 let fpa_prelude = get_prelude "fpa.ae"
+
 let ria_prelude = get_prelude "ria.ae"
+
 let nra_prelude = get_prelude "nra.ae"
 
 let content = function
@@ -90,11 +86,11 @@ let content = function
   | Nra -> Some nra_prelude
   | SmtFloat -> None
 
-let all_preludes = [ Fpa; Ria; Nra; SmtFloat ]
+let all_preludes = [Fpa; Ria; Nra; SmtFloat]
 
-(* SmtFloat is only activated when the user passes --enable-theories smt.float.
-*)
-let default_preludes = [ Fpa; Ria; Nra ]
+(* SmtFloat is only activated when the user passes --enable-theories
+   smt.float. *)
+let default_preludes = [Fpa; Ria; Nra]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
@@ -102,7 +98,10 @@ let default = ADT :: AC :: List.map (fun p -> Prelude p) default_preludes
 
 let theory_enum = List.map (fun t -> Format.asprintf "%a" pp t, t) all
 
-let preludes =
-  List.filter_map (function | Prelude p -> Some p | _ -> None)
+let preludes = List.filter_map (function Prelude p -> Some p | _ -> None)
 
-module Set = Set.Make(struct type nonrec t = t let compare = compare end)
+module Set = Set.Make (struct
+  type nonrec t = t
+
+  let compare = compare
+end)

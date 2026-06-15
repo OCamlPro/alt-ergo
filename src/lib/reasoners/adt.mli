@@ -28,21 +28,25 @@
 val src : Logs.src
 
 type 'a abstract =
-  | Constr of {
-      c_name : Dolmen.Std.Expr.term_cst;
-      c_ty : Ty.t;
-      c_args : (Dolmen.Std.Expr.term_cst * 'a) list
-    }
-
-  | Select of { d_name : Dolmen.Std.Expr.term_cst ; d_ty : Ty.t ; d_arg : 'a }
-
+  | Constr of
+      { c_name : Dolmen.Std.Expr.term_cst;
+        c_ty : Ty.t;
+        c_args : (Dolmen.Std.Expr.term_cst * 'a) list
+      }
+  | Select of
+      { d_name : Dolmen.Std.Expr.term_cst;
+        d_ty : Ty.t;
+        d_arg : 'a
+      }
   | Alien of 'a
 
 module type ALIEN = sig
   include Sig.X
+
   val embed : r abstract -> r
-  val extract : r -> (r abstract) option
+
+  val extract : r -> r abstract option
 end
 
-module Shostak
-    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
+module Shostak (X : ALIEN) :
+  Sig.SHOSTAK with type r = X.r and type t = X.r abstract

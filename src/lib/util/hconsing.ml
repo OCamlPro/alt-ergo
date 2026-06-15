@@ -25,37 +25,45 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module type HASHED =
-sig
+module type HASHED = sig
   type elt
+
   val eq : elt -> elt -> bool
+
   val hash : elt -> int
+
   val set_id : int -> elt -> elt
+
   val initial_size : int
+
   val disable_weaks : unit -> bool
 end
 
-module type S =
-sig
+module type S = sig
   type t
-  val save_cache: unit -> unit
-  val reinit_cache: unit -> unit
+
+  val save_cache : unit -> unit
+
+  val reinit_cache : unit -> unit
+
   val make : t -> t
+
   val elements : unit -> t list
 end
 
-module Make(Hashed : HASHED) : (S with type t = Hashed.elt) =
-struct
+module Make (Hashed : HASHED) : S with type t = Hashed.elt = struct
   type t = Hashed.elt
 
-  module HWeak = Weak.Make
-      (struct
-        type t = Hashed.elt
-        let equal = Hashed.eq
-        let hash = Hashed.hash
-      end)
+  module HWeak = Weak.Make (struct
+    type t = Hashed.elt
+
+    let equal = Hashed.eq
+
+    let hash = Hashed.hash
+  end)
 
   let storage = HWeak.create Hashed.initial_size
+
   let retain_list = ref []
 
   let next_id = ref 0
@@ -67,11 +75,10 @@ struct
     let save_cache () =
       saved_retain_list := !retain_list;
       saved_nid := !next_id;
-      saved_storage := (
-        let hw = HWeak.create Hashed.initial_size in
-        HWeak.iter (HWeak.add hw) storage;
-        Some hw
-      )
+      saved_storage
+        := let hw = HWeak.create Hashed.initial_size in
+           HWeak.iter (HWeak.add hw) storage;
+           Some hw
     in
     let reinit_cache () =
       next_id := !saved_nid;
@@ -86,11 +93,13 @@ struct
   let make d =
     let d = Hashed.set_id !next_id d in
     let o = HWeak.merge storage d in
-    if o == d then begin
+    if o == d
+    then begin
       incr next_id;
-      if Hashed.disable_weaks() then
-        (* retain a pointer to 'd' to prevent the GC from collecting
-           the object if H.disable_weaks is set *)
+      if Hashed.disable_weaks ()
+      then
+        (* retain a pointer to 'd' to prevent the GC from collecting the object
+           if H.disable_weaks is set *)
         retain_list := d :: !retain_list
     end;
     o
@@ -99,5 +108,4 @@ struct
     let acc = ref [] in
     HWeak.iter (fun e -> acc := e :: !acc) storage;
     !acc
-
 end

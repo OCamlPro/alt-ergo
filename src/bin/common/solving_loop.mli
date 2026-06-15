@@ -26,13 +26,11 @@
 (**************************************************************************)
 
 exception Exit_with_code of int
-(** Exception raised to notify that [process_source] cannot continue.
-    The integer corresponds to an error code. *)
+(** Exception raised to notify that [process_source] cannot continue. The
+    integer corresponds to an error code. *)
 
-type parse_result = {
-  path : [`Stdin | `File of string];
-  (** Path to the input file. *)
-}
+type parse_result =
+  { path : [`Stdin | `File of string]  (** Path to the input file. *) }
 
 val main : parse_result -> unit
 (** [main path] solves the input problem [path]. *)
@@ -42,10 +40,10 @@ val process_source :
   print_status:(AltErgoLib.Frontend.status -> int -> unit) ->
   Dolmen_loop.State.source ->
   unit
-(** [process_source ?selector_inst ~print_status src] processes the
-    input source [src] and call [print_status] on each answers.
-    The hook [selector_inst] allows to track generated instantiations.
+(** [process_source ?selector_inst ~print_status src] processes the input source
+    [src] and call [print_status] on each answers. The hook [selector_inst]
+    allows to track generated instantiations.
 
-    @raise Exit_with_code c with c <> 0 if a fatal error occurs.
-           Recovarable errors raise this exception if
-           [Options.get_exit_on_error ()] is [true]. *)
+    @raise Exit_with_code
+      c with c <> 0 if a fatal error occurs. Recovarable errors raise this
+      exception if [Options.get_exit_on_error ()] is [true]. *)

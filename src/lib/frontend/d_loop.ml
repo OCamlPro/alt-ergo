@@ -28,24 +28,26 @@ module State = struct
     let loc = Dolmen.Std.Misc.opt_map loc Dolmen.Std.Loc.full_loc in
     let aux _ =
       let code, descr = Dl.(Code.descr Dl.Report.Error.(code error)) in
-      raise (Errors.(error (Dolmen_error (code, descr))))
+      raise Errors.(error (Dolmen_error (code, descr)))
     in
     match get report_style st with
     | Minimal ->
-      Format.kfprintf aux (Options.Output.get_fmt_diagnostic ())
-        "E:%s@." (Dl.Report.Error.mnemonic error)
+      Format.kfprintf aux
+        (Options.Output.get_fmt_diagnostic ())
+        "E:%s@."
+        (Dl.Report.Error.mnemonic error)
     | Regular | Contextual ->
-      Format.kfprintf aux (Options.Output.get_fmt_diagnostic ())
-        ("@[<v>%a%a @[<hov>%a@]%a@]@.")
-        (pp_loc ?file st) loc
-        Fmt.(styled `Bold @@ styled (`Fg (`Hi `Red)) string) "Error"
-        Dl.Report.Error.print (error, payload)
+      Format.kfprintf aux
+        (Options.Output.get_fmt_diagnostic ())
+        "@[<v>%a%a @[<hov>%a@]%a@]@." (pp_loc ?file st) loc
+        Fmt.(styled `Bold @@ styled (`Fg (`Hi `Red)) string)
+        "Error" Dl.Report.Error.print (error, payload)
         Dl.Report.Error.print_hints (error, payload)
 end
-module Pipeline = Dl.Pipeline.Make(State)
 
-module Parser = Dolmen_loop.Parser.Make(State)
-module Header = Dolmen_loop.Headers.Make(State)
-module Typer = Dolmen_loop.Typer.Typer(State)
+module Pipeline = Dl.Pipeline.Make (State)
+module Parser = Dolmen_loop.Parser.Make (State)
+module Header = Dolmen_loop.Headers.Make (State)
+module Typer = Dolmen_loop.Typer.Typer (State)
 module Typer_Pipe =
-  Dolmen_loop.Typer.Make(DStd.Expr)(DStd.Expr.Print)(State)(Typer)
+  Dolmen_loop.Typer.Make (DStd.Expr) (DStd.Expr.Print) (State) (Typer)

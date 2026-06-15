@@ -26,7 +26,6 @@
 (**************************************************************************)
 
 module DE = Dolmen.Std.Expr
-
 module TvSet = Set.Make (DE.Ty.Var)
 module TvMap = Map.Make (DE.Ty.Var)
 
@@ -50,10 +49,8 @@ module Smtlib = struct
     | Tbool -> Fmt.pf ppf "Bool"
     | Tbitv n -> Fmt.pf ppf "(_ BitVec %d)" n
     | Tfloat (eb, sb) -> Fmt.pf ppf "(_ FloatingPoint %d %d)" eb sb
-    | Tfarray (a_t, r_t) ->
-      Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
-    | Text ([], name) | Tadt (name, []) ->
-      DE.Ty.Const.print ppf name
+    | Tfarray (a_t, r_t) -> Fmt.pf ppf "(Array %a %a)" pp a_t pp r_t
+    | Text ([], name) | Tadt (name, []) -> DE.Ty.Const.print ppf name
     | Text (args, name) | Tadt (name, args) ->
       Fmt.(pf ppf "(@[%a %a@])" DE.Ty.Const.print name (list ~sep:sp pp) args)
     | Tvar tv -> DE.Ty.Var.print ppf tv
@@ -61,11 +58,12 @@ end
 
 let pp_smtlib = Smtlib.pp
 
-exception TypeClash of t*t
+exception TypeClash of t * t
 
 type adt_constr =
-  { constr : DE.term_cst ;
-    destrs : (DE.term_cst * t) list }
+  { constr : DE.term_cst;
+    destrs : (DE.term_cst * t) list
+  }
 
 type type_body = adt_constr list
 
@@ -73,18 +71,16 @@ let assoc_destrs hs cases =
   let res = ref None in
   try
     List.iter
-      (fun {constr = s ; destrs = t} ->
-         if DE.Term.Const.equal hs s then begin
-           res := Some t;
-           raise Exit
-         end
-      )cases;
+      (fun { constr = s; destrs = t } ->
+        if DE.Term.Const.equal hs s
+        then begin
+          res := Some t;
+          raise Exit
+        end)
+      cases;
     raise Not_found
-  with Exit ->
-  match !res with
-  | None -> assert false
-  | Some destrs -> destrs
-
+  with Exit -> (
+    match !res with None -> assert false | Some destrs -> destrs)
 
 (*** pretty print ***)
 let print_generic body_of =
@@ -97,132 +93,124 @@ let print_generic body_of =
       | Tbitv n -> fprintf fmt "bitv[%d]" n
       | Tfloat (eb, sb) -> fprintf fmt "float[%d,%d]" eb sb
       | Tvar tv -> fprintf fmt "'a_%a" DE.Ty.Var.print tv
-      | Text(l, s) when l == [] ->
-        fprintf fmt "<ext>%a" DE.Ty.Const.print s
-      | Text(l,s) ->
-        fprintf fmt "%a <ext>%a" print_list l DE.Ty.Const.print s
+      | Text (l, s) when l == [] -> fprintf fmt "<ext>%a" DE.Ty.Const.print s
+      | Text (l, s) -> fprintf fmt "%a <ext>%a" print_list l DE.Ty.Const.print s
       | Tfarray (t1, t2) ->
         fprintf fmt "(%a,%a) farray" (print body_of) t1 (print body_of) t2
       | Tadt (n, lv) ->
         fprintf fmt "%a <adt>%a" print_list lv DE.Ty.Const.print n;
         begin match body_of with
-          | None -> ()
-          | Some type_body ->
-            let cases = type_body n lv in
-            fprintf fmt " = {";
-            let first = ref true in
-            List.iter
-              (fun {constr = s ; destrs = t} ->
-                 fprintf fmt "%s%a%a" (if !first then "" else " | ")
-                   DE.Term.Const.print s print_adt_tuple t;
-                 first := false
-              ) cases;
-            fprintf fmt "}"
+        | None -> ()
+        | Some type_body ->
+          let cases = type_body n lv in
+          fprintf fmt " = {";
+          let first = ref true in
+          List.iter
+            (fun { constr = s; destrs = t } ->
+              fprintf fmt "%s%a%a"
+                (if !first then "" else " | ")
+                DE.Term.Const.print s print_adt_tuple t;
+              first := false)
+            cases;
+          fprintf fmt "}"
         end
-
   and print_adt_tuple fmt = function
     | [] -> ()
-    | (d, e)::l ->
+    | (d, e) :: l ->
       Format.fprintf fmt " of { %a : %a " DE.Term.Const.print d (print None) e;
       List.iter
         (fun (d, e) ->
-           Format.fprintf fmt "; %a : %a " DE.Term.Const.print d (print None) e
-        ) l;
+          Format.fprintf fmt "; %a : %a " DE.Term.Const.print d (print None) e)
+        l;
       Format.fprintf fmt "}"
-
   and print_list fmt = function
     | [] -> ()
     | [t] -> Format.fprintf fmt "%a " (print body_of) t
-    | t::l ->
+    | t :: l ->
       Format.fprintf fmt "(%a" (print body_of) t;
       List.iter (Format.fprintf fmt ", %a" (print body_of)) l;
       Format.fprintf fmt ")"
   in
   let print body_of ppf t =
-    if Options.get_output_smtlib () then
-      pp_smtlib ppf t
-    else
-      print body_of ppf t
+    if Options.get_output_smtlib ()
+    then pp_smtlib ppf t
+    else print body_of ppf t
   and print_list ppf ts =
-    if Options.get_output_smtlib () then
-      Fmt.(list ~sep:sp pp_smtlib |> parens) ppf ts
-    else
-      print_list ppf ts
+    if Options.get_output_smtlib ()
+    then Fmt.(list ~sep:sp pp_smtlib |> parens) ppf ts
+    else print_list ppf ts
   in
   print, print_list
 
 let print_list = snd (print_generic None)
-let print      = fst (print_generic None) None
+
+let print = fst (print_generic None) None
 
 let fresh_tvar () = Tvar (DE.Ty.Var.mk "A")
 
 let rec compare t1 t2 =
   match t1, t2 with
   | Tvar v1, Tvar v2 -> DE.Ty.Var.compare v1 v2
-  | Tvar _, _ -> -1 | _ , Tvar _ -> 1
-  | Text(l1, s1) , Text(l2, s2) ->
+  | Tvar _, _ -> -1
+  | _, Tvar _ -> 1
+  | Text (l1, s1), Text (l2, s2) ->
     let c = DE.Ty.Const.compare s1 s2 in
-    if c<>0 then c
-    else compare_list l1 l2
-  | Text _, _ -> -1 | _ , Text _ -> 1
-  | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
+    if c <> 0 then c else compare_list l1 l2
+  | Text _, _ -> -1
+  | _, Text _ -> 1
+  | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     let c = compare ta1 tb1 in
-    if c<>0 then c
-    else compare ta2 tb2
-  | Tfarray _, _ -> -1 | _ , Tfarray _ -> 1
+    if c <> 0 then c else compare ta2 tb2
+  | Tfarray _, _ -> -1
+  | _, Tfarray _ -> 1
   | Tadt (s1, pars1), Tadt (s2, pars2) ->
     let c = DE.Ty.Const.compare s1 s2 in
-    if c <> 0 then c
-    else compare_list pars1 pars2
+    if c <> 0 then c else compare_list pars1 pars2
   (* no need to compare bodies *)
-
-  | Tadt _, _ -> -1 | _ , Tadt _ -> 1
-
+  | Tadt _, _ -> -1
+  | _, Tadt _ -> 1
   | Tint, Tint -> 0
-  | Tint, _ -> -1 | _, Tint -> 1
-
+  | Tint, _ -> -1
+  | _, Tint -> 1
   | Treal, Treal -> 0
-  | Treal, _ -> -1 | _, Treal -> 1
-
+  | Treal, _ -> -1
+  | _, Treal -> 1
   | Tbool, Tbool -> 0
-  | Tbool, _ -> -1 | _, Tbool -> 1
-
+  | Tbool, _ -> -1
+  | _, Tbool -> 1
   | Tbitv sz1, Tbitv sz2 -> Int.compare sz1 sz2
-  | Tbitv _, _ -> -1 | _, Tbitv _ -> 1
-
+  | Tbitv _, _ -> -1
+  | _, Tbitv _ -> 1
   | Tfloat (eb1, sb1), Tfloat (eb2, sb2) ->
     let c = Int.compare eb1 eb2 in
     if c <> 0 then c else Int.compare sb1 sb2
 
-and compare_list l1 l2 = match l1, l2 with
-  | [] , [] -> 0
-  | [] , _ -> -1
-  | _ , [] -> 1
-  | x::ll1 , y::ll2 ->
+and compare_list l1 l2 =
+  match l1, l2 with
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+  | x :: ll1, y :: ll2 ->
     let c = compare x y in
-    if c<>0 then c else compare_list ll1 ll2
+    if c <> 0 then c else compare_list ll1 ll2
 
 let rec equal t1 t2 =
-  t1 == t2 ||
+  t1 == t2
+  ||
   match t1, t2 with
   | Tvar v1, Tvar v2 -> DE.Ty.Var.equal v1 v2
-  | Text(l1, s1), Text(l2, s2) ->
-    (try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
-     with Invalid_argument _ -> false)
-  | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
-    equal ta1 tb1 && equal ta2 tb2
+  | Text (l1, s1), Text (l2, s2) -> (
+    try DE.Ty.Const.equal s1 s2 && List.for_all2 equal l1 l2
+    with Invalid_argument _ -> false)
+  | Tfarray (ta1, ta2), Tfarray (tb1, tb2) -> equal ta1 tb1 && equal ta2 tb2
   | Tint, Tint | Treal, Treal | Tbool, Tbool -> true
-  | Tbitv n1, Tbitv n2 -> n1 =n2
-  | Tfloat (eb1, sb1), Tfloat (eb2, sb2) ->
-    eb1 = eb2 && sb1 = sb2
-
-  | Tadt (s1, pars1), Tadt (s2, pars2) ->
-    begin
-      try DE.Ty.Const.equal s1 s2 && List.for_all2 equal pars1 pars2
-      with Invalid_argument _ -> false
-      (* no need to compare bodies *)
-    end
-
+  | Tbitv n1, Tbitv n2 -> n1 = n2
+  | Tfloat (eb1, sb1), Tfloat (eb2, sb2) -> eb1 = eb2 && sb1 = sb2
+  | Tadt (s1, pars1), Tadt (s2, pars2) -> begin
+    try DE.Ty.Const.equal s1 s2 && List.for_all2 equal pars1 pars2
+    with Invalid_argument _ -> false
+    (* no need to compare bodies *)
+  end
   | _ -> false
 
 (*** matching with a substitution mechanism ***)
@@ -231,58 +219,49 @@ type subst = t TvMap.t
 let esubst = TvMap.empty
 
 let rec matching s pat t =
-  match pat , t with
-  | Tvar v , _ ->
-    (try
-       if not (equal (TvMap.find v s) t) then
-         raise (TypeClash (pat,t));
-       s
-     with Not_found -> TvMap.add v t s)
-  | Text (l1,s1) , Text (l2,s2) when DE.Ty.Const.equal s1 s2 ->
+  match pat, t with
+  | Tvar v, _ -> (
+    try
+      if not (equal (TvMap.find v s) t) then raise (TypeClash (pat, t));
+      s
+    with Not_found -> TvMap.add v t s)
+  | Text (l1, s1), Text (l2, s2) when DE.Ty.Const.equal s1 s2 ->
     List.fold_left2 matching s l1 l2
-  | Tfarray (ta1,ta2), Tfarray (tb1,tb2) ->
+  | Tfarray (ta1, ta2), Tfarray (tb1, tb2) ->
     matching (matching s ta1 tb1) ta2 tb2
-  | Tint , Tint | Tbool , Tbool | Treal , Treal -> s
-  | Tbitv n , Tbitv m when n=m -> s
+  | Tint, Tint | Tbool, Tbool | Treal, Treal -> s
+  | Tbitv n, Tbitv m when n = m -> s
   | Tfloat (eb1, sb1), Tfloat (eb2, sb2) when eb1 = eb2 && sb1 = sb2 -> s
-  | Tadt(n1, args1), Tadt(n2, args2) when DE.Ty.Const.equal n1 n2 ->
+  | Tadt (n1, args1), Tadt (n2, args2) when DE.Ty.Const.equal n1 n2 ->
     List.fold_left2 matching s args1 args2
-  | _ , _ ->
-    raise (TypeClash(pat,t))
+  | _, _ -> raise (TypeClash (pat, t))
 
 let apply_subst =
   let rec apply_subst s ty =
     match ty with
-    | Tvar v ->
-      (try TvMap.find v s with Not_found -> ty)
-
-    | Text (l,e) ->
+    | Tvar v -> ( try TvMap.find v s with Not_found -> ty)
+    | Text (l, e) ->
       let l, same = My_list.apply (apply_subst s) l in
-      if same then ty else Text(l, e)
-
-    | Tfarray (t1,t2) ->
+      if same then ty else Text (l, e)
+    | Tfarray (t1, t2) ->
       let t1' = apply_subst s t1 in
       let t2' = apply_subst s t2 in
       if t1 == t1' && t2 == t2' then ty else Tfarray (t1', t2')
-
-    | Tadt(name, params)
-      [@ocaml.ppwarning "TODO: detect when there are no changes "]
-      ->
+    | ((Tadt (name, params))
+       [@ocaml.ppwarning "TODO: detect when there are no changes "]) ->
       Tadt (name, List.map (apply_subst s) params)
-
     | Tint | Treal | Tbool | Tbitv _ | Tfloat _ -> ty
   in
   fun s ty -> if TvMap.is_empty s then ty else apply_subst s ty
 
 let rec fresh ty subst =
   match ty with
-  | Tvar v ->
-    begin
-      try TvMap.find v subst, subst
-      with Not_found ->
-        let nv = fresh_tvar () in
-        nv, TvMap.add v nv subst
-    end
+  | Tvar v -> begin
+    try TvMap.find v subst, subst
+    with Not_found ->
+      let nv = fresh_tvar () in
+      nv, TvMap.add v nv subst
+  end
   | Text (args, n) ->
     let args, subst = fresh_list args subst in
     Text (args, n), subst
@@ -290,71 +269,71 @@ let rec fresh ty subst =
     let ty1, subst = fresh ty1 subst in
     let ty2, subst = fresh ty2 subst in
     Tfarray (ty1, ty2), subst
-  | Tadt(s,args) ->
+  | Tadt (s, args) ->
     let args, subst = fresh_list args subst in
-    Tadt (s,args), subst
+    Tadt (s, args), subst
   | t -> t, subst
 
 and fresh_list lty subst =
   List.fold_right
     (fun ty (lty, subst) ->
-       let ty, subst = fresh ty subst in
-       ty::lty, subst) lty ([], subst)
+      let ty, subst = fresh ty subst in
+      ty :: lty, subst)
+    lty ([], subst)
 
 module Decls = struct
-
   module MH = Map.Make (DE.Ty.Const)
 
-  module MTY = Map.Make(struct
-      type ty = t
-      type t = ty list
-      let compare = compare_list
-    end)
+  module MTY = Map.Make (struct
+    type ty = t
+
+    type t = ty list
+
+    let compare = compare_list
+  end)
 
   type decl =
     { decl : t list * type_body;
-      instances : type_body MTY.t }
+      instances : type_body MTY.t
+    }
 
   type decls = decl MH.t
 
   let (decls : decls ref) = ref MH.empty
 
-
   let fresh_type params cases =
     let params, subst = fresh_list params esubst in
     let _subst, cases =
       List.fold_left
-        (fun (subst, cases) {constr; destrs} ->
-           let subst, destrs =
-             List.fold_left
-               (fun (subst, destrs) (d, ty) ->
-                  let ty, subst = fresh ty subst in
-                  subst, (d, ty) :: destrs
-               )(subst, []) (List.rev destrs)
-           in
-           subst, {constr; destrs} :: cases
-        )(subst, []) (List.rev cases)
+        (fun (subst, cases) { constr; destrs } ->
+          let subst, destrs =
+            List.fold_left
+              (fun (subst, destrs) (d, ty) ->
+                let ty, subst = fresh ty subst in
+                subst, (d, ty) :: destrs)
+              (subst, []) (List.rev destrs)
+          in
+          subst, { constr; destrs } :: cases)
+        (subst, []) (List.rev cases)
     in
     params, cases
-
 
   let add name params body =
     try
       let decl = MH.find name !decls in
-      let decl = {decl with instances = MTY.add params body decl.instances} in
+      let decl = { decl with instances = MTY.add params body decl.instances } in
       decls := MH.add name decl !decls
     with Not_found ->
       let params, body = fresh_type params body in
-      decls :=
-        MH.add name {decl = (params, body); instances = MTY.empty} !decls
+      decls := MH.add name { decl = params, body; instances = MTY.empty } !decls
 
   let body name args =
     try
-      let {decl = (params, body); instances} = MH.find name !decls in
+      let { decl = params, body; instances } = MH.find name !decls in
       try
-        if compare_list params args = 0 then body
-        else MTY.find args instances
-      (* should I instantiate if not found ?? *)
+        if compare_list params args = 0
+        then body
+        else MTY.find args instances (* should I instantiate if not found ?? *)
       with Not_found ->
         let params, cases = fresh_type params body in
         (*if true || get_debug_adt () then*)
@@ -362,23 +341,21 @@ module Decls = struct
           try
             List.fold_left2
               (fun sbt vty ty ->
-                 match vty with
-                 | Tvar v ->
-                   if equal vty ty then sbt else TvMap.add v ty sbt
-                 | _ ->
-                   Printer.print_err "vty = %a and ty = %a"
-                     print vty print ty;
-                   assert false
-              ) TvMap.empty params args
+                match vty with
+                | Tvar v -> if equal vty ty then sbt else TvMap.add v ty sbt
+                | _ ->
+                  Printer.print_err "vty = %a and ty = %a" print vty print ty;
+                  assert false)
+              TvMap.empty params args
           with Invalid_argument _ -> assert false
         in
         let cases =
           List.map
-            (fun {constr; destrs} ->
-               {constr;
-                destrs =
-                  List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs }
-            ) cases
+            (fun { constr; destrs } ->
+              { constr;
+                destrs = List.map (fun (d, ty) -> d, apply_subst sbt ty) destrs
+              })
+            cases
         in
         let params = List.map (fun ty -> apply_subst sbt ty) params in
         add name params cases;
@@ -388,11 +365,9 @@ module Decls = struct
       assert false
 
   let reinit () = decls := MH.empty
-
 end
 
 let type_body name args = Decls.body name args
-
 
 (* smart constructors *)
 let text l s = Text (l, s)
@@ -408,16 +383,14 @@ let fresh_empty_text =
     in
     text [] id
 
-let t_adt ?(body=None) s ty_vars =
+let t_adt ?(body = None) s ty_vars =
   let ty = Tadt (s, ty_vars) in
   begin match body with
-    | None -> ()
-    | Some [] -> assert false
-    | Some cases ->
-      let cases =
-        List.map (fun (constr, destrs) -> {constr; destrs}) cases
-      in
-      Decls.add s ty_vars cases
+  | None -> ()
+  | Some [] -> assert false
+  | Some cases ->
+    let cases = List.map (fun (constr, destrs) -> { constr; destrs }) cases in
+    Decls.add s ty_vars cases
   end;
   ty
 
@@ -434,18 +407,17 @@ let tunit =
 let rec hash t =
   match t with
   | Tvar tv -> DE.Ty.Var.hash tv
-  | Text(l,s) ->
-    abs (List.fold_left (fun acc x-> acc*19 + hash x) (DE.Ty.Const.hash s) l)
-  | Tfarray (t1,t2) -> 19 * (hash t1) + 23 * (hash t2)
+  | Text (l, s) ->
+    abs
+      (List.fold_left (fun acc x -> (acc * 19) + hash x) (DE.Ty.Const.hash s) l)
+  | Tfarray (t1, t2) -> (19 * hash t1) + (23 * hash t2)
   | Tadt (ty, args) ->
     (* We do not hash constructors. *)
     let h =
-      List.fold_left (fun h ty -> 31 * h + hash ty) (DE.Ty.Const.hash ty) args
+      List.fold_left (fun h ty -> (31 * h) + hash ty) (DE.Ty.Const.hash ty) args
     in
     abs h
-
   | Tfloat _ -> 17
-
   | _ -> Hashtbl.hash t
 
 let compare_subst = TvMap.compare compare
@@ -454,38 +426,40 @@ let equal_subst = TvMap.equal equal
 
 module Svty = Util.SI
 
-module Set =
-  Set.Make(struct
-    type t' = t
-    type t = t'
-    let compare = compare
-  end)
+module Set = Set.Make (struct
+  type t' = t
+
+  type t = t'
+
+  let compare = compare
+end)
 
 let vty_of t =
   let rec vty_of_rec acc t =
     match t with
     | Tvar tv -> TvSet.add tv acc
-    | Text (l,_) -> List.fold_left vty_of_rec acc l
-    | Tfarray (t1,t2) -> vty_of_rec (vty_of_rec acc t1) t2
-    | Tadt(_, args) ->
-      List.fold_left vty_of_rec acc args
-
-    | Tint | Treal | Tbool | Tbitv _ | Tfloat _ ->
-      acc
+    | Text (l, _) -> List.fold_left vty_of_rec acc l
+    | Tfarray (t1, t2) -> vty_of_rec (vty_of_rec acc t1) t2
+    | Tadt (_, args) -> List.fold_left vty_of_rec acc args
+    | Tint | Treal | Tbool | Tbitv _ | Tfloat _ -> acc
   in
   vty_of_rec TvSet.empty t
 
 let print_subst =
   let sep ppf () = Fmt.pf ppf " -> " in
-  Fmt.(box @@ braces
-       @@ iter_bindings ~sep:comma TvMap.iter (pair ~sep DE.Ty.Var.print print))
+  Fmt.(
+    box @@ braces
+    @@ iter_bindings ~sep:comma TvMap.iter (pair ~sep DE.Ty.Var.print print))
 
-let print_full =
-  fst (print_generic (Some type_body)) (Some type_body)
+let print_full = fst (print_generic (Some type_body)) (Some type_body)
 
 (** Goal sort *)
 
-type goal_sort = Cut | Check | Thm | Sat
+type goal_sort =
+  | Cut
+  | Check
+  | Thm
+  | Sat
 
 let print_goal_sort fmt = function
   | Cut -> Format.fprintf fmt "cut"
@@ -498,8 +472,8 @@ let fresh_hypothesis_name =
   fun sort ->
     incr cpt;
     match sort with
-    | Thm | Sat -> "@H"^(string_of_int !cpt)
-    | _ -> "@L"^(string_of_int !cpt)
+    | Thm | Sat -> "@H" ^ string_of_int !cpt
+    | _ -> "@L" ^ string_of_int !cpt
 
 let is_local_hyp s =
   try String.equal (String.sub s 0 2) "@L" with Invalid_argument _ -> false

@@ -30,7 +30,7 @@ val get : Util.sat_solver -> (module Sat_solver_sig.SatContainer)
 
 val get_current : unit -> (module Sat_solver_sig.SatContainer)
 (** returns the current activated SAT-solver depending on the value of
-    `Options.sat_solver ()`. See command-line option `-sat-solver` for
-    more details **)
+    `Options.sat_solver ()`. See command-line option `-sat-solver` for more
+    details **)
 
 val get_theory : no_th:bool -> (module Theory.S)

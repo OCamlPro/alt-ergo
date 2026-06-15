@@ -28,36 +28,36 @@
 (** Module_Name
 
     This module aims to count the number of steps in the theories used to solve
-    the problem.
-*)
+    the problem. *)
 
 (** {1 Steps counters} *)
 
-type incr_kind =
-    Matching          (** Matching step increment *)
-  | Interval_Calculus (** Arith : Interval Calculus increment *)
-  | Fourier           (** Arith : FourierMotzkin step increment *)
-  | Omega             (** Arith : number of omega procedure on  Real and Int *)
-  | Uf                (** UF step increment *)
-  | Ac                (** AC step reasoning *)
-  | CP                (** Constraint propagation *)
-  | Th_assumed of int (** Increment the counter for each term assumed in the
-                          theories environment *)
 (** Define the type of increment *)
+type incr_kind =
+  | Matching  (** Matching step increment *)
+  | Interval_Calculus  (** Arith : Interval Calculus increment *)
+  | Fourier  (** Arith : FourierMotzkin step increment *)
+  | Omega  (** Arith : number of omega procedure on Real and Int *)
+  | Uf  (** UF step increment *)
+  | Ac  (** AC step reasoning *)
+  | CP  (** Constraint propagation *)
+  | Th_assumed of int
+      (** Increment the counter for each term assumed in the theories
+          environment *)
 
-(** Returns the max number of bounds *)
 val get_steps_bound : unit -> int
+(** Returns the max number of bounds *)
 
-(** Sets the max number of bounds *)
 val set_steps_bound : int -> unit
+(** Sets the max number of bounds *)
 
-val incr  : incr_kind -> unit
+val incr : incr_kind -> unit
 (** Increment the number of steps depending of the incr_kind
-    @raise Errors.Error.Invalid_steps_count if the number of steps is inbound
-    by the --steps-bound option.
+    @raise Errors.Error.Invalid_steps_count
+      if the number of steps is inbound by the --steps-bound option.
     @raise Run_error
-    {!Errors.Invalid_steps_count} if the number of steps sent to the theories
-     is invalid.
+      {!Errors.Invalid_steps_count} if the number of steps sent to the theories
+      is invalid.
     @raise {!Util.Step_limit_reached} if the number of steps is reached *)
 
 val reset_steps : unit -> unit
@@ -72,14 +72,14 @@ val reinit_steps : unit -> unit
 val get_steps : unit -> int
 (** Return the number of steps *)
 
-(** Return the number of case-split steps *)
 val cs_steps : unit -> int
+(** Return the number of case-split steps *)
 
-(** Increase the number of case-split steps *)
 val incr_cs_steps : unit -> unit
+(** Increase the number of case-split steps *)
 
-(** Disables the step limit during the execution of the continuation. *)
 val apply_without_step_limit : (unit -> 'a) -> 'a
+(** Disables the step limit during the execution of the continuation. *)
 
 (** {2 Incrementality} *)
 

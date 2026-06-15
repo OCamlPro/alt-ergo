@@ -30,8 +30,8 @@ open Intervals_intf
 val src : Logs.src
 
 val map_bound : ('a -> 'b) -> 'a bound -> 'b bound
-(** [map_bound f b] applies [f] to a finite (open or closed) bound [b] and
-    does not change an unbounded bound. *)
+(** [map_bound f b] applies [f] to a finite (open or closed) bound [b] and does
+    not change an unbounded bound. *)
 
 (** This module provides implementations of union-of-intervals over reals and
     integers. *)
@@ -40,26 +40,28 @@ type 'a union
 (** Polymorphic union type. This allows writing conversion functions between
     integer and real unions. *)
 
-module Real : AlgebraicField
-  with type explanation := Explanation.t
-   and type value := Q.t
-   and type 'a union = 'a union
 (** Union-of-intervals over real numbers. *)
+module Real :
+  AlgebraicField
+    with type explanation := Explanation.t
+     and type value := Q.t
+     and type 'a union = 'a union
 
 (** Union-of-intervals over integers. *)
 module Int : sig
-  include EuclideanRing
-    with type explanation := Explanation.t
-     and type value := Z.t
-     and type 'a union = 'a union
+  include
+    EuclideanRing
+      with type explanation := Explanation.t
+       and type value := Z.t
+       and type 'a union = 'a union
 
   (** {2 Bit-vector helpers}
 
-      These functions are intended for the BV theory. They can only be used
-      with integer intervals. Some of these functions return intervals "of
-      width [n]", where [n] is computed from the parameters of the
-      function. This means that the returned interval is contained in the
-      range [[0, n)] ([0] inclusive, [n] exclusive). *)
+      These functions are intended for the BV theory. They can only be used with
+      integer intervals. Some of these functions return intervals "of width
+      [n]", where [n] is computed from the parameters of the function. This
+      means that the returned interval is contained in the range {m [0, n)} ([0]
+      inclusive, [n] exclusive). *)
 
   val lognot : t -> t
   (** Bitwise logical negation. [lognot u] always returns [-u - 1]. *)
@@ -72,9 +74,9 @@ module Int : sig
 
       Requires [0 <= i <= j] and returns an interval of width [j - i + 1].
 
-      {b Note}: The interval [s] must be an integer interval, but is
-      allowed to be unbounded (in which case [extract s i j] returns the
-      full interval [[0, 2^(j - i + 1) - 1]]). *)
+      {b Note}: The interval [s] must be an integer interval, but is allowed to
+      be unbounded (in which case [extract s i j] returns the full interval
+      [[0, 2^(j - i + 1) - 1]]). *)
 
   val bvudiv : size:int -> t -> t -> t
   (** [bvudiv sz s t] computes an overapproximation of integer division for
@@ -111,6 +113,7 @@ module Legacy : sig
   type t
 
   exception NotConsistent of Explanation.t
+
   exception No_finite_bound
 
   val undefined : Ty.t -> t
@@ -121,17 +124,17 @@ module Legacy : sig
 
   val is_strict_smaller : t -> t -> bool
 
-  val new_borne_sup : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
+  val new_borne_sup : Explanation.t -> Numbers.Q.t -> is_le:bool -> t -> t
 
-  val new_borne_inf : Explanation.t -> Numbers.Q.t -> is_le : bool -> t -> t
+  val new_borne_inf : Explanation.t -> Numbers.Q.t -> is_le:bool -> t -> t
 
   val only_borne_sup : t -> t
-  (** Keep only the upper bound of the interval,
-      setting the lower bound to minus infty. *)
+  (** Keep only the upper bound of the interval, setting the lower bound to
+      minus infty. *)
 
   val only_borne_inf : t -> t
-  (** Keep only the lower bound of the interval,
-      setting the upper bound to plus infty. *)
+  (** Keep only the lower bound of the interval, setting the upper bound to plus
+      infty. *)
 
   val is_point : t -> (Numbers.Q.t * Explanation.t) option
 
@@ -150,11 +153,10 @@ module Legacy : sig
   val scale : Numbers.Q.t -> t -> t
 
   val affine_scale : const:Numbers.Q.t -> coef:Numbers.Q.t -> t -> t
-  (** Perform an affine transformation on the given bounds.
-      Supposing input bounds (b1, b2), this will return
-      (const + coef * b1, const + coef * b2).
-      This function is useful to avoid the incorrect roundings that
-      can take place when scaling down an integer range.
+  (** Perform an affine transformation on the given bounds. Supposing input
+      bounds (b1, b2), this will return (const + coef * b1, const + coef * b2).
+      This function is useful to avoid the incorrect roundings that can take
+      place when scaling down an integer range.
 
       @raise Invalid_argument if [coef] is zero. *)
 
@@ -166,22 +168,21 @@ module Legacy : sig
 
   val integer_hull :
     t ->
-    (Numbers.Z.t * Explanation.t) option *
-    (Numbers.Z.t * Explanation.t) option
+    (Numbers.Z.t * Explanation.t) option * (Numbers.Z.t * Explanation.t) option
 
   val borne_inf : t -> Numbers.Q.t * Explanation.t * bool
-  (** bool is true when bound is large. Raise: No_finite_bound if no
-      finite lower bound *)
+  (** bool is true when bound is large. Raise: No_finite_bound if no finite
+      lower bound *)
 
   val borne_sup : t -> Numbers.Q.t * Explanation.t * bool
-  (** bool is true when bound is large. Raise: No_finite_bound if no
-      finite upper bound*)
+  (** bool is true when bound is large. Raise: No_finite_bound if no finite
+      upper bound*)
 
   val div : t -> t -> t
 
   val coerce : Ty.t -> t -> t
-  (** Coerce an interval to the given type. The main use of that function is
-      to round a rational interval to an integer interval. This is particularly
+  (** Coerce an interval to the given type. The main use of that function is to
+      round a rational interval to an integer interval. This is particularly
       useful to avoid roudning too many times when manipulating intervals that
       at the end represent an integer interval, but whose intermediate state do
       not need to represent integer intervals (e.g. computing the interval for
@@ -195,21 +196,21 @@ module Legacy : sig
 
   val pick : is_max:bool -> t -> Numbers.Q.t
   (** [pick ~is_max t] returns an element of the union of intervals [t]. If
-      [is_max] is [true], we pick the largest element of [t], if it exists.
-      We look for the smallest element if [is_max] is [false]. *)
+      [is_max] is [true], we pick the largest element of [t], if it exists. We
+      look for the smallest element if [is_max] is [false]. *)
 
-  val fold :
-    ('a -> Q.t bound interval -> 'a) -> 'a -> t -> 'a
+  val fold : ('a -> Q.t bound interval -> 'a) -> 'a -> t -> 'a
 
   type interval_matching =
-    ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t)
-      Var.Map.t
+    ((Numbers.Q.t * bool) option * (Numbers.Q.t * bool) option * Ty.t) Var.Map.t
 
-  (** matchs the given lower and upper bounds against the given interval, and
-      update the given accumulator with the constraints. Returns None if
-      the matching problem is inconsistent
-  *)
-  val match_interval:
-    Symbols.bound -> Symbols.bound -> t -> interval_matching ->
+  val match_interval :
+    Symbols.bound ->
+    Symbols.bound ->
+    t ->
+    interval_matching ->
     interval_matching option
+  (** matchs the given lower and upper bounds against the given interval, and
+      update the given accumulator with the constraints. Returns None if the
+      matching problem is inconsistent *)
 end

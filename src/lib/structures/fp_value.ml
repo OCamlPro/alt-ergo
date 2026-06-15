@@ -24,36 +24,41 @@ type t =
   | Plus_zero
   | Minus_zero
   | NaN
-  | Finite of { neg : bool; biased_exp : int; significand : Z.t }
+  | Finite of
+      { neg : bool;
+        biased_exp : int;
+        significand : Z.t
+      }
 
 let compare v1 v2 =
-  Util.compare_algebraic v1 v2
-    (function
-      | Finite f1, Finite f2 ->
-        let c = Bool.compare f1.neg f2.neg in
-        if c <> 0 then c else
-          let c = Int.compare f1.biased_exp f2.biased_exp in
-          if c <> 0 then c else
-            Z.compare f1.significand f2.significand
-      | _, (Plus_infinity | Minus_infinity | Plus_zero
-           | Minus_zero | NaN | Finite _) ->
-        assert false)
+  Util.compare_algebraic v1 v2 (function
+    | Finite f1, Finite f2 ->
+      let c = Bool.compare f1.neg f2.neg in
+      if c <> 0
+      then c
+      else
+        let c = Int.compare f1.biased_exp f2.biased_exp in
+        if c <> 0 then c else Z.compare f1.significand f2.significand
+    | ( _,
+        ( Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN
+        | Finite _ ) ) ->
+      assert false)
 
 let pp ppf = function
-  | Plus_infinity  -> Fmt.pf ppf "+oo"
+  | Plus_infinity -> Fmt.pf ppf "+oo"
   | Minus_infinity -> Fmt.pf ppf "-oo"
-  | Plus_zero      -> Fmt.pf ppf "+zero"
-  | Minus_zero     -> Fmt.pf ppf "-zero"
-  | NaN            -> Fmt.pf ppf "NaN"
+  | Plus_zero -> Fmt.pf ppf "+zero"
+  | Minus_zero -> Fmt.pf ppf "-zero"
+  | NaN -> Fmt.pf ppf "NaN"
   | Finite { neg; biased_exp; significand } ->
     Fmt.pf ppf "fp[%b;%d;%s]" neg biased_exp (Z.to_string significand)
 
 let pp_smtlib eb sb ppf = function
-  | Plus_infinity  -> Fmt.pf ppf "(_ +oo %d %d)" eb sb
+  | Plus_infinity -> Fmt.pf ppf "(_ +oo %d %d)" eb sb
   | Minus_infinity -> Fmt.pf ppf "(_ -oo %d %d)" eb sb
-  | Plus_zero      -> Fmt.pf ppf "(_ +zero %d %d)" eb sb
-  | Minus_zero     -> Fmt.pf ppf "(_ -zero %d %d)" eb sb
-  | NaN            -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
+  | Plus_zero -> Fmt.pf ppf "(_ +zero %d %d)" eb sb
+  | Minus_zero -> Fmt.pf ppf "(_ -zero %d %d)" eb sb
+  | NaN -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
   | Finite { neg; biased_exp; significand } ->
     let bfmt n = Fmt.str "%%0%db" n in
     let sign_s = if neg then "1" else "0" in
@@ -68,13 +73,14 @@ let mk_fp_literal ~neg ~biased_exp ~mantissa e =
      another representation so the solver does not see the original terms)
      ideally it would be done at the semantic level, with the theory's `make`
      function for example (or something with domains/propagations?) *)
-  if biased_exp = max_exp then
+  if biased_exp = max_exp
+  then
     (* all-ones exponent: infinity or NaN *)
-    if Z.equal mantissa Z.zero then
-      (if neg then Minus_infinity else Plus_infinity)
+    if Z.equal mantissa Z.zero
+    then if neg then Minus_infinity else Plus_infinity
     else NaN
-  else if biased_exp = 0 && Z.equal mantissa Z.zero then
+  else if biased_exp = 0 && Z.equal mantissa Z.zero
+  then
     (* zero exponent + zero significand: signed zero *)
-    (if neg then Minus_zero else Plus_zero)
-  else
-    Finite { neg; biased_exp; significand = mantissa }
+    if neg then Minus_zero else Plus_zero
+  else Finite { neg; biased_exp; significand = mantissa }

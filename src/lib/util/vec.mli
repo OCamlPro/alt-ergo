@@ -25,17 +25,17 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type 'a t = {
-  mutable data : 'a array;
-  mutable sz : int;
-  dummy: 'a;
-}
+type 'a t =
+  { mutable data : 'a array;
+    mutable sz : int;
+    dummy : 'a
+  }
 (** Type of vectors of 'a elements. *)
 
 val make : int -> dummy:'a -> 'a t
-(** [make cap dummy] creates a new vector filled with [dummy]. The vector
-    is initially empty but its underlying array has capacity [cap].
-    [dummy] will stay alive as long as the vector *)
+(** [make cap dummy] creates a new vector filled with [dummy]. The vector is
+    initially empty but its underlying array has capacity [cap]. [dummy] will
+    stay alive as long as the vector *)
 
 val create : dummy:'a -> 'a t
 (** [create ~dummy] creates an empty vector using [dummy] as dummy values. *)
@@ -54,8 +54,8 @@ val clear : 'a t -> unit
 (** [clear vec] sets the size of [vec] to zero and free the elements. *)
 
 val shrink : 'a t -> int -> unit
-(** [shrink vec sz] resets size of [vec] to [sz] and frees its elements.
-    Assumes [sz >=0 && sz <= size vec]. *)
+(** [shrink vec sz] resets size of [vec] to [sz] and frees its elements. Assumes
+    [sz >=0 && sz <= size vec]. *)
 
 val pop : 'a t -> 'a
 (** Pop last element, free and return it.
@@ -66,8 +66,7 @@ val last : 'a t -> 'a
     @raise Invalid_argument if the vector is empty. *)
 
 val grow_to_by_double : 'a t -> int -> unit
-(** [grow_to_by_double vec c] grow the capacity of the vector
-    by double it. *)
+(** [grow_to_by_double vec c] grow the capacity of the vector by double it. *)
 
 val size : 'a t -> int
 (** Returns the size of the vector. *)
@@ -86,13 +85,13 @@ val get : 'a t -> int -> 'a
     @raise Assert_failure if the index is not valid. *)
 
 val set : 'a t -> int -> 'a -> unit
-(** Set the element at the given index, either already set or the first
-    free slot if [not (is_full vec)], or
+(** Set the element at the given index, either already set or the first free
+    slot if [not (is_full vec)], or
     @raise Invalid_argument if the index is not valid. *)
 
-val replace : (' a -> 'a) -> 'a t -> int -> unit
-(** [replace f vec n] is equalivalent to [set vec n (f (get vec n))],
-    but with a single bound check.
+val replace : ('a -> 'a) -> 'a t -> int -> unit
+(** [replace f vec n] is equalivalent to [set vec n (f (get vec n))], but with a
+    single bound check.
 
     @raise Assert_failure if the index is not valid. *)
 
@@ -100,12 +99,12 @@ val copy : 'a t -> 'a t
 (** Fresh copy. *)
 
 val fast_remove : 'a t -> int -> unit
-(** Remove element at index [i] without preserving order
-    (swap with last element). *)
+(** Remove element at index [i] without preserving order (swap with last
+    element). *)
 
 val filter_in_place : ('a -> bool) -> 'a t -> unit
-(** [filter_in_place p vec] removes from [vec] the elements that do
-    not satisfy [p]. *)
+(** [filter_in_place p vec] removes from [vec] the elements that do not satisfy
+    [p]. *)
 
 val sort : 'a t -> ('a -> 'a -> int) -> unit
 (** Sort in place the vector. *)

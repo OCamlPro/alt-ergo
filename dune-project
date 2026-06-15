@@ -7,6 +7,9 @@
 ; For plugins and preludes
 (using dune_site 0.1)
 
+(formatting
+ (enabled_for ocaml))
+
 (name alt-ergo)
 (authors "Alt-Ergo developers <alt-ergo@ocamlpro.com>")
 (maintainers "Alt-Ergo developers <alt-ergo@ocamlpro.com>")

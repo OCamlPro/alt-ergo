@@ -25,8 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Initialise signals handler for system signals *)
 val init_signals : unit -> unit
+(** Initialise signals handler for system signals *)
 
-(** Initialise timers and profiling if profiling option is set *)
 val init_profiling : unit -> unit
+(** Initialise timers and profiling if profiling option is set *)

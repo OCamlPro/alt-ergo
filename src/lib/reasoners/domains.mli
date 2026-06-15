@@ -18,12 +18,13 @@
 
 module Make
     (NF : Domains_intf.NormalForm)
-    (D : Domains_intf.Domain
-     with type var = NF.Composite.t
-      and type atom = NF.Atom.t
-      and type constant = NF.constant)
-    (W : Domains_intf.OrderedType)
-  : Domains_intf.S
+    (D :
+      Domains_intf.Domain
+        with type var = NF.Composite.t
+         and type atom = NF.Atom.t
+         and type constant = NF.constant)
+    (W : Domains_intf.OrderedType) :
+  Domains_intf.S
     with module NF := NF
      and type domain := D.t
      and type watch := W.t

@@ -26,7 +26,10 @@
 (**************************************************************************)
 
 type answer =
-  | Entailed of { ex : Explanation.t; classes : Expr.Set.t list }
+  | Entailed of
+      { ex : Explanation.t;
+        classes : Expr.Set.t list
+      }
   | Unknown
 
 type theory =
@@ -45,8 +48,7 @@ let show_theory = function
   | Th_bitv -> "Th_bitv"
   | Th_UF -> "Th_UF"
 
-let pp_theory ppf theory =
-  Fmt.string ppf (show_theory theory)
+let pp_theory ppf theory = Fmt.string ppf (show_theory theory)
 
 type lit_origin =
   | Subst
@@ -57,14 +59,14 @@ type lit_origin =
 (* TODO: use a record to document this type. *)
 type case_split = Shostak.Combine.r Xliteral.view * bool * lit_origin
 
-type optimized_split = {
-  value : Objective.Value.t;
-  case_split : case_split;
-}
+type optimized_split =
+  { value : Objective.Value.t;
+    case_split : case_split
+  }
 
-type 'literal acts = {
-  acts_add_decision_lit : 'literal -> unit ;
-  acts_add_split : 'literal -> unit ;
-  acts_add_objective :
-    Objective.Function.t -> Objective.Value.t -> 'literal -> unit ;
-}
+type 'literal acts =
+  { acts_add_decision_lit : 'literal -> unit;
+    acts_add_split : 'literal -> unit;
+    acts_add_objective :
+      Objective.Function.t -> Objective.Value.t -> 'literal -> unit
+  }

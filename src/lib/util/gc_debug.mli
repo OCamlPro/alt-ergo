@@ -27,11 +27,10 @@
 
 val src : Logs.src
 
-(** Prints some debug info about the GC's activity. *)
 val init : unit -> unit
+(** Prints some debug info about the GC's activity. *)
 
 (** Gc logging
 
-    This module registers some alarm functions (if configured in the
-    Options modules) that print some gc statistics on stderr.
-*)
+    This module registers some alarm functions (if configured in the Options
+    modules) that print some gc statistics on stderr. *)

@@ -26,41 +26,49 @@
 (**************************************************************************)
 
 type 'a ac =
-  {h: Symbols.t ; t: Ty.t ; l: ('a * int) list; distribute: bool}
+  { h : Symbols.t;
+    t : Ty.t;
+    l : ('a * int) list;
+    distribute : bool
+  }
 
-type 'a solve_pb = { sbt : ('a * 'a) list; eqs : ('a * 'a) list }
+type 'a solve_pb =
+  { sbt : ('a * 'a) list;
+    eqs : ('a * 'a) list
+  }
 
 module type SHOSTAK = sig
-
-  (**Type of terms of the theory*)
   type t
+  (**Type of terms of the theory*)
 
-  (**Type of representants of terms of the theory*)
   type r
+  (**Type of representants of terms of the theory*)
 
-  (** Name of the theory*)
   val name : string
+  (** Name of the theory*)
 
   val timer : Timers.ty_module
 
   val is_mine_symb : Symbols.t -> bool
   (** Return [true] if the symbol is owned by the theory. *)
 
-  (** Give a representant of a term of the theory*)
   val make : Expr.t -> r * Expr.t list
+  (** Give a representant of a term of the theory*)
 
   val term_extract : r -> Expr.t option * bool (* original term ? *)
 
-  val color : (r ac) -> r
+  val color : r ac -> r
 
   val type_info : t -> Ty.t
 
   val embed : r -> t
+
   val is_mine : t -> r
 
-  (** Give the leaves of a term of the theory *)
   val leaves : t -> r list
+  (** Give the leaves of a term of the theory *)
 
+  val is_constant : t -> bool
   (** Determines whether the semantic value is a constant value. [is_constant t]
       is equivalent to [leaves t == []] (except for the special cases below),
       but is more efficient.
@@ -73,7 +81,6 @@ module type SHOSTAK = sig
 
       Note that for some theories (e.g. adt, arrays) the constant may not be
       pure: it may involve nested (constant) terms of other theories. *)
-  val is_constant : t -> bool
 
   val subst : r -> r -> t -> r
 
@@ -85,19 +92,18 @@ module type SHOSTAK = sig
   val hash : t -> int
   (** solve r1 r2, solve the equality r1=r2 and return the substitution *)
 
-  val solve : r -> r ->  r solve_pb -> r solve_pb
+  val solve : r -> r -> r solve_pb -> r solve_pb
 
   val print : Format.formatter -> t -> unit
 
-  (** return true if the symbol is fully interpreted by the theory, i.e. it
-      is fully embedded into semantic values and does not need term-level
-      congruence *)
   val fully_interpreted : Symbols.t -> bool
+  (** return true if the symbol is fully interpreted by the theory, i.e. it is
+      fully embedded into semantic values and does not need term-level
+      congruence *)
 
   val abstract_selectors : t -> (r * r) list -> r * (r * r) list
 
-  val assign_value :
-    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+  val assign_value : r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
   (**[assign_value r distincts eq] selects the value to assign to [r] in the
      model as a term [t], and returns [Some (t, is_cs)]. [is_cs] is described
      below.
@@ -129,22 +135,21 @@ module type SHOSTAK = sig
      assigned (e.g. adt).
 
      **When returning [false], you must ensure that the equality between the
-     first argument and the return value always hold (i.e. is a *unit* fact).
-     In particular, the equality *must not* depend on [distincts] -- doing so
-     would be unsound.**
+     first argument and the return value always hold (i.e. is a *unit* fact). In
+     particular, the equality *must not* depend on [distincts] -- doing so would
+     be unsound.**
 
-     In other words, if [assign_value r distincts eq] returns
-     [Some (t, false)], then there must be no context in which
-     [solve r (fst X.make t)] raises [Unsolvable]. You have been warned! *)
+     In other words, if [assign_value r distincts eq] returns [Some (t, false)],
+     then there must be no context in which [solve r (fst X.make t)] raises
+     [Unsolvable]. You have been warned! *)
 
   val to_model_term : r -> Expr.t option
-  (** [to_model_term r] creates a model term if [r] is constant.
-      The function cannot fail if [r] is a constant (that is statisfied the
-      predicate [X.is_constant]).
+  (** [to_model_term r] creates a model term if [r] is constant. The function
+      cannot fail if [r] is a constant (that is statisfied the predicate
+      [X.is_constant]).
 
-      The returned value always satisfies the predicate
-      [Expr.is_model_term]. See its documentation for more details about
-      model terms. *)
+      The returned value always satisfies the predicate [Expr.is_model_term].
+      See its documentation for more details about model terms. *)
 end
 
 module type X = sig
@@ -174,7 +179,7 @@ module type X = sig
 
   val subst : r -> r -> r -> r
 
-  val solve : r -> r ->  (r * r) list
+  val solve : r -> r -> (r * r) list
 
   val term_embed : Expr.t -> r
 
@@ -182,9 +187,9 @@ module type X = sig
 
   val ac_embed : r ac -> r
 
-  val ac_extract : r -> (r ac) option
+  val ac_extract : r -> r ac option
 
-  val color : (r ac) -> r
+  val color : r ac -> r
 
   val fully_interpreted : Symbols.t -> bool
 
@@ -197,18 +202,15 @@ module type X = sig
   val is_solvable_theory_symbol : Symbols.t -> bool
 
   (* the returned bool is true when the returned term in a constant of the
-     theory. Otherwise, the term contains aliens that should be assigned
-     (eg. adt). In this case, it is a unit fact, not a decision
-  *)
-  val assign_value :
-    r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
+     theory. Otherwise, the term contains aliens that should be assigned (eg.
+     adt). In this case, it is a unit fact, not a decision *)
+  val assign_value : r -> r list -> (Expr.t * r) list -> (Expr.t * bool) option
 
   val to_model_term : r -> Expr.t option
-  (** [to_model_term r] creates a model term if [r] is constant.
-      The function cannot fail if [r] is a constant (that is statisfied the
-      predicate [X.is_constant]).
+  (** [to_model_term r] creates a model term if [r] is constant. The function
+      cannot fail if [r] is a constant (that is statisfied the predicate
+      [X.is_constant]).
 
-      The returned value always satisfies the predicate
-      [Expr.is_model_term]. See its documentation for more details about
-      model terms. *)
+      The returned value always satisfies the predicate [Expr.is_model_term].
+      See its documentation for more details about model terms. *)
 end
