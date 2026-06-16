@@ -161,7 +161,7 @@ module Main_Default : S = struct
       Ty.Set.fold
         (fun ty mp ->
            match ty with
-           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> mp
+           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ | Tfloat _ -> mp
            | Tvar _ -> assert false
 
            | Text (_, hs) when Ty_map.mem hs mp -> mp
@@ -180,7 +180,7 @@ module Main_Default : S = struct
       Ty_map.iter
         (fun _ ty ->
            match ty with
-           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ -> ()
+           | Tint | Treal | Tbool | Tbitv _ | Tfarray _ | Tfloat _-> ()
            | Tvar _ -> assert false
            | Text _ -> print_dbg ~flushed:false "type %a@ " Ty.print ty
            | Tadt _ ->

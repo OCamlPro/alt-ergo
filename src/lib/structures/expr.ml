@@ -461,6 +461,12 @@ module SmtPrinter = struct
         Symbols.pp_smtlib_operator op
         Fmt.(list ~sep:sp pp |> box) xs
 
+    | Sy.Float v, [] ->
+      let eb, sb =
+        match ty with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
+      in
+      Fp_value.pp_smtlib eb sb ppf v
+
     | Sy.True, [] -> Fmt.pf ppf "true"
 
     | Sy.False, [] -> Fmt.pf ppf "false"
@@ -496,7 +502,7 @@ module SmtPrinter = struct
       Fmt.pf ppf "ae.in"
 
     | Sy.(True | False | Let | Var _ | Int _ | Real _ | Bitv _
-         | MapsTo _ | In _), _ ->
+         | MapsTo _ | In _ | Float _), _ ->
       (* All the cases have been excluded by the parser. *)
       assert false
 
@@ -991,6 +997,8 @@ let real r =
 
 let bitv bt ty = mk_term (Sy.bitv bt) [] ty
 
+let float fp_val eb sb = mk_term (Sy.Float fp_val) [] (Ty.Tfloat (eb, sb))
+
 let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
 
@@ -1085,7 +1093,7 @@ let rec is_model_term e =
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
   | Name { ns = Abstract; _ }, [] -> true
-  | (True | False | Int _ | Real _ | Bitv _), [] -> true
+  | (True | False | Int _ | Real _ | Bitv _ | Float _), [] -> true
   | _ -> false
 
 let[@inline always] is_value_term e =
@@ -1095,7 +1103,7 @@ let[@inline always] is_value_term e =
   match e.f with
   | Sy.Form _ | Sy.Lit _ | Sy.Let -> false
   | True | False | Name _ | Int _ | Real _ | Bitv _ | Op _
-  | Var _ | In _ | MapsTo _ ->
+  | Var _ | In _ | MapsTo _ | Float _ ->
     let res = (e.xs == []) in
     assert (res == (depth e <= 1));
     res
@@ -1185,7 +1193,7 @@ let mk_positive_lit s neg_s l =
     | Lit (L_eq | L_built _) -> true
     | Lit (L_neg_eq | L_neg_pred | L_neg_built _) | Form _
     | True | False | Name _ | Int _ | Real _ | Bitv _
-    | Op _ | Var _ | In _ | MapsTo _ | Let -> false
+    | Op _ | Var _ | In _ | MapsTo _ | Let | Float _ -> false
   );
   let d = 1 + List.fold_left (fun z t -> max z t.depth) 1 l in
   let nb_nodes = List.fold_left (fun z t -> z + t.nb_nodes) 1 l in
@@ -1923,7 +1931,8 @@ module Triggers = struct
   let rec score_term (t : expr) =
     let open Sy in
     match t with
-    | { f = (True | False | Int _ | Real _ | Bitv _ | Var _); _ } -> 0
+    | { f = (True | False | Int _ | Real _ | Bitv _ | Var _ | Float _); _ } ->
+      0
 
     | { f; _ } when is_infix f || is_prefix f ->
       0 (* arithmetic triggers are not suitable *)
@@ -1950,12 +1959,12 @@ module Triggers = struct
     let compare_expr = compare in
     let open Sy in
     match t1, t2 with
-    | { f = (True | False | Int _ | Real _ | Bitv _); _ },
-      { f = (True | False | Int _ | Real _ | Bitv _); _ } ->
+    | { f = (True | False | Int _ | Real _ | Bitv _ | Float _); _ },
+      { f = (True | False | Int _ | Real _ | Bitv _ | Float _); _ } ->
       compare_expr t1 t2
 
-    | { f = (True | False | Int _ | Real _ | Bitv _); _ }, _ -> -1
-    | _, { f = (True | False | Int _ | Real _ | Bitv _); _ } ->  1
+    | { f = (True | False | Int _ | Real _ | Bitv _ | Float _); _ }, _ -> -1
+    | _, { f = (True | False | Int _ | Real _ | Bitv _ | Float _); _ } ->  1
 
     | { f = (Var _) as v1; _ }, { f = (Var _) as v2; _ } -> Sy.compare v1 v2
     | { f = Var _; _ }, _ -> -1
@@ -2407,7 +2416,7 @@ module Triggers = struct
         if eq exclude e then acc else e :: acc
 
       | { f = ( True | False | Int _ | Real _
-              | Bitv _ | In (_, _) | MapsTo _ ); _ } -> acc
+              | Bitv _ | Float _ | In (_, _) | MapsTo _ ); _ } -> acc
       | { f = Var _; _ } -> raise Exit
       | { f = Lit L_neg_pred; _ } -> List.fold_left max_terms acc e.xs
       | { f = Lit _; _ } -> (*List.fold_left max_terms acc e.xs*)raise Exit
@@ -2706,7 +2715,7 @@ module Purification = struct
           | _ -> failwith "unexpected expression in purify_form"
         end
 
-      | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Op _ | Sy.MapsTo _ ->
+      | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Float _ | Sy.Op _ | Sy.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"
 
       | Sy.Lit _ -> purify_literal e
@@ -2828,14 +2837,15 @@ type const =
   | Int of int
   | RoundingMode of Fpa_rounding.rounding_mode
 
+let z_to_int z =
+  match Z.to_int z with
+  | n -> n
+  | exception Z.Overflow ->
+    Fmt.failwith "error when trying to convert %a to an int" Z.pp_print z
+
 let const_view t =
   match term_view t with
-  | { f = Int n; _ } ->
-    begin match Z.to_int n with
-      | n -> Int n
-      | exception Z.Overflow ->
-        Fmt.failwith "error when trying to convert %a to an int" Z.pp_print n
-    end
+  | { f = Int n; _ } -> Int (z_to_int n)
   | { f = Op (Constr c); ty; _ }
     when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
     let c = Fmt.str "%a" DE.Term.Const.print c in
@@ -3138,6 +3148,32 @@ module BV = struct
          (bvule s t))
   let bvsgt s t = bvslt t s
   let bvsge s t = bvsle t s
+end
+
+(** Constructors from the smtlib theory of floating-point numbers.
+
+    https://smt-lib.org/theories-FloatingPoint.shtml *)
+module FP = struct
+
+  let bv_literal_to_z t =
+    match t.f, t.xs with
+    | Sy.Bitv (_, z), [] -> z
+    | _ ->
+      invalid_arg
+        "fp applications are currently only supported for bitvector literals"
+
+  let fp sign_t exp_t sig_t e s =
+    let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
+    let biased_exp = z_to_int (bv_literal_to_z exp_t) in
+    let mantissa = bv_literal_to_z sig_t in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+
+  let ieee_format_to_fp bv_t e s =
+    let bv_z = bv_literal_to_z bv_t in
+    let mantissa = Z.extract bv_z 0 (s - 1) in
+    let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
+    let neg = Z.testbit bv_z (e + s - 1) in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
 end
 
 (** Constructors from the smtlib theory of functional arrays with

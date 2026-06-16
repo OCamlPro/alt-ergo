@@ -544,6 +544,10 @@ let mk_theory_opt () no_contracongru
     no_fm no_nla no_tcp no_theory restricted tighten_vars
     (theories)
   =
+  set_smt_lib_fpa
+    (List.exists
+       (Theories.equal (Theories.Prelude Theories.SmtFloat))
+       theories);
   set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
@@ -1423,16 +1427,12 @@ let parse_theory_opt =
     Arg.(value & flag & info ["tighten-vars"] ~docs ~doc) in
 
   let theories =
-    let theory_enum =
-      Theories.all
-      |> List.map (fun t -> Format.asprintf "%a" Theories.pp t, t)
-    in
-    let theory = Arg.enum theory_enum in
+    let theory = Arg.enum Theories.theory_enum in
     let enable_theories =
       let doc =
         Format.asprintf "Enable builtin theory, multiple comma-separated values
         are supported. $(docv) must be %s."
-          (Arg.doc_alts_enum theory_enum)
+          (Arg.doc_alts_enum Theories.theory_enum)
       in
       let docv = "THEORY" in
       Term.(const List.concat $
@@ -1445,7 +1445,7 @@ let parse_theory_opt =
       let doc =
         Format.asprintf "Disable builtin theory, multiple comma-separated
         values are supported. THEORY must be %s."
-          (Arg.doc_alts_enum theory_enum)
+          (Arg.doc_alts_enum Theories.theory_enum)
       in
       let docv = "THEORY" in
       Term.(const List.concat $

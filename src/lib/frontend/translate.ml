@@ -501,6 +501,7 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n ->
     if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
+  | `Float (e, s) when Options.get_smt_lib_fpa () -> Ty.Tfloat (e, s)
 
   | `App (`Builtin B.Unit, []) -> Ty.tunit
   | `App (`Builtin _, [ty]) -> aux ty
@@ -899,6 +900,26 @@ let rec mk_expr
           | B.Adt Constructor _ ->
             let ty = dty_to_ty term_ty in
             E.mk_constr tcst [] ty
+
+          | B.Float cst when Options.get_smt_lib_fpa () ->
+            begin match cst with
+              | Plus_infinity { e; s } -> E.float Fp_value.Plus_infinity e s
+              | Minus_infinity { e; s } -> E.float Fp_value.Minus_infinity e s
+              | Plus_zero { e; s } -> E.float Fp_value.Plus_zero e s
+              | Minus_zero { e; s } -> E.float Fp_value.Minus_zero e s
+              | NaN { e; s } -> E.float Fp_value.NaN e s
+
+              | RoundingMode | RoundNearestTiesToEven | RoundNearestTiesToAway
+              | RoundTowardPositive | RoundTowardNegative | RoundTowardZero
+              | T _ | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _
+              | Fma _ | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ |  Max _
+              | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _
+              | IsZero _ | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
+              | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
+              | To_ubv _ | To_sbv _ | To_real _ ->
+                unsupported "Literal Floating-Point Arithmetic term %a"
+                  DE.Term.print term
+            end
 
           | _ -> unsupported "Constant term %a" DE.Term.print term
         end
@@ -1379,6 +1400,14 @@ let rec mk_expr
               | RoundTowardPositive, _ -> mk_rounding Up
               | RoundTowardNegative, _ -> mk_rounding Down
               | RoundTowardZero, _ -> mk_rounding ToZero
+
+              | Fp { e; s }, [sign_t; exp_t; sig_t]
+                when Options.get_smt_lib_fpa () ->
+                E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
+
+              | Ieee_format_to_fp { e; s }, [bv_t]
+                when Options.get_smt_lib_fpa () ->
+                E.FP.ieee_format_to_fp (mk bv_t) e s
 
               | (RoundingMode | T _ | Fp _), _
               | (Plus_infinity _ | Minus_infinity _ |

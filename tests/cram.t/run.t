@@ -141,3 +141,21 @@ Tableaux solver.
   
   unknown
   (error "<stdin>:1.62: the selected solver does not support optimization")
+
+Testing Alt-Ergo's support for parsing smt-lib FPA literals, this test ought to
+be moved to ./tests/float when we have a proper support for enabling and
+disabling theories in smt-lib files with `set-option`
+  $ alt-ergo -o smtlib2 --enable-theory smt.float fp_literals.smt2 2>/dev/null
+  
+  unsat
+  
+  unsat
+  
+  unsat
+  
+  unsat
+  
+  unsat
+  
+  unsat
+

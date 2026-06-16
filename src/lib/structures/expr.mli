@@ -252,6 +252,7 @@ val void : t
 val int : string -> t
 val real : string -> t
 val bitv : string -> Ty.t -> t
+val float : Fp_value.t -> int -> int -> t
 val fresh_name : Ty.t -> t
 
 (** Special names used for AC(X) abstraction.
@@ -587,6 +588,14 @@ module BV : sig
   val bvshl : t -> t -> t
   val bvlshr : t -> t -> t
   val bvashr : t -> t -> t
+end
+
+(** Constructors from the smtlib theory of floating-point numbers.
+
+    https://smt-lib.org/theories-FloatingPoint.shtml *)
+module FP: sig
+  val fp : t -> t -> t -> int -> int -> t
+  val ieee_format_to_fp : t -> int -> int -> t
 end
 
 (** Constructors from the smtlib theory of functional arrays with

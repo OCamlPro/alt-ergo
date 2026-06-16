@@ -229,6 +229,9 @@ val set_no_contracongru : bool -> unit
 (** Set [no_ematching] accessible with {!val:get_no_ematching} *)
 val set_no_ematching : bool -> unit
 
+(** Set [smt_lib_fpa] accessible with {!val:get_smt_lib_fpa} *)
+val set_smt_lib_fpa : bool -> unit
+
 (** Set [no_nla] accessible with {!val:get_no_nla} *)
 val set_no_nla : bool -> unit
 
@@ -911,6 +914,11 @@ val get_no_contracongru : unit -> bool
 
 (** [true] if Fourier-Motzkin algorithm is disabled. *)
 val get_no_fm : unit -> bool
+(** Default to [false] *)
+
+(** [true] if support for the SMT-LIB floating-point arithmetic (FPA) theory
+    is enabled. *)
+val get_smt_lib_fpa : unit -> bool
 (** Default to [false] *)
 
 (** [true] if non-linear arithmetic reasoning (i.e. non-linear

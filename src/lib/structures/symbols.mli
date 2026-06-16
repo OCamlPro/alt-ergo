@@ -157,6 +157,7 @@ type t =
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
+  | Float of Fp_value.t
   | Op of operator
   | Lit of lit
   | Form of form

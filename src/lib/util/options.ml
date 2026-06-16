@@ -529,6 +529,7 @@ let get_term_like_pp () = !term_like_pp
 
 let disable_adts = ref false
 let no_ac = ref false
+let smt_lib_fpa = ref false
 let no_contracongru = ref false
 let no_fm = ref false
 let no_nla = ref false
@@ -538,6 +539,7 @@ let restricted = ref false
 let tighten_vars = ref false
 
 let set_disable_adts b = disable_adts := b
+let set_smt_lib_fpa b = smt_lib_fpa := b
 let set_no_ac b = no_ac := b
 let set_no_contracongru b = no_contracongru := b
 let set_no_fm b = no_fm := b
@@ -548,6 +550,7 @@ let set_restricted b = restricted := b
 let set_tighten_vars b = tighten_vars := b
 
 let get_disable_adts () = !disable_adts
+let get_smt_lib_fpa () = !smt_lib_fpa
 let get_no_ac () = !no_ac
 let get_no_contracongru () = !no_contracongru
 let get_no_fm () = !no_fm
