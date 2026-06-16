@@ -101,9 +101,7 @@ let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
 let default = ADT :: AC :: List.map (fun p -> Prelude p) default_preludes
 
-let theory_enum =
-  ("smt.floating_point", Prelude SmtFloat) ::
-  List.map (fun t -> Format.asprintf "%a" pp t, t) all
+let theory_enum = List.map (fun t -> Format.asprintf "%a" pp t, t) all
 
 let preludes =
   List.filter_map (function | Prelude p -> Some p | _ -> None)

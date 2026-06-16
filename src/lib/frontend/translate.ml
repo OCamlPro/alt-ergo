@@ -908,7 +908,15 @@ let rec mk_expr
               | Plus_zero { e; s } -> E.fp Sy.Plus_zero e s
               | Minus_zero { e; s } -> E.fp Sy.Minus_zero e s
               | NaN { e; s } -> E.fp Sy.NaN e s
-              | _ ->
+
+              | RoundingMode | RoundNearestTiesToEven | RoundNearestTiesToAway
+              | RoundTowardPositive | RoundTowardNegative | RoundTowardZero
+              | T _ | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _
+              | Fma _ | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ |  Max _
+              | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _
+              | IsZero _ | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
+              | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
+              | To_ubv _ | To_sbv _ | To_real _ ->
                 unsupported "Constant Floating-Point Arithmetic literal %a"
                   DE.Term.print term
             end
