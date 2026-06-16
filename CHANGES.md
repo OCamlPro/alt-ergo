@@ -1,7 +1,8 @@
 ## unreleased
 
- - Add the --smt-lib-fpa cmdline option to activate support for the SMT-LIB FPA
-   theory and support parsing of SMT-LIB FPA Theory literals (#1358)
+ - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
+   that enables thte support for the SMT-LIB FPA, and that can be used with the
+   cmdline option `--enable-theory smt.float` (#1358)
  - Bump minimal cmdliner version to 2.0 (#1340)
 
 ## v2.6.2
