@@ -120,7 +120,7 @@ type t =
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
-  | Fp of Fp_value.t
+  | Float of Fp_value.t
   | Op of operator
   | Lit of lit
   | Form of form
@@ -273,7 +273,7 @@ let compare s1 s2 =
       | Bitv (n1, s1), Bitv (n2, s2) ->
         let c = Int.compare n1 n2 in
         if c <> 0 then c else Z.compare s1 s2
-      | Fp v1, Fp v2 -> Fp_value.compare v1 v2
+      | Float v1, Float v2 -> Fp_value.compare v1 v2
       | Op op1, Op op2 -> compare_operators op1 op2
       | Lit lit1, Lit lit2 -> compare_lits lit1 lit2
       | Form f1, Form f2 -> compare_forms f1 f2
@@ -281,7 +281,7 @@ let compare s1 s2 =
         let c = compare_bounds b1 b1' in
         if c <> 0 then c else compare_bounds b2 b2'
       | _ ,
-        (True | False | Name _ | Int _ | Real _ | Bitv _ | Fp _
+        (True | False | Name _ | Int _ | Real _ | Bitv _ | Float _
         | Op _ | Lit _ | Form _ | Var _ | In _ | MapsTo _ | Let) ->
         assert false
     )
@@ -306,7 +306,7 @@ let hash x =
   | Op op -> 19 * Hashtbl.hash op + 10
   | Lit lit -> 19 * Hashtbl.hash lit + 11
   | Form x -> 19 * Hashtbl.hash x + 12
-  | Fp v -> 19 * Hashtbl.hash v + 13
+  | Float v -> 19 * Hashtbl.hash v + 13
 
 let string_of_bound_kind x = match x with
   | Unbounded -> "?"
@@ -444,7 +444,7 @@ module AEPrinter = struct
     | In (lb, rb) ->
       Fmt.pf ppf "%s, %s" (string_of_bound lb) (string_of_bound rb)
     | MapsTo v -> Fmt.pf ppf "%a |->" Var.print v
-    | Fp fp -> Fp_value.pp ppf fp
+    | Float fp -> Fp_value.pp ppf fp
 end
 
 module SmtPrinter = struct

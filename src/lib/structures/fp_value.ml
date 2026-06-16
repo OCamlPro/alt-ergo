@@ -60,3 +60,21 @@ let pp_smtlib eb sb ppf = function
     let exp_s = Z.format (bfmt eb) (Z.of_int biased_exp) in
     let sig_s = Z.format (bfmt (sb - 1)) significand in
     Fmt.pf ppf "(fp #b%s #b%s #b%s)" sign_s exp_s sig_s
+
+let mk_fp_literal ~neg ~biased_exp ~mantissa e =
+  let max_exp = (1 lsl e) - 1 in
+  (* TODO: these transformations should not be done this early as they can
+     affect matching (we are transforming terms received from the parser into
+     another representation so the solver does not see the original terms)
+     ideally it would be done at the semantic level, with the theory's `make`
+     function for example (or something with domains/propagations?) *)
+  if biased_exp = max_exp then
+    (* all-ones exponent: infinity or NaN *)
+    if Z.equal mantissa Z.zero then
+      (if neg then Minus_infinity else Plus_infinity)
+    else NaN
+  else if biased_exp = 0 && Z.equal mantissa Z.zero then
+    (* zero exponent + zero significand: signed zero *)
+    (if neg then Minus_zero else Plus_zero)
+  else
+    Finite { neg; biased_exp; significand = mantissa }

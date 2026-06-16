@@ -1,5 +1,4 @@
 (set-logic QF_FP)
-(set-option :smt-lib-fpa true)
 
 (push 1)
 (assert (not (or
@@ -35,6 +34,12 @@
 
 (push 1)
 (assert (not (= (_ NaN 8 24) (_ NaN 8 24))))
+(check-sat)
+(pop 1)
+
+(push 1)
+(assert (not (= (fp #b0 #b01111111 #b00000000000000000000000)
+               ((_ to_fp 8 24) #b00111111100000000000000000000000))))
 (check-sat)
 (pop 1)
 
