@@ -23,7 +23,7 @@ module M: Map.S with type key = Expr.t list = Map.Make
     (struct
       type t = Expr.t list
 
-      let compare = List.compare Expr.compare
+      let compare = Compat.List.compare Expr.compare
     end)
 
 (* The type of this module represents a model value for a function [f] by a
@@ -50,7 +50,7 @@ module Constraints = struct
     include Set.Make (struct
         type t = Expr.t list
 
-        let compare = List.compare Expr.compare
+        let compare = Compat.List.compare Expr.compare
       end)
 
     let pp_arg ppf (ctr, arg) =
