@@ -33,6 +33,7 @@ let
     duneVersion = "3";
 
     buildInputs = (with ocamlPackages; [
+      alt-ergo-lib
       cmdliner
       dune-site
     ]);
