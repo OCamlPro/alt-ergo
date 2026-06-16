@@ -43,7 +43,7 @@ type rounding_mode =
   | Down
   | NearestTiesToAway
 
-let rounding_mode_to_int = function
+let[@inline] rounding_mode_to_int = function
   | NearestTiesToEven -> 0
   | ToZero -> 1
   | Up -> 2

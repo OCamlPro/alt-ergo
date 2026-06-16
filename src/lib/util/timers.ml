@@ -46,7 +46,7 @@ type ty_module =
   | M_Simplex
   | M_Ite
 
-let ty_module_to_enum = function
+let[@inline] ty_module_to_enum = function
   | M_None -> 0
   | M_Combine -> 1
   | M_Sat -> 2
@@ -113,7 +113,7 @@ type ty_function =
   | F_apply_subst
   | F_instantiate
 
-let ty_function_to_enum = function
+let[@inline] ty_function_to_enum = function
   | F_add -> 0
   | F_add_lemma -> 1
   | F_add_predicate -> 2

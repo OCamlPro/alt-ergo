@@ -20,7 +20,7 @@
    [prelude_to_int] so that it gets simplified to the identity. *)
 type prelude = Nra | Ria | Fpa
 
-let prelude_to_int = function
+let[@inline] prelude_to_int = function
   | Nra -> 0
   | Ria -> 1
   | Fpa -> 2

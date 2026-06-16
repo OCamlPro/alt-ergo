@@ -173,7 +173,7 @@ module Debug = struct
     | Commands
     | Optimize
 
-  let to_int = function
+  let[@inline] to_int = function
     | Debug -> 0
     | Ac -> 1
     | Adt -> 2
