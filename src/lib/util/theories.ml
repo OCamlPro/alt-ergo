@@ -73,10 +73,19 @@ let pp ppf = function
 let filename =
   Format.asprintf "<builtins>/%a.ae" pp_prelude
 
+let get_prelude name =
+  match Preludes.read name with
+  | Some content -> content
+  | None -> failwith (Fmt.str "Missing internal prelude: %s" name)
+
+let fpa_prelude = get_prelude "fpa.ae"
+let ria_prelude = get_prelude "ria.ae"
+let nra_prelude = get_prelude "nra.ae"
+
 let content = function
-  | Fpa -> [%blob "src/preludes/fpa.ae"]
-  | Ria -> [%blob "src/preludes/ria.ae"]
-  | Nra -> [%blob "src/preludes/nra.ae"]
+  | Fpa -> fpa_prelude
+  | Ria -> ria_prelude
+  | Nra -> nra_prelude
 
 let all_preludes = [ Fpa; Ria; Nra ]
 

@@ -26,13 +26,6 @@
     logs
     logs.fmt
   )
-  (preprocess
-    (pps
-      ppx_blob
-    )
-  )
-
-  (preprocessor_deps (glob_files ../preludes/*.ae))
 
   ; .mli only modules *also* need to be in this field
   (modules_without_implementation matching_types sig sig_rel)
@@ -56,9 +49,16 @@
     Emap Gc_debug Hconsing Hstring Heap Numbers Uqueue
     Options Timers Util Vec Version Steps Printer
     My_list Theories Nest Compat Loc
+    Preludes
   )
 
  (js_of_ocaml
   (javascript_files missing_primitives.js)
  )
 )
+
+(rule
+ (target preludes.ml)
+ (deps (source_tree ../preludes))
+ (action
+  (run ocaml-crunch -o %{target} -m plain ../preludes)))

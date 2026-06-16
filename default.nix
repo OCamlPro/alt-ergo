@@ -20,7 +20,6 @@ let
       seq
       stdlib-shims
       fmt
-      ppx_blob
       dolmen_loop
       camlzip
     ];
