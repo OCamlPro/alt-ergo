@@ -72,9 +72,8 @@ let pp ppf = function
   | ADT -> Format.fprintf ppf "adt"
   | AC -> Format.fprintf ppf "ac"
 
-let filename = function
-  | SmtFloat -> failwith "smt.float prelude not yet implemented"
-  | p -> Format.asprintf "<builtins>/%a.ae" pp_prelude p
+let filename =
+  Format.asprintf "<builtins>/%a.ae" pp_prelude
 
 let get_prelude name =
   match Preludes.read name with
@@ -86,10 +85,10 @@ let ria_prelude = get_prelude "ria.ae"
 let nra_prelude = get_prelude "nra.ae"
 
 let content = function
-  | Fpa -> fpa_prelude
-  | Ria -> ria_prelude
-  | Nra -> nra_prelude
-  | SmtFloat -> failwith "smt.float prelude not yet implemented"
+  | Fpa -> Some fpa_prelude
+  | Ria -> Some ria_prelude
+  | Nra -> Some nra_prelude
+  | SmtFloat -> None
 
 let all_preludes = [ Fpa; Ria; Nra; SmtFloat ]
 

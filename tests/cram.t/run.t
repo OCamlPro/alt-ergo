@@ -15,6 +15,7 @@ appropriate here.
     (define-fun a2 () (Array Int Int) (as @a1 (Array Int Int)))
   )
 
+
 Now we will test some semantic triggers.
 
   $ alt-ergo -o smtlib2 semantic_triggers.ae 2>/dev/null
@@ -24,6 +25,7 @@ Now we will test some semantic triggers.
   unsat
   
   unsat
+
 
 And some SMT2 action.
 
@@ -36,6 +38,7 @@ And some SMT2 action.
   unknown
   
   unsat
+
 
 Here are some tests to check that we have sane behavior given the insane
 combinations of produce-models et al.
@@ -53,6 +56,7 @@ First, if (get-model) is called outside the SAT mode, we should fail.
   unsat
   (error "Invalid action during Unsat mode: Command get-model")
 
+
 Then, if model generation is not enabled, we should error out when a
 `(get-model)` statement is issued:
 
@@ -61,12 +65,14 @@ Then, if model generation is not enabled, we should error out when a
   unknown
   (error "<stdin>:1.26: Model generation disabled (try --produce-models)")
 
+
 This should be the case Tableaux solver as well:
 
   $ echo '(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
   (error "<stdin>:1.26: Model generation disabled (try --produce-models)")
+
 
 The messages above mention `--produce-models`, but we can also use
 `set-option`.
@@ -76,10 +82,12 @@ The messages above mention `--produce-models`, but we can also use
   unknown
   (error "<stdin>:1.60: Model generation disabled (try --produce-models)")
 
+
   $ echo '(set-option :produce-models false)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 --continue-on-error 2> /dev/null
   
   unknown
   (error "<stdin>:1.60: Model generation disabled (try --produce-models)")
+
 
 And now some cases where it should work (using either `--produce-models` or `set-option`):
 
@@ -89,16 +97,19 @@ And now some cases where it should work (using either `--produce-models` or `set
   (
   )
 
+
   $ echo '(set-option :produce-models true)(set-logic ALL)(check-sat)(get-model)' | alt-ergo -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
+
   $ echo '(set-option :produce-models true)(set-logic ALL)(check-sat)(get-model)' | alt-ergo --sat-solver Tableaux -i smtlib2 -o smtlib2 2>/dev/null
   
   unknown
   (
   )
+
 
 We now test the --continue-on-error strategy where alt-ergo fails (legitimately) on some commands but keeps running.
   $ echo '(get-info :foo) (set-option :bar) (set-logic ALL) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error 2>/dev/null
@@ -132,6 +143,7 @@ Tableaux solver.
   (error "<stdin>:1.62: the selected solver does not support optimization")
   [1]
 
+
   $ echo '(set-logic ALL) (maximize 1) (check-sat)' | alt-ergo -i smtlib2 -o smtlib2 --continue-on-error --sat-solver Tableaux 2>/dev/null
   (error "<stdin>:1.16: the selected solver does not support optimization")
   
@@ -141,3 +153,19 @@ Tableaux solver.
   
   unknown
   (error "<stdin>:1.62: the selected solver does not support optimization")
+
+
+Testing Alt-Ergo's support for parsing smt-lib FPA literals, this test ought to
+be moved to ./tests/float when we have a proper support for enabling and
+disablling theories in smt-lib files with `set-option`
+  $ alt-ergo -o smtlib2 --enable-theory smt.float fp_literals.smt2 2>/dev/null
+  
+  unsat
+  
+  unsat
+  
+  unsat
+  
+  unsat
+  
+  unsat

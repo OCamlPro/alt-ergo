@@ -465,7 +465,7 @@ module SmtPrinter = struct
       let eb, sb =
         match ty with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
       in
-      Sy.pp_fp_val_smtlib eb sb ppf v
+      Fp_value.pp_smtlib eb sb ppf v
 
     | Sy.True, [] -> Fmt.pf ppf "true"
 
@@ -997,7 +997,7 @@ let real r =
 
 let bitv bt ty = mk_term (Sy.bitv bt) [] ty
 
-let fp v eb sb = mk_term (Sy.Fp v) [] (Ty.Tfloat (eb, sb))
+let float fp_val eb sb = mk_term (Sy.Fp fp_val) [] (Ty.Tfloat (eb, sb))
 
 let pred t = mk_term (Sy.Op Sy.Minus) [t;int "1"] Ty.Tint
 
@@ -2837,14 +2837,15 @@ type const =
   | Int of int
   | RoundingMode of Fpa_rounding.rounding_mode
 
+let z_to_int z =
+  match Z.to_int z with
+  | n -> n
+  | exception Z.Overflow ->
+    Fmt.failwith "error when trying to convert %a to an int" Z.pp_print z
+
 let const_view t =
   match term_view t with
-  | { f = Int n; _ } ->
-    begin match Z.to_int n with
-      | n -> Int n
-      | exception Z.Overflow ->
-        Fmt.failwith "error when trying to convert %a to an int" Z.pp_print n
-    end
+  | { f = Int n; _ } -> Int (z_to_int n)
   | { f = Op (Constr c); ty; _ }
     when Ty.equal ty Fpa_rounding.fpa_rounding_mode ->
     let c = Fmt.str "%a" DE.Term.Const.print c in
@@ -3147,6 +3148,51 @@ module BV = struct
          (bvule s t))
   let bvsgt s t = bvslt t s
   let bvsge s t = bvsle t s
+end
+
+(** Constructors from the smtlib theory of floating-point numbers.
+
+    https://smt-lib.org/theories-FloatingPoint.shtml *)
+module FP = struct
+
+
+  let mk_fp_literal ~neg ~biased_exp ~trail e =
+    let max_exp = (1 lsl e) - 1 in
+    (* TODO: these transformations should not be done this early as they can
+       affect matching (we are transforming terms received from the parser into
+       another representation so the solver does not see the original terms)
+       ideally it would be done at the semantic level, with the theory's `make`
+       function for example (or something with domains/propagations?) *)
+    if biased_exp = max_exp then
+      (* all-ones exponent: infinity or NaN *)
+      if Z.equal trail Z.zero then
+        (if neg then Fp_value.Minus_infinity else Fp_value.Plus_infinity)
+      else Fp_value.NaN
+    else if biased_exp = 0 && Z.equal trail Z.zero then
+      (* zero exponent + zero significand: signed zero *)
+      (if neg then Fp_value.Minus_zero else Fp_value.Plus_zero)
+    else
+      Fp_value.Finite { neg; biased_exp; significand = trail }
+
+  let bv_literal_to_z t =
+    match t.f, t.xs with
+    | Sy.Bitv (_, z), [] -> z
+    | _ ->
+      invalid_arg
+        "fp applications are currently only supported for bitvector literals"
+
+  let fp sign_t exp_t sig_t e s =
+    let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
+    let biased_exp = z_to_int (bv_literal_to_z exp_t) in
+    let trail = bv_literal_to_z sig_t in
+    float (mk_fp_literal ~neg ~biased_exp ~trail e) e s
+
+  let ieee_format_to_fp bv_t e s =
+    let bv_z = bv_literal_to_z bv_t in
+    let trail = Z.extract bv_z 0 s in
+    let biased_exp = z_to_int (Z.extract bv_z s e) in
+    let neg = Z.testbit bv_z (e + s - 1) in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~trail e) e s
 end
 
 (** Constructors from the smtlib theory of functional arrays with

@@ -903,11 +903,11 @@ let rec mk_expr
 
           | B.Float cst when Options.get_smt_lib_fpa () ->
             begin match cst with
-              | Plus_infinity { e; s } -> E.fp Sy.Plus_infinity e s
-              | Minus_infinity { e; s } -> E.fp Sy.Minus_infinity e s
-              | Plus_zero { e; s } -> E.fp Sy.Plus_zero e s
-              | Minus_zero { e; s } -> E.fp Sy.Minus_zero e s
-              | NaN { e; s } -> E.fp Sy.NaN e s
+              | Plus_infinity { e; s } -> E.float Fp_value.Plus_infinity e s
+              | Minus_infinity { e; s } -> E.float Fp_value.Minus_infinity e s
+              | Plus_zero { e; s } -> E.float Fp_value.Plus_zero e s
+              | Minus_zero { e; s } -> E.float Fp_value.Minus_zero e s
+              | NaN { e; s } -> E.float Fp_value.NaN e s
 
               | RoundingMode | RoundNearestTiesToEven | RoundNearestTiesToAway
               | RoundTowardPositive | RoundTowardNegative | RoundTowardZero
@@ -917,7 +917,7 @@ let rec mk_expr
               | IsZero _ | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
               | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
               | To_ubv _ | To_sbv _ | To_real _ ->
-                unsupported "Constant Floating-Point Arithmetic literal %a"
+                unsupported "Literal Floating-Point Arithmetic term %a"
                   DE.Term.print term
             end
 
@@ -1403,37 +1403,11 @@ let rec mk_expr
 
               | Fp { e; s }, [sign_t; exp_t; sig_t]
                 when Options.get_smt_lib_fpa () ->
-                let bv_z DE.{ term_descr; _ } =
-                  (* TODO: does Dolmen guarantee that the term is a bitvector
-                     literal? *)
-                  match term_descr with
-                  | DE.Cst { builtin = B.Bitv (Binary_lit bs); _ } ->
-                    Z.of_string_base 2 bs
-                  | _ -> invalid_app_term ()
-                in
-                let neg = Z.equal (bv_z sign_t) Z.one in
-                let biased_exp = Z.to_int (bv_z exp_t) in
-                let trail = bv_z sig_t in
-                let max_exp = (1 lsl e) - 1 in
-                let fp_val =
-                  (* TODO: doesn't Dolmen avoid that? *)
-                  if biased_exp = max_exp then
-                    (* all-ones exponent: infinity or NaN *)
-                    if Z.equal trail Z.zero then
-                      (if neg then Sy.Minus_infinity else Sy.Plus_infinity)
-                    else Sy.NaN
-                  else if biased_exp = 0 && Z.equal trail Z.zero then
-                    (* zero exponent + zero significand: signed zero *)
-                    (if neg then Sy.Minus_zero else Sy.Plus_zero)
-                  else
-                    let hidden_bit = s - 1 in
-                    let significand =
-                      if biased_exp = 0 then trail
-                      else Z.(trail lor (one lsl hidden_bit))
-                    in
-                    Sy.Finite { neg; biased_exp; significand }
-                in
-                E.fp fp_val e s
+                E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
+
+              | Ieee_format_to_fp { e; s }, [bv_t]
+                when Options.get_smt_lib_fpa () ->
+                E.FP.ieee_format_to_fp (mk bv_t) e s
 
               | (RoundingMode | T _ | Fp _), _
               | (Plus_infinity _ | Minus_infinity _ |

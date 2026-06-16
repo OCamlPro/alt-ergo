@@ -928,10 +928,16 @@ let process_source ?selector_inst ~print_status src =
       let builtin_dir = "<builtin>" in
       let theory_preludes =
         Options.get_theory_preludes ()
-        |> List.map (fun theory ->
-            let filename = Theories.filename theory in
-            let content = Theories.content theory in
-            State.mk_file builtin_dir (`Raw (filename, content)))
+        |> List.filter_map (fun theory ->
+            match Theories.content theory with
+            | None ->
+              Printer.print_wrn
+                "Theory prelude for %a is not yet implemented; ignoring."
+                Theories.pp_prelude theory;
+              None
+            | Some content ->
+              let filename = Theories.filename theory in
+              Some (State.mk_file builtin_dir (`Raw (filename, content))))
       in
       let preludes =
         theory_preludes @

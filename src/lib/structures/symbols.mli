@@ -145,14 +145,6 @@ type bound_kind = Unbounded | VarBnd of Var.t | ValBnd of Numbers.Q.t
 type bound = private
   { kind : bound_kind; sort : Ty.t; is_open : bool; is_lower : bool }
 
-type fp_val =
-  | Plus_infinity
-  | Minus_infinity
-  | Plus_zero
-  | Minus_zero
-  | NaN
-  | Finite of { neg : bool; biased_exp : int; significand : Z.t }
-
 type t =
   | True
   | False
@@ -165,7 +157,7 @@ type t =
   | Int of Z.t
   | Real of Q.t
   | Bitv of int * Z.t
-  | Fp of fp_val
+  | Fp of Fp_value.t
   | Op of operator
   | Lit of lit
   | Form of form
@@ -222,10 +214,6 @@ val pp_ae_operator : operator Fmt.t
 val pp_smtlib_operator : operator Fmt.t
 (* [pp_smtlib_operator ppf op] prints the operator symbol [op] on the
    formatter [ppf] using the SMT-LIB format. *)
-
-val pp_fp_val_smtlib : int -> int -> fp_val Fmt.t
-(** [pp_fp_val_smtlib eb sb ppf v] prints the concrete FP value [v] of
-    precision [(eb, sb)] in the SMT-LIB format. *)
 
 (*val dummy : t*)
 
