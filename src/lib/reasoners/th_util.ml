@@ -36,7 +36,17 @@ type theory =
   | Th_arrays
   | Th_bitv
   | Th_UF
-[@@deriving show]
+
+let show_theory = function
+  | Th_arith -> "Th_arith"
+  | Th_sum -> "Th_sum"
+  | Th_adt -> "Th_adt"
+  | Th_arrays -> "Th_arrays"
+  | Th_bitv -> "Th_bitv"
+  | Th_UF -> "Th_UF"
+
+let pp_theory ppf theory =
+  Fmt.string ppf (show_theory theory)
 
 type lit_origin =
   | Subst

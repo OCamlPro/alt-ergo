@@ -32,14 +32,28 @@ module Z = Numbers.Z
 
 (** The five standard rounding modes of the SMTLIB.
     Note that the SMTLIB defines these rounding modes to be the only
-    possible modes. *)
+    possible modes.
+
+    Note: keep the constructors in the same order as in the definition in
+    [rounding_mode_to_int] so that it gets simplified to the identity. *)
 type rounding_mode =
   | NearestTiesToEven
   | ToZero
   | Up
   | Down
   | NearestTiesToAway
-[@@deriving ord]
+
+let rounding_mode_to_int = function
+  | NearestTiesToEven -> 0
+  | ToZero -> 1
+  | Up -> 2
+  | Down -> 3
+  | NearestTiesToAway -> 4
+
+let compare_rounding_mode rm1 rm2 =
+  Int.compare
+    (rounding_mode_to_int rm1)
+    (rounding_mode_to_int rm2)
 
 let constrs =
   [

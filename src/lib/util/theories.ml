@@ -16,30 +16,42 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type prelude = Nra | Ria | Fpa [@@deriving eq]
+(* Note: keep the constructors in the same order as in the definition in
+   [prelude_to_int] so that it gets simplified to the identity. *)
+type prelude = Nra | Ria | Fpa
+
+let prelude_to_int = function
+  | Nra -> 0
+  | Ria -> 1
+  | Fpa -> 2
 
 let pp_prelude ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
   | Ria -> Format.fprintf ppf "ria"
   | Nra -> Format.fprintf ppf "nra"
 
+let equal_prelude prelude1 prelude2 =
+  Int.equal
+    (prelude_to_int prelude1)
+    (prelude_to_int prelude2)
+
 let compare_prelude p1 p2 =
-  match p1, p2 with
-  | Nra, Nra -> 0
-  | Nra, _ -> -1
-  | _, Nra -> 1
-
-  | Ria, Ria -> 0
-  | Ria, _ -> -1
-  | _, Ria -> 1
-
-  | Fpa, Fpa -> 0
+  Int.compare (prelude_to_int p1) (prelude_to_int p2)
 
 type t =
   | Prelude of prelude
   | ADT
   | AC
-[@@deriving eq]
+
+let equal t1 t2 =
+  match t1, t2 with
+  | Prelude p1, Prelude p2 ->
+    equal_prelude p1 p2
+  | ADT, ADT
+  | AC, AC ->
+    true
+  | (Prelude _ | ADT | AC), _ ->
+    false
 
 let compare t1 t2 =
   match t1, t2 with

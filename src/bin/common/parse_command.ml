@@ -143,6 +143,8 @@ module Rule = struct
 end
 
 module Debug = struct
+  (* Note: keep the constructors in the same order as in the definition in
+     [to_int] so that it gets simplified to the identity. *)
   type t =
     | Debug
     | Ac
@@ -170,7 +172,37 @@ module Debug = struct
     | Use
     | Commands
     | Optimize
-  [@@deriving eq]
+
+  let to_int = function
+    | Debug -> 0
+    | Ac -> 1
+    | Adt -> 2
+    | Arith -> 3
+    | Arrays -> 4
+    | Bitv -> 5
+    | Ite -> 6
+    | Cc -> 7
+    | Combine -> 8
+    | Constr -> 9
+    | Explanations -> 10
+    | Fm -> 11
+    | Fpa -> 12
+    | Gc -> 13
+    | Interpretation -> 14
+    | Intervals -> 15
+    | Matching -> 16
+    | Sat -> 17
+    | Split -> 18
+    | Triggers -> 19
+    | Types -> 20
+    | Uf -> 21
+    | Unsat_core -> 22
+    | Use -> 23
+    | Commands -> 24
+    | Optimize -> 25
+
+  let equal t1 t2 =
+    Int.equal (to_int t1) (to_int t2)
 
   let all = [
     Debug; Ac; Adt; Arith; Arrays; Bitv; Ite;

@@ -38,7 +38,6 @@ pkgs.mkShell {
     cmdliner_2
     ppx_blob
     odoc
-    ppx_deriving
     landmarks
     landmarks-ppx
     qcheck

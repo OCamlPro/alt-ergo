@@ -50,7 +50,11 @@ type theory =
   | Th_arrays
   | Th_bitv
   | Th_UF
-[@@deriving show]
+
+
+val pp_theory : theory Fmt.t
+
+val show_theory : theory -> string
 
 (** Indicates where asserted literals come from.
 
