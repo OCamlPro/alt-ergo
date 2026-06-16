@@ -2451,12 +2451,10 @@ let new_facts_for_axiom
 
 
 let syntactic_matching menv env uf _selector =
-  let mconf =
+  let use_ematching = not (get_no_ematching ()) in
+  let tconf =
     {Util.nb_triggers = get_nb_triggers ();
-     no_ematching = get_no_ematching();
      triggers_var = get_triggers_var ();
-     use_cs = false;
-     backward = Util.Normal;
      greedy = get_greedy ();
     }
   in
@@ -2465,8 +2463,11 @@ let syntactic_matching menv env uf _selector =
       (fun f (_th_ax, dep) accu ->
          (* currently, No diff between propagators and case-split axs *)
          let forms = ME.singleton f (E.vrai, 0 (*0 = age *), dep) in
-         let menv = EM.add_triggers mconf menv forms in
-         let res = EM.query mconf menv uf in
+         let triggers =
+           Matching.Triggers.add_triggers_of_formulas
+             tconf Matching.Triggers.empty forms
+         in
+         let res = EM.query ~use_ematching menv triggers uf in
          if get_debug_fpa () >= 2 then begin
            let cpt = ref 0 in
            List.iter (fun (_, l) -> List.iter (fun _ -> incr cpt) l) res;
@@ -2488,7 +2489,7 @@ let instantiate ~do_syntactic_matching match_terms env uf selector =
       "entering IC.instantiate";
   let optimized = ref (SP.empty) in
   let t_infos, t_subterms = match_terms in
-  let menv = EM.make ~max_t_depth:100 t_infos t_subterms [] in
+  let menv = EM.make ~max_t_depth:100 t_infos t_subterms in
   let env =
     if not do_syntactic_matching then env
     else syntactic_matching menv env uf selector

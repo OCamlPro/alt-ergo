@@ -420,15 +420,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
          | Ex.Bj _ | Ex.Fresh _ -> assert false
       ) ex []
 
-  let mround menv env acc =
+  let mround menv tenv env acc =
     let tbox = SAT.current_tbox env.satml in
     let gd2, ngd2 =
-      Inst.m_predicates menv env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_predicates menv tenv env.inst tbox (selector env) env.nb_mrounds
     in
     let l2 = List.rev_append (List.rev gd2) ngd2 in
     if Options.get_profiling() then Profiling.instances l2;
     let gd1, ngd1 =
-      Inst.m_lemmas menv env.inst tbox (selector env) env.nb_mrounds
+      Inst.m_lemmas menv tenv env.inst tbox (selector env) env.nb_mrounds
     in
     let l1 = List.rev_append (List.rev gd1) ngd1 in
     if Options.get_profiling() then Profiling.instances l1;
@@ -734,10 +734,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
                        that are facts with TRUE by mk_lit (and simplify)"]
 
 
-  let new_instances use_cs env sa inst_quantif acc =
+  let new_instances use_cs tenv env sa inst_quantif acc =
     let inst, acc = inst_env_from_atoms env acc sa inst_quantif in
     let inst = terms_from_dec_proc {env with inst=inst} in
-    mround use_cs {env with inst = inst} acc
+    mround use_cs tenv {env with inst = inst} acc
 
 
   type pending = {
@@ -903,49 +903,63 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let frugal_mconf () =
     let open Options in
-    {Util.nb_triggers = get_nb_triggers ();
-     no_ematching = get_no_ematching();
-     triggers_var = get_triggers_var ();
+    {Util.no_ematching = get_no_ematching();
      use_cs = false;
      backward = Util.Normal;
-     greedy = false;
     }
 
   let normal_mconf () =
     let open Options in
-    {Util.nb_triggers = Stdlib.max 2 (get_nb_triggers () * 2);
-     no_ematching = get_no_ematching();
-     triggers_var = get_triggers_var ();
+    {Util.no_ematching = get_no_ematching();
      use_cs = false;
      backward = Util.Normal;
-     greedy = false;
     }
 
   let greedy_mconf () =
-    let open Options in
-    {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
-     no_ematching = false;
-     triggers_var = get_triggers_var ();
+    {Util.no_ematching = false;
      use_cs = true;
      backward = Util.Normal;
-     greedy = true;
     }
 
   let greedier_mconf () =
-    let open Options in
-    {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
-     no_ematching = false;
-     triggers_var = true;
+    {Util.no_ematching = false;
      use_cs = true;
      backward = Util.Normal;
+    }
+
+  let frugal_tconf () =
+    let open Options in
+    {Util.nb_triggers = get_nb_triggers ();
+     triggers_var = get_triggers_var ();
+     greedy = false;
+    }
+
+  let normal_tconf () =
+    let open Options in
+    {Util.nb_triggers = Stdlib.max 2 (get_nb_triggers () * 2);
+     triggers_var = get_triggers_var ();
+     greedy = false;
+    }
+
+  let greedy_tconf () =
+    let open Options in
+    {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
+     triggers_var = get_triggers_var ();
      greedy = true;
     }
 
-  let do_instantiation env sa inst_quantif mconf msg ~dec_lvl =
+  let greedier_tconf () =
+    let open Options in
+    {Util.nb_triggers = Stdlib.max 10 (get_nb_triggers () * 10);
+     triggers_var = true;
+     greedy = true;
+    }
+
+  let do_instantiation env sa inst_quantif mconf tconf msg ~dec_lvl =
     Debug.new_instances msg env;
     let l = instantiate_ground_preds env [] sa in
     let l = expand_skolems env l sa inst_quantif in
-    let l = new_instances mconf env sa inst_quantif l in
+    let l = new_instances mconf tconf env sa inst_quantif l in
     assume_aux ~dec_lvl env l
 
   type instantiation_strat =
@@ -959,40 +973,45 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     match inst_strat with
     | Force_normal ->
       let mconf = frugal_mconf () in (* take frugal_mconf if normal is forced *)
+      let tconf = frugal_tconf () in (* take frugal_tconf if normal is forced *)
       env.last_forced_normal <- nb_mrounds;
       let sa, inst_quantif =
         instantiation_context env ~greedy_round:false ~frugal:false in
-      do_instantiation env sa inst_quantif mconf "normal-inst (forced)" ~dec_lvl
+      do_instantiation
+        env sa inst_quantif mconf tconf "normal-inst (forced)" ~dec_lvl
 
     | Force_greedy ->
-      let mconf = normal_mconf () in (*take normal_mconf if greedy is forced*)
+      let mconf = normal_mconf () in
+      let tconf = normal_tconf () in (* take normal_tconf if greedy is forced *)
       env.last_forced_greedy <- nb_mrounds;
       let sa, inst_quantif =
         instantiation_context env ~greedy_round:true ~frugal:true in
-      do_instantiation env sa inst_quantif mconf "greedy-inst (forced)" ~dec_lvl
+      do_instantiation
+        env sa inst_quantif mconf tconf "greedy-inst (forced)" ~dec_lvl
 
     | Auto ->
       List.fold_left
-        (fun updated (mconf, debug, greedy_round, frugal) ->
+        (fun updated (mconf, tconf, debug, greedy_round, frugal) ->
            if updated then updated
            (* TODO: stop here with an exception *)
            else
              let sa, inst_quantif =
                instantiation_context env ~greedy_round ~frugal in
-             do_instantiation env sa inst_quantif mconf debug ~dec_lvl
+             do_instantiation env sa inst_quantif mconf tconf debug ~dec_lvl
         )
         false
         (match Options.get_instantiation_heuristic () with
          | INormal ->
-           [ frugal_mconf (), "frugal-inst", false, true ;
-             normal_mconf (), "normal-inst", false, false ]
+           [ frugal_mconf (), frugal_tconf (), "frugal-inst", false, true ;
+             normal_mconf (), normal_tconf (), "normal-inst", false, false ]
          | IAuto ->
-           [ frugal_mconf (), "frugal-inst", false, true ;
-             normal_mconf (), "normal-inst", false, false;
-             greedier_mconf (), "greedier-inst", true, false]
+           [ frugal_mconf (), frugal_tconf (), "frugal-inst", false, true ;
+             normal_mconf (), normal_tconf (), "normal-inst", false, false;
+             greedier_mconf (), greedier_tconf (), "greedier-inst", true, false]
          | IGreedy ->
-           [ greedy_mconf (), "greedy-inst", true , false;
-             greedier_mconf (), "greedier-inst", true, false])
+           [ greedy_mconf (), greedy_tconf (), "greedy-inst", true , false;
+             greedier_mconf (), greedier_tconf (), "greedier-inst", true, false
+           ])
 
   let do_case_split env policy =
     match SAT.do_case_split env.satml policy with
@@ -1392,6 +1411,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     Ty.reinit_decls ();
     IntervalCalculus.reinit_cache ();
     Inst.reinit_em_cache ();
+    Matching.Triggers.reinit_caches ();
     Expr.reinit_cache ();
     Hstring.reinit_cache ();
     Shostak.Combine.reinit_cache ();

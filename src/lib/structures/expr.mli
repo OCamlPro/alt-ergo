@@ -334,7 +334,7 @@ val max_ground_terms_rec_of_form : t -> Set.t
 (** skolemization and other smart constructors for formulas **)
 
 val make_triggers:
-  t -> binders -> decl_kind -> Util.matching_env -> trigger list
+  t -> binders -> decl_kind -> Util.triggers_env -> trigger list
 (** [make_triggers f binders decl menv] generate multi-triggers for the
     formula [f] and binders [binders].
 
