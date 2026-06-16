@@ -25,10 +25,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* To get rid of warnings produced by ppx_deriving. *)
-[@@@warning "-32"]
+(* The type of modules, followed by the list of every element.
 
-(* The type of modules, followed by the list of every element. *)
+   Note: keep the constructors in the same order as in the definition in
+   [ty_module_to_enum] so that it gets simplified to the identity. *)
 type ty_module =
   | M_None
   | M_Combine
@@ -45,7 +45,25 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
-[@@deriving enum]
+
+let[@inline] ty_module_to_enum = function
+  | M_None -> 0
+  | M_Combine -> 1
+  | M_Sat -> 2
+  | M_Match -> 3
+  | M_CC -> 4
+  | M_UF -> 5
+  | M_Arith -> 6
+  | M_Arrays -> 7
+  | M_Adt -> 8
+  | M_Bitv -> 9
+  | M_AC -> 10
+  | M_Expr -> 11
+  | M_Triggers -> 12
+  | M_Simplex -> 13
+  | M_Ite -> 14
+
+let max_ty_module = 14
 
 let all_modules =
   let l = [
@@ -69,7 +87,10 @@ let all_modules =
   assert ((List.length l) = max_ty_module + 1);
   l
 
-(* The type of functions, followed by the list of every element. *)
+(* The type of functions, followed by the list of every element.
+
+   Note: keep the constructors in the same order as in the definition in
+   [ty_module_to_enum] so that it gets simplified to the identity. *)
 type ty_function =
   | F_add
   | F_add_lemma
@@ -91,7 +112,30 @@ type ty_function =
   | F_new_facts
   | F_apply_subst
   | F_instantiate
-[@@deriving enum]
+
+let[@inline] ty_function_to_enum = function
+  | F_add -> 0
+  | F_add_lemma -> 1
+  | F_add_predicate -> 2
+  | F_add_terms -> 3
+  | F_are_equal -> 4
+  | F_assume -> 5
+  | F_class_of -> 6
+  | F_leaves -> 7
+  | F_make -> 8
+  | F_m_lemmas -> 9
+  | F_m_predicates -> 10
+  | F_query -> 11
+  | F_solve -> 12
+  | F_subst -> 13
+  | F_union -> 14
+  | F_unsat -> 15
+  | F_none -> 16
+  | F_new_facts -> 17
+  | F_apply_subst -> 18
+  | F_instantiate -> 19
+
+let max_ty_function = 19
 
 let all_functions =
   let l = [

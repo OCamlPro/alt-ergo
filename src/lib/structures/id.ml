@@ -16,11 +16,22 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type t = Hstring.t [@@deriving ord]
-
-type typed = t * Ty.t list * Ty.t [@@deriving ord]
+type t = Hstring.t
 
 let equal = Hstring.equal
+
+let compare = Hstring.compare
+
+type typed = t * Ty.t list * Ty.t
+
+let compare_typed (t1, xs1, ty1) (t2, xs2, ty2) =
+  let c = compare t1 t2 in
+  if c <> 0 then c
+  else
+    let c = Compat.List.compare Ty.compare xs1 xs2 in
+    if c <> 0 then c
+    else
+      Ty.compare ty1 ty2
 
 let pp ppf id =
   Dolmen.Smtlib2.Script.Poly.Print.symbol ppf

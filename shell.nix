@@ -19,6 +19,7 @@ pkgs.mkShell {
     ocp-indent
     dune-release
     dune-site
+    crunch
   ];
 
   buildInputs = [ pkgs.nodejs ] ++ (with ocamlPackages; [
@@ -36,9 +37,7 @@ pkgs.mkShell {
     data-encoding
     zarith_stubs_js
     cmdliner_2
-    ppx_blob
     odoc
-    ppx_deriving
     landmarks
     landmarks-ppx
     qcheck

@@ -20,10 +20,8 @@ let
       seq
       stdlib-shims
       fmt
-      ppx_blob
       dolmen_loop
       camlzip
-      ppx_deriving
     ];
   };
 
@@ -35,6 +33,7 @@ let
     duneVersion = "3";
 
     buildInputs = (with ocamlPackages; [
+      alt-ergo-lib
       cmdliner
       dune-site
     ]);

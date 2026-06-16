@@ -64,6 +64,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
 
  (depends
   (ocaml (>= 4.08.1))
+  crunch
   dune
   dune-build-info
   (dolmen (or (>= 0.10) (= dev)))
@@ -74,14 +75,11 @@ See more details on http://alt-ergo.ocamlpro.com/"
   seq
   (fmt (>= 0.9.0))
   stdlib-shims
-  (ppx_blob (>= 0.7.2))
   (camlzip (>= 1.07))
   (odoc :with-doc)
-  ppx_deriving
   (qcheck (and :with-test (= 0.25)))
  )
  (conflicts
-  (ppxlib (< 0.30.0))
   (result (< 1.5))
  )
 )
