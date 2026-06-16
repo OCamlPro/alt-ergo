@@ -64,6 +64,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
 
  (depends
   (ocaml (>= 4.08.1))
+  crunch
   dune
   dune-build-info
   (dolmen (or (>= 0.10) (= dev)))
