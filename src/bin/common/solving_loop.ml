@@ -805,10 +805,10 @@ let process_source ?selector_inst ~print_status src =
       let builtin_dir = "<builtin>" in
       let theory_preludes =
         Options.get_enabled_theories ()
-        |> List.filter_map (fun th ->
-            match Theories.get_prelude th with
-            | None -> None
-            | Some prelude -> (
+        |> List.filter_map (fun (th, s) ->
+            match Theories.get_prelude th, s with
+            | None, _ | _, Theories.Disabled -> None
+            | Some prelude, _ ->
               match Theories.content prelude with
               | None ->
                 Printer.print_wrn

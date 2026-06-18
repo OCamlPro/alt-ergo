@@ -342,7 +342,7 @@ val set_infer_output_format : bool -> unit
 val set_preludes : string list -> unit
 (** Set [preludes] accessible with {!val:get_preludes} *)
 
-val set_enabled_theories : Theories.t list -> unit
+val set_enabled_theories : (Theories.t * Theories.status) list -> unit
 (** Set [enabled_theories] accessible with {!val:get_enabled_theories} *)
 
 val set_disable_weaks : bool -> unit
@@ -628,7 +628,7 @@ val get_parse_only : unit -> bool
 val get_preludes : unit -> string list
 (** Default to [[]] *)
 
-val get_enabled_theories : unit -> Theories.t list
+val get_enabled_theories : unit -> (Theories.t * Theories.status) list
 (** List of enabled theories. *)
 
 (** [true] if the program shall stop after typing. *)

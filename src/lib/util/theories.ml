@@ -124,8 +124,28 @@ let theory_enum = List.map (fun t -> Format.asprintf "%a" pp t, t) all
 
 let get_prelude = function Prelude p -> Some p | _ -> None
 
-module Set = Set.Make (struct
+module Map = Map.Make (struct
   type nonrec t = t
 
   let compare = compare
 end)
+
+let upd_theory_status th ~enable m =
+  Map.update th
+    (fun current ->
+      match current, enable with
+      | Some Enabled, false | Some Disabled, true ->
+        Fmt.failwith "theory '%a' cannot be both enabled and disabled" pp th
+      | _, true -> Some Enabled
+      | _ -> Some Disabled)
+    m
+
+let enable_theory m th = upd_theory_status th ~enable:true m
+
+let disable_theory m th = upd_theory_status th ~enable:false m
+
+let is_enabled th l =
+  match List.assoc_opt th l with Some (Default | Enabled) -> true | _ -> false
+
+let is_disabled th l =
+  match List.assoc_opt th l with None | Some Disabled -> true | _ -> false
