@@ -804,17 +804,20 @@ let process_source ?selector_inst ~print_status src =
       Options.Time.start ();
       let builtin_dir = "<builtin>" in
       let theory_preludes =
-        Options.get_theory_preludes ()
-        |> List.filter_map (fun theory ->
-            match Theories.content theory with
-            | None ->
-              Printer.print_wrn
-                "Theory prelude for %a is not yet implemented; ignoring."
-                Theories.pp_prelude theory;
-              None
-            | Some content ->
-              let filename = Theories.filename theory in
-              Some (State.mk_file builtin_dir (`Raw (filename, content))))
+        Options.get_enabled_theories ()
+        |> List.filter_map (fun th ->
+            match Theories.get_prelude th with
+            | None -> None
+            | Some prelude -> (
+              match Theories.content prelude with
+              | None ->
+                Printer.print_wrn
+                  "Theory prelude for %a is not yet implemented; ignoring."
+                  Theories.pp_prelude prelude;
+                None
+              | Some content ->
+                let filename = Theories.filename prelude in
+                Some (State.mk_file builtin_dir (`Raw (filename, content)))))
       in
       let preludes =
         theory_preludes

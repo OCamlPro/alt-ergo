@@ -409,7 +409,7 @@ let parse_only = ref false
 
 let preludes = ref []
 
-let theory_preludes = ref Theories.default_preludes
+let enabled_theories = ref []
 
 let type_only = ref false
 
@@ -431,7 +431,7 @@ let set_parse_only b = parse_only := b
 
 let set_preludes p = preludes := p
 
-let set_theory_preludes t = theory_preludes := t
+let set_enabled_theories t = enabled_theories := t
 
 let set_type_only b = type_only := b
 
@@ -453,7 +453,7 @@ let get_parse_only () = !parse_only
 
 let get_preludes () = !preludes
 
-let get_theory_preludes () = !theory_preludes
+let get_enabled_theories () = !enabled_theories
 
 let get_type_only () = !type_only
 

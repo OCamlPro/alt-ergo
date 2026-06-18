@@ -551,7 +551,7 @@ let mk_theory_opt () no_contracongru no_fm no_nla no_tcp no_theory restricted
   set_disable_adts (not (List.exists (Theories.equal Theories.ADT) theories));
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
-  set_theory_preludes (Theories.preludes theories);
+  set_enabled_theories theories;
   `Ok ()
 
 let halt_opt version_info where =
