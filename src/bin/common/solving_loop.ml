@@ -246,6 +246,29 @@ let process_source ?selector_inst ~print_status src =
       fatal_error "Error while setting steps bound to %i: current step = %i." i
         (Steps.get_steps ())
   in
+
+  (* Initialized with `Options.get_enabled_theories ()`, and used to update
+     enabled theories with `Options.set_enabled_theories ()`, when the
+     `:set-option` commands are processed. *)
+  let enabled_theories_key : Theories.status Theories.Map.t State.key =
+    State.create_key ~pipe:"" "enabled_theories"
+  in
+
+  let theory_preludes_loaded_key : bool State.key =
+    State.create_key ~pipe:"" "theory_preludes_loaded"
+  in
+
+  let set_theory_status ~cmd ~enable th st =
+    match List.assoc_opt th Theories.theory_enum with
+    | None ->
+      warning "unknown theory %s; ignoring %s" th cmd;
+      st
+    | Some t ->
+      let theories = State.get enabled_theories_key st in
+      let theories = Theories.upd_theory_status t ~enable theories in
+      State.set enabled_theories_key theories st
+  in
+
   let debug_parsed_pipe st c =
     if State.get State.debug st
     then
@@ -352,11 +375,20 @@ let process_source ?selector_inst ~print_status src =
         |> disable "extra-dstr" |> disable "shadowing")
     in
     let logic_file, response_file = mk_files src in
+    let theories =
+      List.fold_left
+        (fun m (k, v) -> Theories.Map.add k v m)
+        Theories.Map.empty
+        (Options.get_enabled_theories ())
+    in
+    (* TODO: make theories a map in the options module to avoid conversions? *)
     ( logic_file,
       State.empty
       |> State.set solver_ctx_key solver_ctx
       |> State.set partial_model_key None
       |> State.set named_terms Util.MS.empty
+      |> State.set enabled_theories_key theories
+      |> State.set theory_preludes_loaded_key false
       |> DO.init
       |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
            ~size_limit ~response_file
@@ -487,6 +519,14 @@ let process_source ?selector_inst ~print_status src =
         st
       | Some i -> set_steps_bound i st
     end
+    | ( ((":enable-theory" | ":enable-theories") as cmd),
+        Symbol { name = Simple th; _ } ) ->
+      let st = set_theory_status ~cmd ~enable:true th st in
+      st
+    | ( ((":disable-theory" | ":disable-theories") as cmd),
+        Symbol { name = Simple th; _ } ) ->
+      let st = set_theory_status ~cmd ~enable:false th st in
+      st
     | _ ->
       unsupported_opt ~loc name;
       st
@@ -639,153 +679,200 @@ let process_source ?selector_inst ~print_status src =
     in
     Printer.print_std "(@[<v 0>%a@])@," print_terms_assignments assignments
   in
-  let handle_stmt :
-      Frontend.used_context -> State.t -> 'a D_loop.Typer_Pipe.stmt -> State.t =
-    let goal_cnt = ref 0 in
-    fun all_context st td ->
-      let solver_ctx = State.get solver_ctx_key st in
-      let file = (State.get State.logic_file st).loc in
-      let loc = DStd.Loc.loc file td.loc in
-      match td with
-      | { contents = `Set_logic _; _ } ->
-        cmd_on_modes st [Start] "set-logic";
-        DO.Mode.set Util.Assert st
-      (* When the next statement is a goal, the solver is called and provided
-         the goal and the current context *)
-      | { id; contents = `Solve _ as contents; attrs; implicit; _ } ->
-        cmd_on_modes st [Assert; Sat; Unsat] "solve";
-        let l = solver_ctx.local @ solver_ctx.global @ solver_ctx.ctx in
-        let id =
-          match (State.get State.logic_file st).lang with
-          | Some (Smtlib2 _) ->
-            DStd.Id.mk DStd.Namespace.term
-            @@ "g_"
-            ^ string_of_int
-                (incr goal_cnt;
-                 !goal_cnt)
-          | _ -> id
-        in
-        let name =
-          match id.name with
-          | Simple name -> name
-          | _ ->
-            Fmt.failwith "%a: internal error: goal name should be simple" pp_loc
-              loc
-        in
-        let contents =
-          match contents with
-          | `Solve (hyps, []) -> `Check hyps
-          | `Solve ([], [t]) -> `Goal t
-          | _ -> Fmt.failwith "%a: internal error: unknown statement" pp_loc loc
-        in
-        let stmt = { Typer_Pipe.id; contents; loc = td.loc; attrs; implicit } in
-        let cnf, is_thm =
-          match Translate.make file l stmt with
-          | ({ Commands.st_decl = Query (_, _, kind); _ } as cnf) :: hyps ->
-            let is_thm = match kind with Ty.Thm | Sat -> true | _ -> false in
-            List.rev (cnf :: hyps), is_thm
-          | _ -> assert false
-        in
-        let solve_res =
-          solve (DO.SatSolverModule.get st) all_context (cnf, name)
-        in
-        if is_thm
-        then
-          State.set solver_ctx_key
-            (let solver_ctx = State.get solver_ctx_key st in
-             { solver_ctx with global = []; local = [] })
-            st
-          |> set_partial_model_and_mode solve_res
-        else
-          State.set solver_ctx_key
-            (let solver_ctx = State.get solver_ctx_key st in
-             { solver_ctx with local = [] })
-            st
-          |> set_partial_model_and_mode solve_res
-      | { contents =
-            `Set_option
-              { DStd.Term.term =
-                  App ({ term = Symbol { name = Simple name; _ }; _ }, [value]);
-                _
-              };
-          _
-        } ->
-        handle_option ~loc name value st
-      | { contents = `Set_option _; _ } ->
-        recoverable_error ~loc "Invalid set-option";
-        st
-      | { contents = `Get_model; _ } ->
-        cmd_on_modes st [Sat] "get-model";
-        if Options.get_produce_models ()
-        then
-          let () =
-            match State.get partial_model_key st with
-            | Some (Model ((module SAT), env)) ->
-              let module FE = Frontend.Make (SAT) in
-              Fmt.pf
-                (Options.Output.get_fmt_regular ())
-                "%a@." FE.print_model env
-            | None -> recoverable_error ~loc "No model produced."
-          in
-          st
-        else begin
-          recoverable_error ~loc
-            "Model generation disabled (try --produce-models)";
-          st
-        end
-      | { contents = `Reset; _ } ->
-        st
-        |> State.set partial_model_key None
-        |> State.set solver_ctx_key empty_solver_ctx
-        |> DO.Mode.clear |> DO.StrictMode.clear |> DO.ProduceAssignment.clear
-        |> DO.init
-        |> State.set named_terms Util.MS.empty
-      | { contents = `Exit; _ } -> raise (Exit_with_code 0)
-      | { contents = `Echo str; _ } ->
-        Fmt.pf
-          (Options.Output.get_fmt_regular ())
-          "%a@." Printer.pp_smtlib_string str;
-        st
-      | { contents = `Get_info kind; _ } ->
-        handle_get_info ~loc st kind;
-        st
-      | { contents = `Get_assignment; _ } -> begin
-        cmd_on_modes st [Sat] "get-assignment";
-        match State.get partial_model_key st with
-        | Some (Model ((module SAT), partial_model)) ->
-          if DO.ProduceAssignment.get st
-          then handle_get_assignment ~get_value:(SAT.get_value partial_model) st
-          else
-            recoverable_error ~loc
-              "Produce assignments disabled; add (set-option \
-               :produce-assignments true)";
-          st
-        | None ->
-          recoverable_error ~loc
-            "No model produced, cannot execute get-assignment.";
-          st
-      end
-      | { contents = `Other (custom, args); loc; _ } ->
-        handle_custom_statement ~loc custom args st
-      | td ->
-        let st =
-          match td.contents with
-          | `Pop _ | `Push _ -> st |> set_mode Assert
-          | _ -> st
-        in
-        (* TODO: - Separate statements that should be ignored from unsupported
-           statements and throw exception or print a warning when an unsupported
-           statement is encountered. *)
-        let cnf =
-          Translate.make (State.get State.logic_file st).loc
-            (State.get solver_ctx_key st).ctx td
-        in
+
+  let goal_cnt = ref 0 in
+  let builtin_dir = "<builtin>" in
+
+  (* Used to manually load preludes while processing `:set-option` statements *)
+  let rec load_prelude all_context st prelude =
+    let prelude_file =
+      let filename = Theories.filename prelude in
+      let content = Option.get (Theories.content prelude) in
+      State.mk_file builtin_dir (`Raw (filename, content))
+    in
+    let g = Parser.parse_logic ~preludes:[] prelude_file in
+    let open Pipeline in
+    let op_i ?name f = op ?name (fun st x -> f st x, ()) in
+    run ~finally:(finally ~handle_exn) g st
+      (fix
+         (op ~name:"expand" Parser.expand)
+         (op ~name:"debug_pre" debug_parsed_pipe
+         @>|> op ~name:"typecheck" Typer_Pipe.typecheck
+         @>|> op ~name:"debug_post" debug_typed_pipe
+         @>|> op_i (handle_stmts all_context)
+         @>>> _end))
+  (* Loads the preludes for all enabled theories, only called once before the
+     first `solve` or `push`/`pop` statements. *)
+  and load_theory_preludes all_context st =
+    if State.get theory_preludes_loaded_key st
+    then st
+    else
+      let main_logic_file = State.get State.logic_file st in
+      let st = State.set theory_preludes_loaded_key true st in
+      let theories =
+        Theories.Map.bindings (State.get enabled_theories_key st)
+      in
+      Options.set_enabled_theories theories;
+      let st =
+        List.fold_left
+          (fun st (th, s) ->
+            match th, s with
+            | Theories.Prelude prelude, (Theories.Enabled | Default) -> begin
+              match Theories.content prelude with
+              | None ->
+                warning
+                  "Theory prelude for %a is not yet implemented; ignoring."
+                  Theories.pp (Theories.Prelude prelude);
+                st
+              | Some _ -> load_prelude all_context st prelude
+            end
+            | _ -> st)
+          st theories
+      in
+      State.set State.logic_file main_logic_file st
+  and handle_stmt all_context st (td : _ Typer_Pipe.stmt) =
+    let solver_ctx = State.get solver_ctx_key st in
+    let file = (State.get State.logic_file st).loc in
+    let loc = DStd.Loc.loc file td.loc in
+    match td with
+    | { contents = `Set_logic _; _ } ->
+      cmd_on_modes st [Start] "set-logic";
+      DO.Mode.set Util.Assert st
+    (* When the next statement is a goal, the solver is called and provided the
+       goal and the current context *)
+    | { id; contents = `Solve _ as contents; attrs; implicit; _ } ->
+      cmd_on_modes st [Assert; Sat; Unsat] "solve";
+      let st = load_theory_preludes all_context st in
+      let l = solver_ctx.local @ solver_ctx.global @ solver_ctx.ctx in
+      let id =
+        match (State.get State.logic_file st).lang with
+        | Some (Smtlib2 _) ->
+          DStd.Id.mk DStd.Namespace.term
+          @@ "g_"
+          ^ string_of_int
+              (incr goal_cnt;
+               !goal_cnt)
+        | _ -> id
+      in
+      let name =
+        match id.name with
+        | Simple name -> name
+        | _ ->
+          Fmt.failwith "%a: internal error: goal name should be simple" pp_loc
+            loc
+      in
+      let contents =
+        match contents with
+        | `Solve (hyps, []) -> `Check hyps
+        | `Solve ([], [t]) -> `Goal t
+        | _ -> Fmt.failwith "%a: internal error: unknown statement" pp_loc loc
+      in
+      let stmt = { Typer_Pipe.id; contents; loc = td.loc; attrs; implicit } in
+      let cnf, is_thm =
+        match Translate.make file l stmt with
+        | ({ Commands.st_decl = Query (_, _, kind); _ } as cnf) :: hyps ->
+          let is_thm = match kind with Ty.Thm | Sat -> true | _ -> false in
+          List.rev (cnf :: hyps), is_thm
+        | _ -> assert false
+      in
+      let solve_res =
+        solve (DO.SatSolverModule.get st) all_context (cnf, name)
+      in
+      if is_thm
+      then
         State.set solver_ctx_key
           (let solver_ctx = State.get solver_ctx_key st in
-           { solver_ctx with ctx = cnf })
+           { solver_ctx with global = []; local = [] })
           st
-  in
-  let handle_stmts all_context st l =
+        |> set_partial_model_and_mode solve_res
+      else
+        State.set solver_ctx_key
+          (let solver_ctx = State.get solver_ctx_key st in
+           { solver_ctx with local = [] })
+          st
+        |> set_partial_model_and_mode solve_res
+    | { contents =
+          `Set_option
+            { DStd.Term.term =
+                App ({ term = Symbol { name = Simple name; _ }; _ }, [value]);
+              _
+            };
+        _
+      } ->
+      handle_option ~loc name value st
+    | { contents = `Set_option _; _ } ->
+      recoverable_error ~loc "Invalid set-option";
+      st
+    | { contents = `Get_model; _ } ->
+      cmd_on_modes st [Sat] "get-model";
+      if Options.get_produce_models ()
+      then
+        let () =
+          match State.get partial_model_key st with
+          | Some (Model ((module SAT), env)) ->
+            let module FE = Frontend.Make (SAT) in
+            Fmt.pf (Options.Output.get_fmt_regular ()) "%a@." FE.print_model env
+          | None -> recoverable_error ~loc "No model produced."
+        in
+        st
+      else begin
+        recoverable_error ~loc
+          "Model generation disabled (try --produce-models)";
+        st
+      end
+    | { contents = `Reset; _ } ->
+      st
+      |> State.set partial_model_key None
+      |> State.set solver_ctx_key empty_solver_ctx
+      |> DO.Mode.clear |> DO.StrictMode.clear |> DO.ProduceAssignment.clear
+      |> DO.init
+      |> State.set named_terms Util.MS.empty
+    | { contents = `Exit; _ } -> raise (Exit_with_code 0)
+    | { contents = `Echo str; _ } ->
+      Fmt.pf
+        (Options.Output.get_fmt_regular ())
+        "%a@." Printer.pp_smtlib_string str;
+      st
+    | { contents = `Get_info kind; _ } ->
+      handle_get_info ~loc st kind;
+      st
+    | { contents = `Get_assignment; _ } -> begin
+      cmd_on_modes st [Sat] "get-assignment";
+      match State.get partial_model_key st with
+      | Some (Model ((module SAT), partial_model)) ->
+        if DO.ProduceAssignment.get st
+        then handle_get_assignment ~get_value:(SAT.get_value partial_model) st
+        else
+          recoverable_error ~loc
+            "Produce assignments disabled; add (set-option \
+             :produce-assignments true)";
+        st
+      | None ->
+        recoverable_error ~loc
+          "No model produced, cannot execute get-assignment.";
+        st
+    end
+    | { contents = `Other (custom, args); loc; _ } ->
+      handle_custom_statement ~loc custom args st
+    | td ->
+      let st = load_theory_preludes all_context st in
+      let st =
+        match td.contents with
+        | `Pop _ | `Push _ -> st |> set_mode Assert
+        | _ -> st
+      in
+      (* TODO: - Separate statements that should be ignored from unsupported
+         statements and throw exception or print a warning when an unsupported
+         statement is encountered. *)
+      let cnf =
+        Translate.make (State.get State.logic_file st).loc
+          (State.get solver_ctx_key st).ctx td
+      in
+      State.set solver_ctx_key
+        (let solver_ctx = State.get solver_ctx_key st in
+         { solver_ctx with ctx = cnf })
+        st
+  and handle_stmts all_context st l =
     let rec aux named_map st = function
       | [] -> State.set named_terms named_map st
       | stmt :: tl ->
@@ -802,22 +889,42 @@ let process_source ?selector_inst ~print_status src =
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
       Options.Time.start ();
-      let builtin_dir = "<builtin>" in
+      let is_smtlib =
+        match O.get_input_format () with
+        | Some (Smtlib2 _) -> true
+        | Some _ -> false
+        | None -> (
+          match src with
+          | `File path | `Raw (path, _) -> (
+            match Filename.extension path with
+            | ".smt2" | ".psmt2" -> true
+            | _ -> false)
+          | `Stdin ->
+            (* TODO: this means that for native format, it is necessary to
+               explicitely state the format for preludes to be loaded, otherwise
+               they aren't. This should be fixed. *)
+            true)
+      in
       let theory_preludes =
-        Options.get_enabled_theories ()
-        |> List.filter_map (fun (th, s) ->
-            match Theories.get_prelude th, s with
-            | None, _ | _, Theories.Disabled -> None
-            | Some prelude, _ ->
-              match Theories.content prelude with
-              | None ->
-                Printer.print_wrn
-                  "Theory prelude for %a is not yet implemented; ignoring."
-                  Theories.pp_prelude prelude;
-                None
-              | Some content ->
-                let filename = Theories.filename prelude in
-                Some (State.mk_file builtin_dir (`Raw (filename, content)))))
+        (* For SMT-LIB input, theory preludes are loaded lazily after all
+           set-option :enable/disable-theory commands have been processed. *)
+        if is_smtlib
+        then []
+        else
+          Options.get_enabled_theories ()
+          |> List.filter_map (fun (th, s) ->
+              match Theories.get_prelude th, s with
+              | None, _ | _, Theories.Disabled -> None
+              | Some prelude, _ -> (
+                match Theories.content prelude with
+                | None ->
+                  Printer.print_wrn
+                    "Theory prelude for %a is not yet implemented; ignoring."
+                    Theories.pp_prelude prelude;
+                  None
+                | Some content ->
+                  let filename = Theories.filename prelude in
+                  Some (State.mk_file builtin_dir (`Raw (filename, content)))))
       in
       let preludes =
         theory_preludes
