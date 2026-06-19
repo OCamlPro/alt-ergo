@@ -6,7 +6,7 @@
 
    The reproducible resource limit was previously using a time-based limit,
    which does not respect the reproducibility criterion outlined in the SMT-LIB
-   standard. It now defines a per-goal step limit, which apply in addition to
+   standard. It now defines a per-goal step limit, which applies in addition to
    the **global** step limit (defined with `--steps-bound`), if any.
 
    We encourage users of the global step limit (`--steps-bound`) to switch to
