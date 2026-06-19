@@ -175,7 +175,7 @@ let set_steps_bound i =
 let with_step_limit limit ~scope =
   if limit < 0 then invalid_arg "with_step_limit: limit must be nonnegative";
   (* Note that we may not guaranteed that calling [with_step_limit] with a
-      given value inside two distinct context will result in exactly the same
+      given value inside two distinct contexts will result in exactly the same
       limit. What we do guarantee is that calling [with_step_limit] with the
       same value and within the same context will result in the same limit.
       This is consistent with the requirements of the

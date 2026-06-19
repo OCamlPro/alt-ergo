@@ -87,7 +87,7 @@ val apply_without_step_limit : (unit -> 'a) -> 'a
     recorded are *NOT* counted towards the [limit]).
 
     [with_step_limit] is not guaranteed to raise if the limit is reached, as the
-    [Util.Step_limit_reached] exception might be catched by [scope].
+    [Util.Step_limit_reached] exception might be caught by [scope].
 
     [with_step_limit] respects any current limit enforced by [set_steps_bound]
     or another call to [with_step_limit] higher in the call stack: if a parent
