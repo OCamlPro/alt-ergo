@@ -70,7 +70,7 @@ using `(set-option)` in the script.
   
   unsat
 
-The global step limit cannot be overriden and always apply.
+The global step limit cannot be overridden and always applies.
 
   $ alt-ergo --steps-bound 1 nolimit.smt2 \
   >   2>/dev/null
