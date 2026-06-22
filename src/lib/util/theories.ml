@@ -67,7 +67,11 @@ let pp ppf = function
   | ADT -> Format.fprintf ppf "adt"
   | AC -> Format.fprintf ppf "ac"
 
-let filename = Format.asprintf "<builtins>/%a.ae" pp_prelude
+let filename th =
+  match th with
+  | (Fpa | Ria | Nra) as prelude ->
+    Format.asprintf "<builtins>/%a.ae" pp_prelude prelude
+  | SmtFloat -> "<builtins>/smt-lib-fpa.smt2"
 
 let get_prelude name =
   match Preludes.read name with
@@ -80,11 +84,13 @@ let ria_prelude = get_prelude "ria.ae"
 
 let nra_prelude = get_prelude "nra.ae"
 
+let smt_lib_fpa_prelude = get_prelude "smt-lib-fpa.smt2"
+
 let content = function
   | Fpa -> Some fpa_prelude
   | Ria -> Some ria_prelude
   | Nra -> Some nra_prelude
-  | SmtFloat -> None
+  | SmtFloat -> Some smt_lib_fpa_prelude
 
 let all_preludes = [Fpa; Ria; Nra; SmtFloat]
 
