@@ -121,6 +121,9 @@ val tunit : t
 val fresh_tvar : unit -> t
 (** Wrap the {!val:fresh_var} function to return a type. *)
 
+val named_tvar : string -> t
+(** Create a type variable with a specific name. *)
+
 val fresh_empty_text : unit -> t
 (** Return a fesh abstract type. *)
 
