@@ -148,6 +148,8 @@ let print = fst (print_generic None) None
 
 let fresh_tvar () = Tvar (DE.Ty.Var.mk "A")
 
+let named_tvar name = Tvar (DE.Ty.Var.mk name)
+
 let rec compare t1 t2 =
   match t1, t2 with
   | Tvar v1, Tvar v2 -> DE.Ty.Var.compare v1 v2

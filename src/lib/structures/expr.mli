@@ -682,9 +682,120 @@ end
 
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP : sig
+  module Names : sig
+    (* generic float type *)
+    val t : string
+
+    (* arithmetic with rounding mode *)
+    val add : string
+
+    val sub : string
+
+    val mul : string
+
+    val div : string
+
+    val fma : string
+
+    val sqrt : string
+
+    val round_to_integral : string
+
+    val of_real : string
+
+    (* arithmetic without rounding mode *)
+    val abs : string
+
+    val neg : string
+
+    val min : string
+
+    val max : string
+
+    (* comparisons *)
+    val le : string
+
+    val lt : string
+
+    val eq : string
+
+    (* predicates *)
+    val is_normal : string
+
+    val is_subnormal : string
+
+    val is_zero : string
+
+    val is_infinite : string
+
+    val is_nan : string
+
+    val is_negative : string
+
+    val is_positive : string
+
+    (* real conversion *)
+    val to_real : string
+  end
+
   val fp : t -> t -> t -> int -> int -> t
 
   val ieee_format_to_fp : t -> int -> int -> t
+
+  (* arithmetic with rounding mode *)
+  val add : e:int -> s:int -> mode:t -> t -> t -> t
+
+  val sub : e:int -> s:int -> mode:t -> t -> t -> t
+
+  val mul : e:int -> s:int -> mode:t -> t -> t -> t
+
+  val div : e:int -> s:int -> mode:t -> t -> t -> t
+
+  val fma : e:int -> s:int -> mode:t -> t -> t -> t -> t
+
+  val sqrt : e:int -> s:int -> mode:t -> t -> t
+
+  val round_to_integral : e:int -> s:int -> mode:t -> t -> t
+
+  val of_real : e:int -> s:int -> mode:t -> t -> t
+
+  (* arithmetic without rounding mode *)
+  val abs : e:int -> s:int -> t -> t
+
+  val neg : e:int -> s:int -> t -> t
+
+  val min : e:int -> s:int -> t -> t -> t
+
+  val max : e:int -> s:int -> t -> t -> t
+
+  (* comparisons *)
+  val le : e:int -> s:int -> t -> t -> t
+
+  val lt : e:int -> s:int -> t -> t -> t
+
+  val ge : e:int -> s:int -> t -> t -> t
+
+  val gt : e:int -> s:int -> t -> t -> t
+
+  val eq : e:int -> s:int -> t -> t -> t
+
+  (* predicates *)
+  val is_normal : e:int -> s:int -> t -> t
+
+  val is_subnormal : e:int -> s:int -> t -> t
+
+  val is_zero : e:int -> s:int -> t -> t
+
+  val is_infinite : e:int -> s:int -> t -> t
+
+  val is_nan : e:int -> s:int -> t -> t
+
+  val is_negative : e:int -> s:int -> t -> t
+
+  val is_positive : e:int -> s:int -> t -> t
+
+  (* real conversion *)
+  val to_real : e:int -> s:int -> t -> t
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

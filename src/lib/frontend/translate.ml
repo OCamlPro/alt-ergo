@@ -155,33 +155,39 @@ let builtin_term t = Dl.Typer.T.builtin_term t
 
 let builtin_ty t = Dl.Typer.T.builtin_ty t
 
-let ty (ty_cst : DE.ty_cst) ty =
-  let name = get_basename ty_cst.path in
-  DStd.Id.Map.add { name = DStd.Name.simple name; ns = Sort } @@ fun env s ->
-  builtin_ty @@ Dolmen_type.Base.app0 (module Dl.Typer.T) env s ty
-
 let fpa_rounding_mode, rounding_modes, add_rounding_modes =
-  match DT.view Fpa_rounding.fpa_rounding_mode_dty with
-  | `App (`Generic ty_cst, []) ->
-    let constrs = Fpa_rounding.d_constrs in
-    let add_constrs map =
-      List.fold_left
-        (fun map (c : DE.term_cst) ->
-          let name = get_basename c.path in
-          DStd.Id.Map.add
-            { name = DStd.Name.simple name; ns = Term }
-            (fun env _ ->
-              builtin_term
-              @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env c)
-            map)
-        map constrs
-    in
-    Cache.store_ty ty_cst Fpa_rounding.fpa_rounding_mode;
-    ( Fpa_rounding.fpa_rounding_mode_dty,
-      constrs,
-      fun map ->
-        map |> ty ty_cst Fpa_rounding.fpa_rounding_mode_dty |> add_constrs )
-  | _ -> assert false
+  let smt_constrs =
+    DE.Term.Const.Float.
+      [ "RNE", roundNearestTiesToEven;
+        "RNA", roundNearestTiesToAway;
+        "RTP", roundTowardPositive;
+        "RTN", roundTowardNegative;
+        "RTZ", roundTowardZero ]
+  in
+  let constrs = List.map snd smt_constrs in
+  let add_constrs map =
+    List.fold_left
+      (fun map (name, c) ->
+        DStd.Id.Map.add
+          { name = DStd.Name.simple name; ns = Term }
+          (fun env _ ->
+            builtin_term
+            @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env c)
+          map)
+      map smt_constrs
+  in
+  ( DE.Ty.roundingMode,
+    constrs,
+    fun map ->
+      map
+      |> DStd.Id.Map.add
+           { name = DStd.Name.simple "RoundingMode"; ns = Sort }
+           (fun env s ->
+             builtin_ty
+             @@ Dolmen_type.Base.app0
+                  (module Dl.Typer.T)
+                  env s DE.Ty.roundingMode)
+      |> add_constrs )
 
 module Const = struct
   open DE
@@ -447,6 +453,8 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Pi (tyvl, ty) ->
     if update then Cache.store_tyvl ~is_var tyvl;
     aux ty
+  | `App (`Builtin (B.Float B.Float.RoundingMode), []) ->
+    Fpa_rounding.fpa_rounding_mode
   | _ -> unsupported "Type %a" DE.Ty.print dty
 
 and handle_ty_app ?(update = false) ty_c l =
@@ -456,6 +464,11 @@ and handle_ty_app ?(update = false) ty_c l =
   match Cache.find_ty ty_c with
   | Tadt (hs, _) -> Tadt (hs, tyl)
   | Text (_, s) -> Text (tyl, s)
+  | Tvar { path = Absolute { name; _ } | Local { name; _ }; _ } as tv
+    when Compat.List.is_empty tyl && String.equal name E.FP.Names.t ->
+    (* To get the generic abstract float type from the axiomatization which is
+       stored as type varialbe `ae.fp.t`. *)
+    tv
   | _ -> assert false
 
 (** Handles a simple type declaration. *)
@@ -482,13 +495,17 @@ let mk_ty_decl (ty_c : DE.ty_cst) =
     in
     let ty = Ty.t_adt ~body:(Some cs) ty_c tyvl in
     Cache.store_ty ty_c ty
-  | None | Some Abstract ->
-    let ty_params =
-      []
-      (* List.init ty_c.id_ty.arity (fun _ -> Ty.fresh_tvar ()) *)
-    in
-    let ty = Ty.text ty_params ty_c in
-    Cache.store_ty ty_c ty
+  | None | Some Abstract -> (
+    match ty_c with
+    | { path = Absolute { name; _ }; _ }
+      when Options.get_smt_lib_fpa () && String.equal name E.FP.Names.t ->
+      (* Storing the generic abstract float type from the axiomatization as a
+         type variable `ae.fp.t`, so that axioms defined for it can apply for
+         specific instances of the Float(es,sb) type. *)
+      Cache.store_ty ty_c (Ty.named_tvar E.FP.Names.t)
+    | _ ->
+      let ty = Ty.text [] ty_c in
+      Cache.store_ty ty_c ty)
 
 (** Handles term declaration by storing the eventual present type variables in
     the cache as well as the symbol associated to the term. *)
@@ -779,6 +796,11 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         | B.Adt (Constructor _) ->
           let ty = dty_to_ty term_ty in
           E.mk_constr tcst [] ty
+        | B.Float RoundNearestTiesToEven -> mk_rounding NearestTiesToEven
+        | B.Float RoundNearestTiesToAway -> mk_rounding NearestTiesToAway
+        | B.Float RoundTowardPositive -> mk_rounding Up
+        | B.Float RoundTowardNegative -> mk_rounding Down
+        | B.Float RoundTowardZero -> mk_rounding ToZero
         | B.Float cst when Options.get_smt_lib_fpa () -> begin
           match cst with
           | Plus_infinity { e; s } -> E.float Fp_value.Plus_infinity e s
@@ -1159,22 +1181,96 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         (* Floating-point builtins *)
         | B.Float builtin, args -> (
           match builtin, args with
-          | RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
-          | RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
-          | RoundTowardPositive, _ -> mk_rounding Up
-          | RoundTowardNegative, _ -> mk_rounding Down
-          | RoundTowardZero, _ -> mk_rounding ToZero
-          | Fp { e; s }, [sign_t; exp_t; sig_t] when Options.get_smt_lib_fpa ()
-            ->
-            E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
-          | Ieee_format_to_fp { e; s }, [bv_t] when Options.get_smt_lib_fpa ()
-            ->
-            E.FP.ieee_format_to_fp (mk bv_t) e s
+          (* SMT-LIB FPA theory operations *)
+          | _ when Options.get_smt_lib_fpa () -> begin
+            match builtin, args with
+            | Fp { e; s }, [sign_t; exp_t; sig_t] ->
+              E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
+            | Ieee_format_to_fp { e; s }, [bv_t] ->
+              E.FP.ieee_format_to_fp (mk bv_t) e s
+            (* arithmetic with rounding mode *)
+            | Add { e; s }, [mode; x; y] ->
+              E.FP.add ~e ~s ~mode:(mk mode) (mk x) (mk y)
+            | Sub { e; s }, [mode; x; y] ->
+              E.FP.sub ~e ~s ~mode:(mk mode) (mk x) (mk y)
+            | Mul { e; s }, [mode; x; y] ->
+              E.FP.mul ~e ~s ~mode:(mk mode) (mk x) (mk y)
+            | Div { e; s }, [mode; x; y] ->
+              E.FP.div ~e ~s ~mode:(mk mode) (mk x) (mk y)
+            | Fma { e; s }, [mode; x; y; z] ->
+              E.FP.fma ~e ~s ~mode:(mk mode) (mk x) (mk y) (mk z)
+            | Sqrt { e; s }, [mode; x] -> E.FP.sqrt ~e ~s ~mode:(mk mode) (mk x)
+            | RoundToIntegral { e; s }, [mode; x] ->
+              E.FP.round_to_integral ~e ~s ~mode:(mk mode) (mk x)
+            | Of_real { e; s }, [mode; x] ->
+              E.FP.of_real ~e ~s ~mode:(mk mode) (mk x)
+            (* arithmetic without rounding mode *)
+            | Abs { e; s }, [x] -> E.FP.abs ~e ~s (mk x)
+            | Neg { e; s }, [x] -> E.FP.neg ~e ~s (mk x)
+            | Rem { e = _; s = _ }, [_x; _y] ->
+              (* TODO: rem is not currently in the axiomatization, its semantics
+                 need to be either axiomatized or implemented in Alt-Ergo. *)
+              unsupported_app_term ()
+            | Min { e; s }, [x; y] -> E.FP.min ~e ~s (mk x) (mk y)
+            | Max { e; s }, [x; y] -> E.FP.max ~e ~s (mk x) (mk y)
+            (* comparisons *)
+            | Leq { e; s }, [x; y] -> E.FP.le ~e ~s (mk x) (mk y)
+            | Lt { e; s }, [x; y] -> E.FP.lt ~e ~s (mk x) (mk y)
+            | Geq { e; s }, [x; y] -> E.FP.ge ~e ~s (mk x) (mk y)
+            | Gt { e; s }, [x; y] -> E.FP.gt ~e ~s (mk x) (mk y)
+            | Eq { e; s }, [x; y] -> E.FP.eq ~e ~s (mk x) (mk y)
+            (* predicates *)
+            | IsNormal { e; s }, [x] -> E.FP.is_normal ~e ~s (mk x)
+            | IsSubnormal { e; s }, [x] -> E.FP.is_subnormal ~e ~s (mk x)
+            | IsZero { e; s }, [x] -> E.FP.is_zero ~e ~s (mk x)
+            | IsInfinite { e; s }, [x] -> E.FP.is_infinite ~e ~s (mk x)
+            | IsNaN { e; s }, [x] -> E.FP.is_nan ~e ~s (mk x)
+            | IsNegative { e; s }, [x] -> E.FP.is_negative ~e ~s (mk x)
+            | IsPositive { e; s }, [x] -> E.FP.is_positive ~e ~s (mk x)
+            (* real conversion *)
+            | To_real { e; s }, [x] -> E.FP.to_real ~e ~s (mk x)
+            (* TODO: FP <-> FP and BV <-> FP conversion *)
+            | To_fp { e1 = _; s1 = _; e2 = _; s2 = _ }, [_; _]
+            | ( ( Of_sbv { m = _; e = _; s = _ }
+                | Of_ubv { m = _; e = _; s = _ }
+                | To_ubv { m = _; e = _; s = _ }
+                | To_sbv { m = _; e = _; s = _ } ),
+                [_] ) ->
+              unsupported_app_term ()
+            (* can't be applied *)
+            | (RoundingMode | T _ | Fp _), _
+            | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
+                | Minus_zero _ | NaN _ ),
+                _ )
+            | RoundNearestTiesToEven, _
+            | RoundNearestTiesToAway, _
+            | RoundTowardPositive, _
+            | RoundTowardNegative, _
+            | RoundTowardZero, _
+            (* wrong arity *)
+            | ( ( Ieee_format_to_fp _ | To_fp _ | Of_sbv _ | Of_ubv _ | To_ubv _
+                | To_sbv _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
+                | RoundToIntegral _ | Of_real _ | Abs _ | Neg _ | Rem _ | Min _
+                | Max _ | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _
+                | IsSubnormal _ | IsZero _ | IsInfinite _ | IsNaN _
+                | IsNegative _ | IsPositive _ | To_real _ ),
+                _ ) ->
+              invalid_app_term ()
+          end
+          (* can't be applied *)
           | (RoundingMode | T _ | Fp _), _
           | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _ | Minus_zero _
               | NaN _ ),
-              _ ) ->
+              _ )
+          (* roudning modes are now matched as literals since we use the SMT-LIB
+             FP theory ones provided by dolmen *)
+          | RoundNearestTiesToEven, _
+          | RoundNearestTiesToAway, _
+          | RoundTowardPositive, _
+          | RoundTowardNegative, _
+          | RoundTowardZero, _ ->
             invalid_app_term ()
+          (* not supported without [Options.get_smt_lib_fpa ()] *)
           | ( ( Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
               | Rem _ | RoundToIntegral _ | Min _ | Max _ | Leq _ | Lt _ | Geq _
               | Gt _ | Eq _ | IsNormal _ | IsSubnormal _ | IsZero _
