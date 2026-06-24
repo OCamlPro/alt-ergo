@@ -7,6 +7,11 @@
 
 ### SMT-LIB support
 
+ - Support parsing and reasoning over most SMT-LIB FPA Theory symbols (except
+   fp.rem, fp.to_fp, and bv/fp conversion operations), usable with
+   `--enable-theory smt.float`. Add a prelude axiomatizing the semantics of the
+   FPA Theory symbols, adapted from Why3's generated axiomatization. (#1364)
+
  - Added support for the `:reproducible-resource-limit` and
    `--reproducible-resource-limit` options, following the SMT-LIB standard
    (#1353)
