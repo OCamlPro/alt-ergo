@@ -3137,14 +3137,14 @@ module FP = struct
     let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
     let biased_exp = z_to_int (bv_literal_to_z exp_t) in
     let mantissa = bv_literal_to_z sig_t in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
   let ieee_format_to_fp bv_t e s =
     let bv_z = bv_literal_to_z bv_t in
     let mantissa = Z.extract bv_z 0 (s - 1) in
     let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
     let neg = Z.testbit bv_z (e + s - 1) in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
   (* TODO: move this module to somewhere else? fpa_rounding.ml? (might need
      renaming) *)
