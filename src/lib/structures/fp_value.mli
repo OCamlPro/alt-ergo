@@ -24,11 +24,7 @@ type t =
   | Plus_zero
   | Minus_zero
   | NaN
-  | Finite of
-      { neg : bool;
-        biased_exp : int;
-        significand : Z.t
-      }
+  | Finite of Numbers.Q.t
 
 val compare : t -> t -> int
 
@@ -40,8 +36,10 @@ val pp_smtlib : int -> int -> t Fmt.t
 (** [pp_smtlib eb sb ppf v] prints the concrete FP value [v] of precision
     [(eb, sb)] in the SMT-LIB format. *)
 
-val mk_fp_literal : neg:bool -> biased_exp:int -> mantissa:Z.t -> int -> t
-(** [mk_fp_literal neg biased_exp mantissa e] creates a floating-point literal
-    with the geiven parameters, where [neg] is the sign bit, [biased_exp] is the
-    biased exponent, [mantissa] is the mantissa bits (without the hidden bit),
-    [e] is the exponent width. *)
+val mk_fp_literal :
+  neg:bool -> biased_exp:int -> mantissa:Z.t -> e:int -> s:int -> t
+(** [mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s] creates a floating-point
+    literal where [neg] is the sign bit, [biased_exp] is the biased exponent,
+    [mantissa] is the significand bits (without the hidden bit), [e] is the
+    exponent width, and [s] is the significand width (including the hidden bit).
+*)
