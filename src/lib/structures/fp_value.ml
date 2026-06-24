@@ -18,27 +18,19 @@
 
 (** Literal floating-point values. *)
 
+module Q = Numbers.Q
+
 type t =
   | Plus_infinity
   | Minus_infinity
   | Plus_zero
   | Minus_zero
   | NaN
-  | Finite of
-      { neg : bool;
-        biased_exp : int;
-        significand : Z.t
-      }
+  | Finite of Q.t
 
 let compare v1 v2 =
   Util.compare_algebraic v1 v2 (function
-    | Finite f1, Finite f2 ->
-      let c = Bool.compare f1.neg f2.neg in
-      if c <> 0
-      then c
-      else
-        let c = Int.compare f1.biased_exp f2.biased_exp in
-        if c <> 0 then c else Z.compare f1.significand f2.significand
+    | Finite q1, Finite q2 -> Q.compare q1 q2
     | ( _,
         ( Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN
         | Finite _ ) ) ->
@@ -50,8 +42,36 @@ let pp ppf = function
   | Plus_zero -> Fmt.pf ppf "+zero"
   | Minus_zero -> Fmt.pf ppf "-zero"
   | NaN -> Fmt.pf ppf "NaN"
-  | Finite { neg; biased_exp; significand } ->
-    Fmt.pf ppf "fp[%b;%d;%s]" neg biased_exp (Z.to_string significand)
+  | Finite q -> Fmt.pf ppf "fp[%s]" (Q.to_string q)
+
+(* bias = 2^(eb-1) - 1 *)
+let fp_bias eb = (1 lsl (eb - 1)) - 1
+
+(* min_exp = bias + sb - 2 *)
+let fp_min_exp eb sb = fp_bias eb + sb - 2
+
+(* rational value -> (neg, biased_exp, significand) *)
+let q_to_bvs eb sb q =
+  let bias = fp_bias eb in
+  let min_exp = fp_min_exp eb sb in
+  let neg = Q.sign q < 0 in
+  (* (_, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
+  let _, m, e =
+    Fpa_rounding.float_of_rational sb min_exp Fpa_rounding.NearestTiesToEven
+      (Q.abs q)
+  in
+  (* hidden_bit = 2^(sb-1), m >= hidden_bit -> normal *)
+  let hidden_bit = Z.shift_left Z.one (sb - 1) in
+  let biased_exp, significand =
+    if Z.compare m hidden_bit >= 0
+    then
+      (* normal: biased_exp = (e + sb - 1) + bias; strip the hidden bit. *)
+      e + (sb - 1) + bias, Z.sub m hidden_bit
+    else
+      (* subnormal: biased_exp = 0; m is the bare significand. *)
+      0, m
+  in
+  neg, biased_exp, significand
 
 let pp_smtlib eb sb ppf = function
   | Plus_infinity -> Fmt.pf ppf "(_ +oo %d %d)" eb sb
@@ -59,14 +79,37 @@ let pp_smtlib eb sb ppf = function
   | Plus_zero -> Fmt.pf ppf "(_ +zero %d %d)" eb sb
   | Minus_zero -> Fmt.pf ppf "(_ -zero %d %d)" eb sb
   | NaN -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
-  | Finite { neg; biased_exp; significand } ->
+  | Finite q ->
+    let neg, biased_exp, significand = q_to_bvs eb sb q in
     let bfmt n = Fmt.str "%%0%db" n in
     let sign_s = if neg then "1" else "0" in
     let exp_s = Z.format (bfmt eb) (Z.of_int biased_exp) in
     let sig_s = Z.format (bfmt (sb - 1)) significand in
     Fmt.pf ppf "(fp #b%s #b%s #b%s)" sign_s exp_s sig_s
 
-let mk_fp_literal ~neg ~biased_exp ~mantissa e =
+(* (neg, biased_exp, significand) -> rational value *)
+let bvs_to_q ~neg ~biased_exp ~mantissa eb sb =
+  let bias = fp_bias eb in
+  let significand_full, exp_shift =
+    if biased_exp > 0
+    then
+      (* normal: significand_full = 2^(sb-1) + mantissa (restore hidden bit),
+         exp_shift = biased_exp - bias - (sb-1) (actual_exp - (sb-1)) *)
+      Z.add (Z.shift_left Z.one (sb - 1)) mantissa, biased_exp - bias - (sb - 1)
+    else
+      (* subnormal: significand_full = mantissa (no hidden bit), exp_shift = 1 -
+         bias - (sb-1) = -min_exp (fixed actual_exp) *)
+      mantissa, -fp_min_exp eb sb
+  in
+  (* significand_full * 2^exp_shift *)
+  let abs_q =
+    if exp_shift >= 0
+    then Q.mult_2exp (Q.from_z significand_full) exp_shift
+    else Q.div_2exp (Q.from_z significand_full) (-exp_shift)
+  in
+  if neg then Q.minus abs_q else abs_q
+
+let mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s =
   let max_exp = (1 lsl e) - 1 in
   (* TODO: these transformations should not be done this early as they can
      affect matching (we are transforming terms received from the parser into
@@ -83,4 +126,4 @@ let mk_fp_literal ~neg ~biased_exp ~mantissa e =
   then
     (* zero exponent + zero significand: signed zero *)
     if neg then Minus_zero else Plus_zero
-  else Finite { neg; biased_exp; significand = mantissa }
+  else Finite (bvs_to_q ~neg ~biased_exp ~mantissa e s)
