@@ -1221,7 +1221,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         | Max_int, _ -> op Max_int
         | Min_int, _ -> op Min_int
         | Integer_log2, _ -> op Integer_log2
-        | Int_pow2, _ -> op Int_pow2
+        | Int_pow2, [n] ->
+          E.mk_term (Sy.Op Sy.Pow)
+            [E.Ints.of_int 2; aux_mk_expr n]
+            (dty_to_ty term_ty)
         | Not_theory_constant, _ -> op Not_theory_constant
         | Is_theory_constant, _ -> op Is_theory_constant
         | Linear_dependency, _ -> op Linear_dependency

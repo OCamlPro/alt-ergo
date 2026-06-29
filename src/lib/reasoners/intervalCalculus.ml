@@ -677,17 +677,12 @@ let delayed_integer_log2 uf _op = function
         Some (res, exx))
   | _ -> assert false
 
-let delayed_int_pow2 uf _op = function
-  | [x] -> calc_pow (E.Ints.of_int 2) x Ty.Tint uf
-  | _ -> assert false
-
 (* These are the partially interpreted functions that we know how to compute.
    They will be computed immediately if possible, or as soon as we learn the
    value of their arguments. *)
 let dispatch = function
   | Symbols.Pow -> Some delayed_pow
   | Symbols.Integer_log2 -> Some delayed_integer_log2
-  | Symbols.Int_pow2 -> Some delayed_int_pow2
   | Symbols.Int_floor -> Some (delayed_op1 ~ty:Tint Numbers.Q.floor)
   | Symbols.Int_ceil -> Some (delayed_op1 ~ty:Tint Numbers.Q.ceiling)
   | Symbols.Min_int -> Some (delayed_op2 ~ty:Tint Q.min)

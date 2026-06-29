@@ -79,7 +79,6 @@ type operator =
   | Int_floor
   | Int_ceil
   | Integer_log2
-  | Int_pow2
   | Max_real
   | Max_int
   | Min_real
@@ -239,10 +238,10 @@ let compare_operators op1 op2 =
         | Sign_extend _ | Repeat _ | Get | Set | Float | Sqrt_real | Abs_int
         | Abs_real | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
         | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-        | Integer_log2 | Int_pow2 | Pow | Integer_round | BVnot | BVand | BVor
-        | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
-        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
-        | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
+        | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor | BVxor
+        | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr | Int2BV _
+        | BV2Nat | Not_theory_constant | Is_theory_constant | Linear_dependency
+        | Constr _ | Destruct _ | Tite ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -373,7 +372,6 @@ module AEPrinter = struct
     | Min_int -> Fmt.pf ppf "min_int"
     | Integer_log2 -> Fmt.pf ppf "integer_log2"
     | Integer_round -> Fmt.pf ppf "integer_round"
-    | Int_pow2 -> Fmt.pf ppf "int.pow2"
     (* Reals_Ints theory *)
     | Abs_int -> Fmt.pf ppf "abs_int"
     | Abs_real -> Fmt.pf ppf "abs_real"
@@ -511,7 +509,6 @@ module SmtPrinter = struct
     | Min_real -> Fmt.pf ppf "ae.min_real"
     | Min_int -> Fmt.pf ppf "ae.min_int"
     | Integer_log2 -> Fmt.pf ppf "ae.integer_log2"
-    | Int_pow2 -> Fmt.pf ppf "ae.int_pow2"
     | Integer_round -> Fmt.pf ppf "ae.integer_round"
     | Pow -> Fmt.pf ppf "ae.pow"
 end

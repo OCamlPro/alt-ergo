@@ -119,7 +119,7 @@ struct
         ( Plus | Minus | Mult | Div | Modulo | Float | Abs_int | Abs_real
         | Sqrt_real | Sqrt_real_default | Sqrt_real_excess | Real_of_int
         | Int_floor | Int_ceil | Max_int | Max_real | Min_int | Min_real | Pow
-        | Integer_log2 | Int_pow2 | Int2BV _ | Integer_round ) ->
+        | Integer_log2 | Int2BV _ | Integer_round ) ->
       true
     | _ -> false
 
@@ -328,11 +328,6 @@ struct
         Q.from_int (Fpa_rounding.integer_log_2 q)
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
-    | Sy.Op Sy.Int_pow2, [x] ->
-      ( mk_partial_interpretation_1
-          (fun x -> calc_power (Q.from_int 2) x ty)
-          coef p ty t x,
-        ctx )
     | Sy.Op Sy.Pow, [x; y] ->
       ( mk_partial_interpretation_2
           (fun x y -> calc_power x y ty)

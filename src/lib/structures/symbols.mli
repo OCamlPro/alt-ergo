@@ -77,7 +77,6 @@ type operator =
   | Int_floor
   | Int_ceil
   | Integer_log2
-  | Int_pow2
   | Max_real
   | Max_int
   | Min_real
