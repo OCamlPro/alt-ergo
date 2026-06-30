@@ -1,8 +1,10 @@
 ## unreleased
 
+ - Support the `int.pow2` function, which takes an integer `n` and computes
+   `ae.pow_int 2 n` (#1365)
  - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
-   that enables thte support for the SMT-LIB FPA, and that can be used with the
-   cmdline option `--enable-theory smt.float` (#1358)
+   that enables the support for the SMT-LIB FPA Theory, and that can be used
+   with the cmdline option `--enable-theory smt.float` (#1358)
  - Bump minimal cmdliner version to 2.0 (#1340)
 
 ## v2.6.2
