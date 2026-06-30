@@ -45,6 +45,9 @@ module Bitv :
 module Adt :
   Sig.SHOSTAK with type r = Combine.r and type t = Combine.r Adt.abstract
 
+module Fpa :
+  Sig.SHOSTAK with type r = Combine.r and type t = Combine.r Fpa.abstract
+
 module Ac : Ac.S with type r = Combine.r and type t = Combine.r Sig.ac
 
 module MXH : Map.S with type key = Combine.r
