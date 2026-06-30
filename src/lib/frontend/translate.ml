@@ -149,6 +149,7 @@ type _ DStd.Builtin.t +=
       Not_theory_constant
   | Is_theory_constant
   | Linear_dependency
+  | Int_pow2
 
 let builtin_term t = Dl.Typer.T.builtin_term t
 
@@ -268,7 +269,7 @@ let ae_fpa_builtins =
     let a = Var.mk "alpha" in
     op ~tyvars:[a] "is_theory_constant" Is_theory_constant ([of_var a] ->. prop)
   in
-  let fpa_builtins =
+  let additional_builtins =
     let open DT in
     DStd.Id.Map.empty |> add_rounding_modes
     (* the first argument is mantissas' size (including the implicit bit), the
@@ -316,13 +317,15 @@ let ae_fpa_builtins =
     |> op "integer_log2" Integer_log2 ([real] ->. int)
     (* only used for arithmetic. It should not be used for x in float(x) to
        enable computations modulo equality *)
+    |> op "int.pow2" Int_pow2 ([int] ->. int)
+    (* computes 2 to the power of a given integer. *)
     |> op "not_theory_constant" Not_theory_constant ([real] ->. prop)
     |> is_theory_constant
     |> op "linear_dependency" Linear_dependency ([real; real] ->. prop)
   in
   fun env s ->
     let search_id id =
-      try DStd.Id.Map.find_exn id fpa_builtins env s
+      try DStd.Id.Map.find_exn id additional_builtins env s
       with Not_found -> `Not_found
     in
     match s with
@@ -335,6 +338,10 @@ let smt_fpa_builtins =
   let term_app env s f =
     Dl.Typer.T.builtin_term
     @@ Dolmen_type.Base.term_app2 (module Dl.Typer.T) env s f
+  in
+  let int_pow2_cst =
+    let ty = DT.arrow [DT.int] DT.int in
+    DE.Id.mk ~name:"int.pow2" ~builtin:Int_pow2 (DStd.Path.global "int.pow2") ty
   in
   let other_builtins = DStd.Id.Map.empty |> add_rounding_modes in
   fun env s ->
@@ -359,6 +366,9 @@ let smt_fpa_builtins =
       term_app env s DE.Term.Int.pow
     | Id { ns = Term; name = Simple "ae.pow_real" } ->
       term_app env s DE.Term.Real.pow
+    | Id { ns = Term; name = Simple "int.pow2" } ->
+      Dl.Typer.T.builtin_term
+      @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env int_pow2_cst
     | Dl.Typer.T.Id id -> begin
       match DStd.Id.Map.find_exn id other_builtins env s with
       | e -> e
@@ -1211,6 +1221,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         | Max_int, _ -> op Max_int
         | Min_int, _ -> op Min_int
         | Integer_log2, _ -> op Integer_log2
+        | Int_pow2, [n] ->
+          E.mk_term (Sy.Op Sy.Pow)
+            [E.Ints.of_int 2; aux_mk_expr n]
+            (dty_to_ty term_ty)
         | Not_theory_constant, _ -> op Not_theory_constant
         | Is_theory_constant, _ -> op Is_theory_constant
         | Linear_dependency, _ -> op Linear_dependency
