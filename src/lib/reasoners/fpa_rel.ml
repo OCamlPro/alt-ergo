@@ -51,13 +51,15 @@ type precision_literals =
 type t =
   { pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
-    literals_cache : (int * int, precision_literals) Hashtbl.t
+    literals_cache : (int * int, precision_literals) Hashtbl.t;
+    assumed_preds : Ex.t E.Map.t
   }
 
 let empty uf =
   ( { pending_types = IntPairSet.empty;
       pending_literals = [];
-      literals_cache = Hashtbl.create 16
+      literals_cache = Hashtbl.create 16;
+      assumed_preds = E.Map.empty
     },
     Uf.domains uf )
 
@@ -109,15 +111,77 @@ let type_literal_facts env eb sb =
 
 let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
     ~is_positive ~is_negative =
-  let fact name b =
+  let mk_fact name b =
     ( E.mk_term (Sy.name name) [eb_t; sb_t; term] Ty.Tbool,
       if b then E.vrai else E.faux )
   in
-  [ fact Names.is_nan is_nan;
-    fact Names.is_zero is_zero;
-    fact Names.is_infinite is_infinite;
-    fact Names.is_positive is_positive;
-    fact Names.is_negative is_negative ]
+  [ mk_fact Names.is_nan is_nan;
+    mk_fact Names.is_zero is_zero;
+    mk_fact Names.is_infinite is_infinite;
+    mk_fact Names.is_positive is_positive;
+    mk_fact Names.is_negative is_negative ]
+
+let float_type_params x =
+  match E.type_info x with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
+
+let check_fact env condition x =
+  let eb, sb = float_type_params x in
+  let pred =
+    E.mk_term (Sy.name condition)
+      [E.Ints.of_int eb; E.Ints.of_int sb; x]
+      Ty.Tbool
+  in
+  E.Map.find_opt pred env.assumed_preds
+
+let mk_fp_eq_literal x fp_val ex =
+  let eb, sb = float_type_params x in
+  Literal.LTerm (E.mk_eq ~iff:false x (E.float fp_val eb sb)), ex, Th_util.Other
+
+(* TODO: Use domains to store information about which conditions hold for each
+   floating-point value? *)
+let process_pred env ex t =
+  let combine x conditions =
+    ( { env with assumed_preds = E.Map.add t ex env.assumed_preds },
+      List.filter_map
+        (fun (condition, fp_val) ->
+          (* If [condition] is true, then x = fp_val *)
+          match check_fact env condition x with
+          | Some ex2 -> Some (mk_fp_eq_literal x fp_val (Ex.union ex ex2))
+          | None ->
+            (* TODO: if domains are used, these pending deductions should be
+               stored, and propagated if condition becomes true later *)
+            None)
+        conditions )
+  in
+  let { E.f; xs; _ } = E.term_view t in
+  match xs with
+  | [_; _; x] -> begin
+    match f with
+    | Sy.Name { hs; _ } when String.equal (Hstring.view hs) E.FP.Names.is_nan ->
+      env, [mk_fp_eq_literal x Fp_value.NaN ex]
+    | Sy.Name { hs; _ } when String.equal (Hstring.view hs) E.FP.Names.is_zero
+      ->
+      combine x
+        [ Names.is_positive, Fp_value.Plus_zero;
+          Names.is_negative, Fp_value.Minus_zero ]
+    | Sy.Name { hs; _ }
+      when String.equal (Hstring.view hs) E.FP.Names.is_infinite ->
+      combine x
+        [ Names.is_positive, Fp_value.Plus_infinity;
+          Names.is_negative, Fp_value.Minus_infinity ]
+    | Sy.Name { hs; _ }
+      when String.equal (Hstring.view hs) E.FP.Names.is_positive ->
+      combine x
+        [ Names.is_zero, Fp_value.Plus_zero;
+          Names.is_infinite, Fp_value.Plus_infinity ]
+    | Sy.Name { hs; _ }
+      when String.equal (Hstring.view hs) E.FP.Names.is_negative ->
+      combine x
+        [ Names.is_zero, Fp_value.Minus_zero;
+          Names.is_infinite, Fp_value.Minus_infinity ]
+    | _ -> env, []
+  end
+  | _ -> env, []
 
 let fp_literal_facts eb sb term v =
   let eb_t = E.Ints.of_int eb in
@@ -173,7 +237,7 @@ let add env uf _r term =
     env, Uf.domains uf, []
   | _ -> env, Uf.domains uf, []
 
-let assume env uf _la =
+let assume env uf la =
   let prec_facts =
     IntPairSet.fold
       (fun (eb, sb) acc -> type_literal_facts env eb sb @ acc)
@@ -185,7 +249,26 @@ let assume env uf _la =
   let env =
     { env with pending_types = IntPairSet.empty; pending_literals = [] }
   in
-  env, Uf.domains uf, { Sig_rel.assume = prec_facts @ eval_facts; remove = [] }
+  let env, pred_facts =
+    List.fold_left
+      (fun (env, acc) (_ra, root, ex, _orig) ->
+        match root with
+        | None -> env, acc
+        | Some a -> (
+          (* TODO: handle negative predicates, maybe use a domain that keeps
+             information about what the floating-point value can be? that way if
+             we learn that is_positive(x) is false, if is_zero(x) is true, then
+             we can propagate that x = -0 *)
+          match E.lit_view a with
+          | E.Pred (t, false) ->
+            let env, facts = process_pred env ex t in
+            env, facts @ acc
+          | _ -> env, acc))
+      (env, []) la
+  in
+  ( env,
+    Uf.domains uf,
+    { Sig_rel.assume = prec_facts @ eval_facts @ pred_facts; remove = [] } )
 
 let query _ _ _ = Th_util.Unknown
 
