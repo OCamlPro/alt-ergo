@@ -39,7 +39,9 @@ struct
 
   let timer = Timers.M_None
 
-  let is_mine_symb = function Sy.Float _ -> true | _ -> false
+  let is_mine_symb = function
+    | Sy.Float _ -> Options.get_smt_lib_fpa ()
+    | _ -> false
 
   let embed r = match X.extract r with Some v -> v | None -> Alien r
 
@@ -87,7 +89,9 @@ struct
     | Literal _ -> is_mine t
     | Alien r -> if X.equal p r then v else X.subst p v r
 
-  let fully_interpreted = function Sy.Float _ -> true | _ -> false
+  let fully_interpreted = function
+    | Sy.Float _ -> Options.get_smt_lib_fpa ()
+    | _ -> false
 
   let abstract_selectors t acc =
     match t with Literal _ -> is_mine t, acc | Alien _ -> assert false
