@@ -39,6 +39,22 @@ struct
 
   let timer = Timers.M_None
 
+  (*BISECT-IGNORE-BEGIN*)
+  module Debug = struct
+    let solve r1 r2 =
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa" ~function_name:"solve"
+          "solve %a = %a" X.print r1 X.print r2
+
+    let unsolvable r1 r2 =
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa" ~function_name:"solve"
+          "%a <> %a: distinct literals, unsolvable" X.print r1 X.print r2
+  end
+  (*BISECT-IGNORE-END*)
+
   let is_mine_symb = function
     | Sy.Float _ -> Options.get_smt_lib_fpa ()
     | _ -> false
@@ -105,9 +121,14 @@ struct
     | Alien _ -> None, false
 
   let solve r1 r2 pb =
+    Debug.solve r1 r2;
     match embed r1, embed r2 with
     | Literal (_, l1), Literal (_, l2) ->
-      if Fp_value.compare l1 l2 = 0 then pb else raise Util.Unsolvable
+      if Fp_value.compare l1 l2 = 0
+      then pb
+      else (
+        Debug.unsolvable r1 r2;
+        raise Util.Unsolvable)
     | Alien _, Alien _ ->
       Sig.
         { pb with
