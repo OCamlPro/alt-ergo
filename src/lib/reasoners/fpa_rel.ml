@@ -104,9 +104,11 @@ module Domain = struct
     | Unknown, st | st, Unknown -> st
     | True ex1, True ex2 -> True (Ex.union ex (Ex.union ex1 ex2))
     | False ex1, False ex2 -> False (Ex.union ex (Ex.union ex1 ex2))
-    | True ex1, False ex2 ->
-      raise (Inconsistent (Ex.union ex (Ex.union ex1 ex2)))
-    | False ex1, True ex2 ->
+    | True ex1, False ex2 | False ex2, True ex1 ->
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"merge_status"
+          "conflict: %a and %a" pp_status (True ex1) pp_status (False ex2);
       raise (Inconsistent (Ex.union ex (Ex.union ex1 ex2)))
 
   type pred =
@@ -115,6 +117,13 @@ module Domain = struct
     | Infinite
     | Positive
     | Negative
+
+  let pp_pred ppf = function
+    | Nan -> Fmt.string ppf "nan"
+    | Zero -> Fmt.string ppf "zero"
+    | Infinite -> Fmt.string ppf "infinite"
+    | Positive -> Fmt.string ppf "positive"
+    | Negative -> Fmt.string ppf "negative"
 
   let get_pred_status p d =
     match p with
@@ -156,6 +165,10 @@ module Domain = struct
     else None
 
   let rec apply p st d =
+    if Options.get_debug_fpa () > 0
+    then
+      Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"apply"
+        "apply %a = %a to %a" pp_pred p pp_status st pp d;
     let d = upd_pred_status p st d in
     let d =
       (* if [p] became true, then the predicates in [exclusive_of p] are must be
@@ -244,7 +257,12 @@ module Domains = struct
   let add_changed r d nd t =
     if Domain.equal d nd
     then t
-    else { domains = MX.add r nd t.domains; changed = SX.add r t.changed }
+    else (
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"add_changed"
+          "domain of %a: %a -> %a" X.print r Domain.pp d Domain.pp nd;
+      { domains = MX.add r nd t.domains; changed = SX.add r t.changed })
 
   let new_pred r pred is_neg ex t =
     let d = get r t in
@@ -256,10 +274,20 @@ module Domains = struct
 
   let subst ~ex r nr t =
     match MX.find_opt r t.domains with
-    | None -> t
+    | None ->
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"subst"
+          "%a (no domain) -> %a" X.print r X.print nr;
+      t
     | Some d ->
       let nd = get nr t in
       let mergedd = Domain.merge ~ex d nd in
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"subst"
+          "%a -> %a: %a merged with %a = %a" X.print r X.print nr Domain.pp d
+          Domain.pp nd Domain.pp mergedd;
       let t =
         { domains = MX.remove r t.domains; changed = SX.remove r t.changed }
       in
@@ -383,6 +411,11 @@ let process_pred uf ex a domains =
         | Some pred ->
           let r, ex_r = Uf.find uf x in
           let ex = Ex.union ex ex_r in
+          if Options.get_debug_fpa () > 0
+          then
+            Printer.print_dbg ~module_name:"Fpa_rel"
+              ~function_name:"process_pred" "%s(%a) = %b (repr %a)" name E.print
+              x (not is_neg) X.print r;
           Domains.new_pred r pred is_neg ex domains
         | None -> domains)
       | _ -> domains)
@@ -402,7 +435,13 @@ let flush_domain_facts domains =
     (fun acc rr d ->
       match Domain.deduce_fpval_eq d with
       | None -> acc
-      | Some (fp_val, ex) -> mk_eq_fpval_fact rr fp_val ex :: acc)
+      | Some (fp_val, ex) ->
+        if Options.get_debug_fpa () > 0
+        then
+          Printer.print_dbg ~module_name:"Fpa_rel"
+            ~function_name:"flush_domain_facts" "deduced: %a = %a" X.print rr
+            Fp_value.pp fp_val;
+        mk_eq_fpval_fact rr fp_val ex :: acc)
     [] domains
 
 let add env uf _r term =
@@ -424,6 +463,10 @@ let add env uf _r term =
       let env =
         match f with
         | Sy.Float v ->
+          if Options.get_debug_fpa () > 0
+          then
+            Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"add"
+              "queueing literal facts for %a" E.print term;
           { env with
             pending_literals =
               fp_literal_facts eb sb term v @ env.pending_literals
