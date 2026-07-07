@@ -16,11 +16,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module X = Shostak.Combine
 module E = Expr
 module Sy = Symbols
 module Ex = Explanation
 module Q = Numbers.Q
 module Z = Numbers.Z
+module MX = Shostak.MXH
+module SX = Shostak.SXH
 module Names = E.FP.Names
 
 let src = Logs.Src.create ~doc:"Fpa_rel" __MODULE__
@@ -46,22 +49,239 @@ type precision_literals =
     abs_err_denom : Z.t
   }
 
-(* New instances of the Float(eb, sb) type and of FPA literals encountered and
-   requiring their own fact propagations *)
+let is_fpa_ty = function Ty.Tfloat _ -> true | _ -> false
+
+module Domain = struct
+  (* Status of a predicate for a given FP value *)
+  type status =
+    | Unknown
+    | True of Ex.t
+    | False of Ex.t
+
+  exception Inconsistent of Ex.t
+
+  (* Domain representing the status of each predicate for a given FP value *)
+  type t =
+    { is_nan : status;
+      is_zero : status;
+      is_infinite : status;
+      is_positive : status;
+      is_negative : status
+    }
+
+  let unknown =
+    { is_nan = Unknown;
+      is_zero = Unknown;
+      is_infinite = Unknown;
+      is_positive = Unknown;
+      is_negative = Unknown
+    }
+
+  let pp_status ppf = function
+    | Unknown -> Fmt.pf ppf "?"
+    | True _ -> Fmt.pf ppf "T"
+    | False _ -> Fmt.pf ppf "F"
+
+  let pp ppf d =
+    Fmt.pf ppf "{nan=%a zero=%a inf=%a pos=%a neg=%a}" pp_status d.is_nan
+      pp_status d.is_zero pp_status d.is_infinite pp_status d.is_positive
+      pp_status d.is_negative
+
+  let status_equal ts1 ts2 =
+    match ts1, ts2 with
+    | Unknown, Unknown | True _, True _ | False _, False _ -> true
+    | _ -> false
+
+  let equal d1 d2 =
+    status_equal d1.is_nan d2.is_nan
+    && status_equal d1.is_zero d2.is_zero
+    && status_equal d1.is_infinite d2.is_infinite
+    && status_equal d1.is_positive d2.is_positive
+    && status_equal d1.is_negative d2.is_negative
+
+  let merge_status ~ex st1 st2 =
+    match st1, st2 with
+    | Unknown, st | st, Unknown -> st
+    | True ex1, True ex2 -> True (Ex.union ex (Ex.union ex1 ex2))
+    | False ex1, False ex2 -> False (Ex.union ex (Ex.union ex1 ex2))
+    | True ex1, False ex2 ->
+      raise (Inconsistent (Ex.union ex (Ex.union ex1 ex2)))
+    | False ex1, True ex2 ->
+      raise (Inconsistent (Ex.union ex (Ex.union ex1 ex2)))
+
+  type pred =
+    | Nan
+    | Zero
+    | Infinite
+    | Positive
+    | Negative
+
+  let get_pred_status p d =
+    match p with
+    | Nan -> d.is_nan
+    | Zero -> d.is_zero
+    | Infinite -> d.is_infinite
+    | Positive -> d.is_positive
+    | Negative -> d.is_negative
+
+  let upd_pred_status p st d =
+    (* Explanation is within the new status *)
+    let st = merge_status ~ex:Ex.empty (get_pred_status p d) st in
+    match p with
+    | Nan -> { d with is_nan = st }
+    | Zero -> { d with is_zero = st }
+    | Infinite -> { d with is_infinite = st }
+    | Positive -> { d with is_positive = st }
+    | Negative -> { d with is_negative = st }
+
+  (* When [p] is true, the predicates in [exclusive_of p] must be false. *)
+  let exclusive_of = function
+    | Nan -> [Zero; Infinite; Positive; Negative]
+    | Zero -> [Nan; Infinite]
+    | Infinite -> [Nan; Zero]
+    | Positive -> [Nan; Negative]
+    | Negative -> [Nan; Positive]
+
+  let pred_of_name name =
+    if String.equal name Names.is_nan
+    then Some Nan
+    else if String.equal name Names.is_zero
+    then Some Zero
+    else if String.equal name Names.is_infinite
+    then Some Infinite
+    else if String.equal name Names.is_positive
+    then Some Positive
+    else if String.equal name Names.is_negative
+    then Some Negative
+    else None
+
+  let rec apply p st d =
+    let d = upd_pred_status p st d in
+    let d =
+      (* if [p] became true, then the predicates in [exclusive_of p] are must be
+         false *)
+      match st with
+      | True ex ->
+        List.fold_left
+          (fun d p -> upd_pred_status p (False ex) d)
+          d (exclusive_of p)
+      | False _ -> d
+      | Unknown -> assert false
+    in
+    match d.is_nan, d.is_positive, d.is_negative with
+    | Unknown, False ex_p, False ex_n ->
+      (* not positive & not negative -> NaN *)
+      apply Nan (True (Ex.union ex_p ex_n)) d
+    | False ex_nan, Unknown, False ex_n ->
+      (* not NaN & not negative -> positive *)
+      apply Positive (True (Ex.union ex_nan ex_n)) d
+    | False ex_nan, False ex_p, Unknown ->
+      (* not NaN & not positive -> negative *)
+      apply Negative (True (Ex.union ex_nan ex_p)) d
+    | _ -> d
+
+  let merge ~ex d1 d2 =
+    let apply_if_known p st d =
+      match st with
+      | Unknown -> d
+      | True ex2 -> apply p (True (Ex.union ex ex2)) d
+      | False ex2 -> apply p (False (Ex.union ex ex2)) d
+    in
+    apply_if_known Nan d2.is_nan d1
+    |> apply_if_known Zero d2.is_zero
+    |> apply_if_known Infinite d2.is_infinite
+    |> apply_if_known Positive d2.is_positive
+    |> apply_if_known Negative d2.is_negative
+
+  let set_pred p is_neg ex d = apply p (if is_neg then False ex else True ex) d
+
+  (* Deduce literal FP value equality from predicates *)
+  let deduce_fpval_eq d =
+    match d.is_nan with
+    | True ex -> Some (Fp_value.NaN, ex)
+    | _ -> begin
+      match d.is_zero with
+      | True ex_z -> (
+        match d.is_positive, d.is_negative with
+        | True ex_p, _ -> Some (Fp_value.Plus_zero, Ex.union ex_z ex_p)
+        | _, True ex_n -> Some (Fp_value.Minus_zero, Ex.union ex_z ex_n)
+        | _ -> None)
+      | _ -> (
+        match d.is_infinite with
+        | True ex_z -> (
+          match d.is_positive, d.is_negative with
+          | True ex_p, _ -> Some (Fp_value.Plus_infinity, Ex.union ex_z ex_p)
+          | _, True ex_n -> Some (Fp_value.Minus_infinity, Ex.union ex_z ex_n)
+          | _ -> None)
+        | _ -> None)
+    end
+end
+
+module Domains = struct
+  type t =
+    { domains : Domain.t MX.t;
+      changed : SX.t
+    }
+
+  type _ Uf.id += Id : t Uf.id
+
+  exception Inconsistent = Domain.Inconsistent
+
+  let empty = { domains = MX.empty; changed = SX.empty }
+
+  let filter_ty = is_fpa_ty
+
+  let pp ppf t =
+    Fmt.(
+      iter_bindings ~sep:semi MX.iter
+        (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
+      |> braces)
+      ppf t.domains
+
+  let get r t =
+    match MX.find_opt r t.domains with Some d -> d | None -> Domain.unknown
+
+  let add_changed r d nd t =
+    if Domain.equal d nd
+    then t
+    else { domains = MX.add r nd t.domains; changed = SX.add r t.changed }
+
+  let new_pred r pred is_neg ex t =
+    let d = get r t in
+    let nd = Domain.set_pred pred is_neg ex d in
+    add_changed r d nd t
+
+  let init r t =
+    if MX.mem r t.domains then t else { t with changed = SX.add r t.changed }
+
+  let subst ~ex r nr t =
+    match MX.find_opt r t.domains with
+    | None -> t
+    | Some d ->
+      let nd = get nr t in
+      let mergedd = Domain.merge ~ex d nd in
+      let t =
+        { domains = MX.remove r t.domains; changed = SX.remove r t.changed }
+      in
+      add_changed nr nd mergedd t
+
+  let flush_changed_domains f acc t =
+    let acc = SX.fold (fun r acc -> f acc r (get r t)) t.changed acc in
+    acc, { t with changed = SX.empty }
+end
+
 type t =
   { pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
-    literals_cache : (int * int, precision_literals) Hashtbl.t;
-    assumed_preds : Ex.t E.Map.t
+    literals_cache : (int * int, precision_literals) Hashtbl.t
   }
 
 let empty uf =
   ( { pending_types = IntPairSet.empty;
       pending_literals = [];
-      literals_cache = Hashtbl.create 16;
-      assumed_preds = E.Map.empty
+      literals_cache = Hashtbl.create 16
     },
-    Uf.domains uf )
+    Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf) )
 
 let pow2 n = Z.shift_left Z.one n
 
@@ -121,68 +341,6 @@ let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
     mk_fact Names.is_positive is_positive;
     mk_fact Names.is_negative is_negative ]
 
-let float_type_params x =
-  match E.type_info x with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
-
-let check_fact env condition x =
-  let eb, sb = float_type_params x in
-  let pred =
-    E.mk_term (Sy.name condition)
-      [E.Ints.of_int eb; E.Ints.of_int sb; x]
-      Ty.Tbool
-  in
-  E.Map.find_opt pred env.assumed_preds
-
-let mk_fp_eq_literal x fp_val ex =
-  let eb, sb = float_type_params x in
-  Literal.LTerm (E.mk_eq ~iff:false x (E.float fp_val eb sb)), ex, Th_util.Other
-
-(* TODO: Use domains to store information about which conditions hold for each
-   floating-point value? *)
-let process_pred env ex t =
-  let combine x conditions =
-    ( { env with assumed_preds = E.Map.add t ex env.assumed_preds },
-      List.filter_map
-        (fun (condition, fp_val) ->
-          (* If [condition] is true, then x = fp_val *)
-          match check_fact env condition x with
-          | Some ex2 -> Some (mk_fp_eq_literal x fp_val (Ex.union ex ex2))
-          | None ->
-            (* TODO: if domains are used, these pending deductions should be
-               stored, and propagated if condition becomes true later *)
-            None)
-        conditions )
-  in
-  let { E.f; xs; _ } = E.term_view t in
-  match xs with
-  | [_; _; x] -> begin
-    match f with
-    | Sy.Name { hs; _ } when String.equal (Hstring.view hs) E.FP.Names.is_nan ->
-      env, [mk_fp_eq_literal x Fp_value.NaN ex]
-    | Sy.Name { hs; _ } when String.equal (Hstring.view hs) E.FP.Names.is_zero
-      ->
-      combine x
-        [ Names.is_positive, Fp_value.Plus_zero;
-          Names.is_negative, Fp_value.Minus_zero ]
-    | Sy.Name { hs; _ }
-      when String.equal (Hstring.view hs) E.FP.Names.is_infinite ->
-      combine x
-        [ Names.is_positive, Fp_value.Plus_infinity;
-          Names.is_negative, Fp_value.Minus_infinity ]
-    | Sy.Name { hs; _ }
-      when String.equal (Hstring.view hs) E.FP.Names.is_positive ->
-      combine x
-        [ Names.is_zero, Fp_value.Plus_zero;
-          Names.is_infinite, Fp_value.Plus_infinity ]
-    | Sy.Name { hs; _ }
-      when String.equal (Hstring.view hs) E.FP.Names.is_negative ->
-      combine x
-        [ Names.is_zero, Fp_value.Minus_zero;
-          Names.is_infinite, Fp_value.Minus_infinity ]
-    | _ -> env, []
-  end
-  | _ -> env, []
-
 let fp_literal_facts eb sb term v =
   let eb_t = E.Ints.of_int eb in
   let sb_t = E.Ints.of_int sb in
@@ -211,6 +369,41 @@ let fp_literal_facts eb sb term v =
          ~is_infinite:false
          ~is_positive:(Q.sign q > 0)
          ~is_negative:(Q.sign q < 0)
+
+let process_pred uf ex a domains =
+  match E.lit_view a with
+  | E.Pred (t, is_neg) -> (
+    let { E.f; xs; _ } = E.term_view t in
+    match xs with
+    | [_; _; x] when is_fpa_ty (E.type_info x) -> (
+      match f with
+      | Sy.Name { hs; _ } -> (
+        let name = Hstring.view hs in
+        match Domain.pred_of_name name with
+        | Some pred ->
+          let r, ex_r = Uf.find uf x in
+          let ex = Ex.union ex ex_r in
+          Domains.new_pred r pred is_neg ex domains
+        | None -> domains)
+      | _ -> domains)
+    | _ -> domains)
+  | _ -> domains
+
+let mk_eq_fpval_fact rr fp_val ex =
+  let eb, sb =
+    match X.type_info rr with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
+  in
+  let fp_r, _ = X.make (E.float fp_val eb sb) in
+  let eq = Shostak.L.(view @@ mk_eq rr fp_r) in
+  Literal.LSem eq, ex, Th_util.Other
+
+let flush_domain_facts domains =
+  Domains.flush_changed_domains
+    (fun acc rr d ->
+      match Domain.deduce_fpval_eq d with
+      | None -> acc
+      | Some (fp_val, ex) -> mk_eq_fpval_fact rr fp_val ex :: acc)
+    [] domains
 
 let add env uf _r term =
   if not (Options.get_smt_lib_fpa ())
@@ -244,6 +437,7 @@ let assume env uf la =
   if not (Options.get_smt_lib_fpa ())
   then env, Uf.domains uf, { Sig_rel.assume = []; remove = [] }
   else
+    let ds = Uf.domains uf in
     let prec_facts =
       IntPairSet.fold
         (fun (eb, sb) acc -> type_literal_facts env eb sb @ acc)
@@ -255,25 +449,22 @@ let assume env uf la =
     let env =
       { env with pending_types = IntPairSet.empty; pending_literals = [] }
     in
-    let env, pred_facts =
-      List.fold_left
-        (fun (env, acc) (_ra, root, ex, _orig) ->
-          match root with
-          | None -> env, acc
-          | Some a -> (
-            (* TODO: handle negative predicates, maybe use a domain that keeps
-               information about what the floating-point value can be? that way
-               if we learn that is_positive(x) is false, if is_zero(x) is true,
-               then we can propagate that x = -0 *)
-            match E.lit_view a with
-            | E.Pred (t, false) ->
-              let env, facts = process_pred env ex t in
-              env, facts @ acc
-            | _ -> env, acc))
-        (env, []) la
+    let domains = Uf.GlobalDomains.find (module Domains) ds in
+    let domains =
+      try
+        List.fold_left
+          (fun domains (_, root, ex, _) ->
+            match root with
+            | None -> domains
+            | Some a -> process_pred uf ex a domains)
+          domains la
+      with Domain.Inconsistent ex ->
+        raise_notrace (Ex.Inconsistent (ex, Uf.cl_extract uf))
     in
+    let pred_facts, domains = flush_domain_facts domains in
+    let ds = Uf.GlobalDomains.add (module Domains) domains ds in
     ( env,
-      Uf.domains uf,
+      ds,
       { Sig_rel.assume = prec_facts @ eval_facts @ pred_facts; remove = [] } )
 
 let query _ _ _ = Th_util.Unknown
