@@ -298,6 +298,132 @@ module Domains = struct
     acc, { t with changed = SX.empty }
 end
 
+module AEFloat_arg_watch = struct
+  type args =
+    { eb : X.r;
+      eb_lit : bool;
+      sb : X.r;
+      sb_lit : bool;
+      mode : X.r;
+      mode_lit : bool
+    }
+
+  type t =
+    { apps : args E.Map.t;
+      (* ae.float application -> its (eb, sb, mode) arguments *)
+      watched_args : E.Set.t MX.t;
+      (* eb, sb or mode value -> ae.float application that uses it as an
+         argument *)
+      ready : (int * int * E.t) E.Map.t
+          (* Mapping of ae.float applications to their literal (eb, sb, mode)
+             arguments that are now known *)
+    }
+
+  type _ Uf.id += Id : t Uf.id
+
+  exception Inconsistent of Ex.t
+
+  let empty =
+    { apps = E.Map.empty; watched_args = MX.empty; ready = E.Map.empty }
+
+  let pp ppf t =
+    Fmt.pf ppf "{float_watch: %d pending, %d ready}" (E.Map.cardinal t.apps)
+      (E.Map.cardinal t.ready)
+
+  let filter_ty _ = true
+
+  let init _ t = t
+
+  let add_by_arg r term watched_args =
+    let s =
+      match MX.find_opt r watched_args with Some s -> s | None -> E.Set.empty
+    in
+    MX.add r (E.Set.add term s) watched_args
+
+  let int_lit_view r = E.int_view (Option.get (X.to_model_term r))
+
+  let mode_lit_view r = Option.get (X.to_model_term r)
+
+  (* [ready_value] is only called when [eb], [sb] and [mode] are known to be
+     literals. *)
+  let ready_value eb sb mode =
+    int_lit_view eb, int_lit_view sb, mode_lit_view mode
+
+  (* watch [r] only if it is not a literal *)
+  let watch_if_not_lit r term watched_args =
+    if X.is_constant r
+    then true, watched_args
+    else false, add_by_arg r term watched_args
+
+  let register term r_eb r_sb r_mode t =
+    if E.Map.mem term t.apps || E.Map.mem term t.ready
+    then t
+    else
+      let eb_lit, watched_args = watch_if_not_lit r_eb term t.watched_args in
+      let sb_lit, watched_args = watch_if_not_lit r_sb term watched_args in
+      let mode_lit, watched_args = watch_if_not_lit r_mode term watched_args in
+      if eb_lit && sb_lit && mode_lit
+      then
+        { t with ready = E.Map.add term (ready_value r_eb r_sb r_mode) t.ready }
+      else
+        { t with
+          apps =
+            E.Map.add term
+              { eb = r_eb; eb_lit; sb = r_sb; sb_lit; mode = r_mode; mode_lit }
+              t.apps;
+          watched_args
+        }
+
+  (* if r was substituted (r = rr) and is not a literal (not r_lit), then if nrr
+     is not a literal, watch it, otherwise just substitute r. *)
+  let update watched_args rr (nrr, nrr_lit) term (r, r_lit) =
+    if X.equal r rr && not r_lit
+    then
+      let watched_args =
+        if nrr_lit then watched_args else add_by_arg nrr term watched_args
+      in
+      nrr, nrr_lit, watched_args
+    else r, r_lit, watched_args
+
+  let subst ~ex:_ rr nrr t =
+    match MX.find_opt rr t.watched_args with
+    | None -> t
+    | Some terms ->
+      let t = { t with watched_args = MX.remove rr t.watched_args } in
+      let nrr_lit = X.is_constant nrr in
+      E.Set.fold
+        (fun term t ->
+          match E.Map.find_opt term t.apps with
+          | None -> t
+          | Some { eb; eb_lit; sb; sb_lit; mode; mode_lit } ->
+            let eb, eb_lit, watched_args =
+              update t.watched_args rr (nrr, nrr_lit) term (eb, eb_lit)
+            in
+            let sb, sb_lit, watched_args =
+              update watched_args rr (nrr, nrr_lit) term (sb, sb_lit)
+            in
+            let mode, mode_lit, watched_args =
+              update watched_args rr (nrr, nrr_lit) term (mode, mode_lit)
+            in
+            if eb_lit && sb_lit && mode_lit
+            then
+              { apps = E.Map.remove term t.apps;
+                watched_args;
+                ready = E.Map.add term (ready_value eb sb mode) t.ready
+              }
+            else
+              { t with
+                apps =
+                  E.Map.add term
+                    { eb; eb_lit; sb; sb_lit; mode; mode_lit }
+                    t.apps;
+                watched_args
+              })
+        terms t
+
+  let flush_ready t = E.Map.bindings t.ready, { t with ready = E.Map.empty }
+end
+
 type t =
   { pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
@@ -309,7 +435,9 @@ let empty uf =
       pending_literals = [];
       literals_cache = Hashtbl.create 16
     },
-    Uf.GlobalDomains.add (module Domains) Domains.empty (Uf.domains uf) )
+    Uf.domains uf
+    |> Uf.GlobalDomains.add (module Domains) Domains.empty
+    |> Uf.GlobalDomains.add (module AEFloat_arg_watch) AEFloat_arg_watch.empty )
 
 let pow2 n = Z.shift_left Z.one n
 
@@ -444,6 +572,18 @@ let flush_domain_facts domains =
         mk_eq_fpval_fact rr fp_val ex :: acc)
     [] domains
 
+let register_aefloat_arg_watch uf term ds =
+  match E.term_view term with
+  | { E.f = Sy.Name { hs; _ }; xs = [eb; sb; mode; _x]; _ }
+    when String.equal (Hstring.view hs) E.FP.Names.ae_float ->
+    let eb, _ = Uf.find uf eb in
+    let sb, _ = Uf.find uf sb in
+    let mode, _ = Uf.find uf mode in
+    let fw = Uf.GlobalDomains.find (module AEFloat_arg_watch) ds in
+    let fw = AEFloat_arg_watch.register term eb sb mode fw in
+    Uf.GlobalDomains.add (module AEFloat_arg_watch) fw ds
+  | _ -> ds
+
 let add env uf _r term =
   if not (Options.get_smt_lib_fpa ())
   then env, Uf.domains uf, []
@@ -474,7 +614,22 @@ let add env uf _r term =
         | _ -> env
       in
       env, Uf.domains uf, []
+    | Ty.Treal ->
+      (* ae.float applies ae.round on reals *)
+      let ds = register_aefloat_arg_watch uf term (Uf.domains uf) in
+      env, ds, []
     | _ -> env, Uf.domains uf, []
+
+let mk_aefloat_eq_fact term (eb, sb, mode) =
+  match E.term_view term with
+  | { E.xs = [_; _; _; x]; _ } ->
+    let repl =
+      E.mk_term (Sy.Op Float)
+        [E.Ints.of_int eb; E.Ints.of_int sb; mode; x]
+        Ty.Treal
+    in
+    mk_eq_fact term repl
+  | _ -> assert false
 
 let assume env uf la =
   if not (Options.get_smt_lib_fpa ())
@@ -506,9 +661,23 @@ let assume env uf la =
     in
     let pred_facts, domains = flush_domain_facts domains in
     let ds = Uf.GlobalDomains.add (module Domains) domains ds in
+    let aefloat_arg_watch =
+      Uf.GlobalDomains.find (module AEFloat_arg_watch) ds
+    in
+    let ready, aefloat_arg_watch =
+      AEFloat_arg_watch.flush_ready aefloat_arg_watch
+    in
+    let aefloat_facts =
+      List.map (fun (term, p) -> mk_aefloat_eq_fact term p) ready
+    in
+    let ds =
+      Uf.GlobalDomains.add (module AEFloat_arg_watch) aefloat_arg_watch ds
+    in
     ( env,
       ds,
-      { Sig_rel.assume = prec_facts @ eval_facts @ pred_facts; remove = [] } )
+      { Sig_rel.assume = prec_facts @ eval_facts @ pred_facts @ aefloat_facts;
+        remove = []
+      } )
 
 let query _ _ _ = Th_util.Unknown
 
