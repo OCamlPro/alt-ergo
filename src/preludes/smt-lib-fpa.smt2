@@ -1,7 +1,5 @@
 (set-logic ALL)
 (set-info :smt-lib-version 2.6)
-; --- interpreted rounding function for reals ---
-(declare-fun ae.float (Int Int RoundingMode Real) Real)
 ; --- interpreted type-dependent constants ---
 (declare-fun ae.fp.max_int (Int Int) Int)
 (declare-fun ae.fp.max_real (Int Int) Real)

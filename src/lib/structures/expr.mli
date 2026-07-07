@@ -683,6 +683,9 @@ end
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP : sig
   module Names : sig
+    (* float conversion function *)
+    val ae_float : string
+
     (* generic float type *)
     val t : string
 
@@ -741,6 +744,10 @@ module FP : sig
   val fp : t -> t -> t -> int -> int -> t
 
   val ieee_format_to_fp : t -> int -> int -> t
+
+  val ae_float : eb:t -> sb:t -> mode:t -> t -> t
+
+  val ae_float_literal_prec : eb:int -> sb:int -> mode:t -> t -> t
 
   (* arithmetic with rounding mode *)
   val add : e:int -> s:int -> mode:t -> t -> t -> t

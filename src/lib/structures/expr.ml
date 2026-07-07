@@ -3149,6 +3149,9 @@ module FP = struct
   (* TODO: move this module to somewhere else? fpa_rounding.ml? (might need
      renaming) *)
   module Names = struct
+    (* float conversion function *)
+    let ae_float = "ae.float"
+
     (* generic float type *)
     let t = "ae.fp.t"
 
@@ -3203,6 +3206,25 @@ module FP = struct
     (* real conversion *)
     let to_real = "ae.fp.to_real"
   end
+
+  (* [eb] and [sb] are assumed to be literal ints here, so we only check if the
+     rounding mode is a literal. We create an application of [Sy.Op Float] if it
+     is, and use `Names.ae_float` (the symbolic version of the Float function),
+     if it isn't *)
+  let ae_float_literal_prec_aux ~eb ~sb ~mode x =
+    match term_view mode with
+    | { f = Sy.Op (Constr _); _ } ->
+      mk_term (Sy.Op Float) [eb; sb; mode; x] Ty.Treal
+    | _ -> mk_term (Sy.name Names.ae_float) [eb; sb; mode; x] Ty.Treal
+
+  let ae_float_literal_prec ~eb ~sb ~mode x =
+    ae_float_literal_prec_aux ~eb:(Ints.of_int eb) ~sb:(Ints.of_int sb) ~mode x
+
+  let ae_float ~eb ~sb ~mode x =
+    match term_view eb, term_view sb with
+    | { f = Sy.Int _; _ }, { f = Sy.Int _; _ } ->
+      ae_float_literal_prec_aux ~eb ~sb ~mode x
+    | _ -> mk_term (Sy.name Names.ae_float) [eb; sb; mode; x] Ty.Treal
 
   let fp_prelude_op e s name args ret_ty =
     let e = Ints.of_int e in
