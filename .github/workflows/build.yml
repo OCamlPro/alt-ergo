@@ -28,7 +28,7 @@ jobs:
           - windows-latest
         ocaml-compiler:
           - "4.14"
-          - "5.4"
+          - "5.5"
         include:
           # Can't run on ubuntu-latest, see
           # https://github.com/ocaml/ocaml/issues/14031
