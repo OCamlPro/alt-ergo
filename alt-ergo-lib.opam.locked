@@ -41,7 +41,7 @@ depends: [
   "fs-io" {= "3.22.0"}
   "gen" {= "1.1"}
   "hmap" {= "0.8.1"}
-  "js_of_ocaml-compiler" {= "6.2.0"}
+  "js_of_ocaml-compiler" {= "6.4.0"}
   "logs" {= "0.10.0"}
   "lwt" {= "5.9.2"}
   "menhir" {= "20260209"}
