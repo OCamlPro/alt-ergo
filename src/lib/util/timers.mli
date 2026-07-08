@@ -41,6 +41,7 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
+  | M_Fpa
 
 type ty_function =
   | F_add
