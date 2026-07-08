@@ -405,16 +405,11 @@ let pow2 n = Z.shift_left Z.one n
 let mk_eq_fact lhs rhs =
   Literal.LTerm (E.mk_eq ~iff:false lhs rhs), Ex.empty, Th_util.Other
 
-(* TODO: cache (eb, sb) -> (eb, sb) exprs? *)
-let int_literal_fact eb sb name literal =
-  let eb_t = E.Ints.of_int eb in
-  let sb_t = E.Ints.of_int sb in
+let int_literal_fact eb_t sb_t name literal =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Tint in
   mk_eq_fact lhs (E.Ints.of_Z literal)
 
-let real_literal_fact eb sb name literal =
-  let eb_t = E.Ints.of_int eb in
-  let sb_t = E.Ints.of_int sb in
+let real_literal_fact eb_t sb_t name literal =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Treal in
   mk_eq_fact lhs (E.Reals.of_Z literal)
 
@@ -438,13 +433,15 @@ let get_literals env eb sb =
 
 let type_literal_facts env eb sb =
   let c = get_literals env eb sb in
-  [ int_literal_fact eb sb "ae.fp.pow2sb" c.pow2sb;
-    int_literal_fact eb sb "ae.fp.max_int" c.max_int_z;
-    real_literal_fact eb sb "ae.fp.max_real" c.max_int_z;
-    real_literal_fact eb sb "ae.fp.pow2sb_real" c.pow2sb;
-    real_literal_fact eb sb "ae.fp.half_pow2sb_real" c.half_pow2sb;
-    real_literal_fact eb sb "ae.fp.abs_err_rne_denom" c.abs_err_rne_denom;
-    real_literal_fact eb sb "ae.fp.abs_err_denom" c.abs_err_denom ]
+  let eb_t = E.Ints.of_int eb in
+  let sb_t = E.Ints.of_int sb in
+  [ int_literal_fact eb_t sb_t "ae.fp.pow2sb" c.pow2sb;
+    int_literal_fact eb_t sb_t "ae.fp.max_int" c.max_int_z;
+    real_literal_fact eb_t sb_t "ae.fp.max_real" c.max_int_z;
+    real_literal_fact eb_t sb_t "ae.fp.pow2sb_real" c.pow2sb;
+    real_literal_fact eb_t sb_t "ae.fp.half_pow2sb_real" c.half_pow2sb;
+    real_literal_fact eb_t sb_t "ae.fp.abs_err_rne_denom" c.abs_err_rne_denom;
+    real_literal_fact eb_t sb_t "ae.fp.abs_err_denom" c.abs_err_denom ]
 
 let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
     ~is_positive ~is_negative =

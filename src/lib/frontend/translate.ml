@@ -1270,7 +1270,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _ | Minus_zero _
               | NaN _ ),
               _ )
-          (* roudning modes are now matched as literals since we use the SMT-LIB
+          (* rounding modes are now matched as literals since we use the SMT-LIB
              FP theory ones provided by dolmen *)
           | RoundNearestTiesToEven, _
           | RoundNearestTiesToAway, _

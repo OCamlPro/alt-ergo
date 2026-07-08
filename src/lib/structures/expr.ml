@@ -3146,8 +3146,6 @@ module FP = struct
     let neg = Z.testbit bv_z (e + s - 1) in
     float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
-  (* TODO: move this module to somewhere else? fpa_rounding.ml? (might need
-     renaming) *)
   module Names = struct
     (* float conversion function *)
     let ae_float = "ae.float"
