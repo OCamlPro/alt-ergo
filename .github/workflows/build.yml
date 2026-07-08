@@ -29,7 +29,7 @@ jobs:
         ocaml-compiler:
           - "4.11.2"
           - "4.14"
-          - 5
+          - "5.5"
         exclude:
           # OCaml 4.11.2 is not available on macOS + arm
           - os: macos-latest
