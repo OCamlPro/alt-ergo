@@ -212,22 +212,21 @@ module Domain = struct
   let deduce_fpval_eq d =
     match d.is_nan with
     | True ex -> Some (Fp_value.NaN, ex)
-    | _ -> begin
-      match d.is_zero with
-      | True ex_z -> (
-        match d.is_positive, d.is_negative with
-        | True ex_p, _ -> Some (Fp_value.Plus_zero, Ex.union ex_z ex_p)
-        | _, True ex_n -> Some (Fp_value.Minus_zero, Ex.union ex_z ex_n)
-        | _ -> None)
-      | _ -> (
-        match d.is_infinite with
-        | True ex_z -> (
-          match d.is_positive, d.is_negative with
-          | True ex_p, _ -> Some (Fp_value.Plus_infinity, Ex.union ex_z ex_p)
-          | _, True ex_n -> Some (Fp_value.Minus_infinity, Ex.union ex_z ex_n)
-          | _ -> None)
-        | _ -> None)
-    end
+    | _ -> (
+      match d.is_zero, d.is_infinite, d.is_positive, d.is_negative with
+      | True ex_z, _, True ex_p, _ ->
+        (* is_zero & is_positive -> = plus_zero *)
+        Some (Fp_value.Plus_zero, Ex.union ex_z ex_p)
+      | True ex_z, _, _, True ex_n ->
+        (* is_zero & is_negative -> = minus_zero *)
+        Some (Fp_value.Minus_zero, Ex.union ex_z ex_n)
+      | _, True ex_inf, True ex_p, _ ->
+        (* is_infinite & is_positive -> = plus_infinity *)
+        Some (Fp_value.Plus_infinity, Ex.union ex_inf ex_p)
+      | _, True ex_inf, _, True ex_n ->
+        (* is_infinite & is_negative -> = minus_infinity *)
+        Some (Fp_value.Minus_infinity, Ex.union ex_inf ex_n)
+      | _ -> None)
 end
 
 module Domains = struct
