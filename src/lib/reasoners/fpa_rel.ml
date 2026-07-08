@@ -303,7 +303,8 @@ module AEFloat_arg_watch = struct
   type args =
     { eb : int;
       sb : int;
-      mode : X.r
+      mode : X.r;
+      ex : Ex.t
     }
 
   type t =
@@ -311,7 +312,7 @@ module AEFloat_arg_watch = struct
       (* ae.float application -> its (eb, sb, mode) arguments *)
       watched_args : E.Set.t MX.t;
       (* mode value -> ae.float applications that use it as an argument *)
-      ready : (int * int * E.t) E.Map.t
+      ready : (int * int * E.t * Ex.t) E.Map.t
           (* Mapping of ae.float applications to their literal (eb, sb, mode)
              arguments that are now known *)
     }
@@ -342,23 +343,24 @@ module AEFloat_arg_watch = struct
   let mode_lit_view r = Option.get (X.to_model_term r)
 
   (* [ready_value] is only called when [mode] is known to be a literal. *)
-  let ready_value eb sb mode = eb, sb, mode_lit_view mode
+  let ready_value eb sb mode ex = eb, sb, mode_lit_view mode, ex
 
-  let register term r_eb r_sb r_mode t =
+  let register term r_eb r_sb r_mode ~ex t =
     if E.Map.mem term t.apps || E.Map.mem term t.ready
     then t
     else
       let eb = int_lit_view r_eb in
       let sb = int_lit_view r_sb in
       if X.is_constant r_mode
-      then { t with ready = E.Map.add term (ready_value eb sb r_mode) t.ready }
+      then
+        { t with ready = E.Map.add term (ready_value eb sb r_mode ex) t.ready }
       else
         { t with
-          apps = E.Map.add term { eb; sb; mode = r_mode } t.apps;
+          apps = E.Map.add term { eb; sb; mode = r_mode; ex } t.apps;
           watched_args = add_by_arg r_mode term t.watched_args
         }
 
-  let subst ~ex:_ rr nrr t =
+  let subst ~ex rr nrr t =
     match MX.find_opt rr t.watched_args with
     | None -> t
     | Some terms ->
@@ -368,17 +370,18 @@ module AEFloat_arg_watch = struct
         (fun term t ->
           match E.Map.find_opt term t.apps with
           | None -> t
-          | Some { eb; sb; mode } ->
+          | Some { eb; sb; mode; ex = ex0 } ->
             assert (X.equal mode rr);
+            let ex = Ex.union ex0 ex in
             if nrr_lit
             then
               { apps = E.Map.remove term t.apps;
                 watched_args = t.watched_args;
-                ready = E.Map.add term (ready_value eb sb nrr) t.ready
+                ready = E.Map.add term (ready_value eb sb nrr ex) t.ready
               }
             else
               { t with
-                apps = E.Map.add term { eb; sb; mode = nrr } t.apps;
+                apps = E.Map.add term { eb; sb; mode = nrr; ex } t.apps;
                 watched_args = add_by_arg nrr term t.watched_args
               })
         terms t
@@ -405,8 +408,8 @@ let empty uf =
 
 let pow2 n = Z.shift_left Z.one n
 
-let mk_eq_fact lhs rhs =
-  Literal.LTerm (E.mk_eq ~iff:false lhs rhs), Ex.empty, Th_util.Other
+let mk_eq_fact ?(ex = Ex.empty) lhs rhs =
+  Literal.LTerm (E.mk_eq ~iff:false lhs rhs), ex, Th_util.Other
 
 let int_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Tint in
@@ -540,9 +543,9 @@ let register_aefloat_arg_watch uf term ds =
   | { E.f = Sy.Op Float; xs = [eb; sb; mode; _x]; _ } ->
     let eb, _ = Uf.find uf eb in
     let sb, _ = Uf.find uf sb in
-    let mode, _ = Uf.find uf mode in
+    let mode, ex = Uf.find uf mode in
     let fw = Uf.GlobalDomains.find (module AEFloat_arg_watch) ds in
-    let fw = AEFloat_arg_watch.register term eb sb mode fw in
+    let fw = AEFloat_arg_watch.register term eb sb mode ~ex fw in
     Uf.GlobalDomains.add (module AEFloat_arg_watch) fw ds
   | _ -> ds
 
@@ -582,7 +585,7 @@ let add env uf _r term =
       env, ds, []
     | _ -> env, Uf.domains uf, []
 
-let mk_aefloat_eq_fact term (eb, sb, mode) =
+let mk_aefloat_eq_fact term (eb, sb, mode, ex) =
   match E.term_view term with
   | { E.xs = [_; _; _; x]; _ } ->
     let repl =
@@ -590,7 +593,7 @@ let mk_aefloat_eq_fact term (eb, sb, mode) =
         [E.Ints.of_int eb; E.Ints.of_int sb; mode; x]
         Ty.Treal
     in
-    mk_eq_fact term repl
+    mk_eq_fact ~ex term repl
   | _ -> assert false
 
 let assume env uf la =
