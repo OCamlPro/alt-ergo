@@ -2805,22 +2805,22 @@ let z_to_int z =
 
 let const_view t =
   match term_view t with
-  | { f = Int n; _ } -> Int (z_to_int n)
+  | { f = Int n; _ } -> Some (Int (z_to_int n))
   | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
     ->
     let c = Fmt.str "%a" DE.Term.Const.print c in
-    RoundingMode (Fpa_rounding.rounding_mode_of_smt c)
-  | _ -> Fmt.failwith "unsupported constant: %a" print t
+    Some (RoundingMode (Fpa_rounding.rounding_mode_of_smt c))
+  | _ -> None
 
 let int_view t =
   match const_view t with
-  | Int n -> n
+  | Some (Int n) -> n
   | _ -> Fmt.failwith "The given term %a is not an integer" print t
 
 let rounding_mode_view t =
   match const_view t with
-  | RoundingMode m -> m
-  | _ -> Fmt.failwith "The given term %a is not a rounding mode" print t
+  | Some (RoundingMode m) -> Some m
+  | _ -> None
 
 (****************************************************************************)
 (*                     Helpers to build typed terms                         *)
@@ -3206,25 +3206,6 @@ module FP = struct
     (* real conversion *)
     let to_real = "ae.fp.to_real"
   end
-
-  (* [eb] and [sb] are assumed to be literal ints here, so we only check if the
-     rounding mode is a literal. We create an application of [Sy.Op Float] if it
-     is, and use `Names.ae_float` (the symbolic version of the Float function),
-     if it isn't *)
-  let ae_float_literal_prec_aux ~eb ~sb ~mode x =
-    match term_view mode with
-    | { f = Sy.Op (Constr _); _ } ->
-      mk_term (Sy.Op Float) [eb; sb; mode; x] Ty.Treal
-    | _ -> mk_term (Sy.name Names.ae_float) [eb; sb; mode; x] Ty.Treal
-
-  let ae_float_literal_prec ~eb ~sb ~mode x =
-    ae_float_literal_prec_aux ~eb:(Ints.of_int eb) ~sb:(Ints.of_int sb) ~mode x
-
-  let ae_float ~eb ~sb ~mode x =
-    match term_view eb, term_view sb with
-    | { f = Sy.Int _; _ }, { f = Sy.Int _; _ } ->
-      ae_float_literal_prec_aux ~eb ~sb ~mode x
-    | _ -> mk_term (Sy.name Names.ae_float) [eb; sb; mode; x] Ty.Treal
 
   let fp_prelude_op e s name args ret_ty =
     let e = Ints.of_int e in

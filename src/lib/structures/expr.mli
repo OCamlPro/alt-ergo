@@ -184,10 +184,9 @@ val int_view : t -> int
 
     @raise Failure if the expression is not a constant integer. *)
 
-val rounding_mode_view : t -> Fpa_rounding.rounding_mode
-(** Extracts the rounding mode value of the expression, if there is one.
-
-    @raise Failure if the expression is not a constant rounding mode.*)
+val rounding_mode_view : t -> Fpa_rounding.rounding_mode option
+(** Extracts the rounding mode value of the expression, if there is one. Return
+    [None] if the expression is not a constant rounding mode. *)
 
 (** pretty printing *)
 
@@ -744,10 +743,6 @@ module FP : sig
   val fp : t -> t -> t -> int -> int -> t
 
   val ieee_format_to_fp : t -> int -> int -> t
-
-  val ae_float : eb:t -> sb:t -> mode:t -> t -> t
-
-  val ae_float_literal_prec : eb:int -> sb:int -> mode:t -> t -> t
 
   (* arithmetic with rounding mode *)
   val add : e:int -> s:int -> mode:t -> t -> t -> t

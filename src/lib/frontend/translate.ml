@@ -350,7 +350,7 @@ let smt_fpa_builtins =
     DE.Id.mk ~name:"int.pow2" ~builtin:Int_pow2 (DStd.Path.global "int.pow2") ty
   in
   let ae_float_cst =
-    let name = "ae.float" in
+    let name = E.FP.Names.ae_float in
     let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
     DE.Id.mk ~name ~builtin:Float (DStd.Path.global name) ty
   in
@@ -1305,19 +1305,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
                 Loc.report loc
           in
           semantic_trigger ~loc ?var trigger
-        (* Custom builtins.
-
-           When [Options.get_smt_lib_fpa ()] reasoning over symbolic arguments
-           for Float and AERound is supported, otherwise they are expected to be
-           literals. *)
-        | Float, [eb; sb; mode; x] when Options.get_smt_lib_fpa () ->
-          let eb = aux_mk_expr eb in
-          let sb = aux_mk_expr sb in
-          let mode = aux_mk_expr mode in
-          E.FP.ae_float ~eb ~sb ~mode (aux_mk_expr x)
-        | AERound (eb, sb), [mode; x] when Options.get_smt_lib_fpa () ->
-          let mode = aux_mk_expr mode in
-          E.FP.ae_float_literal_prec ~eb ~sb ~mode (aux_mk_expr x)
+        (* Custom builtins *)
         | Float, _ -> op Float
         | AERound (i, j), _ ->
           let args =

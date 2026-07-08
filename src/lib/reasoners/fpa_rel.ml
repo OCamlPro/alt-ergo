@@ -300,20 +300,16 @@ end
 
 module AEFloat_arg_watch = struct
   type args =
-    { eb : X.r;
-      eb_lit : bool;
-      sb : X.r;
-      sb_lit : bool;
-      mode : X.r;
-      mode_lit : bool
+    { eb : int;
+      sb : int;
+      mode : X.r
     }
 
   type t =
     { apps : args E.Map.t;
       (* ae.float application -> its (eb, sb, mode) arguments *)
       watched_args : E.Set.t MX.t;
-      (* eb, sb or mode value -> ae.float application that uses it as an
-         argument *)
+      (* mode value -> ae.float applications that use it as an argument *)
       ready : (int * int * E.t) E.Map.t
           (* Mapping of ae.float applications to their literal (eb, sb, mode)
              arguments that are now known *)
@@ -344,46 +340,22 @@ module AEFloat_arg_watch = struct
 
   let mode_lit_view r = Option.get (X.to_model_term r)
 
-  (* [ready_value] is only called when [eb], [sb] and [mode] are known to be
-     literals. *)
-  let ready_value eb sb mode =
-    int_lit_view eb, int_lit_view sb, mode_lit_view mode
-
-  (* watch [r] only if it is not a literal *)
-  let watch_if_not_lit r term watched_args =
-    if X.is_constant r
-    then true, watched_args
-    else false, add_by_arg r term watched_args
+  (* [ready_value] is only called when [mode] is known to be a literal. *)
+  let ready_value eb sb mode = eb, sb, mode_lit_view mode
 
   let register term r_eb r_sb r_mode t =
     if E.Map.mem term t.apps || E.Map.mem term t.ready
     then t
     else
-      let eb_lit, watched_args = watch_if_not_lit r_eb term t.watched_args in
-      let sb_lit, watched_args = watch_if_not_lit r_sb term watched_args in
-      let mode_lit, watched_args = watch_if_not_lit r_mode term watched_args in
-      if eb_lit && sb_lit && mode_lit
-      then
-        { t with ready = E.Map.add term (ready_value r_eb r_sb r_mode) t.ready }
+      let eb = int_lit_view r_eb in
+      let sb = int_lit_view r_sb in
+      if X.is_constant r_mode
+      then { t with ready = E.Map.add term (ready_value eb sb r_mode) t.ready }
       else
         { t with
-          apps =
-            E.Map.add term
-              { eb = r_eb; eb_lit; sb = r_sb; sb_lit; mode = r_mode; mode_lit }
-              t.apps;
-          watched_args
+          apps = E.Map.add term { eb; sb; mode = r_mode } t.apps;
+          watched_args = add_by_arg r_mode term t.watched_args
         }
-
-  (* if r was substituted (r = rr) and is not a literal (not r_lit), then if nrr
-     is not a literal, watch it, otherwise just substitute r. *)
-  let update watched_args rr (nrr, nrr_lit) term (r, r_lit) =
-    if X.equal r rr && not r_lit
-    then
-      let watched_args =
-        if nrr_lit then watched_args else add_by_arg nrr term watched_args
-      in
-      nrr, nrr_lit, watched_args
-    else r, r_lit, watched_args
 
   let subst ~ex:_ rr nrr t =
     match MX.find_opt rr t.watched_args with
@@ -395,29 +367,18 @@ module AEFloat_arg_watch = struct
         (fun term t ->
           match E.Map.find_opt term t.apps with
           | None -> t
-          | Some { eb; eb_lit; sb; sb_lit; mode; mode_lit } ->
-            let eb, eb_lit, watched_args =
-              update t.watched_args rr (nrr, nrr_lit) term (eb, eb_lit)
-            in
-            let sb, sb_lit, watched_args =
-              update watched_args rr (nrr, nrr_lit) term (sb, sb_lit)
-            in
-            let mode, mode_lit, watched_args =
-              update watched_args rr (nrr, nrr_lit) term (mode, mode_lit)
-            in
-            if eb_lit && sb_lit && mode_lit
+          | Some { eb; sb; mode } ->
+            assert (X.equal mode rr);
+            if nrr_lit
             then
               { apps = E.Map.remove term t.apps;
-                watched_args;
-                ready = E.Map.add term (ready_value eb sb mode) t.ready
+                watched_args = t.watched_args;
+                ready = E.Map.add term (ready_value eb sb nrr) t.ready
               }
             else
               { t with
-                apps =
-                  E.Map.add term
-                    { eb; eb_lit; sb; sb_lit; mode; mode_lit }
-                    t.apps;
-                watched_args
+                apps = E.Map.add term { eb; sb; mode = nrr } t.apps;
+                watched_args = add_by_arg nrr term t.watched_args
               })
         terms t
 
@@ -574,8 +535,7 @@ let flush_domain_facts domains =
 
 let register_aefloat_arg_watch uf term ds =
   match E.term_view term with
-  | { E.f = Sy.Name { hs; _ }; xs = [eb; sb; mode; _x]; _ }
-    when String.equal (Hstring.view hs) E.FP.Names.ae_float ->
+  | { E.f = Sy.Op Float; xs = [eb; sb; mode; _x]; _ } ->
     let eb, _ = Uf.find uf eb in
     let sb, _ = Uf.find uf sb in
     let mode, _ = Uf.find uf mode in
