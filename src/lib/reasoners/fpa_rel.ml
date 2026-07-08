@@ -388,13 +388,15 @@ end
 type t =
   { pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
-    literals_cache : (int * int, precision_literals) Hashtbl.t
+    literals_cache : (int * int, precision_literals) Hashtbl.t;
+    new_terms : E.Set.t
   }
 
 let empty uf =
   ( { pending_types = IntPairSet.empty;
       pending_literals = [];
-      literals_cache = Hashtbl.create 16
+      literals_cache = Hashtbl.create 16;
+      new_terms = E.Set.empty
     },
     Uf.domains uf
     |> Uf.GlobalDomains.add (module Domains) Domains.empty
@@ -405,13 +407,13 @@ let pow2 n = Z.shift_left Z.one n
 let mk_eq_fact lhs rhs =
   Literal.LTerm (E.mk_eq ~iff:false lhs rhs), Ex.empty, Th_util.Other
 
-let int_literal_fact eb_t sb_t name literal =
+let int_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Tint in
-  mk_eq_fact lhs (E.Ints.of_Z literal)
+  E.Set.add lhs terms, mk_eq_fact lhs (E.Ints.of_Z literal) :: facts
 
-let real_literal_fact eb_t sb_t name literal =
+let real_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Treal in
-  mk_eq_fact lhs (E.Reals.of_Z literal)
+  E.Set.add lhs terms, mk_eq_fact lhs (E.Reals.of_Z literal) :: facts
 
 let get_literals env eb sb =
   match Hashtbl.find_opt env.literals_cache (eb, sb) with
@@ -435,13 +437,15 @@ let type_literal_facts env eb sb =
   let c = get_literals env eb sb in
   let eb_t = E.Ints.of_int eb in
   let sb_t = E.Ints.of_int sb in
-  [ int_literal_fact eb_t sb_t "ae.fp.pow2sb" c.pow2sb;
-    int_literal_fact eb_t sb_t "ae.fp.max_int" c.max_int_z;
-    real_literal_fact eb_t sb_t "ae.fp.max_real" c.max_int_z;
-    real_literal_fact eb_t sb_t "ae.fp.pow2sb_real" c.pow2sb;
-    real_literal_fact eb_t sb_t "ae.fp.half_pow2sb_real" c.half_pow2sb;
-    real_literal_fact eb_t sb_t "ae.fp.abs_err_rne_denom" c.abs_err_rne_denom;
-    real_literal_fact eb_t sb_t "ae.fp.abs_err_denom" c.abs_err_denom ]
+  (E.Set.empty, [])
+  |> int_literal_fact eb_t sb_t E.FP.Names.pow2sb c.pow2sb
+  |> int_literal_fact eb_t sb_t E.FP.Names.max_int c.max_int_z
+  |> real_literal_fact eb_t sb_t E.FP.Names.max_real c.max_int_z
+  |> real_literal_fact eb_t sb_t E.FP.Names.pow2sb_real c.pow2sb
+  |> real_literal_fact eb_t sb_t E.FP.Names.half_pow2sb_real c.half_pow2sb
+  |> real_literal_fact eb_t sb_t E.FP.Names.abs_err_rne_denom
+       c.abs_err_rne_denom
+  |> real_literal_fact eb_t sb_t E.FP.Names.abs_err_denom c.abs_err_denom
 
 let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
     ~is_positive ~is_negative =
@@ -593,16 +597,22 @@ let assume env uf la =
   then env, Uf.domains uf, { Sig_rel.assume = []; remove = [] }
   else
     let ds = Uf.domains uf in
-    let prec_facts =
+    let new_terms, prec_facts =
       IntPairSet.fold
-        (fun (eb, sb) acc -> type_literal_facts env eb sb @ acc)
-        env.pending_types []
+        (fun (eb, sb) (terms_acc, facts_acc) ->
+          let terms, facts = type_literal_facts env eb sb in
+          E.Set.union terms terms_acc, facts @ facts_acc)
+        env.pending_types (E.Set.empty, [])
     in
     let eval_facts =
       List.map (fun (lhs, rhs) -> mk_eq_fact lhs rhs) env.pending_literals
     in
     let env =
-      { env with pending_types = IntPairSet.empty; pending_literals = [] }
+      { env with
+        pending_types = IntPairSet.empty;
+        pending_literals = [];
+        new_terms = E.Set.union new_terms env.new_terms
+      }
     in
     let domains = Uf.GlobalDomains.find (module Domains) ds in
     let domains =
@@ -642,7 +652,7 @@ let case_split _env _uf ~for_model:_ = []
 
 let optimizing_objective _env _uf _o = None
 
-let new_terms _ = E.Set.empty
+let new_terms env = env.new_terms
 
 let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
 
