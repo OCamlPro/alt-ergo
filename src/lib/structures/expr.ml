@@ -3203,6 +3203,21 @@ module FP = struct
 
     (* real conversion *)
     let to_real = "ae.fp.to_real"
+
+    (* precision-dependent literals *)
+    let pow2sb = "ae.fp.pow2sb"
+
+    let max_int = "ae.fp.max_int"
+
+    let max_real = "ae.fp.max_real"
+
+    let pow2sb_real = "ae.fp.pow2sb_real"
+
+    let half_pow2sb_real = "ae.fp.half_pow2sb_real"
+
+    let abs_err_rne_denom = "ae.fp.abs_err_rne_denom"
+
+    let abs_err_denom = "ae.fp.abs_err_denom"
   end
 
   let fp_prelude_op e s name args ret_ty =

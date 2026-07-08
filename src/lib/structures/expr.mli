@@ -738,6 +738,21 @@ module FP : sig
 
     (* real conversion *)
     val to_real : string
+
+    (* precision-dependent literals *)
+    val pow2sb : string
+
+    val max_int : string
+
+    val max_real : string
+
+    val pow2sb_real : string
+
+    val half_pow2sb_real : string
+
+    val abs_err_rne_denom : string
+
+    val abs_err_denom : string
   end
 
   val fp : t -> t -> t -> int -> int -> t
