@@ -354,6 +354,11 @@ let smt_fpa_builtins =
     let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
     DE.Id.mk ~name ~builtin:Float (DStd.Path.global name) ty
   in
+  let sqrt_real_cst =
+    let name = "sqrt_real" in
+    let ty = DT.arrow [DT.real] DT.real in
+    DE.Id.mk ~name ~builtin:Sqrt_real (DStd.Path.global name) ty
+  in
   let other_builtins = DStd.Id.Map.empty |> add_rounding_modes in
   fun env s ->
     match s with
@@ -383,6 +388,9 @@ let smt_fpa_builtins =
     | Id { ns = Term; name = Simple "ae.float" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env ae_float_cst
+    | Id { ns = Term; name = Simple "sqrt_real" } ->
+      Dl.Typer.T.builtin_term
+      @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env sqrt_real_cst
     | Dl.Typer.T.Id id -> begin
       match DStd.Id.Map.find_exn id other_builtins env s with
       | e -> e
