@@ -30,7 +30,7 @@ let src = Logs.Src.create ~doc:"Fpa_rel" __MODULE__
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-let timer = Timers.M_None
+let timer = Timers.M_Fpa
 
 module IntPairSet = Set.Make (struct
   type t = int * int
