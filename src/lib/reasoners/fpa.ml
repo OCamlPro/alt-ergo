@@ -37,7 +37,7 @@ struct
 
   let name = "Fpa"
 
-  let timer = Timers.M_None
+  let timer = Timers.M_Fpa
 
   (*BISECT-IGNORE-BEGIN*)
   module Debug = struct
