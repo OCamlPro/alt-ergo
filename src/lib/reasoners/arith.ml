@@ -289,18 +289,35 @@ struct
         in
         P.add p (P.mult_const coef p3), ctx
     (*** <begin>: partial handling of some arith/FPA operators **)
-    | Sy.Op Float, [prec; exp; mode; x] ->
+    | Sy.Op Float, [prec; exp; mode; x] -> (
       let prec = E.int_view prec and exp = E.int_view exp in
-      let mode = E.rounding_mode_view mode in
-      let aux_func e =
-        let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
-        res
-      in
-      mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+      match E.rounding_mode_view mode with
+      | Some mode ->
+        let aux_func e =
+          let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
+          res
+        in
+        mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+      | None when Options.get_smt_lib_fpa () ->
+        (* If the rounding mode is not a literal and [Options.get_smt_lib_fpa
+           ()] is true, treat it as an uninterpreted function and wait for
+           fpa_rel to update it when the rounding mode is substituted with a
+           literal. *)
+        P.add (P.create [coef, X.term_embed t] Q.zero ty) p, ctx
+      | None ->
+        Fmt.failwith
+          "ae.float: The given term %a is not a constant rounding mode" E.print
+          mode)
     | Sy.Op Sy.Integer_round, [mode; x] ->
-      let aux_func =
-        Fpa_rounding.round_to_integer (E.rounding_mode_view mode)
+      let mode =
+        match E.rounding_mode_view mode with
+        | Some mode -> mode
+        | None ->
+          Fmt.failwith
+            "integer_round: The given term %a is not a constant rounding mode"
+            E.print mode
       in
+      let aux_func = Fpa_rounding.round_to_integer mode in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
     | Sy.Op (Sy.Abs_int | Sy.Abs_real), [x] ->
       mk_partial_interpretation_1 Q.abs coef p ty t x, ctx
