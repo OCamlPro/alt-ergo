@@ -99,17 +99,17 @@ module Domain = struct
     && status_equal d1.is_positive d2.is_positive
     && status_equal d1.is_negative d2.is_negative
 
-  let merge_status ~ex st1 st2 =
+  let merge_status st1 st2 =
     match st1, st2 with
     | Unknown, st | st, Unknown -> st
-    | True ex1, True ex2 -> True (Ex.union ex (Ex.union ex1 ex2))
-    | False ex1, False ex2 -> False (Ex.union ex (Ex.union ex1 ex2))
+    | True ex1, True ex2 -> True (Ex.union ex1 ex2)
+    | False ex1, False ex2 -> False (Ex.union ex1 ex2)
     | True ex1, False ex2 | False ex2, True ex1 ->
       if Options.get_debug_fpa () > 0
       then
         Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"merge_status"
           "conflict: %a and %a" pp_status (True ex1) pp_status (False ex2);
-      raise (Inconsistent (Ex.union ex (Ex.union ex1 ex2)))
+      raise (Inconsistent (Ex.union ex1 ex2))
 
   type pred =
     | Nan
@@ -134,8 +134,7 @@ module Domain = struct
     | Negative -> d.is_negative
 
   let upd_pred_status p st d =
-    (* Explanation is within the new status *)
-    let st = merge_status ~ex:Ex.empty (get_pred_status p d) st in
+    let st = merge_status (get_pred_status p d) st in
     match p with
     | Nan -> { d with is_nan = st }
     | Zero -> { d with is_zero = st }
@@ -164,19 +163,22 @@ module Domain = struct
     then Some Negative
     else None
 
-  let rec apply p st d =
+  let rec apply p ~ex ~is_true d =
     if Options.get_debug_fpa () > 0
     then
       Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"apply"
-        "apply %a = %a to %a" pp_pred p pp_status st pp d;
+        "apply %a = %b to %a" pp_pred p is_true pp d;
+    let st = if is_true then True ex else False ex in
     let d = upd_pred_status p st d in
     let d =
       (* if [p] became true, then the predicates in [exclusive_of p] are must be
          false *)
       match st with
-      | True ex ->
+      | True _ ->
+        (* Because `ex` is the same as the `ex_st` in [True ex_st] *)
+        let neg_st = False ex in
         List.fold_left
-          (fun d p -> upd_pred_status p (False ex) d)
+          (fun d p -> upd_pred_status p neg_st d)
           d (exclusive_of p)
       | False _ -> d
       | Unknown -> assert false
@@ -184,21 +186,21 @@ module Domain = struct
     match d.is_nan, d.is_positive, d.is_negative with
     | Unknown, False ex_p, False ex_n ->
       (* not positive & not negative -> NaN *)
-      apply Nan (True (Ex.union ex_p ex_n)) d
+      apply Nan ~ex:(Ex.union ex_p ex_n) ~is_true:true d
     | False ex_nan, Unknown, False ex_n ->
       (* not NaN & not negative -> positive *)
-      apply Positive (True (Ex.union ex_nan ex_n)) d
+      apply Positive ~ex:(Ex.union ex_nan ex_n) ~is_true:true d
     | False ex_nan, False ex_p, Unknown ->
       (* not NaN & not positive -> negative *)
-      apply Negative (True (Ex.union ex_nan ex_p)) d
+      apply Negative ~ex:(Ex.union ex_nan ex_p) ~is_true:true d
     | _ -> d
 
   let merge ~ex d1 d2 =
     let apply_if_known p st d =
       match st with
       | Unknown -> d
-      | True ex2 -> apply p (True (Ex.union ex ex2)) d
-      | False ex2 -> apply p (False (Ex.union ex ex2)) d
+      | True ex2 -> apply p ~ex:(Ex.union ex ex2) ~is_true:true d
+      | False ex2 -> apply p ~ex:(Ex.union ex ex2) ~is_true:false d
     in
     apply_if_known Nan d2.is_nan d1
     |> apply_if_known Zero d2.is_zero
@@ -206,7 +208,7 @@ module Domain = struct
     |> apply_if_known Positive d2.is_positive
     |> apply_if_known Negative d2.is_negative
 
-  let set_pred p is_neg ex d = apply p (if is_neg then False ex else True ex) d
+  let set_pred p is_neg ex d = apply p ~ex ~is_true:(not is_neg) d
 
   (* Deduce literal FP value equality from predicates *)
   let deduce_fpval_eq d =
