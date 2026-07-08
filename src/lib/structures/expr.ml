@@ -2806,22 +2806,22 @@ let z_to_int z =
 
 let const_view t =
   match term_view t with
-  | { f = Int n; _ } -> Int (z_to_int n)
+  | { f = Int n; _ } -> Some (Int (z_to_int n))
   | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
     ->
     let c = Fmt.str "%a" DE.Term.Const.print c in
-    RoundingMode (Fpa_rounding.rounding_mode_of_smt c)
-  | _ -> Fmt.failwith "unsupported constant: %a" print t
+    Some (RoundingMode (Fpa_rounding.rounding_mode_of_smt c))
+  | _ -> None
 
 let int_view t =
   match const_view t with
-  | Int n -> n
+  | Some (Int n) -> n
   | _ -> Fmt.failwith "The given term %a is not an integer" print t
 
 let rounding_mode_view t =
   match const_view t with
-  | RoundingMode m -> m
-  | _ -> Fmt.failwith "The given term %a is not a rounding mode" print t
+  | Some (RoundingMode m) -> Some m
+  | _ -> None
 
 (****************************************************************************)
 (*                     Helpers to build typed terms                         *)
