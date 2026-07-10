@@ -65,8 +65,8 @@ let q_to_bvs eb sb q =
   let neg = Q.sign q < 0 in
   (* (_, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
   let _, m, e =
-    Fpa_rounding.float_of_rational sb min_exp Fpa_rounding.NearestTiesToEven
-      (Q.abs q)
+    Fpa_rounding.float_of_rational sb min_exp
+      Dolmen.Std.Builtin.Float.RoundNearestTiesToEven (Q.abs q)
   in
   (* hidden_bit = 2^(sb-1), m >= hidden_bit -> normal *)
   let hidden_bit = Z.shift_left Z.one (sb - 1) in

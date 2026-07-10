@@ -814,11 +814,11 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           E.mk_constr tcst [] ty
         | B.Float cst -> begin
           match cst with
-          | RoundNearestTiesToEven -> mk_rounding NearestTiesToEven
-          | RoundNearestTiesToAway -> mk_rounding NearestTiesToAway
-          | RoundTowardPositive -> mk_rounding Up
-          | RoundTowardNegative -> mk_rounding Down
-          | RoundTowardZero -> mk_rounding ToZero
+          | RoundNearestTiesToEven -> mk_rounding B.Float.RoundNearestTiesToEven
+          | RoundNearestTiesToAway -> mk_rounding B.Float.RoundNearestTiesToAway
+          | RoundTowardPositive -> mk_rounding B.Float.RoundTowardPositive
+          | RoundTowardNegative -> mk_rounding B.Float.RoundTowardNegative
+          | RoundTowardZero -> mk_rounding B.Float.RoundTowardZero
           | Plus_infinity { e; s } when Options.get_smt_lib_fpa () ->
             E.float Fp_value.Plus_infinity e s
           | Minus_infinity { e; s } when Options.get_smt_lib_fpa () ->
