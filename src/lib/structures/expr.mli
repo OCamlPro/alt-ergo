@@ -769,63 +769,63 @@ module FP : sig
 
   (** {2 Arithmetic with rounding mode} *)
 
-  val add : e:int -> s:int -> mode:t -> t -> t -> t
+  val add : eb:int -> sb:int -> mode:t -> t -> t -> t
 
-  val sub : e:int -> s:int -> mode:t -> t -> t -> t
+  val sub : eb:int -> sb:int -> mode:t -> t -> t -> t
 
-  val mul : e:int -> s:int -> mode:t -> t -> t -> t
+  val mul : eb:int -> sb:int -> mode:t -> t -> t -> t
 
-  val div : e:int -> s:int -> mode:t -> t -> t -> t
+  val div : eb:int -> sb:int -> mode:t -> t -> t -> t
 
-  val fma : e:int -> s:int -> mode:t -> t -> t -> t -> t
+  val fma : eb:int -> sb:int -> mode:t -> t -> t -> t -> t
 
-  val sqrt : e:int -> s:int -> mode:t -> t -> t
+  val sqrt : eb:int -> sb:int -> mode:t -> t -> t
 
-  val round_to_integral : e:int -> s:int -> mode:t -> t -> t
+  val round_to_integral : eb:int -> sb:int -> mode:t -> t -> t
 
-  val of_real : e:int -> s:int -> mode:t -> t -> t
+  val of_real : eb:int -> sb:int -> mode:t -> t -> t
 
   (** {2 Arithmetic without rounding mode} *)
 
-  val abs : e:int -> s:int -> t -> t
+  val abs : eb:int -> sb:int -> t -> t
 
-  val neg : e:int -> s:int -> t -> t
+  val neg : eb:int -> sb:int -> t -> t
 
-  val min : e:int -> s:int -> t -> t -> t
+  val min : eb:int -> sb:int -> t -> t -> t
 
-  val max : e:int -> s:int -> t -> t -> t
+  val max : eb:int -> sb:int -> t -> t -> t
 
   (** {2 Comparisons} *)
 
-  val le : e:int -> s:int -> t -> t -> t
+  val le : eb:int -> sb:int -> t -> t -> t
 
-  val lt : e:int -> s:int -> t -> t -> t
+  val lt : eb:int -> sb:int -> t -> t -> t
 
-  val ge : e:int -> s:int -> t -> t -> t
+  val ge : eb:int -> sb:int -> t -> t -> t
 
-  val gt : e:int -> s:int -> t -> t -> t
+  val gt : eb:int -> sb:int -> t -> t -> t
 
-  val eq : e:int -> s:int -> t -> t -> t
+  val eq : eb:int -> sb:int -> t -> t -> t
 
   (** {2 Predicates} *)
 
-  val is_normal : e:int -> s:int -> t -> t
+  val is_normal : eb:int -> sb:int -> t -> t
 
-  val is_subnormal : e:int -> s:int -> t -> t
+  val is_subnormal : eb:int -> sb:int -> t -> t
 
-  val is_zero : e:int -> s:int -> t -> t
+  val is_zero : eb:int -> sb:int -> t -> t
 
-  val is_infinite : e:int -> s:int -> t -> t
+  val is_infinite : eb:int -> sb:int -> t -> t
 
-  val is_nan : e:int -> s:int -> t -> t
+  val is_nan : eb:int -> sb:int -> t -> t
 
-  val is_negative : e:int -> s:int -> t -> t
+  val is_negative : eb:int -> sb:int -> t -> t
 
-  val is_positive : e:int -> s:int -> t -> t
+  val is_positive : eb:int -> sb:int -> t -> t
 
   (** {2 Real conversion} *)
 
-  val to_real : e:int -> s:int -> t -> t
+  val to_real : eb:int -> sb:int -> t -> t
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

@@ -3210,73 +3210,76 @@ module FP = struct
     let neg = Z.testbit bv_z (e + s - 1) in
     float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
-  let fp_prelude_op e s name args ret_ty =
-    let e = Ints.of_int e in
-    let s = Ints.of_int s in
-    mk_term (Sy.name name) (e :: s :: args) ret_ty
+  let fp_prelude_op eb sb name args ret_ty =
+    let eb = Ints.of_int eb in
+    let sb = Ints.of_int sb in
+    mk_term (Sy.name name) (eb :: sb :: args) ret_ty
 
   (* arithmetic with rounding mode *)
-  let add ~e ~s ~mode x y =
-    fp_prelude_op e s Names.add [mode; x; y] (Ty.Tfloat (e, s))
+  let add ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.add [mode; x; y] (Ty.Tfloat (eb, sb))
 
-  let sub ~e ~s ~mode x y =
-    fp_prelude_op e s Names.sub [mode; x; y] (Ty.Tfloat (e, s))
+  let sub ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.sub [mode; x; y] (Ty.Tfloat (eb, sb))
 
-  let mul ~e ~s ~mode x y =
-    fp_prelude_op e s Names.mul [mode; x; y] (Ty.Tfloat (e, s))
+  let mul ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.mul [mode; x; y] (Ty.Tfloat (eb, sb))
 
-  let div ~e ~s ~mode x y =
-    fp_prelude_op e s Names.div [mode; x; y] (Ty.Tfloat (e, s))
+  let div ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.div [mode; x; y] (Ty.Tfloat (eb, sb))
 
-  let fma ~e ~s ~mode x y z =
-    fp_prelude_op e s Names.fma [mode; x; y; z] (Ty.Tfloat (e, s))
+  let fma ~eb ~sb ~mode x y z =
+    fp_prelude_op eb sb Names.fma [mode; x; y; z] (Ty.Tfloat (eb, sb))
 
-  let sqrt ~e ~s ~mode x =
-    fp_prelude_op e s Names.sqrt [mode; x] (Ty.Tfloat (e, s))
+  let sqrt ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.sqrt [mode; x] (Ty.Tfloat (eb, sb))
 
-  let round_to_integral ~e ~s ~mode x =
-    fp_prelude_op e s Names.round_to_integral [mode; x] (Ty.Tfloat (e, s))
+  let round_to_integral ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.round_to_integral [mode; x] (Ty.Tfloat (eb, sb))
 
-  let of_real ~e ~s ~mode x =
-    fp_prelude_op e s Names.of_real [mode; x] (Ty.Tfloat (e, s))
+  let of_real ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.of_real [mode; x] (Ty.Tfloat (eb, sb))
 
   (* arithmetic without rounding mode *)
-  let abs ~e ~s x = fp_prelude_op e s Names.abs [x] (Ty.Tfloat (e, s))
+  let abs ~eb ~sb x = fp_prelude_op eb sb Names.abs [x] (Ty.Tfloat (eb, sb))
 
-  let neg ~e ~s x = fp_prelude_op e s Names.neg [x] (Ty.Tfloat (e, s))
+  let neg ~eb ~sb x = fp_prelude_op eb sb Names.neg [x] (Ty.Tfloat (eb, sb))
 
-  let min ~e ~s x y = fp_prelude_op e s Names.min [x; y] (Ty.Tfloat (e, s))
+  let min ~eb ~sb x y =
+    fp_prelude_op eb sb Names.min [x; y] (Ty.Tfloat (eb, sb))
 
-  let max ~e ~s x y = fp_prelude_op e s Names.max [x; y] (Ty.Tfloat (e, s))
+  let max ~eb ~sb x y =
+    fp_prelude_op eb sb Names.max [x; y] (Ty.Tfloat (eb, sb))
 
   (* comparisons *)
-  let le ~e ~s x y = fp_prelude_op e s Names.le [x; y] Ty.Tbool
+  let le ~eb ~sb x y = fp_prelude_op eb sb Names.le [x; y] Ty.Tbool
 
-  let lt ~e ~s x y = fp_prelude_op e s Names.lt [x; y] Ty.Tbool
+  let lt ~eb ~sb x y = fp_prelude_op eb sb Names.lt [x; y] Ty.Tbool
 
-  let ge ~e ~s x y = le ~e ~s y x
+  let ge ~eb ~sb x y = le ~eb ~sb y x
 
-  let gt ~e ~s x y = lt ~e ~s y x
+  let gt ~eb ~sb x y = lt ~eb ~sb y x
 
-  let eq ~e ~s x y = fp_prelude_op e s Names.eq [x; y] Ty.Tbool
+  let eq ~eb ~sb x y = fp_prelude_op eb sb Names.eq [x; y] Ty.Tbool
 
   (* predicates *)
-  let is_normal ~e ~s x = fp_prelude_op e s Names.is_normal [x] Ty.Tbool
+  let is_normal ~eb ~sb x = fp_prelude_op eb sb Names.is_normal [x] Ty.Tbool
 
-  let is_subnormal ~e ~s x = fp_prelude_op e s Names.is_subnormal [x] Ty.Tbool
+  let is_subnormal ~eb ~sb x =
+    fp_prelude_op eb sb Names.is_subnormal [x] Ty.Tbool
 
-  let is_zero ~e ~s x = fp_prelude_op e s Names.is_zero [x] Ty.Tbool
+  let is_zero ~eb ~sb x = fp_prelude_op eb sb Names.is_zero [x] Ty.Tbool
 
-  let is_infinite ~e ~s x = fp_prelude_op e s Names.is_infinite [x] Ty.Tbool
+  let is_infinite ~eb ~sb x = fp_prelude_op eb sb Names.is_infinite [x] Ty.Tbool
 
-  let is_nan ~e ~s x = fp_prelude_op e s Names.is_nan [x] Ty.Tbool
+  let is_nan ~eb ~sb x = fp_prelude_op eb sb Names.is_nan [x] Ty.Tbool
 
-  let is_negative ~e ~s x = fp_prelude_op e s Names.is_negative [x] Ty.Tbool
+  let is_negative ~eb ~sb x = fp_prelude_op eb sb Names.is_negative [x] Ty.Tbool
 
-  let is_positive ~e ~s x = fp_prelude_op e s Names.is_positive [x] Ty.Tbool
+  let is_positive ~eb ~sb x = fp_prelude_op eb sb Names.is_positive [x] Ty.Tbool
 
   (* real conversion *)
-  let to_real ~e ~s x = fp_prelude_op e s Names.to_real [x] Ty.Treal
+  let to_real ~eb ~sb x = fp_prelude_op eb sb Names.to_real [x] Ty.Treal
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

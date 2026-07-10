@@ -1209,29 +1209,30 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           (* SMT-LIB FPA theory operations *)
           | _ when Options.get_smt_lib_fpa () -> begin
             match builtin, args with
-            | Fp { e; s }, [sign_t; exp_t; sig_t] ->
-              E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
-            | Ieee_format_to_fp { e; s }, [bv_t] ->
-              E.FP.ieee_format_to_fp (mk bv_t) e s
+            | Fp { e = eb; s = sb }, [sign_t; exp_t; sig_t] ->
+              E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) eb sb
+            | Ieee_format_to_fp { e = eb; s = sb }, [bv_t] ->
+              E.FP.ieee_format_to_fp (mk bv_t) eb sb
             (* arithmetic with rounding mode *)
-            | Add { e; s }, [mode; x; y] ->
-              E.FP.add ~e ~s ~mode:(mk mode) (mk x) (mk y)
-            | Sub { e; s }, [mode; x; y] ->
-              E.FP.sub ~e ~s ~mode:(mk mode) (mk x) (mk y)
-            | Mul { e; s }, [mode; x; y] ->
-              E.FP.mul ~e ~s ~mode:(mk mode) (mk x) (mk y)
-            | Div { e; s }, [mode; x; y] ->
-              E.FP.div ~e ~s ~mode:(mk mode) (mk x) (mk y)
-            | Fma { e; s }, [mode; x; y; z] ->
-              E.FP.fma ~e ~s ~mode:(mk mode) (mk x) (mk y) (mk z)
-            | Sqrt { e; s }, [mode; x] -> E.FP.sqrt ~e ~s ~mode:(mk mode) (mk x)
-            | RoundToIntegral { e; s }, [mode; x] ->
-              E.FP.round_to_integral ~e ~s ~mode:(mk mode) (mk x)
-            | Of_real { e; s }, [mode; x] ->
-              E.FP.of_real ~e ~s ~mode:(mk mode) (mk x)
+            | Add { e = eb; s = sb }, [mode; x; y] ->
+              E.FP.add ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+            | Sub { e = eb; s = sb }, [mode; x; y] ->
+              E.FP.sub ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+            | Mul { e = eb; s = sb }, [mode; x; y] ->
+              E.FP.mul ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+            | Div { e = eb; s = sb }, [mode; x; y] ->
+              E.FP.div ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+            | Fma { e = eb; s = sb }, [mode; x; y; z] ->
+              E.FP.fma ~eb ~sb ~mode:(mk mode) (mk x) (mk y) (mk z)
+            | Sqrt { e = eb; s = sb }, [mode; x] ->
+              E.FP.sqrt ~eb ~sb ~mode:(mk mode) (mk x)
+            | RoundToIntegral { e = eb; s = sb }, [mode; x] ->
+              E.FP.round_to_integral ~eb ~sb ~mode:(mk mode) (mk x)
+            | Of_real { e = eb; s = sb }, [mode; x] ->
+              E.FP.of_real ~eb ~sb ~mode:(mk mode) (mk x)
             (* arithmetic without rounding mode *)
-            | Abs { e; s }, [x] -> E.FP.abs ~e ~s (mk x)
-            | Neg { e; s }, [x] -> E.FP.neg ~e ~s (mk x)
+            | Abs { e = eb; s = sb }, [x] -> E.FP.abs ~eb ~sb (mk x)
+            | Neg { e = eb; s = sb }, [x] -> E.FP.neg ~eb ~sb (mk x)
             | Rem { e = _; s = _ }, [_x; _y] ->
               (* TODO: rem is not currently in the axiomatization, its semantics
                  need to be either axiomatized or implemented in Alt-Ergo. It is
@@ -1239,24 +1240,28 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
               let ty = dty_to_ty term_ty in
               let sy = Sy.name (get_basename tcst.path) in
               E.mk_term sy (List.map mk args) ty
-            | Min { e; s }, [x; y] -> E.FP.min ~e ~s (mk x) (mk y)
-            | Max { e; s }, [x; y] -> E.FP.max ~e ~s (mk x) (mk y)
+            | Min { e = eb; s = sb }, [x; y] -> E.FP.min ~eb ~sb (mk x) (mk y)
+            | Max { e = eb; s = sb }, [x; y] -> E.FP.max ~eb ~sb (mk x) (mk y)
             (* comparisons *)
-            | Leq { e; s }, [x; y] -> E.FP.le ~e ~s (mk x) (mk y)
-            | Lt { e; s }, [x; y] -> E.FP.lt ~e ~s (mk x) (mk y)
-            | Geq { e; s }, [x; y] -> E.FP.ge ~e ~s (mk x) (mk y)
-            | Gt { e; s }, [x; y] -> E.FP.gt ~e ~s (mk x) (mk y)
-            | Eq { e; s }, [x; y] -> E.FP.eq ~e ~s (mk x) (mk y)
+            | Leq { e = eb; s = sb }, [x; y] -> E.FP.le ~eb ~sb (mk x) (mk y)
+            | Lt { e = eb; s = sb }, [x; y] -> E.FP.lt ~eb ~sb (mk x) (mk y)
+            | Geq { e = eb; s = sb }, [x; y] -> E.FP.ge ~eb ~sb (mk x) (mk y)
+            | Gt { e = eb; s = sb }, [x; y] -> E.FP.gt ~eb ~sb (mk x) (mk y)
+            | Eq { e = eb; s = sb }, [x; y] -> E.FP.eq ~eb ~sb (mk x) (mk y)
             (* predicates *)
-            | IsNormal { e; s }, [x] -> E.FP.is_normal ~e ~s (mk x)
-            | IsSubnormal { e; s }, [x] -> E.FP.is_subnormal ~e ~s (mk x)
-            | IsZero { e; s }, [x] -> E.FP.is_zero ~e ~s (mk x)
-            | IsInfinite { e; s }, [x] -> E.FP.is_infinite ~e ~s (mk x)
-            | IsNaN { e; s }, [x] -> E.FP.is_nan ~e ~s (mk x)
-            | IsNegative { e; s }, [x] -> E.FP.is_negative ~e ~s (mk x)
-            | IsPositive { e; s }, [x] -> E.FP.is_positive ~e ~s (mk x)
+            | IsNormal { e = eb; s = sb }, [x] -> E.FP.is_normal ~eb ~sb (mk x)
+            | IsSubnormal { e = eb; s = sb }, [x] ->
+              E.FP.is_subnormal ~eb ~sb (mk x)
+            | IsZero { e = eb; s = sb }, [x] -> E.FP.is_zero ~eb ~sb (mk x)
+            | IsInfinite { e = eb; s = sb }, [x] ->
+              E.FP.is_infinite ~eb ~sb (mk x)
+            | IsNaN { e = eb; s = sb }, [x] -> E.FP.is_nan ~eb ~sb (mk x)
+            | IsNegative { e = eb; s = sb }, [x] ->
+              E.FP.is_negative ~eb ~sb (mk x)
+            | IsPositive { e = eb; s = sb }, [x] ->
+              E.FP.is_positive ~eb ~sb (mk x)
             (* real conversion *)
-            | To_real { e; s }, [x] -> E.FP.to_real ~e ~s (mk x)
+            | To_real { e = eb; s = sb }, [x] -> E.FP.to_real ~eb ~sb (mk x)
             (* TODO: FP <-> FP and BV <-> FP conversion, treated as
                uninterpreted in the meantime. *)
             | ( ( To_fp { e1 = _; s1 = _; e2 = _; s2 = _ }
