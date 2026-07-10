@@ -461,6 +461,8 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
     Ty.Tbitv n
   | `Float (e, s) when Options.get_smt_lib_fpa () -> Ty.Tfloat (e, s)
   | `App (`Builtin B.Unit, []) -> Ty.tunit
+  | `App (`Builtin (B.Float B.Float.RoundingMode), []) ->
+    Fpa_rounding.fpa_rounding_mode
   | `App (`Builtin _, [ty]) -> aux ty
   | `App (`Generic c, l) -> handle_ty_app ~update c l
   | `Var ty_v when update -> Cache.find_update_ty ty_v
@@ -469,8 +471,6 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Pi (tyvl, ty) ->
     if update then Cache.store_tyvl ~is_var tyvl;
     aux ty
-  | `App (`Builtin (B.Float B.Float.RoundingMode), []) ->
-    Fpa_rounding.fpa_rounding_mode
   | _ -> unsupported "Type %a" DE.Ty.print dty
 
 and handle_ty_app ?(update = false) ty_c l =
@@ -812,27 +812,36 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         | B.Adt (Constructor _) ->
           let ty = dty_to_ty term_ty in
           E.mk_constr tcst [] ty
-        | B.Float RoundNearestTiesToEven -> mk_rounding NearestTiesToEven
-        | B.Float RoundNearestTiesToAway -> mk_rounding NearestTiesToAway
-        | B.Float RoundTowardPositive -> mk_rounding Up
-        | B.Float RoundTowardNegative -> mk_rounding Down
-        | B.Float RoundTowardZero -> mk_rounding ToZero
-        | B.Float cst when Options.get_smt_lib_fpa () -> begin
+        | B.Float cst -> begin
           match cst with
-          | Plus_infinity { e; s } -> E.float Fp_value.Plus_infinity e s
-          | Minus_infinity { e; s } -> E.float Fp_value.Minus_infinity e s
-          | Plus_zero { e; s } -> E.float Fp_value.Plus_zero e s
-          | Minus_zero { e; s } -> E.float Fp_value.Minus_zero e s
-          | NaN { e; s } -> E.float Fp_value.NaN e s
-          | RoundingMode | RoundNearestTiesToEven | RoundNearestTiesToAway
-          | RoundTowardPositive | RoundTowardNegative | RoundTowardZero | T _
-          | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _
-          | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ | Max _ | Leq _ | Lt _
-          | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _ | IsZero _
-          | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
+          | RoundNearestTiesToEven -> mk_rounding NearestTiesToEven
+          | RoundNearestTiesToAway -> mk_rounding NearestTiesToAway
+          | RoundTowardPositive -> mk_rounding Up
+          | RoundTowardNegative -> mk_rounding Down
+          | RoundTowardZero -> mk_rounding ToZero
+          | Plus_infinity { e; s } when Options.get_smt_lib_fpa () ->
+            E.float Fp_value.Plus_infinity e s
+          | Minus_infinity { e; s } when Options.get_smt_lib_fpa () ->
+            E.float Fp_value.Minus_infinity e s
+          | Plus_zero { e; s } when Options.get_smt_lib_fpa () ->
+            E.float Fp_value.Plus_zero e s
+          | Minus_zero { e; s } when Options.get_smt_lib_fpa () ->
+            E.float Fp_value.Minus_zero e s
+          | NaN { e; s } when Options.get_smt_lib_fpa () ->
+            E.float Fp_value.NaN e s
+          | RoundingMode | T _ | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _
+          | Div _ | Fma _ | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ | Max _
+          | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _
+          | IsZero _ | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
           | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
           | To_ubv _ | To_sbv _ | To_real _ ->
             unsupported "Literal Floating-Point Arithmetic term %a"
+              DE.Term.print term
+          | Plus_infinity _ | Minus_infinity _ | Plus_zero _ | Minus_zero _
+          | NaN _ ->
+            unsupported
+              "Constant term %a (Enable the SMT-LIB FPA with `-enable-theory \
+               smt.float` to be able to use float literals)"
               DE.Term.print term
         end
         | _ -> unsupported "Constant term %a" DE.Term.print term
