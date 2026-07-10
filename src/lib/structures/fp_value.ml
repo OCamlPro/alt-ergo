@@ -36,6 +36,17 @@ let compare v1 v2 =
         | Finite _ ) ) ->
       assert false)
 
+let equal v1 v2 =
+  match v1, v2 with
+  | Plus_infinity, Plus_infinity
+  | Minus_infinity, Minus_infinity
+  | Plus_zero, Plus_zero
+  | Minus_zero, Minus_zero
+  | NaN, NaN ->
+    true
+  | Finite q1, Finite q2 when Q.equal q1 q2 -> true
+  | _, _ -> false
+
 (* This works because we know that [q] is always dyadic since its created from
    an SMT-LIB float literal. *)
 let hex_of_q q =
