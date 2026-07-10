@@ -1234,8 +1234,11 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
             | Neg { e; s }, [x] -> E.FP.neg ~e ~s (mk x)
             | Rem { e = _; s = _ }, [_x; _y] ->
               (* TODO: rem is not currently in the axiomatization, its semantics
-                 need to be either axiomatized or implemented in Alt-Ergo. *)
-              unsupported_app_term ()
+                 need to be either axiomatized or implemented in Alt-Ergo. It is
+                 treated as an uninterpreted symbol in the meantime. *)
+              let ty = dty_to_ty term_ty in
+              let sy = Sy.name (get_basename tcst.path) in
+              E.mk_term sy (List.map mk args) ty
             | Min { e; s }, [x; y] -> E.FP.min ~e ~s (mk x) (mk y)
             | Max { e; s }, [x; y] -> E.FP.max ~e ~s (mk x) (mk y)
             (* comparisons *)
@@ -1254,14 +1257,17 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
             | IsPositive { e; s }, [x] -> E.FP.is_positive ~e ~s (mk x)
             (* real conversion *)
             | To_real { e; s }, [x] -> E.FP.to_real ~e ~s (mk x)
-            (* TODO: FP <-> FP and BV <-> FP conversion *)
-            | To_fp { e1 = _; s1 = _; e2 = _; s2 = _ }, [_; _]
-            | ( ( Of_sbv { m = _; e = _; s = _ }
+            (* TODO: FP <-> FP and BV <-> FP conversion, treated as
+               uninterpreted in the meantime. *)
+            | ( ( To_fp { e1 = _; s1 = _; e2 = _; s2 = _ }
+                | Of_sbv { m = _; e = _; s = _ }
                 | Of_ubv { m = _; e = _; s = _ }
                 | To_ubv { m = _; e = _; s = _ }
                 | To_sbv { m = _; e = _; s = _ } ),
-                [_] ) ->
-              unsupported_app_term ()
+                [_; _] ) ->
+              let ty = dty_to_ty term_ty in
+              let sy = Sy.name (get_basename tcst.path) in
+              E.mk_term sy (List.map mk args) ty
             (* can't be applied *)
             | (RoundingMode | T _ | Fp _), _
             | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
