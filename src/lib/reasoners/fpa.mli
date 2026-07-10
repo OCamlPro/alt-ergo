@@ -18,7 +18,7 @@
 
 type 'r abstract =
   | Alien of 'r
-  | Literal of Ty.t * Fp_value.t
+  | Literal of int * int * Fp_value.t
 
 module Shostak (X : sig
   include Sig.X

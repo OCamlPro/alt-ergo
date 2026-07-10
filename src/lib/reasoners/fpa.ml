@@ -21,7 +21,7 @@ module Sy = Symbols
 
 type 'r abstract =
   | Alien of 'r
-  | Literal of Ty.t * Fp_value.t
+  | Literal of int * int * Fp_value.t
 
 module Shostak (X : sig
   include Sig.X
@@ -65,37 +65,42 @@ struct
 
   let make t =
     let { E.f; ty; _ } = E.term_view t in
-    match f with
-    | Sy.Float fp_val -> is_mine (Literal (ty, fp_val)), []
-    | _ ->
+    match f, ty with
+    | Sy.Float fp_val, Ty.Tfloat (eb, sb) ->
+      is_mine (Literal (eb, sb, fp_val)), []
     | _ -> Util.internal_error "%a is not a floating-point literal" E.print t
 
-  let type_info = function Alien r -> X.type_info r | Literal (ty, _) -> ty
+  let type_info = function
+    | Alien r -> X.type_info r
+    | Literal (eb, sb, _) -> Ty.Tfloat (eb, sb)
 
   let equal s1 s2 =
     match s1, s2 with
     | Alien r1, Alien r2 -> X.equal r1 r2
-    | Literal (ty1, v1), Literal (ty2, v2) ->
-      Ty.equal ty1 ty2 && Fp_value.equal v1 v2
+    | Literal (eb1, sb1, v1), Literal (eb2, sb2, v2) ->
+      eb1 = eb2 && sb1 = sb2 && Fp_value.equal v1 v2
     | _ -> false
 
   let hash = function
     | Alien r -> X.hash r
-    | Literal (ty, v) -> Ty.hash ty + (17 * Hashtbl.hash v)
+    | Literal (eb, sb, v) -> Hashtbl.hash (eb, sb) + (17 * Hashtbl.hash v)
 
   let compare s1 s2 =
     match embed s1, embed s2 with
     | Alien r1, Alien r2 -> X.str_cmp r1 r2
     | Alien _, _ -> 1
     | _, Alien _ -> -1
-    | Literal (ty1, v1), Literal (ty2, v2) ->
-      let c = Ty.compare ty1 ty2 in
-      if c <> 0 then c else Fp_value.compare v1 v2
+    | Literal (eb1, sb1, v1), Literal (eb2, sb2, v2) ->
+      let c = Int.compare eb1 eb2 in
+      if c <> 0
+      then c
+      else
+        let c = Int.compare sb1 sb2 in
+        if c <> 0 then c else Fp_value.compare v1 v2
 
   let print ppf = function
     | Alien r -> X.print ppf r
-    | Literal (Ty.Tfloat (eb, sb), v) -> Fp_value.pp_smtlib eb sb ppf v
-    | Literal _ -> assert false
+    | Literal (eb, sb, v) -> Fp_value.pp_smtlib eb sb ppf v
 
   let leaves = function Alien r -> X.leaves r | Literal _ -> []
 
@@ -117,14 +122,13 @@ struct
 
   let term_extract r =
     match embed r with
-    | Literal (Ty.Tfloat (eb, sb), fp_val) -> Some (E.float fp_val eb sb), false
-    | Literal _ -> assert false
+    | Literal (eb, sb, fp_val) -> Some (E.float fp_val eb sb), false
     | Alien _ -> None, false
 
   let solve r1 r2 pb =
     Debug.solve r1 r2;
     match embed r1, embed r2 with
-    | Literal (_, l1), Literal (_, l2) ->
+    | Literal (_, _, l1), Literal (_, _, l2) ->
       if Fp_value.equal l1 l2
       then pb
       else (
@@ -142,7 +146,6 @@ struct
 
   let to_model_term r =
     match embed r with
-    | Literal (Ty.Tfloat (eb, sb), fp_val) -> Some (E.float fp_val eb sb)
-    | Literal _ -> assert false
+    | Literal (eb, sb, fp_val) -> Some (E.float fp_val eb sb)
     | Alien _ -> None
 end
