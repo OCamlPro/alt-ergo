@@ -2793,33 +2793,23 @@ let reinit_cache () =
   Labels.clear labels;
   HC.reinit_cache ()
 
-type const =
-  | Int of int
-  | RoundingMode of Fpa_rounding.rounding_mode
-
 let z_to_int z =
   match Z.to_int z with
   | n -> n
   | exception Z.Overflow ->
     Fmt.failwith "error when trying to convert %a to an int" Z.pp_print z
 
-let const_view t =
-  match term_view t with
-  | { f = Int n; _ } -> Some (Int (z_to_int n))
-  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
-    ->
-    let c = Fmt.str "%a" DE.Term.Const.print c in
-    Some (RoundingMode (Fpa_rounding.rounding_mode_of_smt c))
-  | _ -> None
-
 let int_view t =
-  match const_view t with
-  | Some (Int n) -> n
+  match term_view t with
+  | { f = Int n; _ } -> z_to_int n
   | _ -> Fmt.failwith "The given term %a is not an integer" print t
 
 let rounding_mode_view t =
-  match const_view t with
-  | Some (RoundingMode m) -> Some m
+  match term_view t with
+  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
+    ->
+    let c = Fmt.str "%a" DE.Term.Const.print c in
+    Some (Fpa_rounding.rounding_mode_of_smt c)
   | _ -> None
 
 (****************************************************************************)
