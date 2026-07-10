@@ -80,7 +80,7 @@ struct
 
   let hash = function
     | Alien r -> X.hash r
-    | Literal (ty, v) -> Ty.hash ty * 17 lxor Hashtbl.hash v
+    | Literal (ty, v) -> Ty.hash ty + (17 * Hashtbl.hash v)
 
   let compare s1 s2 =
     match embed s1, embed s2 with
