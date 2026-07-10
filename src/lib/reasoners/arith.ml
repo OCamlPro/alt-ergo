@@ -298,16 +298,11 @@ struct
           res
         in
         mk_partial_interpretation_1 aux_func coef p ty t x, ctx
-      | None when Options.get_smt_lib_fpa () ->
-        (* If the rounding mode is not a literal and [Options.get_smt_lib_fpa
-           ()] is true, treat it as an uninterpreted function and wait for
-           fpa_rel to update it when the rounding mode is substituted with a
-           literal. *)
-        P.add (P.create [coef, X.term_embed t] Q.zero ty) p, ctx
       | None ->
-        Fmt.failwith
-          "ae.float: The given term %a is not a constant rounding mode" E.print
-          mode)
+        (* If the rounding mode is not a literal, treat it as an uninterpreted
+           function. If [Options.get_smt_lib_fpa ()], fpa_rel will update it
+           when the rounding mode is substituted with a literal. *)
+        P.add (P.create [coef, X.term_embed t] Q.zero ty) p, ctx)
     | Sy.Op Sy.Integer_round, [mode; x] ->
       let mode =
         match E.rounding_mode_view mode with
