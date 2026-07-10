@@ -36,13 +36,21 @@ let compare v1 v2 =
         | Finite _ ) ) ->
       assert false)
 
+(* This works because we know that [q] is always dyadic since its created from
+   an SMT-LIB float literal. *)
+let hex_of_q q =
+  let sign = if Q.sign q < 0 then "-" else "" in
+  let num = Z.abs (Q.num q) in
+  let k = Z.numbits (Q.den q) - 1 in
+  Fmt.str "%s0x%sp-%d" sign (Z.format "%x" num) k
+
 let pp ppf = function
   | Plus_infinity -> Fmt.pf ppf "+oo"
   | Minus_infinity -> Fmt.pf ppf "-oo"
   | Plus_zero -> Fmt.pf ppf "+zero"
   | Minus_zero -> Fmt.pf ppf "-zero"
   | NaN -> Fmt.pf ppf "NaN"
-  | Finite q -> Fmt.pf ppf "fp[%s]" (Q.to_string q)
+  | Finite q -> Fmt.pf ppf "fp[%s]" (hex_of_q q)
 
 (* bias = 2^(eb-1) - 1 *)
 let fp_bias eb = (1 lsl (eb - 1)) - 1

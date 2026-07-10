@@ -682,13 +682,16 @@ end
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP : sig
   module Names : sig
-    (* float conversion function *)
+    (** {2 Float conversion functions} *)
+
     val ae_float : string
 
-    (* generic float type *)
+    (** {2 Generic float type} *)
+
     val t : string
 
-    (* arithmetic with rounding mode *)
+    (** {2 Arithmetic with rounding mode} *)
+
     val add : string
 
     val sub : string
@@ -705,7 +708,8 @@ module FP : sig
 
     val of_real : string
 
-    (* arithmetic without rounding mode *)
+    (** {2 Arithmetic without rounding mode} *)
+
     val abs : string
 
     val neg : string
@@ -714,14 +718,16 @@ module FP : sig
 
     val max : string
 
-    (* comparisons *)
+    (** {2 Comparisons} *)
+
     val le : string
 
     val lt : string
 
     val eq : string
 
-    (* predicates *)
+    (** {2 Predicates} *)
+
     val is_normal : string
 
     val is_subnormal : string
@@ -736,10 +742,12 @@ module FP : sig
 
     val is_positive : string
 
-    (* real conversion *)
+    (** {2 Real conversion} *)
+
     val to_real : string
 
-    (* precision-dependent literals *)
+    (** {2 Precision-dependent literals} *)
+
     val pow2sb : string
 
     val max_int : string
@@ -759,7 +767,8 @@ module FP : sig
 
   val ieee_format_to_fp : t -> int -> int -> t
 
-  (* arithmetic with rounding mode *)
+  (** {2 Arithmetic with rounding mode} *)
+
   val add : e:int -> s:int -> mode:t -> t -> t -> t
 
   val sub : e:int -> s:int -> mode:t -> t -> t -> t
@@ -776,7 +785,8 @@ module FP : sig
 
   val of_real : e:int -> s:int -> mode:t -> t -> t
 
-  (* arithmetic without rounding mode *)
+  (** {2 Arithmetic without rounding mode} *)
+
   val abs : e:int -> s:int -> t -> t
 
   val neg : e:int -> s:int -> t -> t
@@ -785,7 +795,8 @@ module FP : sig
 
   val max : e:int -> s:int -> t -> t -> t
 
-  (* comparisons *)
+  (** {2 Comparisons} *)
+
   val le : e:int -> s:int -> t -> t -> t
 
   val lt : e:int -> s:int -> t -> t -> t
@@ -796,7 +807,8 @@ module FP : sig
 
   val eq : e:int -> s:int -> t -> t -> t
 
-  (* predicates *)
+  (** {2 Predicates} *)
+
   val is_normal : e:int -> s:int -> t -> t
 
   val is_subnormal : e:int -> s:int -> t -> t
@@ -811,7 +823,8 @@ module FP : sig
 
   val is_positive : e:int -> s:int -> t -> t
 
-  (* real conversion *)
+  (** {2 Real conversion} *)
+
   val to_real : e:int -> s:int -> t -> t
 end
 

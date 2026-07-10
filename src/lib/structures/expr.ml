@@ -3126,26 +3126,6 @@ end
 
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP = struct
-  let bv_literal_to_z t =
-    match t.f, t.xs with
-    | Sy.Bitv (_, z), [] -> z
-    | _ ->
-      invalid_arg
-        "fp applications are currently only supported for bitvector literals"
-
-  let fp sign_t exp_t sig_t e s =
-    let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
-    let biased_exp = z_to_int (bv_literal_to_z exp_t) in
-    let mantissa = bv_literal_to_z sig_t in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
-
-  let ieee_format_to_fp bv_t e s =
-    let bv_z = bv_literal_to_z bv_t in
-    let mantissa = Z.extract bv_z 0 (s - 1) in
-    let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
-    let neg = Z.testbit bv_z (e + s - 1) in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
-
   module Names = struct
     (* float conversion function *)
     let ae_float = "ae.float"
@@ -3219,6 +3199,26 @@ module FP = struct
 
     let abs_err_denom = "ae.fp.abs_err_denom"
   end
+
+  let bv_literal_to_z t =
+    match t.f, t.xs with
+    | Sy.Bitv (_, z), [] -> z
+    | _ ->
+      invalid_arg
+        "fp applications are currently only supported for bitvector literals"
+
+  let fp sign_t exp_t sig_t e s =
+    let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
+    let biased_exp = z_to_int (bv_literal_to_z exp_t) in
+    let mantissa = bv_literal_to_z sig_t in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+
+  let ieee_format_to_fp bv_t e s =
+    let bv_z = bv_literal_to_z bv_t in
+    let mantissa = Z.extract bv_z 0 (s - 1) in
+    let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
+    let neg = Z.testbit bv_z (e + s - 1) in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
   let fp_prelude_op e s name args ret_ty =
     let e = Ints.of_int e in
