@@ -117,3 +117,29 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
+  $ alt-ergo -t 1 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (=
+  >   (_ +oo 11 53)
+  >   (fp.fma roundNearestTiesToEven
+  >     (fp (_ bv1 1) (_ bv1 11) (_ bv0 52))
+  >     (fp (_ bv1 1) (_ bv2047 11) (_ bv0 52))
+  >     (fp (_ bv0 1) (_ bv0 11) (_ bv0 52))
+  >   )
+  > )))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 1 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-fun x () Float64)
+  > (declare-fun y () Float64)
+  > (assert (= x (fp (_ bv0 1) #b10011100010 (_ bv0 52))))
+  > (assert (= y (fp (_ bv1 1) #b11111000100 (_ bv0 52))))
+  > (assert (not (= (_ -oo 11 53) (fp.mul roundNearestTiesToEven x y))))
+  > (check-sat)
+  > EOF
+  
+  unsat
