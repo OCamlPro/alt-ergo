@@ -75,7 +75,7 @@ struct
     match s1, s2 with
     | Alien r1, Alien r2 -> X.equal r1 r2
     | Literal (ty1, v1), Literal (ty2, v2) ->
-      Ty.equal ty1 ty2 && Fp_value.compare v1 v2 = 0
+      Ty.equal ty1 ty2 && Fp_value.equal v1 v2
     | _ -> false
 
   let hash = function
@@ -124,7 +124,7 @@ struct
     Debug.solve r1 r2;
     match embed r1, embed r2 with
     | Literal (_, l1), Literal (_, l2) ->
-      if Fp_value.compare l1 l2 = 0
+      if Fp_value.equal l1 l2
       then pb
       else (
         Debug.unsolvable r1 r2;
