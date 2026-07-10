@@ -67,7 +67,8 @@ struct
     let { E.f; ty; _ } = E.term_view t in
     match f with
     | Sy.Float fp_val -> is_mine (Literal (ty, fp_val)), []
-    | _ -> assert false
+    | _ ->
+    | _ -> Util.internal_error "%a is not a floating-point literal" E.print t
 
   let type_info = function Alien r -> X.type_info r | Literal (ty, _) -> ty
 
