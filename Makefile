@@ -205,7 +205,17 @@ lock:
 	opam lock ./alt-ergo-lib.opam -w
 	# Remove OCaml compiler constraints
 	sed -i \
-		'/"ocaml"\|"ocaml-base-compiler"\|"ocaml-system"\|"ocaml-config"\|"base-domains"\|"base-nnp"/d' \
+		-e '/"ocaml"/d' \
+		-e '/"ocaml-base-compiler"/d' \
+		-e '/"ocaml-compiler-lib"/d' \
+		-e '/"ocaml-system"/d' \
+		-e '/"ocaml-config"/d' \
+		-e '/"ocaml-variants"/d' \
+		-e '/"base-domains"/d' \
+		-e '/"base-effects"/d' \
+		-e '/"base-nnp"/d' \
+		-e '/"ocamlfind"/d' \
+		-e '/"host-.*"/d' \
 		./alt-ergo-lib.opam.locked
 
 dev-switch:
