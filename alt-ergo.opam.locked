@@ -1,14 +1,11 @@
-
 opam-version: "2.0"
-name: "alt-ergo-lib"
+name: "alt-ergo"
 version: "dev"
-synopsis: "The Alt-Ergo SMT prover library"
+synopsis: "The Alt-Ergo SMT prover"
 description: """\
-This is the core library used in the Alt-Ergo SMT solver.
-
 Alt-Ergo is an automatic theorem prover of mathematical formulas. It was developed at LRI, and is now maintained at OCamlPro.
 
-See more details on http://alt-ergo.ocamlpro.com/"""
+See more details on https://alt-ergo.ocamlpro.com/"""
 maintainer: "Alt-Ergo developers <alt-ergo@ocamlpro.com>"
 authors: "Alt-Ergo developers <alt-ergo@ocamlpro.com>"
 license: ["LicenseRef-OCamlpro-Non-Commercial" "Apache-2.0"]
@@ -17,6 +14,7 @@ homepage: "https://alt-ergo.ocamlpro.com/"
 doc: "https://ocamlpro.github.io/alt-ergo"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
+  "alt-ergo-lib" {= "dev"}
   "base-bigarray" {= "base"}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
@@ -48,13 +46,9 @@ depends: [
   "ocamlbuild" {= "0.16.1"}
   "ocplib-simplex" {= "0.5.1"}
   "ordering" {= "3.24.2"}
-  "ounit2" {= "2.2.7" & with-test}
   "pp" {= "2.0.0"}
   "pp_loc" {= "2.1.0"}
   "ptime" {= "1.2.0"}
-  "qcheck" {= "0.25" & with-test}
-  "qcheck-core" {= "0.25" & with-test}
-  "qcheck-ounit" {= "0.25" & with-test}
   "seq" {= "base"}
   "spelll" {= "0.4"}
   "stdlib-shims" {= "0.3.0"}
@@ -63,9 +57,6 @@ depends: [
   "topkg" {= "1.1.1"}
   "uutf" {= "1.0.4"}
   "zarith" {= "1.14"}
-]
-conflicts: [
-  "result" {< "1.5"}
 ]
 build: [
   ["dune" "subst"] {dev}
