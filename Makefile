@@ -9,6 +9,7 @@ BIN_DIR := $(SRC_DIR)/bin
 LIB_DIR := $(SRC_DIR)/lib
 PLUGINS_DIR := $(SRC_DIR)/plugins
 PARSERS_DIR := $(SRC_DIR)/parsers
+LOCK_SWITCH := alt-ergo-lock
 
 COMMON_DIR := $(BIN_DIR)/common
 BTEXT_DIR := $(BIN_DIR)/text
@@ -201,22 +202,7 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	dot -Tpdf archi.dot > archi.pdf
 
 lock:
-	dune build ./alt-ergo-lib.opam
-	opam lock ./alt-ergo-lib.opam -w
-	# Remove OCaml compiler constraints
-	sed -i \
-		-e '/"ocaml"/d' \
-		-e '/"ocaml-base-compiler"/d' \
-		-e '/"ocaml-compiler-lib"/d' \
-		-e '/"ocaml-system"/d' \
-		-e '/"ocaml-config"/d' \
-		-e '/"ocaml-variants"/d' \
-		-e '/"base-domains"/d' \
-		-e '/"base-effects"/d' \
-		-e '/"base-nnp"/d' \
-		-e '/"ocamlfind"/d' \
-		-e '/"host-.*"/d' \
-		./alt-ergo-lib.opam.locked
+	LOCK_SWITCH="$(LOCK_SWITCH)" ./rsc/extra/generate_lock_file.sh
 
 dev-switch:
 	opam switch create . --deps-only --ignore-constraints-on alt-ergo-lib
