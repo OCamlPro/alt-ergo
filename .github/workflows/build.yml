@@ -33,7 +33,7 @@ jobs:
           # Can't run on ubuntu-latest, see
           # https://github.com/ocaml/ocaml/issues/14031
           - os: ubuntu-24.04
-            ocaml-compiler: "4.11.2"
+            ocaml-compiler: "4.13.1"
 
     runs-on: ${{ matrix.os }}
 
