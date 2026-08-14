@@ -50,6 +50,19 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "0.5.1"
     },
+    "opam-ed": {
+        "branch": "master",
+        "description": "A small  command-line tool to help with mechanical edition of opam files",
+        "homepage": null,
+        "owner": "ocaml-opam",
+        "repo": "opam-ed",
+        "rev": "ac93c41d99987f598dffa012f73794cafdc0e487",
+        "sha256": "1fm38mr439pm1yndskk484z4b7l20bdp7r14ygjxfc7rdny0w31a",
+        "type": "tarball",
+        "url": "https://github.com/ocaml-opam/opam-ed/archive/ac93c41d99987f598dffa012f73794cafdc0e487.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "version": "0.5"
+    },
     "pp_loc": {
         "branch": "v2.1.0",
         "description": "Pretty-printing for error source locations",
