@@ -9,7 +9,6 @@ BIN_DIR := $(SRC_DIR)/bin
 LIB_DIR := $(SRC_DIR)/lib
 PLUGINS_DIR := $(SRC_DIR)/plugins
 PARSERS_DIR := $(SRC_DIR)/parsers
-LOCK_SWITCH := alt-ergo-lock
 
 COMMON_DIR := $(BIN_DIR)/common
 BTEXT_DIR := $(BIN_DIR)/text
@@ -202,7 +201,7 @@ archi: $(EXTRA_DIR)/ocamldot/ocamldot
 	dot -Tpdf archi.dot > archi.pdf
 
 lock:
-	LOCK_SWITCH="$(LOCK_SWITCH)" ./rsc/extra/generate_lock_file.sh
+	./rsc/extra/generate_lock_file.sh
 
 dev-switch:
 	opam switch create . --deps-only --ignore-constraints-on alt-ergo-lib
