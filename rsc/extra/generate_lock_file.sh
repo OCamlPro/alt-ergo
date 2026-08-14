@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export LOCKED_SWITCH="alt-ergo-locked"
+export LOCKED_SWITCH="${LOCKED_SWITCH:=alt-ergo-locked}"
 export OPAMYES=true
 export OPAMSWITCH="$LOCKED_SWITCH"
+
+function cleanup() {
+  opam switch remove "$LOCKED_SWITCH"
+}
 
 function check_switch_available() {
   opam list >/dev/null 2>&1
@@ -16,6 +20,7 @@ EOF
   exit 1
 fi
 
+trap cleanup EXIT
 opam switch create "$LOCKED_SWITCH" 5.4.1 --no-switch
 
 opam install --deps-only --with-test --assume-depexts \
