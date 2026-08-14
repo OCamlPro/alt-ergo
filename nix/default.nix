@@ -20,6 +20,7 @@ import sources.nixpkgs {
           };
         });
         zarith_stubs_js = self.callPackage ./zarith_stubs_js.nix { };
+        opam-ed = self.callPackage ./opam-ed.nix { };
       });
     })
   ];
