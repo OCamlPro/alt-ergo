@@ -60,7 +60,7 @@ jobs:
       # Use Node Js actions
       - uses: actions/setup-node@v4
         with:
-          node-version: '14'
+          node-version: '16.9.0'
 
       # Run simple test with node
       # TODO: use gentest to run more tests there.
