@@ -931,7 +931,8 @@ let bitv bt ty = mk_term (Sy.bitv bt) [] ty
 
 let float fp_val eb sb = mk_term (Sy.Float fp_val) [] (Ty.Tfloat (eb, sb))
 
-let pred t = mk_term (Sy.Op Sy.Minus) [t; int "1"] Ty.Tint
+let pred t =
+  mk_term (Sy.Op Sy.Minus) [t; mk_term (Sy.Int Z.one) [] Ty.Tint] Ty.Tint
 
 (** simple smart constructors for formulas *)
 
@@ -2845,13 +2846,15 @@ end
 (** Constructors from the smtlib theory of integers.
     https://smtlib.cs.uiowa.edu/theories-Ints.shtml *)
 module Ints = struct
-  let of_int n = int (string_of_int n)
-
-  let ( ~$ ) = of_int
-
-  let of_Z n = int (Z.to_string n)
+  let of_Z n = mk_term (Int n) [] Tint
 
   let ( ~$$ ) = of_Z
+
+  let of_Q q = of_Z (Numbers.Q.to_z q)
+
+  let of_int n = of_Z (Z.of_int n)
+
+  let ( ~$ ) = of_int
 
   let ( + ) x y = mk_term (Op Plus) [x; y] Tint
 
@@ -2881,15 +2884,15 @@ end
 (** Constructors from the smtlib theory of real numbers.
     https://smtlib.cs.uiowa.edu/theories-Reals.shtml *)
 module Reals = struct
-  let of_int n = real (string_of_int n)
+  let of_Q q = mk_term (Real q) [] Treal
+
+  let of_Z n = of_Q (Q.of_bigint n)
+
+  let of_int n = of_Z (Z.of_int n)
 
   let ( ~$ ) = of_int
 
-  let of_Z n = real (Z.to_string n)
-
   let ( ~$$ ) = of_Z
-
-  let of_Q q = real (Q.to_string q)
 
   let ( ~$$$ ) = of_Q
 
