@@ -514,8 +514,8 @@ module Ints : sig
 
   val ( ~$$ ) : Z.t -> t
 
-  val of_Q : Q.t -> t
-  (** [of_Q q] Conversion from a rational [q] known to be an integer
+  val of_Q_exn : Q.t -> t
+  (** [of_Q_exn q] Conversion from a rational [q] known to be an integer
 
       @raise Assert_failure if [q] is not an integer *)
 

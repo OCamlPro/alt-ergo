@@ -1898,7 +1898,7 @@ let model_from_simplex sim is_int env uf =
       then main_vars, slake_vars
       else round_to_integers main_vars, round_to_integers slake_vars
     in
-    let fct = if is_int then E.Ints.of_Q else E.Reals.of_Q in
+    let fct = if is_int then E.Ints.of_Q_exn else E.Reals.of_Q in
     List.fold_left
       (fun acc (v, q) ->
         assert ((not is_int) || Q.is_int q);
@@ -1939,7 +1939,7 @@ let model_from_infinite_domains =
 
 let mk_const_term c ty =
   match ty with
-  | Ty.Tint -> E.Ints.of_Q c
+  | Ty.Tint -> E.Ints.of_Q_exn c
   | Ty.Treal -> E.Reals.of_Q c
   | _ -> assert false
 
@@ -2120,7 +2120,7 @@ let best_interval_of optimized env p =
 
 let mk_const_term ty s =
   match ty with
-  | Ty.Tint -> E.Ints.of_Q s
+  | Ty.Tint -> E.Ints.of_Q_exn s
   | Ty.Treal -> E.Reals.of_Q s
   | _ -> assert false
 

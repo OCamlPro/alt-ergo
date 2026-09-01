@@ -2850,7 +2850,7 @@ module Ints = struct
 
   let ( ~$$ ) = of_Z
 
-  let of_Q q = of_Z (Numbers.Q.to_z q)
+  let of_Q_exn q = of_Z (Numbers.Q.to_z q)
 
   let of_int n = of_Z (Z.of_int n)
 

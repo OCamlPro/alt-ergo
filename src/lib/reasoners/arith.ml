@@ -700,7 +700,7 @@ struct
       else
         let term_of_cst, cpt =
           match X.type_info r with
-          | Ty.Tint -> E.Ints.of_Q, cpt_int
+          | Ty.Tint -> E.Ints.of_Q_exn, cpt_int
           | Ty.Treal -> E.Reals.of_Q, cpt_real
           | _ -> assert false
         in
@@ -709,7 +709,7 @@ struct
 
   let to_model_term r =
     match P.is_const (embed r), X.type_info r with
-    | Some i, Ty.Tint -> Some (E.Ints.of_Q i)
+    | Some i, Ty.Tint -> Some (E.Ints.of_Q_exn i)
     | Some q, Ty.Treal -> Some (E.Reals.of_Q q)
     | _ -> None
 end
