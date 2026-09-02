@@ -700,18 +700,16 @@ struct
       else
         let term_of_cst, cpt =
           match X.type_info r with
-          | Ty.Tint -> E.int, cpt_int
-          | Ty.Treal -> E.real, cpt_real
+          | Ty.Tint -> E.Ints.of_Q_exn, cpt_int
+          | Ty.Treal -> E.Reals.of_Q, cpt_real
           | _ -> assert false
         in
         cpt := Q.add Q.one (max_constant distincts !cpt);
-        Some (term_of_cst (Q.to_string !cpt), true)
+        Some (term_of_cst !cpt, true)
 
   let to_model_term r =
     match P.is_const (embed r), X.type_info r with
-    | Some i, Ty.Tint ->
-      assert (Z.equal (Q.den i) Z.one);
-      Some (Expr.Ints.of_Z (Q.num i))
-    | Some q, Ty.Treal -> Some (Expr.Reals.of_Q q)
+    | Some i, Ty.Tint -> Some (E.Ints.of_Q_exn i)
+    | Some q, Ty.Treal -> Some (E.Reals.of_Q q)
     | _ -> None
 end

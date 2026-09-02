@@ -723,7 +723,9 @@ let destruct_app e =
 let mk_lt translate ty x y =
   if ty == `Int
   then
-    let e3 = E.mk_term (Sy.Op Sy.Minus) [translate y; E.int "1"] Ty.Tint in
+    let e3 =
+      E.mk_term (Sy.Op Sy.Minus) [translate y; E.Ints.of_Z Z.one] Ty.Tint
+    in
     let e1 = translate x in
     E.mk_builtin ~is_pos:true Sy.LE [e1; e3]
   else E.mk_builtin ~is_pos:true Sy.LT [translate x; translate y]
@@ -731,7 +733,9 @@ let mk_lt translate ty x y =
 let mk_gt translate ty x y =
   if ty == `Int
   then
-    let e3 = E.mk_term (Sy.Op Sy.Minus) [translate x; E.int "1"] Ty.Tint in
+    let e3 =
+      E.mk_term (Sy.Op Sy.Minus) [translate x; E.Ints.of_Z Z.one] Ty.Tint
+    in
     let e2 = translate y in
     E.mk_builtin ~is_pos:true Sy.LE [e2; e3]
   else E.mk_builtin ~is_pos:true Sy.LT [translate y; translate x]
@@ -910,7 +914,9 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           (* Unary builtins *)
           | Minus mty, [x] ->
             let e1, ty =
-              if mty == `Int then E.int "0", Ty.Tint else E.real "0", Ty.Treal
+              if mty == `Int
+              then E.Ints.of_Z Z.zero, Ty.Tint
+              else E.Reals.of_Q Q.zero, Ty.Treal
             in
             E.mk_term (Sy.Op Sy.Minus) [e1; aux_mk_expr x] ty
           | Minus _, _ -> invalid_app_term ()
