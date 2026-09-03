@@ -1,3 +1,7 @@
+## v2.6.4
+
+ - Fix more crashes and incorrect output in `--profiling` (#1354, #1355, #1356)
+
 ## v2.6.3
 
  - Add support for ae.pow_int and ae.pow_real (#1342)
