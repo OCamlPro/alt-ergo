@@ -30,6 +30,9 @@ jobs:
           - "4.13.1"
           - "4.14"
           - "5.5"
+        exclude:
+          - ocaml-compiler: "4.13.1"
+            os: windows-latest
 
     runs-on: ${{ matrix.os }}
 
