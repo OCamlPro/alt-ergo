@@ -66,7 +66,8 @@ To install the `Alt-Ergo` JavaScript artifacts, simply install the `alt-ergo-js`
 opam package. The artifacts will be available in `SHARE/alt-ergo-js`, where
 `SHARE` refers to the share directory of your current opam switch.
 
-To execute Alt-Ergo JavaScript, use the following command:
+We recommend at least NodeJS 22 for the JavaScript artifact. To run it, use
+the following command:
 ```console
 node SHARE/alt-ergo-js/alt-ergo.js <options> <input_files>
 ```
