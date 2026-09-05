@@ -16,32 +16,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Literal floating-point values. *)
+type 'r abstract =
+  | Alien of 'r
+  | Literal of int * int * Fp_value.t
 
-type t =
-  | Plus_infinity
-  | Minus_infinity
-  | Plus_zero
-  | Minus_zero
-  | NaN
-  | Finite of Numbers.Q.t
+module Shostak (X : sig
+  include Sig.X
 
-val compare : t -> t -> int
+  val extract : r -> r abstract option
 
-val equal : t -> t -> bool
-
-val pp : t Fmt.t
-(** [pp ppf v] prints the concrete FP value [v] in the Alt-Ergo native format.
-*)
-
-val pp_smtlib : int -> int -> t Fmt.t
-(** [pp_smtlib eb sb ppf v] prints the concrete FP value [v] of precision
-    [(eb, sb)] in the SMT-LIB format. *)
-
-val mk_fp_literal :
-  neg:bool -> biased_exp:int -> mantissa:Z.t -> e:int -> s:int -> t
-(** [mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s] creates a floating-point
-    literal where [neg] is the sign bit, [biased_exp] is the biased exponent,
-    [mantissa] is the significand bits (without the hidden bit), [e] is the
-    exponent width, and [s] is the significand width (including the hidden bit).
-*)
+  val embed : r abstract -> r
+end) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract

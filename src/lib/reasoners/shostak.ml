@@ -50,6 +50,10 @@ module rec CX : sig
   val extract3 : r -> ADT.t option
 
   val embed3 : ADT.t -> r
+
+  val extract4 : r -> FPA.t option
+
+  val embed4 : FPA.t -> r
 end = struct
   type rview =
     | Term of Expr.t
@@ -57,6 +61,7 @@ end = struct
     | Arith of ARITH.t
     | Bitv of BITV.t
     | Adt of ADT.t
+    | Fpa of FPA.t
 
   type r =
     { v : rview;
@@ -75,6 +80,7 @@ end = struct
         | Arith t -> fprintf fmt "%a" ARITH.print t
         | Bitv t -> fprintf fmt "%a" BITV.print t
         | Adt t -> fprintf fmt "%a" ADT.print t
+        | Fpa t -> fprintf fmt "%a" FPA.print t
         | Term t -> fprintf fmt "%a" Expr.print t
         | Ac t -> fprintf fmt "%a" AC.print t
       end
@@ -83,6 +89,7 @@ end = struct
         | Arith t -> fprintf fmt "Arith(%s):[%a]" ARITH.name ARITH.print t
         | Bitv t -> fprintf fmt "Bitv(%s):[%a]" BITV.name BITV.print t
         | Adt t -> fprintf fmt "Adt(%s):[%a]" ADT.name ADT.print t
+        | Fpa t -> fprintf fmt "Fpa(%s):[%a]" FPA.name FPA.print t
         | Term t -> fprintf fmt "FT:[%a]" Expr.print t
         | Ac t -> fprintf fmt "Ac:[%a]" AC.print t
       end
@@ -152,6 +159,7 @@ end = struct
         | Arith x -> 1 + (10 * ARITH.hash x)
         | Bitv x -> 3 + (10 * BITV.hash x)
         | Adt x -> 6 + (10 * ADT.hash x)
+        | Fpa x -> 7 + (10 * FPA.hash x)
         | Ac ac -> 9 + (10 * AC.hash ac)
         | Term t -> 8 + (10 * Expr.hash t)
       in
@@ -162,6 +170,7 @@ end = struct
       | Arith x, Arith y -> ARITH.equal x y
       | Bitv x, Bitv y -> BITV.equal x y
       | Adt x, Adt y -> ADT.equal x y
+      | Fpa x, Fpa y -> FPA.equal x y
       | Term x, Term y -> Expr.equal x y
       | Ac x, Ac y -> AC.equal x y
       | _ -> false
@@ -187,6 +196,8 @@ end = struct
 
   let embed3 x = hcons { v = Adt x; id = -1000 (* dummy *) }
 
+  let embed4 x = hcons { v = Fpa x; id = -1000 (* dummy *) }
+
   let ac_embed ({ Sig.l; _ } as t) =
     match l with
     | [] -> assert false
@@ -204,6 +215,8 @@ end = struct
 
   let extract3 = function { v = Adt r; _ } -> Some r | _ -> None
 
+  let extract4 = function { v = Fpa r; _ } -> Some r | _ -> None
+
   let ac_extract = function { v = Ac t; _ } -> Some t | _ -> None
 
   let term_extract r =
@@ -211,6 +224,7 @@ end = struct
     | Arith _ -> ARITH.term_extract r
     | Bitv _ -> BITV.term_extract r
     | Adt _ -> ADT.term_extract r
+    | Fpa _ -> FPA.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -220,6 +234,7 @@ end = struct
       | Arith _ -> ARITH.to_model_term r
       | Bitv _ -> BITV.to_model_term r
       | Adt _ -> ADT.to_model_term r
+      | Fpa _ -> FPA.to_model_term r
       | Term t when Expr.is_model_term t -> Some t
       | Ac _ | Term _ -> None
     in
@@ -235,6 +250,7 @@ end = struct
     | { v = Arith t; _ } -> ARITH.type_info t
     | { v = Bitv t; _ } -> BITV.type_info t
     | { v = Adt t; _ } -> ADT.type_info t
+    | { v = Fpa t; _ } -> FPA.type_info t
     | { v = Ac x; _ } -> AC.type_info x
     | { v = Term t; _ } -> Expr.type_info t
 
@@ -247,6 +263,7 @@ end = struct
     | Arith _ -> -3
     | Bitv _ -> -4
     | Adt _ -> -5
+    | Fpa _ -> -6
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -258,6 +275,7 @@ end = struct
       | Arith _, Arith _ -> ARITH.compare a b
       | Bitv _, Bitv _ -> BITV.compare a b
       | Adt _, Adt _ -> ADT.compare a b
+      | Fpa _, Fpa _ -> FPA.compare a b
       | Term x, Term y -> Expr.compare x y
       | Ac x, Ac y -> AC.compare x y
       | va, vb -> compare_tag va vb
@@ -294,6 +312,7 @@ end = struct
     | Arith t -> ARITH.leaves t
     | Bitv t -> BITV.leaves t
     | Adt t -> ADT.leaves t
+    | Fpa t -> FPA.leaves t
     | Ac t -> r :: AC.leaves t
     | Term _ -> [r]
 
@@ -302,6 +321,7 @@ end = struct
     | Arith t -> ARITH.is_constant t
     | Bitv t -> BITV.is_constant t
     | Adt t -> ADT.is_constant t
+    | Fpa t -> FPA.is_constant t
     | Term t -> begin
       let Expr.{ f; xs; _ } = Expr.term_view t in
       (* Constant terms that have no theories. *)
@@ -319,6 +339,7 @@ end = struct
       | Arith t -> ARITH.subst p v t
       | Bitv t -> BITV.subst p v t
       | Adt t -> ADT.subst p v t
+      | Fpa t -> FPA.subst p v t
       | Ac t -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
@@ -329,17 +350,20 @@ end = struct
       ( ARITH.is_mine_symb sb,
         not_restricted && BITV.is_mine_symb sb,
         not_restricted && ADT.is_mine_symb sb,
+        FPA.is_mine_symb sb,
         AC.is_mine_symb sb )
     with
-    | true, false, false, false ->
+    | true, false, false, false, false ->
       Timers.with_timer Timers.M_Arith Timers.F_make @@ fun () -> ARITH.make t
-    | false, true, false, false ->
+    | false, true, false, false, false ->
       Timers.with_timer Timers.M_Bitv Timers.F_make @@ fun () -> BITV.make t
-    | false, false, true, false ->
+    | false, false, true, false, false ->
       Timers.with_timer Timers.M_Adt Timers.F_make @@ fun () -> ADT.make t
-    | false, false, false, true ->
+    | false, false, false, true, false ->
+      Timers.with_timer FPA.timer Timers.F_make @@ fun () -> FPA.make t
+    | false, false, false, false, true ->
       Timers.with_timer Timers.M_AC Timers.F_make @@ fun () -> AC.make t
-    | false, false, false, false -> term_embed t, []
+    | false, false, false, false, false -> term_embed t, []
     | _ -> assert false
 
   let fully_interpreted sb =
@@ -348,19 +372,21 @@ end = struct
       ( ARITH.is_mine_symb sb,
         not_restricted && BITV.is_mine_symb sb,
         not_restricted && ADT.is_mine_symb sb,
+        FPA.is_mine_symb sb,
         AC.is_mine_symb sb )
     with
-    | true, false, false, false -> ARITH.fully_interpreted sb
-    | false, true, false, false -> BITV.fully_interpreted sb
-    | false, false, true, false -> ADT.fully_interpreted sb
-    | false, false, false, true -> AC.fully_interpreted sb
-    | false, false, false, false -> false
+    | true, false, false, false, false -> ARITH.fully_interpreted sb
+    | false, true, false, false, false -> BITV.fully_interpreted sb
+    | false, false, true, false, false -> ADT.fully_interpreted sb
+    | false, false, false, true, false -> FPA.fully_interpreted sb
+    | false, false, false, false, true -> AC.fully_interpreted sb
+    | false, false, false, false, false -> false
     | _ -> assert false
 
   let is_solvable_theory_symbol sb =
     ARITH.is_mine_symb sb
     || (not (Options.get_restricted ()))
-       && (BITV.is_mine_symb sb || ADT.is_mine_symb sb)
+       && (BITV.is_mine_symb sb || ADT.is_mine_symb sb || FPA.is_mine_symb sb)
 
   let is_a_leaf r = match r.v with Term _ | Ac _ -> true | _ -> false
 
@@ -387,6 +413,7 @@ end = struct
     | Arith a -> ARITH.abstract_selectors a acc
     | Bitv a -> BITV.abstract_selectors a acc
     | Adt a -> ADT.abstract_selectors a acc
+    | Fpa a -> FPA.abstract_selectors a acc
     | Term _ -> a, acc
     | Ac a -> AC.abstract_selectors a acc
 
@@ -476,6 +503,9 @@ end = struct
           | Ty.Tadt _ when not (Options.get_disable_adts ()) ->
             Timers.with_timer ADT.timer Timers.F_solve @@ fun () ->
             ADT.solve ra rb pb
+          | Ty.Tfloat _ ->
+            Timers.with_timer FPA.timer Timers.F_solve @@ fun () ->
+            FPA.solve ra rb pb
           | _ ->
             Timers.with_timer Timers.M_Combine Timers.F_solve @@ fun () ->
             solve_uninterpreted ra rb pb
@@ -516,6 +546,7 @@ end = struct
       | _, Ty.Tbitv _ -> BITV.assign_value r distincts eq
       | _, Ty.Tadt _ when not (Options.get_disable_adts ()) ->
         ADT.assign_value r distincts eq
+      | _, Ty.Tfloat _ -> FPA.assign_value r distincts eq
       | Term _t, Ty.Tbool ->
         if is_bool_const r
         then None
@@ -585,6 +616,15 @@ Adt.Shostak (struct
   let embed = embed3
 end)
 
+and FPA : (Sig.SHOSTAK with type r = CX.r and type t = CX.r Fpa.abstract) =
+Fpa.Shostak (struct
+  include CX
+
+  let extract = extract4
+
+  let embed = embed4
+end)
+
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
 and AC : (Ac.S with type r = CX.r) = Ac.Make (CX)
 
@@ -626,6 +666,7 @@ end
 module Arith = ARITH
 module Bitv = BITV
 module Adt = ADT
+module Fpa = FPA
 module Polynome = TARITH
 module Ac = AC
 

@@ -67,24 +67,33 @@ let pp ppf = function
   | ADT -> Format.fprintf ppf "adt"
   | AC -> Format.fprintf ppf "ac"
 
-let filename = Format.asprintf "<builtins>/%a.ae" pp_prelude
+let prelude_filename = function
+  | Fpa -> "fpa.ae"
+  | Ria -> "ria.ae"
+  | Nra -> "nra.ae"
+  | SmtFloat -> "smt-lib-fpa.smt2"
 
-let get_prelude name =
+let filename th = Fmt.str "<builtins>/%s" (prelude_filename th)
+
+let get_prelude prelude =
+  let name = prelude_filename prelude in
   match Preludes.read name with
   | Some content -> content
   | None -> failwith (Fmt.str "Missing internal prelude: %s" name)
 
-let fpa_prelude = get_prelude "fpa.ae"
+let fpa_prelude = get_prelude Fpa
 
-let ria_prelude = get_prelude "ria.ae"
+let ria_prelude = get_prelude Ria
 
-let nra_prelude = get_prelude "nra.ae"
+let nra_prelude = get_prelude Nra
+
+let smt_lib_fpa_prelude = get_prelude SmtFloat
 
 let content = function
   | Fpa -> Some fpa_prelude
   | Ria -> Some ria_prelude
   | Nra -> Some nra_prelude
-  | SmtFloat -> None
+  | SmtFloat -> Some smt_lib_fpa_prelude
 
 let all_preludes = [Fpa; Ria; Nra; SmtFloat]
 

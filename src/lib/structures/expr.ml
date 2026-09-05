@@ -2794,34 +2794,24 @@ let reinit_cache () =
   Labels.clear labels;
   HC.reinit_cache ()
 
-type const =
-  | Int of int
-  | RoundingMode of Fpa_rounding.rounding_mode
-
 let z_to_int z =
   match Z.to_int z with
   | n -> n
   | exception Z.Overflow ->
     Fmt.failwith "error when trying to convert %a to an int" Z.pp_print z
 
-let const_view t =
-  match term_view t with
-  | { f = Int n; _ } -> Int (z_to_int n)
-  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
-    ->
-    let c = Fmt.str "%a" DE.Term.Const.print c in
-    RoundingMode (Fpa_rounding.rounding_mode_of_smt c)
-  | _ -> Fmt.failwith "unsupported constant: %a" print t
-
 let int_view t =
-  match const_view t with
-  | Int n -> n
+  match term_view t with
+  | { f = Int n; _ } -> z_to_int n
   | _ -> Fmt.failwith "The given term %a is not an integer" print t
 
 let rounding_mode_view t =
-  match const_view t with
-  | RoundingMode m -> m
-  | _ -> Fmt.failwith "The given term %a is not a rounding mode" print t
+  match term_view t with
+  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
+    ->
+    let c = Fmt.str "%a" DE.Term.Const.print c in
+    Some (Fpa_rounding.rounding_mode_of_smt c)
+  | _ -> None
 
 (****************************************************************************)
 (*                     Helpers to build typed terms                         *)
@@ -3129,6 +3119,80 @@ end
 
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP = struct
+  module Names = struct
+    (* float conversion function *)
+    let ae_float = "ae.float"
+
+    (* generic float type *)
+    let t = "ae.fp.t"
+
+    (* arithmetic with rounding mode *)
+    let add = "ae.fp.add"
+
+    let sub = "ae.fp.sub"
+
+    let mul = "ae.fp.mul"
+
+    let div = "ae.fp.div"
+
+    let fma = "ae.fp.fma"
+
+    let sqrt = "ae.fp.sqrt"
+
+    let round_to_integral = "ae.fp.roundToIntegral"
+
+    let of_real = "ae.fp.from_real"
+
+    (* arithmetic without rounding mode *)
+    let abs = "ae.fp.abs"
+
+    let neg = "ae.fp.neg"
+
+    let min = "ae.fp.min"
+
+    let max = "ae.fp.max"
+
+    (* comparisons *)
+    let le = "ae.fp.le"
+
+    let lt = "ae.fp.lt"
+
+    let eq = "ae.fp.eq"
+
+    (* predicates *)
+    let is_normal = "ae.fp.is_normal"
+
+    let is_subnormal = "ae.fp.is_subnormal"
+
+    let is_zero = "ae.fp.is_zero"
+
+    let is_infinite = "ae.fp.is_infinite"
+
+    let is_nan = "ae.fp.is_nan"
+
+    let is_negative = "ae.fp.is_negative"
+
+    let is_positive = "ae.fp.is_positive"
+
+    (* real conversion *)
+    let to_real = "ae.fp.to_real"
+
+    (* precision-dependent literals *)
+    let pow2sb = "ae.fp.pow2sb"
+
+    let max_int = "ae.fp.max_int"
+
+    let max_real = "ae.fp.max_real"
+
+    let pow2sb_real = "ae.fp.pow2sb_real"
+
+    let half_pow2sb_real = "ae.fp.half_pow2sb_real"
+
+    let abs_err_rne_denom = "ae.fp.abs_err_rne_denom"
+
+    let abs_err_denom = "ae.fp.abs_err_denom"
+  end
+
   let bv_literal_to_z t =
     match t.f, t.xs with
     | Sy.Bitv (_, z), [] -> z
@@ -3140,14 +3204,85 @@ module FP = struct
     let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
     let biased_exp = z_to_int (bv_literal_to_z exp_t) in
     let mantissa = bv_literal_to_z sig_t in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
 
   let ieee_format_to_fp bv_t e s =
     let bv_z = bv_literal_to_z bv_t in
     let mantissa = Z.extract bv_z 0 (s - 1) in
     let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
     let neg = Z.testbit bv_z (e + s - 1) in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+
+  let fp_prelude_op eb sb name args ret_ty =
+    let eb = Ints.of_int eb in
+    let sb = Ints.of_int sb in
+    mk_term (Sy.name name) (eb :: sb :: args) ret_ty
+
+  (* arithmetic with rounding mode *)
+  let add ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.add [mode; x; y] (Ty.Tfloat (eb, sb))
+
+  let sub ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.sub [mode; x; y] (Ty.Tfloat (eb, sb))
+
+  let mul ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.mul [mode; x; y] (Ty.Tfloat (eb, sb))
+
+  let div ~eb ~sb ~mode x y =
+    fp_prelude_op eb sb Names.div [mode; x; y] (Ty.Tfloat (eb, sb))
+
+  let fma ~eb ~sb ~mode x y z =
+    fp_prelude_op eb sb Names.fma [mode; x; y; z] (Ty.Tfloat (eb, sb))
+
+  let sqrt ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.sqrt [mode; x] (Ty.Tfloat (eb, sb))
+
+  let round_to_integral ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.round_to_integral [mode; x] (Ty.Tfloat (eb, sb))
+
+  let of_real ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.of_real [mode; x] (Ty.Tfloat (eb, sb))
+
+  (* arithmetic without rounding mode *)
+  let abs ~eb ~sb x = fp_prelude_op eb sb Names.abs [x] (Ty.Tfloat (eb, sb))
+
+  let neg ~eb ~sb x = fp_prelude_op eb sb Names.neg [x] (Ty.Tfloat (eb, sb))
+
+  let min ~eb ~sb x y =
+    fp_prelude_op eb sb Names.min [x; y] (Ty.Tfloat (eb, sb))
+
+  let max ~eb ~sb x y =
+    fp_prelude_op eb sb Names.max [x; y] (Ty.Tfloat (eb, sb))
+
+  (* comparisons *)
+  let le ~eb ~sb x y = fp_prelude_op eb sb Names.le [x; y] Ty.Tbool
+
+  let lt ~eb ~sb x y = fp_prelude_op eb sb Names.lt [x; y] Ty.Tbool
+
+  let ge ~eb ~sb x y = le ~eb ~sb y x
+
+  let gt ~eb ~sb x y = lt ~eb ~sb y x
+
+  let eq ~eb ~sb x y = fp_prelude_op eb sb Names.eq [x; y] Ty.Tbool
+
+  (* predicates *)
+  let is_normal ~eb ~sb x = fp_prelude_op eb sb Names.is_normal [x] Ty.Tbool
+
+  let is_subnormal ~eb ~sb x =
+    fp_prelude_op eb sb Names.is_subnormal [x] Ty.Tbool
+
+  let is_zero ~eb ~sb x = fp_prelude_op eb sb Names.is_zero [x] Ty.Tbool
+
+  let is_infinite ~eb ~sb x = fp_prelude_op eb sb Names.is_infinite [x] Ty.Tbool
+
+  let is_nan ~eb ~sb x = fp_prelude_op eb sb Names.is_nan [x] Ty.Tbool
+
+  let is_negative ~eb ~sb x = fp_prelude_op eb sb Names.is_negative [x] Ty.Tbool
+
+  let is_positive ~eb ~sb x = fp_prelude_op eb sb Names.is_positive [x] Ty.Tbool
+
+  (* real conversion *)
+  let to_real ~eb ~sb x = fp_prelude_op eb sb Names.to_real [x] Ty.Treal
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

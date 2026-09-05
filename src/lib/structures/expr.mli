@@ -184,10 +184,9 @@ val int_view : t -> int
 
     @raise Failure if the expression is not a constant integer. *)
 
-val rounding_mode_view : t -> Fpa_rounding.rounding_mode
-(** Extracts the rounding mode value of the expression, if there is one.
-
-    @raise Failure if the expression is not a constant rounding mode.*)
+val rounding_mode_view : t -> Fpa_rounding.rounding_mode option
+(** Extracts the rounding mode value of the expression, if there is one. Return
+    [None] if the expression is not a constant rounding mode. *)
 
 (** pretty printing *)
 
@@ -687,9 +686,151 @@ end
 
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP : sig
+  module Names : sig
+    (** {2 Float conversion functions} *)
+
+    val ae_float : string
+
+    (** {2 Generic float type} *)
+
+    val t : string
+
+    (** {2 Arithmetic with rounding mode} *)
+
+    val add : string
+
+    val sub : string
+
+    val mul : string
+
+    val div : string
+
+    val fma : string
+
+    val sqrt : string
+
+    val round_to_integral : string
+
+    val of_real : string
+
+    (** {2 Arithmetic without rounding mode} *)
+
+    val abs : string
+
+    val neg : string
+
+    val min : string
+
+    val max : string
+
+    (** {2 Comparisons} *)
+
+    val le : string
+
+    val lt : string
+
+    val eq : string
+
+    (** {2 Predicates} *)
+
+    val is_normal : string
+
+    val is_subnormal : string
+
+    val is_zero : string
+
+    val is_infinite : string
+
+    val is_nan : string
+
+    val is_negative : string
+
+    val is_positive : string
+
+    (** {2 Real conversion} *)
+
+    val to_real : string
+
+    (** {2 Precision-dependent literals} *)
+
+    val pow2sb : string
+
+    val max_int : string
+
+    val max_real : string
+
+    val pow2sb_real : string
+
+    val half_pow2sb_real : string
+
+    val abs_err_rne_denom : string
+
+    val abs_err_denom : string
+  end
+
   val fp : t -> t -> t -> int -> int -> t
 
   val ieee_format_to_fp : t -> int -> int -> t
+
+  (** {2 Arithmetic with rounding mode} *)
+
+  val add : eb:int -> sb:int -> mode:t -> t -> t -> t
+
+  val sub : eb:int -> sb:int -> mode:t -> t -> t -> t
+
+  val mul : eb:int -> sb:int -> mode:t -> t -> t -> t
+
+  val div : eb:int -> sb:int -> mode:t -> t -> t -> t
+
+  val fma : eb:int -> sb:int -> mode:t -> t -> t -> t -> t
+
+  val sqrt : eb:int -> sb:int -> mode:t -> t -> t
+
+  val round_to_integral : eb:int -> sb:int -> mode:t -> t -> t
+
+  val of_real : eb:int -> sb:int -> mode:t -> t -> t
+
+  (** {2 Arithmetic without rounding mode} *)
+
+  val abs : eb:int -> sb:int -> t -> t
+
+  val neg : eb:int -> sb:int -> t -> t
+
+  val min : eb:int -> sb:int -> t -> t -> t
+
+  val max : eb:int -> sb:int -> t -> t -> t
+
+  (** {2 Comparisons} *)
+
+  val le : eb:int -> sb:int -> t -> t -> t
+
+  val lt : eb:int -> sb:int -> t -> t -> t
+
+  val ge : eb:int -> sb:int -> t -> t -> t
+
+  val gt : eb:int -> sb:int -> t -> t -> t
+
+  val eq : eb:int -> sb:int -> t -> t -> t
+
+  (** {2 Predicates} *)
+
+  val is_normal : eb:int -> sb:int -> t -> t
+
+  val is_subnormal : eb:int -> sb:int -> t -> t
+
+  val is_zero : eb:int -> sb:int -> t -> t
+
+  val is_infinite : eb:int -> sb:int -> t -> t
+
+  val is_nan : eb:int -> sb:int -> t -> t
+
+  val is_negative : eb:int -> sb:int -> t -> t
+
+  val is_positive : eb:int -> sb:int -> t -> t
+
+  (** {2 Real conversion} *)
+
+  val to_real : eb:int -> sb:int -> t -> t
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

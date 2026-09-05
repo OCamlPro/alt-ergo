@@ -45,6 +45,7 @@ type ty_module =
   | M_Triggers
   | M_Simplex
   | M_Ite
+  | M_Fpa
 
 let[@inline] ty_module_to_enum = function
   | M_None -> 0
@@ -62,8 +63,9 @@ let[@inline] ty_module_to_enum = function
   | M_Triggers -> 12
   | M_Simplex -> 13
   | M_Ite -> 14
+  | M_Fpa -> 15
 
-let max_ty_module = 14
+let max_ty_module = 15
 
 let all_modules =
   let l =
@@ -81,7 +83,8 @@ let all_modules =
       M_Expr;
       M_Triggers;
       M_Simplex;
-      M_Ite ]
+      M_Ite;
+      M_Fpa ]
   in
   assert (List.length l = max_ty_module + 1);
   l
@@ -179,6 +182,7 @@ let string_of_ty_module k =
   | M_Triggers -> "Triggers"
   | M_Simplex -> "Simplex"
   | M_Ite -> "Ite"
+  | M_Fpa -> "Fpa"
 
 let string_of_ty_function f =
   match f with

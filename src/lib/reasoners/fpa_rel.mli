@@ -16,32 +16,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Literal floating-point values. *)
+include Sig_rel.RELATION
 
-type t =
-  | Plus_infinity
-  | Minus_infinity
-  | Plus_zero
-  | Minus_zero
-  | NaN
-  | Finite of Numbers.Q.t
-
-val compare : t -> t -> int
-
-val equal : t -> t -> bool
-
-val pp : t Fmt.t
-(** [pp ppf v] prints the concrete FP value [v] in the Alt-Ergo native format.
-*)
-
-val pp_smtlib : int -> int -> t Fmt.t
-(** [pp_smtlib eb sb ppf v] prints the concrete FP value [v] of precision
-    [(eb, sb)] in the SMT-LIB format. *)
-
-val mk_fp_literal :
-  neg:bool -> biased_exp:int -> mantissa:Z.t -> e:int -> s:int -> t
-(** [mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s] creates a floating-point
-    literal where [neg] is the sign bit, [biased_exp] is the biased exponent,
-    [mantissa] is the significand bits (without the hidden bit), [e] is the
-    exponent width, and [s] is the significand width (including the hidden bit).
-*)
+val src : Logs.src
