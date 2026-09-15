@@ -50,7 +50,20 @@ let op_rename_table : (string * string) list =
          "of_int";
          "to_int1";
          "from_real";
-         "is_int1" ]
+         "is_int1";
+         "is_plus_infinity";
+         "is_minus_infinity";
+         "is_not_nan";
+         "in_range";
+         "in_int_range";
+         "no_overflow";
+         "in_safe_int_range";
+         "same_sign";
+         "diff_sign";
+         "product_sign";
+         "overflow_value";
+         "sign_zero_result";
+         "same_sign_real" ]
 
 type ctx =
   { cst_cache : (string, DE.Term.Const.t) Hashtbl.t;
@@ -393,8 +406,14 @@ let generalize (ctx : ctx) (st : state)
         let c, vars =
           if term_uses_vars [eb_var; sb_var] body'
           then
-            ( add_eb_sb_args_type ctx (cst_path_name c) c.id_ty,
-              eb_var :: sb_var :: vars )
+            (* Change the name of the defined function to follow the style of
+               the other defined/declared operations *)
+            let name =
+              match List.assoc_opt (cst_path_name c) op_rename_table with
+              | Some new_name -> new_name
+              | None -> cst_path_name c
+            in
+            add_eb_sb_args_type ctx name c.id_ty, eb_var :: sb_var :: vars
           else c, vars
         in
         st, keep (`Defs (r, [`Term_def (tag, c, [], vars, body')]))
