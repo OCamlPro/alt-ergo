@@ -54,7 +54,9 @@ let op_rename_table : (string * string) list =
 
 type ctx =
   { cst_cache : (string, DE.Term.Const.t) Hashtbl.t;
-    var_subst : (DE.Term.Var.t * DE.Term.Var.t) list
+    var_subst : (DE.Term.Var.t * DE.Term.Var.t) list;
+    pow2_builtin : bool;
+    sqrt_builtin : bool
   }
 
 type state =
@@ -126,7 +128,12 @@ let eb_sb_guard =
 let apply_with_eb_sb ?(args = []) new_cst =
   DE.Term.apply_cst new_cst [] (eb_term :: sb_term :: args)
 
-let create_ctx () = { cst_cache = Hashtbl.create 32; var_subst = [] }
+let pow2_ty = DE.Ty.arrow [DE.Ty.int] DE.Ty.int
+
+let sqrt2_ty = DE.Ty.arrow [DE.Ty.real] DE.Ty.real
+
+let create_ctx ?(pow2_builtin = true) ?(sqrt_builtin = true) () =
+  { cst_cache = Hashtbl.create 32; var_subst = []; pow2_builtin; sqrt_builtin }
 
 let init_state =
   { seen_set_logic = false;
@@ -198,6 +205,10 @@ let rec rewrite_term ctx (t : DE.Term.t) : DE.Term.t =
       let name = cst_path_name c in
       match lookup_op_rename ctx name c.id_ty with
       | Some new_c -> apply_with_eb_sb ~args new_c
+      | None when ctx.pow2_builtin && String.equal name pow2_name ->
+        DE.Term.apply_cst (get_cst ctx builtin_pow2_name pow2_ty) [] args
+      | None when ctx.sqrt_builtin && String.equal name sqrt2_name ->
+        DE.Term.apply_cst (get_cst ctx builtin_sqrt2_name sqrt2_ty) [] args
       | None -> DE.Term.apply (rewrite_term ctx f) tys args)
     | _ -> DE.Term.apply (rewrite_term ctx f) tys args)
   | Binder (Forall (tyvs, vs), body) ->
@@ -241,15 +252,24 @@ let rec term_uses_vars (vl : DE.Term.Var.t list) (t : DE.Term.t) : bool =
   | DE.Binder (_, body) -> term_uses_vars vl body
   | _ -> false
 
+let rec term_mentions (name : string) (t : DE.Term.t) : bool =
+  match t.term_descr with
+  | DE.Cst c -> String.equal (cst_path_name c) name
+  | DE.App (f, _, args) ->
+    term_mentions name f || List.exists (term_mentions name) args
+  | DE.Binder (_, body) -> term_mentions name body
+  | _ -> false
+
 let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
   match t.term_descr with
-  (* Ignore pow2 ground facts: (assert (= (pow2 _) _)) *)
+  (* pow2 ground facts: (assert (= (pow2 _) _)), dropped when builtin `int.pow2`
+     is used, otherwise kept. *)
   | DE.App
       ( { term_descr = Cst { builtin = B.Equal; _ }; _ },
         _,
         [{ term_descr = DE.App ({ term_descr = Cst c; _ }, [], [_]); _ }; _b] )
-    when String.equal (cst_path_name c) "pow2" ->
-    `Keep t
+    when String.equal (cst_path_name c) pow2_name ->
+    if ctx.pow2_builtin then `Drop else `Keep t
   (* Drop `match_mode` quantifiers. *)
   | DE.Binder (Forall (_ :: _, _), _) -> `Drop
   (* Drop (< 1 11) and (< 1 53). *)
@@ -261,12 +281,10 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
          && (String.equal "11" (cst_path_name n)
             || String.equal "53" (cst_path_name n)) ->
     `Drop
-  | _ -> (
+  | _ ->
     let body = rewrite_term ctx t in
-    (* If no eb/sb were introduced, emit as-is. *)
-    if not (term_uses_vars [eb_var; sb_var] body)
-    then `Keep body
-    else
+    if term_uses_vars [eb_var; sb_var] body
+    then
       (* Wrap with (forall (eb sb ...) (=> guard ...)), copying :pattern. *)
       let add_guard b =
         let triggers = DE.Term.get_tag_list b DE.Tags.triggers in
@@ -278,17 +296,34 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
       | DE.Binder (Forall ([], vs), inner) ->
         (* Merge eb sb into the existing ground forall. *)
         `Keep (DE.Term.all ([], eb_var :: sb_var :: vs) (add_guard inner))
-      | _ -> `Keep (DE.Term.all ([], [eb_var; sb_var]) (add_guard body)))
+      | _ -> `Keep (DE.Term.all ([], [eb_var; sb_var]) (add_guard body))
+    else if
+      (ctx.pow2_builtin && term_mentions pow2_name t)
+      || (ctx.sqrt_builtin && term_mentions sqrt2_name t)
+    then `Drop
+    else `Keep body
 
 let generalize (ctx : ctx) (st : state)
     (stmt : Loop.Typer.typechecked Loop.Typer.stmt) :
     state * Loop.Typer.typechecked Loop.Typer.stmt list =
-  (* add ae.float declaration after comment. *)
-  let st, added_ae_float_decl =
+  (* add declaration ae.float and other builtins *)
+  let st, added_early_decls =
     match st.pending_ae_float_decl with
-    | Some ae when st.seen_set_info ->
-      { st with pending_ae_float_decl = None }, Some ae
-    | _ -> st, None
+    | Some ae_float_decl when st.seen_set_info ->
+      let builtin_decl name ty =
+        { ae_float_decl with
+          contents = `Decls (false, [`Term_decl (get_cst ctx name ty)])
+        }
+      in
+      let decls =
+        List.filter_map
+          (fun (enabled, name, ty) ->
+            if enabled then Some (builtin_decl name ty) else None)
+          [ ctx.pow2_builtin, builtin_pow2_name, pow2_ty;
+            ctx.sqrt_builtin, builtin_sqrt2_name, sqrt2_ty ]
+      in
+      { st with pending_ae_float_decl = None }, ae_float_decl :: decls
+    | _ -> st, []
   in
   let keep c = [{ stmt with contents = c }] in
   let st, result =
@@ -333,6 +368,12 @@ let generalize (ctx : ctx) (st : state)
               Some { stmt with contents = `Decls (r, [d']) }
           },
           [] )
+      (* Drop declarations of pow2 and sqrt2 when their buitlin counterparts are
+         used *)
+      | `Term_decl { path = Absolute { name; _ }; _ }
+        when (ctx.pow2_builtin && String.equal name pow2_name)
+             || (ctx.sqrt_builtin && String.equal name sqrt2_name) ->
+        st, []
       | _ when not st.seen_sort_decl -> st, []
       | _ -> st, keep (`Decls (r, [d']))
       end
@@ -341,6 +382,11 @@ let generalize (ctx : ctx) (st : state)
     | `Defs (r, [def]) -> begin
       match def with
       | `Type_alias _ -> st, [stmt]
+      (* `sqr` is only used by sqrt2, so drop it when the builtin version of
+         sqrt2 is used*)
+      | `Term_def (_, c, _, _, _)
+        when ctx.sqrt_builtin && String.equal (cst_path_name c) sqr_name ->
+        st, []
       | `Term_def (tag, c, [], vars, body) ->
         let ctx, vars = rewrite_vars ctx vars in
         let body' = rewrite_term ctx body in
@@ -362,7 +408,7 @@ let generalize (ctx : ctx) (st : state)
     | `End when st.seen_set_info -> st, [stmt]
     | _ -> st, []
   in
-  st, Option.to_list added_ae_float_decl @ result
+  st, added_early_decls @ result
 
 let run (ctx : ctx) (st : state)
     (stmts : Loop.Typer.typechecked Loop.Typer.stmt list) :

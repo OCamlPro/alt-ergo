@@ -29,8 +29,28 @@ let file_arg =
     & pos 0 (some string) None
     & info [] ~docv:"FILE" ~doc:"Input SMT-LIB2 file.")
 
+let pow2_builtin_arg =
+  Arg.(
+    value & opt bool true
+    & info ["pow2-builtin"] ~docv:"BOOL"
+        ~doc:
+          "Use the builtin operator `int.pow2` instead of the axiomatized \
+           `pow2`.")
+
+let sqrt_builtin_arg =
+  Arg.(
+    value & opt bool true
+    & info ["sqrt-builtin"] ~docv:"BOOL"
+        ~doc:
+          "Use the builtin operator `sqrt_real` instead of the axiomatized \
+           `sqrt2`.")
+
 let cmd =
-  let term = Term.(const (fun f -> f) $ file_arg) in
+  let term =
+    Term.(
+      const (fun f p s -> f, p, s)
+      $ file_arg $ pow2_builtin_arg $ sqrt_builtin_arg)
+  in
   Cmd.v
     (Cmd.info "fpa-gen"
        ~doc:
