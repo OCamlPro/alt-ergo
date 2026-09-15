@@ -67,9 +67,12 @@ let op_rename_table : (string * string) list =
 
 type ctx =
   { cst_cache : (string, DE.Term.Const.t) Hashtbl.t;
+    func_defs :
+      (string, DE.Ty.Var.t * DE.Term.Var.t list * DE.Term.t) Hashtbl.t;
     var_subst : (DE.Term.Var.t * DE.Term.Var.t) list;
     pow2_builtin : bool;
     sqrt_builtin : bool;
+    inline_functions : bool;
     fp_tyvar : DE.Ty.Var.t
   }
 
@@ -159,11 +162,14 @@ let sqrt2_ty = DE.Ty.arrow [DE.Ty.real] DE.Ty.real
 
 (* fp_tyvar is a placeholder, it is replaced before every axiom/function
    definition. *)
-let create_ctx ?(pow2_builtin = true) ?(sqrt_builtin = true) () =
+let create_ctx ?(pow2_builtin = true) ?(sqrt_builtin = true)
+    ?(inline_functions = true) () =
   { cst_cache = Hashtbl.create 32;
+    func_defs = Hashtbl.create 16;
     var_subst = [];
     pow2_builtin;
     sqrt_builtin;
+    inline_functions;
     fp_tyvar = fresh_aefpt_var ()
   }
 
@@ -204,6 +210,39 @@ let add_eb_sb_args_type ?tyvar ctx name (orig_ty : DE.Ty.t) : DE.Term.Const.t =
   in
   get_cst ctx name ty
 
+let rec subst_ty_var (src : DE.Ty.Var.t) (dst : DE.Ty.t) (ty : DE.Ty.t) :
+    DE.Ty.t =
+  match ty.ty_descr with
+  | DE.TyVar v when DE.Ty.Var.equal v src -> dst
+  | TyVar _ -> ty
+  | TyApp (tc, args) -> DE.Ty.apply tc (List.map (subst_ty_var src dst) args)
+  | Arrow (params, ret) ->
+    let params = List.map (subst_ty_var src dst) params in
+    let ret = subst_ty_var src dst ret in
+    DE.Ty.arrow params ret
+  | Pi (vars, body) -> DE.Ty.pi vars (subst_ty_var src dst body)
+
+let rec inline_subst (src_tyvar : DE.Ty.Var.t) (dst_ty : DE.Ty.t)
+    (map : (DE.Term.Var.t * DE.Term.t) list) (t : DE.Term.t) : DE.Term.t =
+  match t.term_descr with
+  | DE.Var v -> (
+    match List.find_opt (fun (v', _) -> DE.Term.Var.equal v v') map with
+    | Some (_, t') -> t'
+    | None -> t)
+  | App (f, tys, args) ->
+    let f = inline_subst src_tyvar dst_ty map f in
+    let tys = List.map (subst_ty_var src_tyvar dst_ty) tys in
+    let args = List.map (inline_subst src_tyvar dst_ty map) args in
+    DE.Term.apply f tys args
+  | _ -> t
+
+let inline_call (ctx : ctx)
+    ((def_fp_tyvar, def_params, def_body) :
+      DE.Ty.Var.t * DE.Term.Var.t list * DE.Term.t) (args : DE.Term.t list) :
+    DE.Term.t =
+  let map = List.combine def_params args in
+  inline_subst def_fp_tyvar (DE.Ty.of_var ctx.fp_tyvar) map def_body
+
 let lookup_op_rename ctx name orig_ty =
   match List.assoc_opt name op_rename_table with
   | Some new_name -> Some (add_eb_sb_args_type ctx new_name orig_ty)
@@ -236,22 +275,28 @@ let rec rewrite_term ctx (t : DE.Term.t) : DE.Term.t =
   end
   | Cst c -> (
     let name = cst_path_name c in
-    match lookup_rename ctx name c.id_ty with
-    | Some new_c -> apply_with_eb_sb ctx new_c
-    | None -> ( match name with "11" -> eb_term | "53" -> sb_term | _ -> t))
+    match Hashtbl.find_opt ctx.func_defs name with
+    | Some def -> inline_call ctx def []
+    | None -> (
+      match lookup_rename ctx name c.id_ty with
+      | Some new_c -> apply_with_eb_sb ctx new_c
+      | None -> ( match name with "11" -> eb_term | "53" -> sb_term | _ -> t)))
   | App (f, tys, args) -> (
     let args = List.map (rewrite_term ctx) args in
     let tys = List.map (subst_t ~subst:(DE.Ty.of_var ctx.fp_tyvar)) tys in
     match f.term_descr with
     | Cst c -> (
       let name = cst_path_name c in
-      match lookup_op_rename ctx name c.id_ty with
-      | Some new_c -> apply_with_eb_sb ctx ~args new_c
-      | None when ctx.pow2_builtin && String.equal name pow2_name ->
-        DE.Term.apply_cst (get_cst ctx builtin_pow2_name pow2_ty) [] args
-      | None when ctx.sqrt_builtin && String.equal name sqrt2_name ->
-        DE.Term.apply_cst (get_cst ctx builtin_sqrt2_name sqrt2_ty) [] args
-      | None -> DE.Term.apply (rewrite_term ctx f) tys args)
+      match Hashtbl.find_opt ctx.func_defs name with
+      | Some def -> inline_call ctx def args
+      | None -> (
+        match lookup_op_rename ctx name c.id_ty with
+        | Some new_c -> apply_with_eb_sb ctx ~args new_c
+        | None when ctx.pow2_builtin && String.equal name pow2_name ->
+          DE.Term.apply_cst (get_cst ctx builtin_pow2_name pow2_ty) [] args
+        | None when ctx.sqrt_builtin && String.equal name sqrt2_name ->
+          DE.Term.apply_cst (get_cst ctx builtin_sqrt2_name sqrt2_ty) [] args
+        | None -> DE.Term.apply (rewrite_term ctx f) tys args))
     | _ -> DE.Term.apply (rewrite_term ctx f) tys args)
   | Binder (Forall (tyvs, vs), body) ->
     let ctx, vs = rewrite_vars ctx vs in
@@ -448,7 +493,13 @@ let generalize (ctx : ctx) (st : state)
         let ctx = { ctx with fp_tyvar = fresh_aefpt_var () } in
         let ctx, vars = rewrite_vars ctx vars in
         let body' = rewrite_term ctx body in
-        if not (term_uses_vars [eb_var; sb_var] body')
+        if ctx.inline_functions
+        then (
+          (* Record the function definition and drop it *)
+          Hashtbl.replace ctx.func_defs (cst_path_name c)
+            (ctx.fp_tyvar, vars, body');
+          st, [])
+        else if not (term_uses_vars [eb_var; sb_var] body')
         then st, keep (`Defs (r, [`Term_def (tag, c, [], vars, body')]))
         else
           let name =
