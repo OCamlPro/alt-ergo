@@ -23,6 +23,9 @@ RSC_DIR := rsc
 EXTRA_DIR := $(RSC_DIR)/extra
 SPHINX_DOC_DIR   := docs/sphinx_docs
 
+FPA_GEN_DIR := tools/fpa_gen
+FPA_GEN_FILES_DIR := $(FPA_GEN_DIR)/files
+
 BUILD_DIR := _build
 INSTALL_DIR := $(BUILD_DIR)/install
 DEFAULT_DIR := $(BUILD_DIR)/default
@@ -130,6 +133,31 @@ promote:
 	dune promote
 
 .PHONY: runtest runtest-ci promote
+
+# ===============================
+# Generate the SMT-LIB FPA prelude
+# ===============================
+
+# Generates src/preludes/smt-lib-fpa.psmt2
+# why3 is called on test.mlw to generate a psmt2 file that contains the
+# axiomatization of the SMT-LIB FPA for 64-bit floats.
+# A check is made to ensure that only one file is generated (just in case)
+# That file is taken by the fpa-gen executable which generalizes is to floats
+# of any size, and its output iswritten into
+# $(SRC_DIR)/preludes/smt-lib-fpa.psmt2
+gen-fpa-prelude:
+	$(DUNE) build $(FPA_GEN_DIR)/main.exe
+	why3 prove -P alt-ergo $(FPA_GEN_FILES_DIR)/test.mlw -o $(FPA_GEN_FILES_DIR)
+	generated=$$(ls $(FPA_GEN_FILES_DIR)/*.psmt2 | grep -vx '$(FPA_GEN_FILES_DIR)/ae_builtins.psmt2'); \
+	if [ "$$(echo "$$generated" | wc -l)" -ne 1 ]; then \
+		echo "expected exactly one generated file, got: $$generated" >&2; exit 1; \
+	fi; \
+	$(DUNE) exec -- $(FPA_GEN_DIR)/main.exe "$$generated" \
+		| sed -E '/^\(declare-fun (ae\.float|int\.pow2|sqrt_real) /d' \
+		> $(SRC_DIR)/preludes/smt-lib-fpa.psmt2; \
+	rm -f "$$generated"
+
+.PHONY: gen-fpa-prelude
 
 # ============
 # Installation

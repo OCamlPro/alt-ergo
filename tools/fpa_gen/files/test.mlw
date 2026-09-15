@@ -1,0 +1,4 @@
+
+use ieee_float.Float64
+
+goal g: true
