@@ -45,11 +45,19 @@ let sqrt_builtin_arg =
           "Use the builtin operator `sqrt_real` instead of the axiomatized \
            `sqrt2`.")
 
+let inline_functions_arg =
+  Arg.(
+    value & opt bool true
+    & info ["inline-functions"] ~docv:"BOOL"
+        ~doc:
+          "Eagerly inline calls to defined functions. (The functions are \
+           expected to be non-recursive)")
+
 let cmd =
   let term =
     Term.(
-      const (fun f p s -> f, p, s)
-      $ file_arg $ pow2_builtin_arg $ sqrt_builtin_arg)
+      const (fun f p s i -> f, p, s, i)
+      $ file_arg $ pow2_builtin_arg $ sqrt_builtin_arg $ inline_functions_arg)
   in
   Cmd.v
     (Cmd.info "fpa-gen"
