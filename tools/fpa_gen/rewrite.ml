@@ -69,42 +69,48 @@ type ctx =
   { cst_cache : (string, DE.Term.Const.t) Hashtbl.t;
     var_subst : (DE.Term.Var.t * DE.Term.Var.t) list;
     pow2_builtin : bool;
-    sqrt_builtin : bool
+    sqrt_builtin : bool;
+    fp_tyvar : DE.Ty.Var.t
   }
 
 type state =
   { seen_set_logic : bool;
     seen_set_info : bool;
-    seen_sort_decl : bool;
+    passed_preamble : bool;
     pending_ae_float_decl : Loop.Typer.typechecked Loop.Typer.stmt option;
     pending_hyp : Loop.Typer.typechecked Loop.Typer.stmt option
   }
 
-let ae_fp_ty = DE.Ty.Const.mk (Path.global "ae.fp.t") 0
+let fresh_aefpt_var () = DE.Ty.Var.mk "ae.fp.t"
 
-let rec rewrite_ty (ty : DE.Ty.t) : DE.Ty.t =
+let rec subst_t ~(subst : DE.Ty.t) (ty : DE.Ty.t) : DE.Ty.t =
   match ty.ty_descr with
   | DE.TyVar _ -> ty
-  | DE.TyApp (tc, args) ->
-    let tc' =
-      match tc.path with
-      | Path.Absolute { path = []; name = "t" } | Path.Local { name = "t" } ->
-        ae_fp_ty
-      | _ -> tc
-    in
-    let args' = List.map rewrite_ty args in
-    DE.Ty.apply tc' args'
+  | DE.TyApp (tc, _) -> (
+    match tc.path with
+    | Path.Absolute { path = []; name = "t" } | Path.Local { name = "t" } ->
+      subst
+    | _ -> ty)
   | DE.Arrow (params, ret) ->
-    let params' = List.map rewrite_ty params in
-    let ret' = rewrite_ty ret in
+    let params' = List.map (subst_t ~subst) params in
+    let ret' = (subst_t ~subst) ret in
     DE.Ty.arrow params' ret'
   | DE.Pi (vars, body) ->
-    let body' = rewrite_ty body in
+    let body' = (subst_t ~subst) body in
     DE.Ty.pi vars body'
+
+(* Whether a given type variable occurs anywhere in a type. *)
+let rec ty_mentions_var (v : DE.Ty.Var.t) (ty : DE.Ty.t) : bool =
+  match ty.ty_descr with
+  | DE.TyVar v' -> DE.Ty.Var.equal v v'
+  | DE.TyApp (_, args) -> List.exists (ty_mentions_var v) args
+  | DE.Arrow (params, ret) ->
+    List.exists (ty_mentions_var v) params || ty_mentions_var v ret
+  | DE.Pi (_, body) -> ty_mentions_var v body
 
 let rewrite_var ctx (v : DE.Term.Var.t) : ctx * DE.Term.Var.t =
   let ty = DE.Term.Var.ty v in
-  let ty' = rewrite_ty ty in
+  let ty' = subst_t ~subst:(DE.Ty.of_var ctx.fp_tyvar) ty in
   if DE.Ty.equal ty' ty
   then ctx, v
   else
@@ -137,21 +143,34 @@ let eb_sb_guard =
   let one = DE.Term.Int.mk "1" in
   DE.Term._and [DE.Term.Int.lt one eb_term; DE.Term.Int.lt one sb_term]
 
-(* Add eb and sb as first arguments to a function call *)
-let apply_with_eb_sb ?(args = []) new_cst =
-  DE.Term.apply_cst new_cst [] (eb_term :: sb_term :: args)
+let expects_type_arg cst = DE.Ty.pi_arity (DE.Term.Const.ty cst) > 0
+
+(* Add eb and sb as first arguments to a function call and the FP type as type
+   parameter when the cst is polymorphic. *)
+let apply_with_eb_sb (ctx : ctx) ?(args = []) new_cst =
+  let tys =
+    if expects_type_arg new_cst then [DE.Ty.of_var ctx.fp_tyvar] else []
+  in
+  DE.Term.apply_cst new_cst tys (eb_term :: sb_term :: args)
 
 let pow2_ty = DE.Ty.arrow [DE.Ty.int] DE.Ty.int
 
 let sqrt2_ty = DE.Ty.arrow [DE.Ty.real] DE.Ty.real
 
+(* fp_tyvar is a placeholder, it is replaced before every axiom/function
+   definition. *)
 let create_ctx ?(pow2_builtin = true) ?(sqrt_builtin = true) () =
-  { cst_cache = Hashtbl.create 32; var_subst = []; pow2_builtin; sqrt_builtin }
+  { cst_cache = Hashtbl.create 32;
+    var_subst = [];
+    pow2_builtin;
+    sqrt_builtin;
+    fp_tyvar = fresh_aefpt_var ()
+  }
 
 let init_state =
   { seen_set_logic = false;
     seen_set_info = false;
-    seen_sort_decl = false;
+    passed_preamble = false;
     pending_ae_float_decl = None;
     pending_hyp = None
   }
@@ -169,11 +188,21 @@ let get_cst (ctx : ctx) name (ty : DE.Ty.t) : DE.Term.Const.t =
     Hashtbl.add ctx.cst_cache name c;
     c
 
-let add_eb_sb_args_type ctx name (orig_ty : DE.Ty.t) : DE.Term.Const.t =
+let add_eb_sb_args_type ?tyvar ctx name (orig_ty : DE.Ty.t) : DE.Term.Const.t =
+  let tyvar = match tyvar with Some v -> v | None -> fresh_aefpt_var () in
+  let subst = DE.Ty.of_var tyvar in
   let _, f_args, ret = DE.Ty.poly_sig orig_ty in
-  let f_args = List.map rewrite_ty f_args in
-  let ret = rewrite_ty ret in
-  get_cst ctx name (DE.Ty.arrow (DE.Ty.int :: DE.Ty.int :: f_args) ret)
+  let f_args = List.map (subst_t ~subst) f_args in
+  let ret = subst_t ~subst ret in
+  let arrow_ty = DE.Ty.arrow (DE.Ty.int :: DE.Ty.int :: f_args) ret in
+  (* we could avoid revisiting the type by making subst return a bool (if the
+     subst happened or not) *)
+  let ty =
+    if List.exists (ty_mentions_var tyvar) f_args || ty_mentions_var tyvar ret
+    then DE.Ty.pi [tyvar] arrow_ty
+    else arrow_ty
+  in
+  get_cst ctx name ty
 
 let lookup_op_rename ctx name orig_ty =
   match List.assoc_opt name op_rename_table with
@@ -208,16 +237,16 @@ let rec rewrite_term ctx (t : DE.Term.t) : DE.Term.t =
   | Cst c -> (
     let name = cst_path_name c in
     match lookup_rename ctx name c.id_ty with
-    | Some new_c -> apply_with_eb_sb new_c
+    | Some new_c -> apply_with_eb_sb ctx new_c
     | None -> ( match name with "11" -> eb_term | "53" -> sb_term | _ -> t))
   | App (f, tys, args) -> (
     let args = List.map (rewrite_term ctx) args in
-    let tys = List.map rewrite_ty tys in
+    let tys = List.map (subst_t ~subst:(DE.Ty.of_var ctx.fp_tyvar)) tys in
     match f.term_descr with
     | Cst c -> (
       let name = cst_path_name c in
       match lookup_op_rename ctx name c.id_ty with
-      | Some new_c -> apply_with_eb_sb ~args new_c
+      | Some new_c -> apply_with_eb_sb ctx ~args new_c
       | None when ctx.pow2_builtin && String.equal name pow2_name ->
         DE.Term.apply_cst (get_cst ctx builtin_pow2_name pow2_ty) [] args
       | None when ctx.sqrt_builtin && String.equal name sqrt2_name ->
@@ -273,6 +302,18 @@ let rec term_mentions (name : string) (t : DE.Term.t) : bool =
   | DE.Binder (_, body) -> term_mentions name body
   | _ -> false
 
+(* Whether a given type variable occurs anywhere in a term. *)
+let rec term_mentions_fp_tyvar (tyvar : DE.Ty.Var.t) (t : DE.Term.t) : bool =
+  ty_mentions_var tyvar t.term_ty
+  ||
+  match t.term_descr with
+  | DE.App (f, tys, args) ->
+    List.exists (ty_mentions_var tyvar) tys
+    || term_mentions_fp_tyvar tyvar f
+    || List.exists (term_mentions_fp_tyvar tyvar) args
+  | DE.Binder (_, body) -> term_mentions_fp_tyvar tyvar body
+  | _ -> false
+
 let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
   match t.term_descr with
   (* pow2 ground facts: (assert (= (pow2 _) _)), dropped when builtin `int.pow2`
@@ -295,10 +336,15 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
             || String.equal "53" (cst_path_name n)) ->
     `Drop
   | _ ->
+    let ctx = { ctx with fp_tyvar = fresh_aefpt_var () } in
     let body = rewrite_term ctx t in
     if term_uses_vars [eb_var; sb_var] body
     then
-      (* Wrap with (forall (eb sb ...) (=> guard ...)), copying :pattern. *)
+      (* Wrap with (forall (eb sb ...) (=> guard ...)), copying :pattern. The
+         forall also binds the FP type variable if its needed by its body. *)
+      let tyvs =
+        if term_mentions_fp_tyvar ctx.fp_tyvar body then [ctx.fp_tyvar] else []
+      in
       let add_guard b =
         let triggers = DE.Term.get_tag_list b DE.Tags.triggers in
         let guarded = DE.Term.imply eb_sb_guard b in
@@ -308,8 +354,8 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
       match body.term_descr with
       | DE.Binder (Forall ([], vs), inner) ->
         (* Merge eb sb into the existing ground forall. *)
-        `Keep (DE.Term.all ([], eb_var :: sb_var :: vs) (add_guard inner))
-      | _ -> `Keep (DE.Term.all ([], [eb_var; sb_var]) (add_guard body))
+        `Keep (DE.Term.all (tyvs, eb_var :: sb_var :: vs) (add_guard inner))
+      | _ -> `Keep (DE.Term.all (tyvs, [eb_var; sb_var]) (add_guard body))
     else if
       (ctx.pow2_builtin && term_mentions pow2_name t)
       || (ctx.sqrt_builtin && term_mentions sqrt2_name t)
@@ -366,14 +412,12 @@ let generalize (ctx : ctx) (st : state)
       in
       begin match d' with
       | `Type_decl ({ path = Absolute { name = "t"; _ }; _ }, None)
-        when not st.seen_sort_decl ->
-        (* When t is encountered, add const declarations and ae.fp.t's
-           declaration *)
+        when not st.passed_preamble ->
+        (* When t is encountered, drop it, add const declarations as a preable,
+           and set passed_preamble to true, which means that the axiomatization
+           can now start. *)
         let const_decls = declare_fp_constants ctx stmt in
-        ( { st with seen_sort_decl = true },
-          const_decls
-          @ [{ stmt with contents = `Decls (r, [`Type_decl (ae_fp_ty, None)]) }]
-        )
+        { st with passed_preamble = true }, const_decls
       | `Term_decl { path = Absolute { name = "ae.float"; _ }; _ }
         when not st.seen_set_info ->
         ( { st with
@@ -387,11 +431,11 @@ let generalize (ctx : ctx) (st : state)
         when (ctx.pow2_builtin && String.equal name pow2_name)
              || (ctx.sqrt_builtin && String.equal name sqrt2_name) ->
         st, []
-      | _ when not st.seen_sort_decl -> st, []
+      | _ when not st.passed_preamble -> st, []
       | _ -> st, keep (`Decls (r, [d']))
       end
     end
-    | `Defs _ when not st.seen_sort_decl -> st, []
+    | `Defs _ when not st.passed_preamble -> st, []
     | `Defs (r, [def]) -> begin
       match def with
       | `Type_alias _ -> st, [stmt]
@@ -401,25 +445,26 @@ let generalize (ctx : ctx) (st : state)
         when ctx.sqrt_builtin && String.equal (cst_path_name c) sqr_name ->
         st, []
       | `Term_def (tag, c, [], vars, body) ->
+        let ctx = { ctx with fp_tyvar = fresh_aefpt_var () } in
         let ctx, vars = rewrite_vars ctx vars in
         let body' = rewrite_term ctx body in
-        let c, vars =
-          if term_uses_vars [eb_var; sb_var] body'
-          then
-            (* Change the name of the defined function to follow the style of
-               the other defined/declared operations *)
-            let name =
-              match List.assoc_opt (cst_path_name c) op_rename_table with
-              | Some new_name -> new_name
-              | None -> cst_path_name c
-            in
-            add_eb_sb_args_type ctx name c.id_ty, eb_var :: sb_var :: vars
-          else c, vars
-        in
-        st, keep (`Defs (r, [`Term_def (tag, c, [], vars, body')]))
+        if not (term_uses_vars [eb_var; sb_var] body')
+        then st, keep (`Defs (r, [`Term_def (tag, c, [], vars, body')]))
+        else
+          let name =
+            match List.assoc_opt (cst_path_name c) op_rename_table with
+            | Some new_name -> new_name
+            | None -> cst_path_name c
+          in
+          let new_c =
+            add_eb_sb_args_type ~tyvar:ctx.fp_tyvar ctx name c.id_ty
+          in
+          let all_vars = eb_var :: sb_var :: vars in
+          let tyvs = if expects_type_arg new_c then [ctx.fp_tyvar] else [] in
+          st, keep (`Defs (r, [`Term_def (tag, new_c, tyvs, all_vars, body')]))
       | _ -> st, []
     end
-    | `Hyp _ when not st.seen_sort_decl -> st, []
+    | `Hyp _ when not st.passed_preamble -> st, []
     | `Hyp t -> (
       match rewrite_hyp ctx t with
       | `Keep t' -> st, keep (`Hyp t')
