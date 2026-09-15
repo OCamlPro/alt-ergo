@@ -2,6 +2,7 @@ module Path = Dolmen.Std.Path
 module DE = Dolmen.Std.Expr
 module B = Dolmen.Std.Builtin
 open Literals
+open Helpers
 
 let strip_suffix suffix s =
   if String.ends_with ~suffix s
@@ -73,6 +74,7 @@ type ctx =
     pow2_builtin : bool;
     sqrt_builtin : bool;
     inline_functions : bool;
+    select_triggers : bool;
     fp_tyvar : DE.Ty.Var.t
   }
 
@@ -117,12 +119,7 @@ let rewrite_var ctx (v : DE.Term.Var.t) : ctx * DE.Term.Var.t =
   if DE.Ty.equal ty' ty
   then ctx, v
   else
-    let name =
-      match v.path with
-      | Path.Absolute { path = []; name } | Path.Local { name } -> name
-      | _ -> assert false
-    in
-    let v' = DE.Term.Var.mk name ty' in
+    let v' = DE.Term.Var.mk (path_name v.path) ty' in
     { ctx with var_subst = (v, v') :: ctx.var_subst }, v'
 
 let rewrite_vars ctx (vs : DE.Term.Var.t list) : ctx * DE.Term.Var.t list =
@@ -163,13 +160,14 @@ let sqrt2_ty = DE.Ty.arrow [DE.Ty.real] DE.Ty.real
 (* fp_tyvar is a placeholder, it is replaced before every axiom/function
    definition. *)
 let create_ctx ?(pow2_builtin = true) ?(sqrt_builtin = true)
-    ?(inline_functions = true) () =
+    ?(inline_functions = true) ?(select_triggers = true) () =
   { cst_cache = Hashtbl.create 32;
     func_defs = Hashtbl.create 16;
     var_subst = [];
     pow2_builtin;
     sqrt_builtin;
     inline_functions;
+    select_triggers;
     fp_tyvar = fresh_aefpt_var ()
   }
 
@@ -180,11 +178,6 @@ let init_state =
     pending_ae_float_decl = None;
     pending_hyp = None
   }
-
-let cst_path_name (c : DE.Term.Const.t) : string =
-  match DE.Term.Const.path c with
-  | Path.Absolute { path = []; name } | Path.Local { name } -> name
-  | _ -> assert false
 
 let get_cst (ctx : ctx) name (ty : DE.Ty.t) : DE.Term.Const.t =
   match Hashtbl.find_opt ctx.cst_cache name with
@@ -330,15 +323,6 @@ and rewrite_binder_body ctx body =
       (List.map (rewrite_term ctx) triggers);
   body'
 
-let rec term_uses_vars (vl : DE.Term.Var.t list) (t : DE.Term.t) : bool =
-  match t.term_descr with
-  | DE.Var v' -> List.mem v' vl
-  | DE.Cst _ -> false
-  | DE.App (f, _, args) ->
-    term_uses_vars vl f || List.exists (term_uses_vars vl) args
-  | DE.Binder (_, body) -> term_uses_vars vl body
-  | _ -> false
-
 let rec term_mentions (name : string) (t : DE.Term.t) : bool =
   match t.term_descr with
   | DE.Cst c -> String.equal (cst_path_name c) name
@@ -384,7 +368,7 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
     let ctx = { ctx with fp_tyvar = fresh_aefpt_var () } in
     let body = rewrite_term ctx t in
     if term_uses_vars [eb_var; sb_var] body
-    then
+    then (
       (* Wrap with (forall (eb sb ...) (=> guard ...)), copying :pattern. The
          forall also binds the FP type variable if its needed by its body. *)
       let tyvs =
@@ -398,14 +382,28 @@ let rewrite_hyp (ctx : ctx) (t : DE.Term.t) : [`Keep of DE.Term.t | `Drop] =
       in
       match body.term_descr with
       | DE.Binder (Forall ([], vs), inner) ->
+        if ctx.select_triggers
+        then
+          Triggers.process_axiom ~fp_tyvar:ctx.fp_tyvar (eb_var :: sb_var :: vs)
+            inner;
         (* Merge eb sb into the existing ground forall. *)
         `Keep (DE.Term.all (tyvs, eb_var :: sb_var :: vs) (add_guard inner))
-      | _ -> `Keep (DE.Term.all (tyvs, [eb_var; sb_var]) (add_guard body))
+      | _ ->
+        if ctx.select_triggers
+        then
+          Triggers.process_axiom ~fp_tyvar:ctx.fp_tyvar [eb_var; sb_var] body;
+        `Keep (DE.Term.all (tyvs, [eb_var; sb_var]) (add_guard body)))
     else if
       (ctx.pow2_builtin && term_mentions pow2_name t)
       || (ctx.sqrt_builtin && term_mentions sqrt2_name t)
     then `Drop
-    else `Keep body
+    else (
+      (match body.term_descr with
+      | DE.Binder (Forall ([], vs), inner) ->
+        if ctx.select_triggers
+        then Triggers.process_axiom ~fp_tyvar:ctx.fp_tyvar vs inner
+      | _ -> ());
+      `Keep body)
 
 let generalize (ctx : ctx) (st : state)
     (stmt : Loop.Typer.typechecked Loop.Typer.stmt) :
