@@ -24,3 +24,7 @@ let sqr_name = "sqr"
 let builtin_pow2_name = "int.pow2"
 
 let builtin_sqrt2_name = "sqrt_real"
+
+let ae_builtin_syms = [builtin_pow2_name; builtin_sqrt2_name]
+
+let fp_comparison_relations = ["ae.fp.le"; "ae.fp.lt"; "ae.fp.eq"]
