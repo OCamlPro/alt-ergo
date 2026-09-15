@@ -13,8 +13,8 @@ let handle_stmt rewrite_ctx st
   let st, _ = Loop.Export.export st stmts' in
   st, ()
 
-let run_pipeline input st =
-  let rewrite_ctx = Rewrite.create_ctx () in
+let run_pipeline ~pow2_builtin ~sqrt_builtin input st =
+  let rewrite_ctx = Rewrite.create_ctx ~pow2_builtin ~sqrt_builtin () in
   let ae_builtins =
     Loop.State.mk_file (Filename.dirname input) (`File "ae_builtins.psmt2")
   in
@@ -44,6 +44,6 @@ let () =
   match Cmdliner.Cmd.eval_value Options.cmd with
   | Ok (`Version | `Help) -> exit 0
   | Error (`Parse | `Term | `Exn) -> exit 1
-  | Ok (`Ok input) ->
+  | Ok (`Ok (input, pow2_builtin, sqrt_builtin)) ->
     let state = Options.mk_state input in
-    run_pipeline input state
+    run_pipeline ~pow2_builtin ~sqrt_builtin input state
