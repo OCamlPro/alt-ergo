@@ -13,9 +13,11 @@ let handle_stmt rewrite_ctx st
   let st, _ = Loop.Export.export st stmts' in
   st, ()
 
-let run_pipeline ~pow2_builtin ~sqrt_builtin ~inline_functions input st =
+let run_pipeline ~pow2_builtin ~sqrt_builtin ~inline_functions ~select_triggers
+    input st =
   let rewrite_ctx =
-    Rewrite.create_ctx ~pow2_builtin ~sqrt_builtin ~inline_functions ()
+    Rewrite.create_ctx ~pow2_builtin ~sqrt_builtin ~inline_functions
+      ~select_triggers ()
   in
   let ae_builtins =
     Loop.State.mk_file (Filename.dirname input) (`File "ae_builtins.psmt2")
@@ -42,10 +44,13 @@ let run_pipeline ~pow2_builtin ~sqrt_builtin ~inline_functions input st =
   let _st = Dolmen_loop.State.flush st () in
   ()
 
+let run input pow2_builtin sqrt_builtin inline_functions select_triggers =
+  let state = Options.mk_state input in
+  run_pipeline ~pow2_builtin ~sqrt_builtin ~inline_functions ~select_triggers
+    input state
+
 let () =
-  match Cmdliner.Cmd.eval_value Options.cmd with
+  match Cmdliner.Cmd.eval_value (Options.cmd run) with
   | Ok (`Version | `Help) -> exit 0
   | Error (`Parse | `Term | `Exn) -> exit 1
-  | Ok (`Ok (input, pow2_builtin, sqrt_builtin, inline_functions)) ->
-    let state = Options.mk_state input in
-    run_pipeline ~pow2_builtin ~sqrt_builtin ~inline_functions input state
+  | Ok (`Ok ()) -> ()
