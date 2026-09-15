@@ -1,0 +1,39 @@
+open Cmdliner
+
+let mk_state input =
+  let open Loop in
+  let dir = Filename.dirname input in
+  let base = Filename.basename input in
+  let logic_file = State.mk_file dir (`File base) in
+  let response_file = State.mk_file dir (`Raw ("", "")) in
+  State.empty
+  |> State.set Header.header_state Dolmen_loop.Headers.empty
+  |> State.init ~debug:false ~report_style:Contextual
+       ~reports:
+         (Dolmen_loop.Report.Conf.mk
+            ~default:Dolmen_loop.Report.Warning.Status.Disabled)
+       ~max_warn:max_int ~time_limit:infinity ~size_limit:infinity
+       ~response_file
+  |> State.set State.logic_file logic_file
+  |> Parser.init
+  |> Typer.init
+       ~ty_state:(Dolmen_loop.Typer.new_state ())
+       ~smtlib2_forced_logic:None
+  |> Typer.init_pipe ~type_check:true
+  |> Header.init ~header_check:false ~header_licenses:[]
+       ~header_lang_version:None
+
+let file_arg =
+  Arg.(
+    required
+    & pos 0 (some string) None
+    & info [] ~docv:"FILE" ~doc:"Input SMT-LIB2 file.")
+
+let cmd =
+  let term = Term.(const (fun f -> f) $ file_arg) in
+  Cmd.v
+    (Cmd.info "fpa-gen"
+       ~doc:
+         "Generalize FPA preludes by adding eb/sb parameters to FP operations \
+          and quantifying the axioms over eb and sb.")
+    term
