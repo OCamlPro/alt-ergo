@@ -53,11 +53,19 @@ let inline_functions_arg =
           "Eagerly inline calls to defined functions. (The functions are \
            expected to be non-recursive)")
 
-let cmd =
+let select_triggers_arg =
+  Arg.(
+    value & opt bool true
+    & info ["select-triggers"] ~docv:"BOOL"
+        ~doc:
+          "Automatically select a :pattern trigger for every generated axiom \
+           that doesn't already have one.")
+
+let cmd run =
   let term =
     Term.(
-      const (fun f p s i -> f, p, s, i)
-      $ file_arg $ pow2_builtin_arg $ sqrt_builtin_arg $ inline_functions_arg)
+      const run $ file_arg $ pow2_builtin_arg $ sqrt_builtin_arg
+      $ inline_functions_arg $ select_triggers_arg)
   in
   Cmd.v
     (Cmd.info "fpa-gen"
