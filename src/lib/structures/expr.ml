@@ -887,6 +887,8 @@ let vrai =
   in
   res
 
+let mk_uninterpreted_term name args ret_ty = mk_term (Sy.name name) args ret_ty
+
 let faux = neg vrai
 
 let fresh_name ty =
@@ -3193,6 +3195,9 @@ module FP = struct
     let abs_err_denom = "ae.fp.abs_err_denom"
   end
 
+  let is_bv_literal t =
+    match t.f, t.xs with Sy.Bitv _, [] -> true | _ -> false
+
   let bv_literal_to_z t =
     match t.f, t.xs with
     | Sy.Bitv (_, z), [] -> z
@@ -3201,17 +3206,23 @@ module FP = struct
         "fp applications are currently only supported for bitvector literals"
 
   let fp sign_t exp_t sig_t e s =
-    let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
-    let biased_exp = z_to_int (bv_literal_to_z exp_t) in
-    let mantissa = bv_literal_to_z sig_t in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+    if is_bv_literal sign_t && is_bv_literal exp_t && is_bv_literal sig_t
+    then
+      let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
+      let biased_exp = z_to_int (bv_literal_to_z exp_t) in
+      let mantissa = bv_literal_to_z sig_t in
+      float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+    else mk_uninterpreted_term "to_fp" [sign_t; exp_t; sig_t] (Ty.Tfloat (e, s))
 
   let ieee_format_to_fp bv_t e s =
-    let bv_z = bv_literal_to_z bv_t in
-    let mantissa = Z.extract bv_z 0 (s - 1) in
-    let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
-    let neg = Z.testbit bv_z (e + s - 1) in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+    if is_bv_literal bv_t
+    then
+      let bv_z = bv_literal_to_z bv_t in
+      let mantissa = Z.extract bv_z 0 (s - 1) in
+      let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
+      let neg = Z.testbit bv_z (e + s - 1) in
+      float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s) e s
+    else mk_uninterpreted_term "ieee_format_to_fp" [bv_t] (Ty.Tfloat (e, s))
 
   let fp_prelude_op eb sb name args ret_ty =
     let eb = Ints.of_int eb in

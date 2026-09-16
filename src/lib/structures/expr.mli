@@ -261,6 +261,10 @@ val mk_trigger : ?user:bool -> ?depth:int -> ?hyp:t list -> t list -> trigger
 
 val mk_term : Symbols.t -> t list -> Ty.t -> t
 
+val mk_uninterpreted_term : string -> t list -> Ty.t -> t
+(** [mk_uninterpreted_term name args ret_ty] builds an application of the
+    uninterpreted symbol [name] to [args], of type [ret_ty]. *)
+
 val vrai : t
 
 val faux : t

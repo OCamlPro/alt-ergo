@@ -1243,9 +1243,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
               (* TODO: rem is not currently in the axiomatization, its semantics
                  need to be either axiomatized or implemented in Alt-Ergo. It is
                  treated as an uninterpreted symbol in the meantime. *)
-              let ty = dty_to_ty term_ty in
-              let sy = Sy.name (get_basename tcst.path) in
-              E.mk_term sy (List.map mk args) ty
+              E.mk_uninterpreted_term (get_basename tcst.path)
+                (List.map mk args) (dty_to_ty term_ty)
             | Min { e = eb; s = sb }, [x; y] -> E.FP.min ~eb ~sb (mk x) (mk y)
             | Max { e = eb; s = sb }, [x; y] -> E.FP.max ~eb ~sb (mk x) (mk y)
             (* comparisons *)
@@ -1276,9 +1275,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
                 | To_ubv { m = _; e = _; s = _ }
                 | To_sbv { m = _; e = _; s = _ } ),
                 [_; _] ) ->
-              let ty = dty_to_ty term_ty in
-              let sy = Sy.name (get_basename tcst.path) in
-              E.mk_term sy (List.map mk args) ty
+              E.mk_uninterpreted_term (get_basename tcst.path)
+                (List.map mk args) (dty_to_ty term_ty)
             (* can't be applied *)
             | (RoundingMode | T _ | Fp _), _
             | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
