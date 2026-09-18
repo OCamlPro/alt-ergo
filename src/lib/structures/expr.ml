@@ -3125,9 +3125,6 @@ module FP = struct
     (* float conversion function *)
     let ae_float = "ae.float"
 
-    (* generic float type *)
-    let t = "ae.fp.t"
-
     (* arithmetic with rounding mode *)
     let add = "ae.fp.add"
 

@@ -695,10 +695,6 @@ module FP : sig
 
     val ae_float : string
 
-    (** {2 Generic float type} *)
-
-    val t : string
-
     (** {2 Arithmetic with rounding mode} *)
 
     val add : string

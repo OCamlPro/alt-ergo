@@ -480,11 +480,6 @@ and handle_ty_app ?(update = false) ty_c l =
   match Cache.find_ty ty_c with
   | Tadt (hs, _) -> Tadt (hs, tyl)
   | Text (_, s) -> Text (tyl, s)
-  | Tvar { path = Absolute { name; _ } | Local { name; _ }; _ } as tv
-    when Compat.List.is_empty tyl && String.equal name E.FP.Names.t ->
-    (* To get the generic abstract float type from the axiomatization which is
-       stored as type varialbe `ae.fp.t`. *)
-    tv
   | _ -> assert false
 
 (** Handles a simple type declaration. *)
@@ -511,17 +506,9 @@ let mk_ty_decl (ty_c : DE.ty_cst) =
     in
     let ty = Ty.t_adt ~body:(Some cs) ty_c tyvl in
     Cache.store_ty ty_c ty
-  | None | Some Abstract -> (
-    match ty_c with
-    | { path = Absolute { name; _ }; _ }
-      when Options.get_smt_lib_fpa () && String.equal name E.FP.Names.t ->
-      (* Storing the generic abstract float type from the axiomatization as a
-         type variable `ae.fp.t`, so that axioms defined for it can apply for
-         specific instances of the Float(es,sb) type. *)
-      Cache.store_ty ty_c (Ty.named_tvar E.FP.Names.t)
-    | _ ->
-      let ty = Ty.text [] ty_c in
-      Cache.store_ty ty_c ty)
+  | None | Some Abstract ->
+    let ty = Ty.text [] ty_c in
+    Cache.store_ty ty_c ty
 
 (** Handles term declaration by storing the eventual present type variables in
     the cache as well as the symbol associated to the term. *)
