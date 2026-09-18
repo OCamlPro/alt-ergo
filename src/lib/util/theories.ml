@@ -71,7 +71,7 @@ let prelude_filename = function
   | Fpa -> "fpa.ae"
   | Ria -> "ria.ae"
   | Nra -> "nra.ae"
-  | SmtFloat -> "smt-lib-fpa.smt2"
+  | SmtFloat -> "smt-lib-fpa.psmt2"
 
 let filename th = Fmt.str "<builtins>/%s" (prelude_filename th)
 
