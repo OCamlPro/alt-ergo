@@ -541,17 +541,17 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp =
 let mk_theory_opt () no_contracongru no_fm no_nla no_tcp no_theory restricted
     tighten_vars theories =
   set_smt_lib_fpa
-    (List.exists (Theories.equal (Theories.Prelude Theories.SmtFloat)) theories);
-  set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
+    (Theories.is_enabled (Theories.Prelude Theories.SmtFloat) theories);
+  set_no_ac (Theories.is_disabled Theories.AC theories);
   set_no_fm no_fm;
   set_no_nla no_nla;
   set_no_tcp no_tcp;
   set_no_theory no_theory;
   set_restricted restricted;
-  set_disable_adts (not (List.exists (Theories.equal Theories.ADT) theories));
+  set_disable_adts (Theories.is_disabled Theories.ADT theories);
   set_tighten_vars tighten_vars;
   set_no_contracongru no_contracongru;
-  set_theory_preludes (Theories.preludes theories);
+  set_enabled_theories theories;
   `Ok ()
 
 let halt_opt version_info where =
@@ -1439,18 +1439,21 @@ let parse_theory_opt =
             & info ["disable-theory"; "disable-theories"] ~docs ~doc ~docv))
     in
     let preludes enable_theories disable_theories =
-      let theories = Theories.Set.of_list Theories.default in
-      let rec aux th en dis =
+      let theories =
+        List.fold_left
+          (fun acc th -> Theories.Map.add th Theories.Default acc)
+          Theories.Map.empty Theories.default
+      in
+      let rec aux m en dis =
         match en, dis with
-        | _ :: _, [] ->
-          aux (List.fold_left (fun th en -> Theories.Set.add en th) th en) [] []
+        | _ :: _, [] -> aux (List.fold_left Theories.enable_theory m en) [] []
         | e :: _, d :: _ when e = d ->
           Fmt.error_msg
             "theory prelude '%a' cannot be both enabled and\n          disabled"
             Theories.pp e
-        | e :: en, d :: _ when e < d -> aux (Theories.Set.add e th) en dis
-        | _, d :: dis -> aux (Theories.Set.filter (( <> ) d) th) en dis
-        | [], [] -> Ok (Theories.Set.elements th)
+        | e :: en, d :: _ when e < d -> aux (Theories.enable_theory m e) en dis
+        | _, d :: dis -> aux (Theories.disable_theory m d) en dis
+        | [], [] -> Ok (Theories.Map.bindings m)
       in
       aux theories
         (List.fast_sort Theories.compare enable_theories)
