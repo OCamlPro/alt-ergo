@@ -366,11 +366,12 @@ let select_triggers qvars (body : DE.Term.t) : DE.Term.t list list =
 (* Select triggers from the body, unless one is already set. *)
 let process_axiom ~fp_tyvar qvars (inner : DE.Term.t) : unit =
   current_fp_tyvar := fp_tyvar;
-  if List.is_empty (DE.Term.get_tag_list inner DE.Tags.triggers)
-  then
+  match DE.Term.get_tag_list inner DE.Tags.triggers with
+  | _ :: _ -> ()
+  | [] -> (
     match select_triggers qvars inner with
     | [] -> ()
     | pats ->
       (* wrap any pattern with multiple terms as a multi-trigger *)
       DE.Term.set_tag inner DE.Tags.triggers
-        (List.map (function [t] -> t | ts -> DE.Term.multi_trigger ts) pats)
+        (List.map (function [t] -> t | ts -> DE.Term.multi_trigger ts) pats))
