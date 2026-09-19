@@ -43,7 +43,7 @@
     Sig Sig_rel Theory Uf Use Domains Domains_intf Rel_utils Bitlist
     ; structures
     Commands Errors Explanation Fp_value Fpa_rounding
-    Profiling Satml_types Symbols
+    Profiling Satml_types Symbols Satml_types_intf
     Expr Var Ty Xliteral ModelMap Id Objective Literal
     ; util
     Emap Gc_debug Hconsing Hstring Heap Numbers Uqueue
