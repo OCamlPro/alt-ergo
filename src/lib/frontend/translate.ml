@@ -132,6 +132,10 @@ end
 (** Builtins *)
 type _ DStd.Builtin.t +=
   | Float
+  | FloatEbSb
+        (** Same as [Float], but where the first two arguments are [(eb, sb)]
+            rather than [(prec, exp_min)], used for the SMT-LIB FPA theory
+            axiomatization. *)
   | AERound of int * int  (** Equivalent of Float for the SMT2 format. *)
   | Integer_round
   | Abs_real
@@ -352,7 +356,7 @@ let smt_fpa_builtins =
   let ae_float_cst =
     let name = E.FP.Names.ae_float in
     let ty = DT.(arrow [int; int; fpa_rounding_mode; real] real) in
-    DE.Id.mk ~name ~builtin:Float (DStd.Path.global name) ty
+    DE.Id.mk ~name ~builtin:FloatEbSb (DStd.Path.global name) ty
   in
   let sqrt_real_cst =
     let name = "sqrt_real" in
@@ -1326,6 +1330,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           semantic_trigger ~loc ?var trigger
         (* Custom builtins *)
         | Float, _ -> op Float
+        | FloatEbSb, _ -> op FloatEbSb
         | AERound (i, j), _ ->
           let args =
             let i = E.Ints.of_int i in
