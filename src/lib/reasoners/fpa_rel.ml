@@ -421,13 +421,17 @@ let real_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Treal in
   E.Set.add lhs terms, mk_eq_fact lhs (E.Reals.of_Z literal) :: facts
 
+let compute_emax_min_exp eb sb =
+  let bias = (1 lsl (eb - 1)) - 1 in
+  let emax = bias + 1 in
+  let min_exp = emax + sb - 3 in
+  emax, min_exp
+
 let get_literals env eb sb =
   match Hashtbl.find_opt env.literals_cache (eb, sb) with
   | Some c -> c
   | None ->
-    let bias = (1 lsl (eb - 1)) - 1 in
-    let emax = bias + 1 in
-    let min_exp = emax + sb - 3 in
+    let emax, min_exp = compute_emax_min_exp eb sb in
     let max_int_z =
       if emax >= sb then Some (Z.sub (pow2 emax) (pow2 (emax - sb))) else None
     in
@@ -551,7 +555,7 @@ let flush_domain_facts domains =
 
 let register_aefloat_arg_watch uf term ds =
   match E.term_view term with
-  | { E.f = Sy.Op Float; xs = [eb; sb; mode; _x]; _ } ->
+  | { E.f = Sy.Op FloatEbSb; xs = [eb; sb; mode; _x]; _ } ->
     let eb, _ = Uf.find uf eb in
     let sb, _ = Uf.find uf sb in
     let mode, ex = Uf.find uf mode in
@@ -599,9 +603,10 @@ let add env uf _r term =
 let mk_aefloat_eq_fact term (eb, sb, mode, ex) =
   match E.term_view term with
   | { E.xs = [_; _; _; x]; _ } ->
+    let _, min_exp = compute_emax_min_exp eb sb in
     let repl =
       E.mk_term (Sy.Op Float)
-        [E.Ints.of_int eb; E.Ints.of_int sb; mode; x]
+        [E.Ints.of_int sb; E.Ints.of_int min_exp; mode; x]
         Ty.Treal
     in
     mk_eq_fact ~ex term repl

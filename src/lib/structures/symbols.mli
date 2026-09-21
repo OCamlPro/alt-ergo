@@ -66,6 +66,10 @@ type operator =
   | BV2Nat
   (* FP *)
   | Float
+  | FloatEbSb
+      (** Same as [Float], but where the first two arguments are [(eb, sb)]
+          rather than [(prec, exp_min)], used for the SMT-LIB FPA theory
+          axiomatization. *)
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default

@@ -143,3 +143,17 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   > EOF
   
   unsat
+
+  $ alt-ergo -t 1 --timelimit-per-goal -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-fun x () Float64)
+  > (declare-fun y () Float64)
+  > (declare-fun r () Float64)
+  > (assert (= x (fp #b1 #b01011000011 #b1101000000101001011111101100101000101111000010110111)))
+  > (assert (= y (fp #b1 #b11011011000 #b1110011100101011100011010111111001100001011001000011)))
+  > (assert (= r (fp #b0 #b11011011000 #b1110011100101011100011010111111001100001011001000011)))
+  > (assert (= (fp.sub roundTowardPositive x y) r))
+  > (check-sat)
+  > EOF
+  
+  unknown
