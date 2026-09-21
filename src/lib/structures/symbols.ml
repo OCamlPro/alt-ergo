@@ -68,6 +68,7 @@ type operator =
   | BV2Nat
   (* FP *)
   | Float
+  | FloatEbSb
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default
@@ -235,13 +236,13 @@ let compare_operators op1 op2 =
     | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
     | ( _,
         ( Plus | Minus | Mult | Div | Modulo | Real_is_int | Concat | Extract _
-        | Sign_extend _ | Repeat _ | Get | Set | Float | Sqrt_real | Abs_int
-        | Abs_real | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
-        | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-        | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor | BVxor
-        | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr | Int2BV _
-        | BV2Nat | Not_theory_constant | Is_theory_constant | Linear_dependency
-        | Constr _ | Destruct _ | Tite ) ) ->
+        | Sign_extend _ | Repeat _ | Get | Set | Float | FloatEbSb | Sqrt_real
+        | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
+        | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int | Max_real
+        | Max_int | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor
+        | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
+        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
+        | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -403,6 +404,7 @@ module AEPrinter = struct
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
     | Float -> Fmt.pf ppf "float"
+    | FloatEbSb -> Fmt.pf ppf "ae.float"
     | Not_theory_constant -> Fmt.pf ppf "not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "linear_dependency"
@@ -495,6 +497,7 @@ module SmtPrinter = struct
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"
+    | FloatEbSb -> Fmt.pf ppf "ae.float"
     (* Not in the SMT-LIB standard *)
     | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
