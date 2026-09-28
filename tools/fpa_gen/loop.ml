@@ -16,32 +16,30 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Literal floating-point values. *)
+module State = struct
+  include Dolmen_loop.State
 
-type t =
-  | Plus_infinity
-  | Minus_infinity
-  | Plus_zero
-  | Minus_zero
-  | NaN
-  | Finite of Numbers.Q.t
+  let is_interactive _ = false
+end
 
-val compare : t -> t -> int
+module Pipeline = Dolmen_loop.Pipeline.Make (State)
+module Parser = Dolmen_loop.Parser.Make (State)
+module Header = Dolmen_loop.Headers.Make (State)
+module Logic = Dolmen_loop.Logic
 
-val equal : t -> t -> bool
+module Typer = struct
+  module T = Dolmen_loop.Typer.Typer (State)
+  include T
+  include
+    Dolmen_loop.Typer.Make (Dolmen.Std.Expr) (Dolmen.Std.Expr.Print) (State) (T)
 
-val pp : t Fmt.t
-(** [pp ppf v] prints the concrete FP value [v] in the Alt-Ergo native format.
-*)
+  let init_pipe = init
 
-val pp_smtlib : int -> int -> t Fmt.t
-(** [pp_smtlib eb sb ppf v] prints the concrete FP value [v] of precision
-    [(eb, sb)] in the SMT-LIB format. *)
+  let init = T.init
+end
 
-val mk_fp_literal :
-  neg:bool -> biased_exp:int -> mantissa:Z.t -> e:int -> s:int -> t
-(** [mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s] creates a floating-point
-    literal where [neg] is the sign bit, [biased_exp] is the biased exponent,
-    [mantissa] is the significand bits (without the hidden bit), [e] is the
-    exponent width, and [s] is the significand width (including the hidden bit).
-*)
+module Export =
+  Dolmen_loop.Export.Make (Dolmen.Std.Expr) (Dolmen_std.Term.View.Sexpr)
+    (Dolmen_std.Expr.View.TFF)
+    (State)
+    (Typer)

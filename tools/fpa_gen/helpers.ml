@@ -16,32 +16,25 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Literal floating-point values. *)
+module Path = Dolmen.Std.Path
+module DE = Dolmen.Std.Expr
 
-type t =
-  | Plus_infinity
-  | Minus_infinity
-  | Plus_zero
-  | Minus_zero
-  | NaN
-  | Finite of Numbers.Q.t
+let path_name (p : Path.t) : string =
+  match p with
+  | Path.Absolute { path = []; name } | Path.Local { name } -> name
+  | _ -> assert false
 
-val compare : t -> t -> int
+let cst_path_name (c : DE.Term.Const.t) : string =
+  path_name (DE.Term.Const.path c)
 
-val equal : t -> t -> bool
+let rec term_uses_vars (vl : DE.Term.Var.t list) (t : DE.Term.t) : bool =
+  match t.term_descr with
+  | DE.Var v' -> List.exists (DE.Term.Var.equal v') vl
+  | DE.Cst _ -> false
+  | DE.App (f, _, args) ->
+    term_uses_vars vl f || List.exists (term_uses_vars vl) args
+  | DE.Binder (_, body) -> term_uses_vars vl body
+  | _ -> false
 
-val pp : t Fmt.t
-(** [pp ppf v] prints the concrete FP value [v] in the Alt-Ergo native format.
-*)
-
-val pp_smtlib : int -> int -> t Fmt.t
-(** [pp_smtlib eb sb ppf v] prints the concrete FP value [v] of precision
-    [(eb, sb)] in the SMT-LIB format. *)
-
-val mk_fp_literal :
-  neg:bool -> biased_exp:int -> mantissa:Z.t -> e:int -> s:int -> t
-(** [mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s] creates a floating-point
-    literal where [neg] is the sign bit, [biased_exp] is the biased exponent,
-    [mantissa] is the significand bits (without the hidden bit), [e] is the
-    exponent width, and [s] is the significand width (including the hidden bit).
-*)
+let term_uses_all_vars (vl : DE.Term.Var.t list) (t : DE.Term.t) : bool =
+  List.for_all (fun v -> term_uses_vars [v] t) vl

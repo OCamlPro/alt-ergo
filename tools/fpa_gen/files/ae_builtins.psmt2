@@ -1,0 +1,2 @@
+(set-logic ALL)
+(declare-fun ae.float64 (RoundingMode Real) Real)
