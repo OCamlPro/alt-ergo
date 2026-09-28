@@ -74,15 +74,19 @@ let q_to_bvs eb sb q =
   let bias = fp_bias eb in
   let min_exp = fp_min_exp eb sb in
   let neg = Q.sign q < 0 in
-  (* (_, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
-  let _, m, e =
+  (* (r, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
+  let r, m, e =
     Fpa_rounding.float_of_rational sb min_exp
       Dolmen.Std.Builtin.Float.RoundNearestTiesToEven (Q.abs q)
   in
-  (* hidden_bit = 2^(sb-1), m >= hidden_bit -> normal *)
+  (* q is decoded from a float literal, so assert that rounding is exact which
+     means that m < 2^sb. *)
+  assert (Q.equal r (Q.abs q));
+  (* hidden_bit = 2^(sb-1) *)
   let hidden_bit = Z.shift_left Z.one (sb - 1) in
   let biased_exp, significand =
-    if Z.compare m hidden_bit >= 0
+    (* m < 2^sb, so m >= hidden_bit (normal) iff bit (sb-1) of m is set. *)
+    if Z.testbit m (sb - 1)
     then
       (* normal: biased_exp = (e + sb - 1) + bias; strip the hidden bit. *)
       e + (sb - 1) + bias, Z.sub m hidden_bit
@@ -100,6 +104,8 @@ let pp_smtlib eb sb ppf = function
   | NaN -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
   | Finite q ->
     let neg, biased_exp, significand = q_to_bvs eb sb q in
+    (* all-ones exponent is reserved for infinities and NaN *)
+    assert (biased_exp < (1 lsl eb) - 1);
     let bfmt n = Fmt.str "%%0%db" n in
     let sign_s = if neg then "1" else "0" in
     let exp_s = Z.format (bfmt eb) (Z.of_int biased_exp) in
