@@ -33,4 +33,8 @@ let lexing_positions = Dolmen.Std.Loc.lexing_positions
 
 let dummy = Dolmen.Std.Loc.dummy
 
-let report = Dolmen.Std.Loc.fmt
+let report ppf
+    Dolmen.Std.Loc.{ file; start_line; start_line_offset; stop_line_offset; _ }
+  =
+  Format.fprintf ppf "File \"%s\", line %d, characters %d-%d:" file start_line
+    start_line_offset stop_line_offset
