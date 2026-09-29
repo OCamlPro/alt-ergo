@@ -159,3 +159,5 @@ disabling theories in smt-lib files with `set-option`
   
   unsat
 
+This line is matched by Why3 to extract the number of steps. See `alt_ergo_common.drv` in the Why3 repository.
+  $ echo '(set-logic ALL) (check-sat)' | alt-ergo 2>&1 | grep -E '^; File ".*", line [0-9]+, characters [0-9]+-[0-9]+:.*([0-9]+.?[0-9]*) steps)' >/dev/null
