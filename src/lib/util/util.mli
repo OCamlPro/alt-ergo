@@ -140,9 +140,7 @@ val internal_error : ('a, Format.formatter, unit, 'b) format4 -> 'a
 
 module Syntax : sig
   val ( let& ) : (scope:('a -> 'b) -> 'b) -> ('a -> 'b) -> 'b
-  (** [let&] is a "resource binding" operator from
-      {{:https://munch-maccagnoni.fr/software/ocaml/memprof-limits.0.3.0/memprof-limits/Memprof_limits/Resource_bind/index.html}
-       memprof-limits}.
+  (** [let&] is a "resource binding" operator from memprof-limits
 
       It provides a nice notation for resources cleaned up at the end of scope:
 
