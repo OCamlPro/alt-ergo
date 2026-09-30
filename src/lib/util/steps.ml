@@ -221,23 +221,30 @@ let with_step_limit limit ~scope =
     (* SMT-LIB standard: 0 disables the limit *)
     if limit = 0 then old_steps_bound else get_steps () + limit
   in
-  steps_bound
-    := (* It is not allowed to bypass an existing limit. *)
-       if old_steps_bound < 0
-       then bound_for_limit
-       else min old_steps_bound bound_for_limit;
-  match scope () with
+  let new_steps_bound =
+    (* It is not allowed to bypass an existing limit. *)
+    if old_steps_bound < 0
+    then bound_for_limit
+    else min old_steps_bound bound_for_limit
+  in
+  (* Note: code within [BEGIN ATOMIC] .. [END ATOMIC] below must not raise any
+     exception, and thus must not contain allocations due to asynchronous
+     exceptions -- otherwise the limit might end up in an inconsistent state. *)
+  (* BEGIN ATOMIC *)
+  steps_bound := new_steps_bound;
+  match (* END ATOMIC *) scope () with
+  (* BEGIN ATOMIC *)
   | result ->
     steps_bound := old_steps_bound;
+    (* END ATOMIC *)
     result
+  (* BEGIN ATOMIC *)
   | exception e -> (
+    steps_bound := old_steps_bound;
+    (* END ATOMIC *)
     match Printexc.get_raw_backtrace () with
-    | bt ->
-      steps_bound := old_steps_bound;
-      Printexc.raise_with_backtrace e bt
-    | exception Out_of_memory ->
-      steps_bound := old_steps_bound;
-      raise e)
+    | bt -> Printexc.raise_with_backtrace e bt
+    | exception Out_of_memory -> raise e)
 
 let get_steps_bound () = !steps_bound
 
