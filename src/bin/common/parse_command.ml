@@ -911,7 +911,10 @@ let parse_limit_opt =
       & info ["timelimit-interpretation"] ~docv ~docs ~doc)
   in
   let steps_bound =
-    let doc = "Set the maximum number of steps." in
+    let doc =
+      "Set the maximum number of steps. Consider using \
+       --reproducible-resource-limit instead."
+    in
     let docv = "STEPS" in
     Arg.(
       value
@@ -919,7 +922,11 @@ let parse_limit_opt =
       & info ["S"; "steps-bound"] ~docv ~doc)
   in
   let reproducible_resource_limit =
-    let doc = "Set the reproducible resource limit." in
+    let doc =
+      "Set the per-goal reproducible resource limit in steps (0 disables the \
+       limit). This is the same as setting :reproducible-resource-limit from \
+       SMT-LIB scripts. "
+    in
     let docv = "LIMIT" in
     Arg.(value & opt int 0 & info ["reproducible-resource-limit"] ~docv ~doc)
   in
