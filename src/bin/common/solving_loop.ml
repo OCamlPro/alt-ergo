@@ -195,10 +195,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       let ftdn_env = FE.init_env ?selector_inst used_context in
       let () =
         try
-          (* At the moment we ignore the [Error] case here: the unknown reason
-             should have already been set internally by the solver when the
-             [Util.Step_limit_reached] exception was raised. *)
-          let ( let& ) f scope = f ~scope in
+          let open Util.Syntax in
           let& () = Steps.with_step_limit limit in
           List.iter (FE.process_decl ~hook_on_status ftdn_env) cnf
         with StopProcessDecl -> ()
