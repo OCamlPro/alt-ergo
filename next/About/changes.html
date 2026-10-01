@@ -62,6 +62,7 @@
 <li class="toctree-l2"><a class="reference internal" href="license.html">Licenses</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-3">v2.6.3</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-6-2">v2.6.2</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#supported-features">Supported features</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#smt-lib-support">SMT-LIB support</a></li>
@@ -175,12 +176,27 @@ the <a class="reference external" href="https://github.com/OCamlPro/Alt-Ergo">of
 GitHub</a>.</p>
 <section id="unreleased">
 <h2>unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading"></a></h2>
-<ul class="simple">
+<ul>
 <li><p>Support the <code class="docutils literal notranslate"><span class="pre">int.pow2</span></code> function, which takes an integer <code class="docutils literal notranslate"><span class="pre">n</span></code> and computes
 <code class="docutils literal notranslate"><span class="pre">ae.pow_int</span> <span class="pre">2</span> <span class="pre">n</span></code> (#1365)</p></li>
 <li><p>Support parsing of SMT-LIB FPA Theory literals and add the theory <code class="docutils literal notranslate"><span class="pre">smt.float</span></code>
 that enables the support for the SMT-LIB FPA Theory, and that can be used
 with the cmdline option <code class="docutils literal notranslate"><span class="pre">--enable-theory</span> <span class="pre">smt.float</span></code> (#1358)</p></li>
+<li><p>Added support for the <code class="docutils literal notranslate"><span class="pre">:reproducible-resource-limit</span></code> and
+<code class="docutils literal notranslate"><span class="pre">--reproducible-resource-limit</span></code> options, following the SMT-LIB standard
+(#1353)</p>
+<p>The reproducible resource limit was previously using a time-based limit,
+which does not respect the reproducibility criterion outlined in the SMT-LIB
+standard. It now defines a per-goal step limit, which applies in addition to
+the <strong>global</strong> step limit (defined with <code class="docutils literal notranslate"><span class="pre">--steps-bound</span></code>), if any.</p>
+<p>We encourage users of the global step limit (<code class="docutils literal notranslate"><span class="pre">--steps-bound</span></code>) to switch to
+the reproducible resource limit instead.</p>
+</li>
+</ul>
+</section>
+<section id="v2-6-3">
+<h2>v2.6.3<a class="headerlink" href="#v2-6-3" title="Permalink to this heading"></a></h2>
+<ul class="simple">
 <li><p>Bump minimal cmdliner version to 2.0 (#1340)</p></li>
 </ul>
 </section>
