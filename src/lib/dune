@@ -49,7 +49,7 @@
     Emap Gc_debug Hconsing Hstring Heap Numbers Uqueue
     Options Timers Util Vec Version Steps Printer
     My_list Theories Nest Compat Loc
-    Preludes
+    Preludes Container_types_intf Container_types
   )
 
  (js_of_ocaml
