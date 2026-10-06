@@ -1344,7 +1344,7 @@ let no_capture_issue s_t binders =
   then true
   else begin
     Printer.print_wrn "captures between@,%aand%a!@,(captured = %a)"
-      (Var.Map.pp print) s_t pp_binders binders pp_binders capt_bind;
+      (Var.Map.print print) s_t pp_binders binders pp_binders capt_bind;
     false
   end
 

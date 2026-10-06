@@ -232,8 +232,8 @@ module Make (X : Arg) : S with type theory = X.t = struct
       if Options.get_debug_matching () >= 3
       then
         let print fmt Matching_types.{ sbs; sty; _ } =
-          Format.fprintf fmt ">>> sbs= %a | sty= %a@ " (SubstE.pp E.print) sbs
-            Ty.print_subst sty
+          Format.fprintf fmt ">>> sbs= %a | sty= %a@ " (SubstE.print E.print)
+            sbs Ty.print_subst sty
         in
         print_dbg ~module_name:"Matching" ~function_name:"match_pats_modulo"
           "@[<v 2>match_pat_modulo: %a  with accumulated substs@ %a@]" E.print
@@ -244,7 +244,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
       then
         print_dbg ~module_name:"Matching" ~function_name:"match_one_pat"
           "match_pat: %a with subst: sbs= %a | sty= %a" E.print pat0
-          (SubstE.pp E.print) sbs Ty.print_subst sty
+          (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_one_pat_against Matching_types.{ sbs; sty; _ } pat0 t =
       if Options.get_debug_matching () >= 3
@@ -252,21 +252,21 @@ module Make (X : Arg) : S with type theory = X.t = struct
         print_dbg ~module_name:"Matching" ~function_name:"match_one_pat_against"
           "@[<v 0>match_pat: %a against term %a@ with subst:  sbs= %a | sty= \
            %a@]"
-          E.print pat0 E.print t (SubstE.pp E.print) sbs Ty.print_subst sty
+          E.print pat0 E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_term Matching_types.{ sbs; sty; _ } t pat =
       if Options.get_debug_matching () >= 3
       then
         print_dbg ~module_name:"Matching" ~function_name:"match_term"
           "I match %a against %a with subst: sbs=%a | sty= %a" E.print pat
-          E.print t (SubstE.pp E.print) sbs Ty.print_subst sty
+          E.print t (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_list Matching_types.{ sbs; sty; _ } pats xs =
       if Options.get_debug_matching () >= 3
       then
         print_dbg ~module_name:"Matching" ~function_name:"match_list"
           "I match %a against %a with subst: sbs=%a | sty= %a" E.print_list pats
-          E.print_list xs (SubstE.pp E.print) sbs Ty.print_subst sty
+          E.print_list xs (SubstE.print E.print) sbs Ty.print_subst sty
 
     let match_class_of t cl =
       if Options.get_debug_matching () >= 3
@@ -287,7 +287,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
         List.iter
           (fun gsbt ->
             print_dbg ~header:false ">>> sbs = %a  and  sbty = %a@ "
-              (SubstE.pp E.print) gsbt.sbs Ty.print_subst gsbt.sty)
+              (SubstE.print E.print) gsbt.sbs Ty.print_subst gsbt.sty)
           res
   end
   (*BISECT-IGNORE-END*)

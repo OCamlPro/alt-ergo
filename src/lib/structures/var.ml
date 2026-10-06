@@ -99,22 +99,16 @@ let print ppf { repr; id } = Fmt.pf ppf "%a~%d" pp_repr repr id
 
 let to_string = Fmt.to_to_string print
 
-module Set = Set.Make (struct
+module T0 = struct
   type nonrec t = t
 
+  let print = print
+
+  let equal = equal
+
+  let hash = hash
+
   let compare = compare
-end)
-
-module Map = struct
-  include Map.Make (struct
-    type nonrec t = t
-
-    let compare = compare
-  end)
-
-  let pp pp_elt =
-    let sep ppf () = Fmt.pf ppf " -> " in
-    Fmt.box @@ Fmt.braces
-    @@ Fmt.iter_bindings ~sep:Fmt.comma iter
-    @@ Fmt.pair ~sep print pp_elt
 end
+
+include Container_types.Make (T0)
