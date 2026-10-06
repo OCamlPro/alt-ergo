@@ -1144,16 +1144,16 @@ let terms env =
 (* Helper functions used by the caches during the computation of the model. *)
 module Cache = struct
   let store_array_get arrays_cache (t : E.t) (i : E.t) (v : E.t) =
-    match E.Table.find arrays_cache t with
+    match E.Tbl.find arrays_cache t with
     | exception Not_found ->
-      let values = E.Table.create 17 in
-      E.Table.add values i v;
-      E.Table.add arrays_cache t values
-    | values -> E.Table.replace values i v
+      let values = E.Tbl.create 17 in
+      E.Tbl.add values i v;
+      E.Tbl.add arrays_cache t values
+    | values -> E.Tbl.replace values i v
 end
 
 type cache =
-  { array_selects : Expr.t E.Table.t E.Table.t
+  { array_selects : Expr.t E.Tbl.t E.Tbl.t
         (** Stores all the get accesses to array names. *)
   }
 
@@ -1231,14 +1231,14 @@ let extract_concrete_model cache =
         terms (model, mrepr)
     in
     let model =
-      E.Table.fold
+      E.Tbl.fold
         (fun t vals mdl ->
           (* We produce a fresh identifiant for abstract value in order to
              prevent any capture. *)
           assert (E.is_model_term t);
           let ty = Expr.type_info t in
           let arr_val =
-            E.Table.fold
+            E.Tbl.fold
               (fun i v arr_val -> Expr.ArraysEx.store arr_val i v)
               vals t
           in
@@ -1271,5 +1271,5 @@ let extract_concrete_model cache =
     { Models.propositional = prop_model; model; term_values = mrepr }
 
 let extract_concrete_model ~prop_model ~defaults =
-  let cache : cache = { array_selects = E.Table.create 17 } in
+  let cache : cache = { array_selects = E.Tbl.create 17 } in
   fun env -> extract_concrete_model cache ~prop_model ~defaults env

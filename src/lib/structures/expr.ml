@@ -548,17 +548,19 @@ module Msbty : Map.S with type key = Ty.subst = Map.Make (struct
   let compare = Ty.compare_subst
 end)
 
-module TSet : Set.S with type elt = expr = Set.Make (struct
+module T0 = struct
   type t = expr
 
-  let compare = compare
-end)
+  let print = print
 
-module TMap : Map.S with type key = expr = Map.Make (struct
-  type t = expr
+  let equal = equal
+
+  let hash = hash
 
   let compare = compare
-end)
+end
+
+include Container_types.Make (T0)
 
 module H = struct
   type elt = t
@@ -730,7 +732,7 @@ let print_tagged_classes =
   fun fmt l ->
     List.iter
       (fun cl ->
-        let cl = List.filter is_labeled (TSet.elements cl) in
+        let cl = List.filter is_labeled (Set.elements cl) in
         if cl != [] then Format.fprintf fmt "\n{ %a }" (print_list_sep " , ") cl)
       l
 
@@ -1591,18 +1593,18 @@ and find_particular_subst =
     end
 
 let apply_subst, clear_subst_cache =
-  let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
+  let (cache : t Msbty.t Msbt.t Map.t ref) = ref Map.empty in
   let apply_subst ((sbt, sbty) as s) f =
     let ch = !cache in
-    try TMap.find f ch |> Msbt.find sbt |> Msbty.find sbty
+    try Map.find f ch |> Msbt.find sbt |> Msbty.find sbty
     with Not_found ->
       let nf = apply_subst_aux s f in
-      let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
+      let c_sbt = try Map.find f ch with Not_found -> Msbt.empty in
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
-      cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
+      cache := Map.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
   in
-  let clear_subst_cache () = cache := TMap.empty in
+  let clear_subst_cache () = cache := Map.empty in
   apply_subst, clear_subst_cache
 
 let apply_subst s t =
@@ -1620,14 +1622,14 @@ let max_pure_subterms =
     | _ -> e.xs
   in
   let rec aux acc e =
-    if e.pure then TSet.add e acc else List.fold_left aux acc (args_of e)
+    if e.pure then Set.add e acc else List.fold_left aux acc (args_of e)
   in
-  fun e -> aux TSet.empty e
+  fun e -> aux Set.empty e
 
 let rec sub_terms acc e =
   match e.f with
   | Sy.Form _ | Sy.Lit _ -> acc
-  | _ -> List.fold_left sub_terms (TSet.add e acc) e.xs
+  | _ -> List.fold_left sub_terms (Set.add e acc) e.xs
 
 let args_of_lit e =
   match e.f with
@@ -1636,7 +1638,7 @@ let args_of_lit e =
   | _ when e.ty == Ty.Tbool -> [e]
   | _ -> assert false
 
-let max_terms_of_lit e = TSet.of_list @@ args_of_lit e
+let max_terms_of_lit e = Set.of_list @@ args_of_lit e
 
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
@@ -1644,16 +1646,16 @@ let max_ground_terms_of_lit =
     | Sy.Form _ | Sy.Lit _ -> assert false
     | _ ->
       if is_ground e
-      then TSet.add e acc
+      then Set.add e acc
       else List.fold_left max_sub_ground acc e.xs
   in
-  fun e -> List.fold_left max_sub_ground TSet.empty (args_of_lit e)
+  fun e -> List.fold_left max_sub_ground Set.empty (args_of_lit e)
 
 let atoms_rec_of_form =
   let rec atoms only_ground acc f =
     match form_view f with
     | Literal a ->
-      if (not only_ground) || is_ground a then TSet.add a acc else acc
+      if (not only_ground) || is_ground a then Set.add a acc else acc
     | Lemma { main = f; _ } | Skolem { main = f; _ } -> atoms only_ground acc f
     | Unit (f1, f2) | Clause (f1, f2, _) | Iff (f1, f2) | Xor (f1, f2) ->
       atoms only_ground (atoms only_ground acc f1) f2
@@ -1666,10 +1668,10 @@ let atoms_rec_of_form =
   fun ~only_ground f acc -> atoms only_ground acc f
 
 let max_ground_terms_rec_of_form f =
-  TSet.fold
-    (fun a acc -> TSet.union acc (max_ground_terms_of_lit a))
-    (atoms_rec_of_form ~only_ground:false f TSet.empty)
-    TSet.empty
+  Set.fold
+    (fun a acc -> Set.union acc (max_ground_terms_of_lit a))
+    (atoms_rec_of_form ~only_ground:false f Set.empty)
+    Set.empty
 
 (** Other smart constructors and skolemization functions **)
 
@@ -1682,7 +1684,7 @@ let resolution_of_literal a binders free_vty acc =
       let vars = free_vars t Var.Map.empty in
       Var.Map.for_all (fun v _ -> Var.Map.mem v vars) binders
     in
-    if cond then TSet.add t acc else acc
+    if cond then Set.add t acc else acc
   | _ -> acc
 
 let rec resolution_of_disj is_back f binders free_vty acc =
@@ -1717,7 +1719,7 @@ let sub_terms_of_formula f =
       then aux xx.let_e acc
       else sub_terms acc xx.let_e
   in
-  aux f TSet.empty
+  aux f Set.empty
 
 (* unification/matching like function, to detect when a backward triggers is too
    permessive (general) *)
@@ -1745,16 +1747,16 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
     | Daxiom | Dgoal ->
       let free_vty = f.vty in
       let cand =
-        resolution_of_toplevel_conj is_back f binders free_vty TSet.empty
+        resolution_of_toplevel_conj is_back f binders free_vty Set.empty
       in
       let others =
-        TSet.filter (fun t -> not (TSet.mem t cand)) (sub_terms_of_formula f)
+        Set.filter (fun t -> not (Set.mem t cand)) (sub_terms_of_formula f)
       in
-      TSet.fold
+      Set.fold
         (fun t acc ->
           if
             type_info t != Ty.Tbool
-            || TSet.exists (cand_is_more_general t) others
+            || Set.exists (cand_is_more_general t) others
           then acc
           else mk_trigger ~depth:t.depth [t] :: acc)
         cand []
@@ -1901,7 +1903,7 @@ let elim_iff f1 f2 ~with_conj =
 
 module Triggers = struct
   (* Set of patterns with their sets of free term and type variables. *)
-  module STRS = Set.Make (struct
+  module STRS = Stdlib.Set.Make (struct
     type t = expr * Var.Set.t * Ty.TvSet.t
 
     let compare (t1, _, _) (t2, _, _) = compare t1 t2
@@ -2099,7 +2101,7 @@ module Triggers = struct
       let l = unique_stable_sort l in
       List.rev (atmost [] n l)
 
-  module SLLT = Set.Make (struct
+  module SLLT = Stdlib.Set.Make (struct
     type t = expr list * Var.Set.t * Ty.TvSet.t
 
     let compare (a, y1, _) (b, y2, _) =
@@ -2289,22 +2291,22 @@ module Triggers = struct
         let s =
           List.fold_left
             (fun s t ->
-              if TMap.mem t s then s else TMap.add t (sub_terms TSet.empty t) s)
-            TMap.empty trig.content
+              if Map.mem t s then s else Map.add t (sub_terms Set.empty t) s)
+            Map.empty trig.content
         in
         let res =
-          TMap.fold
+          Map.fold
             (fun t _ acc ->
-              let rm = TMap.remove t acc in
-              if TMap.exists (fun _ sub -> TSet.mem t sub) rm then rm else acc)
+              let rm = Map.remove t acc in
+              if Map.exists (fun _ sub -> Set.mem t sub) rm then rm else acc)
             s s
         in
         let sz_l = List.length trig.content in
-        let sz_s = TMap.cardinal res in
+        let sz_s = Map.cardinal res in
         if sz_l = sz_s
         then trig
         else
-          let content = TMap.fold (fun t _ acc -> t :: acc) res [] in
+          let content = Map.fold (fun t _ acc -> t :: acc) res [] in
           let content = List.stable_sort pat_weight content in
           if Options.get_verbose ()
           then
@@ -2775,9 +2777,6 @@ let purify_form f =
   Purification.lets_counter := 0;
   Purification.purify_form f
 
-module Set = TSet
-module Map = TMap
-
 (******)
 
 type gformula =
@@ -3184,11 +3183,3 @@ module ArraysEx = struct
 
   let store a i v = mk_term Sy.(Op Set) [a; i; v] (type_info a)
 end
-
-module Table = Hashtbl.Make (struct
-  type nonrec t = t
-
-  let hash = hash
-
-  let equal = equal
-end)
