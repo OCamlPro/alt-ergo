@@ -125,198 +125,6 @@ type form_view =
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
 
-(** Comparison and hashing functions *)
-
-(* We keep true and false as repr * ordering is influenced by
-   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
-   that fresh vars will be smaller *)
-(* XXX Uf.term_repr sensitive to the way this function is coded *)
-let compare t1 t2 =
-  if t1 == t2
-  then 0
-  else
-    let c = t1.depth - t2.depth in
-    if c <> 0 then c else t1.tag - t2.tag
-
-let equal t1 t2 = t1 == t2
-
-let hash t = t.tag
-
-let uid t = t.tag
-
-let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  let c = Ty.compare_subst s_ty1 s_ty2 in
-  if c <> 0 then c else Var.Map.compare compare s_t1 s_t2
-
-let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  Ty.equal_subst s_ty1 s_ty2 || Var.Map.equal equal s_t1 s_t2
-
-let compare_let let1 let2 =
-  let c = Var.compare let1.let_v let2.let_v in
-  if c <> 0
-  then c
-  else
-    let c = compare let1.let_e let2.let_e in
-    if c <> 0 then c else compare let1.in_e let2.in_e
-
-let compare_binders = Var.Map.compare Ty.compare
-
-let[@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
-  try
-    List.iter2
-      (fun s t ->
-        let c = cmp_xxx s t in
-        if c <> 0 then raise (Util.Cmp c))
-      sk1 sk2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length sk1 - List.length sk2
-
-let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
-
-let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
-
-let compare_lists l1 l2 cmp_elts =
-  let res = Util.cmp_lists l1 l2 cmp_elts in
-  if res <> 0 then raise (Util.Cmp res)
-
-let compare_triggers trs1 trs2 =
-  try
-    List.iter2
-      (fun tr1 tr2 ->
-        compare_lists tr1.content tr2.content compare;
-        compare_lists tr1.hyp tr2.hyp compare;
-        compare_lists tr1.semantic tr2.semantic (fun a b ->
-            Util.compare_algebraic a b (function
-              | Interval (s, b1, b2), Interval (t, c1, c2) ->
-                let c = compare s t in
-                if c <> 0
-                then c
-                else
-                  let c = Sy.compare_bounds b1 c1 in
-                  if c <> 0 then c else Sy.compare_bounds b2 c2
-              | MapsTo (h1, t1), MapsTo (h2, t2) ->
-                let c = compare t1 t2 in
-                if c <> 0 then c else Var.compare h1 h2
-              | NotTheoryConst a, NotTheoryConst b
-              | IsTheoryConst a, IsTheoryConst b ->
-                compare a b
-              | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
-                let c = compare s1 s2 in
-                if c <> 0 then c else compare t1 t2
-              | ( _,
-                  ( Interval _ | MapsTo _ | NotTheoryConst _ | IsTheoryConst _
-                  | LinearDependency _ ) ) ->
-                assert false)))
-      trs1 trs2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length trs1 - List.length trs2
-
-let compare_quant
-    { main = f1;
-      binders = b1;
-      sko_v = sko_v1;
-      sko_vty = free_vty1;
-      user_trs = trs1;
-      _
-    }
-    { main = f2;
-      binders = b2;
-      sko_v = sko_v2;
-      sko_vty = free_vty2;
-      user_trs = trs2;
-      _
-    } =
-  let c = compare f1 f2 in
-  if c <> 0
-  then c
-  else
-    let c = compare_binders b1 b2 in
-    if c <> 0
-    then c
-    else
-      let c = compare_sko_vars sko_v1 sko_v2 in
-      if c <> 0
-      then c
-      else
-        let c = compare_sko_vty free_vty1 free_vty2 in
-        if c <> 0 then c else compare_triggers trs1 trs2
-
-module Msbt : Map.S with type key = expr Var.Map.t = Map.Make (struct
-  type t = expr Var.Map.t
-
-  let compare a b = Var.Map.compare compare a b
-end)
-
-module Msbty : Map.S with type key = Ty.subst = Map.Make (struct
-  type t = Ty.subst
-
-  let compare = Ty.compare_subst
-end)
-
-module TSet : Set.S with type elt = expr = Set.Make (struct
-  type t = expr
-
-  let compare = compare
-end)
-
-module TMap : Map.S with type key = expr = Map.Make (struct
-  type t = expr
-
-  let compare = compare
-end)
-
-module H = struct
-  type elt = t
-
-  type t = elt
-
-  let eq t1 t2 =
-    try
-      Sy.equal t1.f t2.f
-      && List.for_all2 ( == ) t1.xs t2.xs
-      && Ty.equal t1.ty t2.ty
-      && Util.compare_algebraic t1.bind t2.bind (function
-           | B_lemma q1, B_lemma q2 | B_skolem q1, B_skolem q2 ->
-             compare_quant q1 q2
-           | B_let a, B_let b -> compare_let a b
-           | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false)
-         = 0
-    with Invalid_argument _ -> false
-
-  let equal = eq
-
-  let hash t =
-    abs
-    @@ List.fold_left
-         (fun acc x -> (acc * 23) + x.tag)
-         ((7 * Hashtbl.hash t.bind) + (5 * Sy.hash t.f) + Ty.hash t.ty)
-         t.xs
-
-  let set_id tag x = { x with tag }
-
-  let initial_size = 9001
-
-  let disable_weaks () = Options.get_disable_weaks ()
-end
-
-module Labels = Hashtbl.Make (H)
-module HC = Hconsing.Make (H)
-module Hsko = Hashtbl.Make (H)
-
-module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
-  type t' = t
-
-  type t = t'
-
-  let hash = hash
-
-  let equal = equal
-end)
-
 (** pretty printing *)
 
 module SmtPrinter = struct
@@ -607,6 +415,198 @@ let pp_binders ppf =
   if Options.get_output_smtlib ()
   then SmtPrinter.pp_binders ppf
   else AEPrinter.pp_binders ppf
+
+(** Comparison and hashing functions *)
+
+(* We keep true and false as repr * ordering is influenced by
+   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
+   that fresh vars will be smaller *)
+(* XXX Uf.term_repr sensitive to the way this function is coded *)
+let compare t1 t2 =
+  if t1 == t2
+  then 0
+  else
+    let c = t1.depth - t2.depth in
+    if c <> 0 then c else t1.tag - t2.tag
+
+let equal t1 t2 = t1 == t2
+
+let hash t = t.tag
+
+let uid t = t.tag
+
+let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+  let c = Ty.compare_subst s_ty1 s_ty2 in
+  if c <> 0 then c else Var.Map.compare compare s_t1 s_t2
+
+let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+  Ty.equal_subst s_ty1 s_ty2 || Var.Map.equal equal s_t1 s_t2
+
+let compare_let let1 let2 =
+  let c = Var.compare let1.let_v let2.let_v in
+  if c <> 0
+  then c
+  else
+    let c = compare let1.let_e let2.let_e in
+    if c <> 0 then c else compare let1.in_e let2.in_e
+
+let compare_binders = Var.Map.compare Ty.compare
+
+let[@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
+  try
+    List.iter2
+      (fun s t ->
+        let c = cmp_xxx s t in
+        if c <> 0 then raise (Util.Cmp c))
+      sk1 sk2;
+    0
+  with
+  | Util.Cmp c -> c
+  | Invalid_argument _ -> List.length sk1 - List.length sk2
+
+let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
+
+let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
+
+let compare_lists l1 l2 cmp_elts =
+  let res = Util.cmp_lists l1 l2 cmp_elts in
+  if res <> 0 then raise (Util.Cmp res)
+
+let compare_triggers trs1 trs2 =
+  try
+    List.iter2
+      (fun tr1 tr2 ->
+        compare_lists tr1.content tr2.content compare;
+        compare_lists tr1.hyp tr2.hyp compare;
+        compare_lists tr1.semantic tr2.semantic (fun a b ->
+            Util.compare_algebraic a b (function
+              | Interval (s, b1, b2), Interval (t, c1, c2) ->
+                let c = compare s t in
+                if c <> 0
+                then c
+                else
+                  let c = Sy.compare_bounds b1 c1 in
+                  if c <> 0 then c else Sy.compare_bounds b2 c2
+              | MapsTo (h1, t1), MapsTo (h2, t2) ->
+                let c = compare t1 t2 in
+                if c <> 0 then c else Var.compare h1 h2
+              | NotTheoryConst a, NotTheoryConst b
+              | IsTheoryConst a, IsTheoryConst b ->
+                compare a b
+              | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
+                let c = compare s1 s2 in
+                if c <> 0 then c else compare t1 t2
+              | ( _,
+                  ( Interval _ | MapsTo _ | NotTheoryConst _ | IsTheoryConst _
+                  | LinearDependency _ ) ) ->
+                assert false)))
+      trs1 trs2;
+    0
+  with
+  | Util.Cmp c -> c
+  | Invalid_argument _ -> List.length trs1 - List.length trs2
+
+let compare_quant
+    { main = f1;
+      binders = b1;
+      sko_v = sko_v1;
+      sko_vty = free_vty1;
+      user_trs = trs1;
+      _
+    }
+    { main = f2;
+      binders = b2;
+      sko_v = sko_v2;
+      sko_vty = free_vty2;
+      user_trs = trs2;
+      _
+    } =
+  let c = compare f1 f2 in
+  if c <> 0
+  then c
+  else
+    let c = compare_binders b1 b2 in
+    if c <> 0
+    then c
+    else
+      let c = compare_sko_vars sko_v1 sko_v2 in
+      if c <> 0
+      then c
+      else
+        let c = compare_sko_vty free_vty1 free_vty2 in
+        if c <> 0 then c else compare_triggers trs1 trs2
+
+module Msbt : Map.S with type key = expr Var.Map.t = Map.Make (struct
+  type t = expr Var.Map.t
+
+  let compare a b = Var.Map.compare compare a b
+end)
+
+module Msbty : Map.S with type key = Ty.subst = Map.Make (struct
+  type t = Ty.subst
+
+  let compare = Ty.compare_subst
+end)
+
+module TSet : Set.S with type elt = expr = Set.Make (struct
+  type t = expr
+
+  let compare = compare
+end)
+
+module TMap : Map.S with type key = expr = Map.Make (struct
+  type t = expr
+
+  let compare = compare
+end)
+
+module H = struct
+  type elt = t
+
+  type t = elt
+
+  let eq t1 t2 =
+    try
+      Sy.equal t1.f t2.f
+      && List.for_all2 ( == ) t1.xs t2.xs
+      && Ty.equal t1.ty t2.ty
+      && Util.compare_algebraic t1.bind t2.bind (function
+           | B_lemma q1, B_lemma q2 | B_skolem q1, B_skolem q2 ->
+             compare_quant q1 q2
+           | B_let a, B_let b -> compare_let a b
+           | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false)
+         = 0
+    with Invalid_argument _ -> false
+
+  let equal = eq
+
+  let hash t =
+    abs
+    @@ List.fold_left
+         (fun acc x -> (acc * 23) + x.tag)
+         ((7 * Hashtbl.hash t.bind) + (5 * Sy.hash t.f) + Ty.hash t.ty)
+         t.xs
+
+  let set_id tag x = { x with tag }
+
+  let initial_size = 9001
+
+  let disable_weaks () = Options.get_disable_weaks ()
+end
+
+module Labels = Hashtbl.Make (H)
+module HC = Hconsing.Make (H)
+module Hsko = Hashtbl.Make (H)
+
+module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
+  type t' = t
+
+  type t = t'
+
+  let hash = hash
+
+  let equal = equal
+end)
 
 (** different views of an expression *)
 
