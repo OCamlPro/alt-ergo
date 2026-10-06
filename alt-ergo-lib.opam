@@ -62,14 +62,14 @@ license: [
 pin-depends: [
   [
     "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/hra687261/dolmen.git#abf073fb6720b0937513aff0f232fa13166e3645"
   ]
   [
     "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/hra687261/dolmen.git#abf073fb6720b0937513aff0f232fa13166e3645"
   ]
   [
     "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/hra687261/dolmen.git#abf073fb6720b0937513aff0f232fa13166e3645"
   ]
 ]
