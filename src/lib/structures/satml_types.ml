@@ -837,6 +837,15 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         Some p.Atom.neg
       with Not_found -> None)
 
+  (* Expand a proxy definition into clausal normal form.
+
+     The definition [p <=> l_1 \/ ... \/ l_n] is expanded into:
+
+     [(~p \/ l_1 \/ ... \/ l_n) /\ (p \/ ~l_1) /\ ... /\ (p \/ ~l_n)]
+
+     and the definition [p <=> l_1 /\ ... /\ l_n] is expanded into:
+
+     [(p \/ ~l_1 \/ ... \/ ~l_n) /\ (~p \/ l_1) /\ ... /\ (~p \/ l_n)] *)
   let expand_proxy_defn acc (p, l, is_and) =
     if is_and
     then (* p <=> (l1 and ... and l_n) *)
@@ -851,22 +860,22 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       let acc = List.fold_left (fun acc a -> [p; a.Atom.neg] :: acc) acc l in
       (p.Atom.neg :: l) :: acc
 
-  let cnf_abstr hcons f new_vars =
-    let rec abstr hcons f new_proxies new_vars =
+  let cnf_abstr hcons f new_vars new_clauses =
+    let rec abstr hcons f new_vars new_clauses =
       match f.view with
-      | UNIT a -> a, new_proxies, new_vars
+      | UNIT a -> a, new_vars, new_clauses
       | AND l | OR l -> (
         match get_proxy_of hcons f with
-        | Some p -> p, new_proxies, new_vars
+        | Some p -> p, new_vars, new_clauses
         | None ->
-          let l, new_proxies, new_vars =
+          let l, new_vars, new_clauses =
             List.fold_left
-              (fun (l, new_proxies, new_vars) f ->
-                let f, new_proxies, new_vars =
-                  abstr hcons f new_proxies new_vars
+              (fun (l, new_vars, new_clauses) f ->
+                let f, new_vars, new_clauses =
+                  abstr hcons f new_vars new_clauses
                 in
-                f :: l, new_proxies, new_vars)
-              ([], new_proxies, new_vars)
+                f :: l, new_vars, new_clauses)
+              ([], new_vars, new_clauses)
               l
           in
           let l = List.rev l in
@@ -879,11 +888,11 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
             | OR _ -> false
             | UNIT _ -> assert false
           in
-          let new_proxies = (p, l, is_and) :: new_proxies in
           Numbers.Int.Tbl.add hcons.proxies f.tag (p, l, is_and);
-          p, new_proxies, new_vars)
+          let new_clauses = expand_proxy_defn new_clauses (p, l, is_and) in
+          p, new_vars, new_clauses)
     in
-    abstr hcons f [] new_vars
+    abstr hcons f new_vars new_clauses
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
 
