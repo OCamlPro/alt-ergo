@@ -401,26 +401,6 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       is [true], then [p] is a proxy for [l_1 /\ ... /\ l_n]; otherwise, [p] is
       a proxy for [l_1 \/ ... \/ l_n]. *)
 
-  type proxies = proxy_defn Util.MI.t
-  (** Map from flat formula tags to their proxy definitions. If flat formula [f]
-      is associated to [p, l, is_and], then [p] is an atom that represents [f]
-      (so that deciding on [p] forces [f] to take the same truth value).
-
-      Only [AND] and [OR] flat formulas are present in a [proxies] map: [UNIT]
-      flat formulas do not need a proxy, as they are already atoms.
-
-      Note: Integer maps (keyed on tags) are used for historical reasons (and
-      possibly slight performance boost).
-
-      Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]), then
-      the corresponding [is_and] entry is [false] (resp. [true]), and the list
-      [l] contains the atoms or proxies for the values in [fl].
-
-      Note: the [proxies] map contains either a flat formula or its negation;
-      [get_proxy_of] tries both possibilities. *)
-
-  let empty_proxies = Util.MI.empty
-
   module HT = Hashtbl.Make (struct
     type nonrec t = t
 
@@ -458,7 +438,27 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
   type hcons_env =
     { tbl : t HT.t;
       cpt : int ref;
-      atoms : Atom.hcons_env
+      atoms : Atom.hcons_env;
+      proxies : proxy_defn Numbers.Int.Tbl.t
+          (** Map from flat formula tags to their proxy definitions. If flat
+              formula [f] is associated to [p, l, is_and], then [p] is an atom
+              that represents [f] (so that deciding on [p] forces [f] to take
+              the same truth value).
+
+              Only [AND] and [OR] flat formulas are present in a [proxies] map:
+              [UNIT] flat formulas do not need a proxy, as they are already
+              atoms.
+
+              Note: Integer maps (keyed on tags) are used for historical reasons
+              (and possibly slight performance boost).
+
+              Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]),
+              then the corresponding [is_and] entry is [false] (resp. [true]),
+              and the list [l] contains the atoms or proxies for the values in
+              [fl].
+
+              Note: the [proxies] map contains either a flat formula or its
+              negation; [get_proxy_of] tries both possibilities. *)
     }
 
   let make hcons pos neg =
@@ -499,13 +499,18 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
      initialized with the good reference to "vrai" *)
   let empty_hcons_env, vrai =
     let empty_hcons =
-      { tbl = HT.create 4096; cpt = ref 0; atoms = Atom.empty_hcons_env () }
+      { tbl = HT.create 4096;
+        cpt = ref 0;
+        atoms = Atom.empty_hcons_env ();
+        proxies = Numbers.Int.Tbl.create 4096
+      }
     in
     let vrai = mk_lit empty_hcons E.vrai [] |> fst in
     let f_empty_hcons () =
       { tbl = HT.copy empty_hcons.tbl;
         cpt = ref !(empty_hcons.cpt);
-        atoms = Atom.copy_hcons_env empty_hcons.atoms
+        atoms = Atom.copy_hcons_env empty_hcons.atoms;
+        proxies = Numbers.Int.Tbl.copy empty_hcons.proxies
       }
     in
     f_empty_hcons, vrai
@@ -822,13 +827,13 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
     let sy = Symbols.name ~ns:Internal @@ "PROXY__" ^ string_of_int n in
     E.mk_term sy [] Ty.Tbool
 
-  let get_proxy_of f proxies_mp =
+  let get_proxy_of { proxies; _ } f =
     try
-      let p, _, _ = Util.MI.find f.tag proxies_mp in
+      let p, _, _ = Numbers.Int.Tbl.find proxies f.tag in
       Some p
     with Not_found -> (
       try
-        let p, _, _ = Util.MI.find f.neg.tag proxies_mp in
+        let p, _, _ = Numbers.Int.Tbl.find proxies f.neg.tag in
         Some p.Atom.neg
       with Not_found -> None)
 
@@ -846,22 +851,22 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       let acc = List.fold_left (fun acc a -> [p; a.Atom.neg] :: acc) acc l in
       (p.Atom.neg :: l) :: acc
 
-  let cnf_abstr hcons f proxies_mp new_vars =
-    let rec abstr f new_proxies proxies_mp new_vars =
+  let cnf_abstr hcons f new_vars =
+    let rec abstr hcons f new_proxies new_vars =
       match f.view with
-      | UNIT a -> a, new_proxies, proxies_mp, new_vars
+      | UNIT a -> a, new_proxies, new_vars
       | AND l | OR l -> (
-        match get_proxy_of f proxies_mp with
-        | Some p -> p, new_proxies, proxies_mp, new_vars
+        match get_proxy_of hcons f with
+        | Some p -> p, new_proxies, new_vars
         | None ->
-          let l, new_proxies, proxies_mp, new_vars =
+          let l, new_proxies, new_vars =
             List.fold_left
-              (fun (l, new_proxies, proxies_mp, new_vars) f ->
-                let f, new_proxies, proxies_mp, new_vars =
-                  abstr f new_proxies proxies_mp new_vars
+              (fun (l, new_proxies, new_vars) f ->
+                let f, new_proxies, new_vars =
+                  abstr hcons f new_proxies new_vars
                 in
-                f :: l, new_proxies, proxies_mp, new_vars)
-              ([], new_proxies, proxies_mp, new_vars)
+                f :: l, new_proxies, new_vars)
+              ([], new_proxies, new_vars)
               l
           in
           let l = List.rev l in
@@ -875,10 +880,10 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
             | UNIT _ -> assert false
           in
           let new_proxies = (p, l, is_and) :: new_proxies in
-          let proxies_mp = Util.MI.add f.tag (p, l, is_and) proxies_mp in
-          p, new_proxies, proxies_mp, new_vars)
+          Numbers.Int.Tbl.add hcons.proxies f.tag (p, l, is_and);
+          p, new_proxies, new_vars)
     in
-    abstr f [] proxies_mp new_vars
+    abstr hcons f [] new_vars
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
 

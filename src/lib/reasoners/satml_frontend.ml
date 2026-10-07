@@ -58,7 +58,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       mutable conj : (int * SE.t) FF.Map.t;
       mutable abstr_of_axs : (FF.t * Atom.atom) ME.t;
       mutable axs_of_abstr : (E.t * Atom.atom) ME.t;
-      mutable proxies : FF.proxies;
       mutable inst : Inst.t;
       mutable skolems : E.gformula ME.t; (* key <-> f *)
       add_inst : E.t -> bool;
@@ -94,7 +93,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       conj = FF.Map.empty;
       abstr_of_axs = ME.empty;
       axs_of_abstr = ME.empty;
-      proxies = FF.empty_proxies;
       inst = Inst.empty;
       skolems = ME.empty;
       guards = init_guards ();
@@ -734,10 +732,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             else
               { acc with activate = FF.Set.add ff acc.activate; updated = true }
           else
-            let ff_abstr, new_proxies, proxies_mp, new_vars =
-              FF.cnf_abstr env.ff_hcons_env ff env.proxies acc.new_vars
+            let ff_abstr, new_proxies, new_vars =
+              FF.cnf_abstr env.ff_hcons_env ff acc.new_vars
             in
-            env.proxies <- proxies_mp;
             let nunit =
               List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
             in
@@ -774,7 +771,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           (E.vrai
           [@ocaml.ppwarning "TODO: should fix for unsat cores generation"])
         in
-        SAT.set_new_proxies env.satml env.proxies;
         let nbv = FF.nb_made_vars env.ff_hcons_env in
         let unit, nunit = SAT.new_vars env.satml ~nbv new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
