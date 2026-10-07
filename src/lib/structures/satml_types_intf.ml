@@ -212,19 +212,8 @@ module type FLAT_FORMULA = sig
     hcons_env ->
     t ->
     Atom.var list ->
-    Atom.atom * proxy_defn list * Atom.var list
-
-  val expand_proxy_defn :
-    Atom.atom list list -> proxy_defn -> Atom.atom list list
-  (** Expand a proxy definition into clausal normal form.
-
-      The definition [p <=> l_1 \/ ... \/ l_n] is expanded into:
-
-      [(~p \/ l_1 \/ ... \/ l_n) /\ (p \/ ~l_1) /\ ... /\ (p \/ ~l_n)]
-
-      and the definition [p <=> l_1 /\ ... /\ l_n] is expanded into:
-
-      [(p \/ ~l_1 \/ ... \/ ~l_n) /\ (~p \/ l_1) /\ ... /\ (~p \/ l_n)] *)
+    Atom.atom list list ->
+    Atom.atom * Atom.var list * Atom.atom list list
 
   val reinit_cpt : unit -> unit
   (** Resets to 0 the counter *)
