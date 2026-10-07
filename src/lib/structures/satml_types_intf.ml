@@ -193,9 +193,28 @@ module type FLAT_FORMULA = sig
   val simplify :
     hcons_env ->
     Expr.t ->
-    (Expr.t -> t * 'a) ->
-    Atom.var list ->
-    t * (Expr.t * (t * Atom.atom)) list * Atom.var list
+    Atom.var list (* new_vars *) ->
+    Atom.atom list (* new_abstr_vars *) ->
+    t
+    * Expr.Set.t (* toplevel lemmas *)
+    * Atom.var list (* new_vars *)
+    * Atom.atom list (* new_abstr_vars *)
+
+  val expand_lemma : hcons_env -> Expr.t -> Expr.t * Atom.atom
+  (** [expand_lemma env abstr] returns the universal quantifier associated with
+      [abstr] (and corresponding atom), if any.
+
+      If [abstr] is not the abstraction literal for a universal quantifier,
+      [expand_lemma env abstr] raises [Not_found]. *)
+
+  val expand_skolem : hcons_env -> Expr.t -> Expr.gformula
+  (** [expand_skolem env abstr] returns a formula equivalent to
+      [abstr => skolem] if [abstr] is the abstraction literal for an existential
+      quantifier, where [skolem] is the skolemized representation of that
+      existential quantifier.
+
+      If [abstr] is not the abstraction literal for an existential quantifier,
+      [expand_skolem env abstr] raises [Not_found]. *)
 
   val get_proxy_of : hcons_env -> t -> Atom.atom option
   (** [get_proxy_of env ff] returns the proxy registered for [ff] in [env], if

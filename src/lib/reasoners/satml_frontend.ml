@@ -56,10 +56,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       mutable last_forced_greedy : int;
       mutable gamma : (int * FF.t option) ME.t;
       mutable conj : (int * SE.t) FF.Map.t;
-      mutable abstr_of_axs : (FF.t * Atom.atom) ME.t;
-      mutable axs_of_abstr : (E.t * Atom.atom) ME.t;
       mutable inst : Inst.t;
-      mutable skolems : E.gformula ME.t; (* key <-> f *)
       add_inst : E.t -> bool;
       guards : guards;
       mutable last_saved_model : Models.t Lazy.t option;
@@ -91,10 +88,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       last_forced_normal = 0;
       last_forced_greedy = 0;
       conj = FF.Map.empty;
-      abstr_of_axs = ME.empty;
-      axs_of_abstr = ME.empty;
       inst = Inst.empty;
-      skolems = ME.empty;
       guards = init_guards ();
       add_inst = selector;
       last_saved_model = None;
@@ -407,60 +401,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let ex = Ex.singleton (Ex.Literal at) in
     Inst.add_lemma inst gax ex
 
-  let register_abstraction env new_abstr_vars (f, (af, at)) =
-    if Options.(get_debug_sat () && get_verbose ())
-    then
-      Printer.print_dbg ~module_name:"Satml_frontend"
-        ~function_name:"register_abstraction" "abstraction of %a is %a" E.print
-        f FF.print af;
-    let lat =
-      match Shostak.Literal.view @@ Atom.literal at with
-      | LTerm at -> at
-      | LSem _ ->
-        (* Abstractions are always fresh expressions, so `at` is always a
-           syntaxic literal *)
-        assert false
-    in
-    let new_abstr_vars =
-      if not (Atom.is_true at) then at :: new_abstr_vars else new_abstr_vars
-    in
-    assert (not (ME.mem f env.abstr_of_axs));
-    assert (not (ME.mem lat env.axs_of_abstr));
-    let () =
-      if not (Atom.eq_atom at Atom.vrai_atom || Atom.eq_atom at Atom.faux_atom)
-      then begin
-        env.abstr_of_axs <- ME.add f (af, at) env.abstr_of_axs;
-        env.axs_of_abstr <- ME.add lat (f, at) env.axs_of_abstr
-      end
-    in
-    if Atom.level at = 0
-    then (* at is necessarily assigned if lvl = 0 *)
-      if Atom.is_true at
-      then
-        let () = axiom_def env (mk_gf f) Ex.empty in
-        new_abstr_vars
-      else begin
-        assert (Atom.is_true (Atom.neg at));
-        assert false (* FF.simplify invariant: should not happen *)
-      end
-    else begin
-      (* FF.simplify invariant: should not happen *)
-      assert (Atom.level at < 0);
-      let ded =
-        match E.neg f |> E.form_view with
-        | E.Skolem q -> E.skolemize q
-        | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _ | E.Let _ | E.Iff _
-        | E.Xor _ ->
-          assert false
-      in
-      (*XXX TODO: internal skolems*)
-      let f = E.mk_or lat ded false in
-      let nlat = E.neg lat in
-      (* semantics: nlat ==> f *)
-      env.skolems <- ME.add nlat (mk_gf f) env.skolems;
-      new_abstr_vars
-    end
-
   let expand_skolems env acc sa inst_quantif =
     List.fold_left
       (fun acc a ->
@@ -471,7 +411,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         try
           if inst_quantif a
           then
-            let ({ E.ff = f; _ } as gf) = ME.find a env.skolems in
+            let ({ E.ff = f; _ } as gf) = FF.expand_skolem env.ff_hcons_env a in
             if (not (Options.get_cdcl_tableaux ())) && ME.mem f env.gamma
             then acc
             else gf :: acc
@@ -490,7 +430,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         let inst = Inst.add_terms inst (E.max_ground_terms_of_lit a) gf in
         (* ax <-> a, if ax exists in axs_of_abstr *)
         try
-          let ax, at = ME.find a env.axs_of_abstr in
+          let ax, at = FF.expand_lemma env.ff_hcons_env a in
           if inst_quantif a
           then internal_axiom_def ax a at inst, acc
           else inst, acc
@@ -704,23 +644,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           { acc with updated = true }
         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _ | E.Let _ | E.Iff _
         | E.Xor _ ->
-          let ff, axs, new_vars =
-            FF.simplify env.ff_hcons_env f
-              (fun f -> ME.find f env.abstr_of_axs)
-              acc.new_vars
+          let ff, axs, new_vars, new_abstr_vars =
+            FF.simplify env.ff_hcons_env f acc.new_vars acc.new_abstr_vars
           in
-          let acc = { acc with new_vars } in
+          let acc = { acc with new_vars; new_abstr_vars } in
           let cnf_is_in_cdcl = FF.Map.mem ff env.conj in
           let _, old_sf =
             try FF.Map.find ff env.conj with Not_found -> 0, SE.empty
           in
           env.gamma <- ME.add f (env.nb_mrounds, Some ff) env.gamma;
           env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
+          (* [axs] are the top-level lemmas *)
+          E.Set.iter (fun f -> axiom_def env (mk_gf f) Ex.empty) axs;
           Debug.simplified_form f ff;
-          let new_abstr_vars =
-            List.fold_left (register_abstraction env) acc.new_abstr_vars axs
-          in
-          let acc = { acc with new_abstr_vars } in
           if FF.equal ff FF.vrai
           then acc
           else if cnf_is_in_cdcl

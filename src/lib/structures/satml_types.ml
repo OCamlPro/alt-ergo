@@ -439,7 +439,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
     { tbl : t HT.t;
       cpt : int ref;
       atoms : Atom.hcons_env;
-      proxies : proxy_defn Numbers.Int.Tbl.t
+      proxies : proxy_defn Numbers.Int.Tbl.t;
           (** Map from flat formula tags to their proxy definitions. If flat
               formula [f] is associated to [p, l, is_and], then [p] is an atom
               that represents [f] (so that deciding on [p] forces [f] to take
@@ -459,6 +459,14 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
               Note: the [proxies] map contains either a flat formula or its
               negation; [get_proxy_of] tries both possibilities. *)
+      abstr_of_axs : (t * Atom.atom) E.Tbl.t;
+      axs_of_abstr : (E.t * Atom.atom) E.Tbl.t;
+      skolems : E.gformula E.Tbl.t
+          (** The semantics of an an entry [lit -> gf] in [skolems], then the
+              implication [lit ==> gf] holds.
+
+              Note: in that case, there is an entry [neg lit -> (f, at)] in
+              [axs_of_abstr], with [gf = lit \/ f]. *)
     }
 
   let make hcons pos neg =
@@ -502,15 +510,24 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       { tbl = HT.create 4096;
         cpt = ref 0;
         atoms = Atom.empty_hcons_env ();
-        proxies = Numbers.Int.Tbl.create 4096
+        proxies = Numbers.Int.Tbl.create 0;
+        abstr_of_axs = E.Tbl.create 0;
+        axs_of_abstr = E.Tbl.create 0;
+        skolems = E.Tbl.create 0
       }
     in
     let vrai = mk_lit empty_hcons E.vrai [] |> fst in
+    assert (E.Tbl.length empty_hcons.abstr_of_axs = 0);
+    assert (E.Tbl.length empty_hcons.axs_of_abstr = 0);
+    assert (E.Tbl.length empty_hcons.skolems = 0);
     let f_empty_hcons () =
       { tbl = HT.copy empty_hcons.tbl;
         cpt = ref !(empty_hcons.cpt);
         atoms = Atom.copy_hcons_env empty_hcons.atoms;
-        proxies = Numbers.Int.Tbl.copy empty_hcons.proxies
+        proxies = Numbers.Int.Tbl.create 4096;
+        abstr_of_axs = E.Tbl.create 128;
+        axs_of_abstr = E.Tbl.create 128;
+        skolems = E.Tbl.create 128
       }
     in
     f_empty_hcons, vrai
@@ -757,36 +774,78 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   (* translation from E.t *)
 
-  let abstract_lemma hcons abstr (f : E.t) tl lem new_vars =
-    try fst (abstr f)
-    with Not_found -> (
-      try fst (snd (List.find (fun (x, _) -> E.equal f x) !lem))
-      with Not_found ->
-        if tl
-        then begin
-          lem := (f, (vrai, Atom.vrai_atom)) :: !lem;
-          vrai
-        end
-        else
-          let lit = E.fresh_name Ty.Tbool in
-          let xlit, new_v = mk_lit hcons lit !new_vars in
-          let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit new_v in
-          new_vars := new_v;
-          lem
-            := ((f, (xlit, at_lit)) :: !lem)
-               [@ocaml.ppwarning "xlit or at_lit is probably redundant"];
-          xlit)
+  let expand_lemma hcons a = E.Tbl.find hcons.axs_of_abstr a
 
-  let simplify hcons f abstr new_vars =
-    let lem = ref [] in
+  let expand_skolem hcons a = E.Tbl.find hcons.skolems a
+
+  let mk_gf f =
+    { E.ff = f;
+      trigger_depth = max_int;
+      nb_reductions = 0;
+      origin_name = "<none>";
+      age = 0;
+      lem = None;
+      mf = false;
+      gf = false;
+      gdist = -1;
+      hdist = -1;
+      from_terms = [];
+      theory_elim = true
+    }
+
+  let abstract_lemma hcons (f : E.t) tl lem new_vars new_abstr_vars =
+    match E.Tbl.find hcons.abstr_of_axs f with
+    | ff, _ -> ff
+    | exception Not_found ->
+      if E.Set.mem f !lem
+      then vrai
+      else if tl
+      then begin
+        lem := E.Set.add f !lem;
+        vrai
+      end
+      else
+        let lit = E.fresh_name Ty.Tbool in
+        let xlit, new_v = mk_lit hcons lit !new_vars in
+        let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit new_v in
+        if Options.(get_debug_sat () && get_verbose ())
+        then
+          Printer.print_dbg ~module_name:"Satml_frontend"
+            ~function_name:"register_abstraction" "abstraction of %a is %a"
+            E.print f print xlit;
+        assert (Atom.level at_lit < 0);
+        new_abstr_vars := at_lit :: !new_abstr_vars;
+        E.Tbl.add hcons.abstr_of_axs f (xlit, at_lit);
+        E.Tbl.add hcons.axs_of_abstr lit (f, at_lit);
+        let () =
+          (* Register skolem *)
+          let ded =
+            match E.neg f |> E.form_view with
+            | E.Skolem q -> E.skolemize q
+            | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _ | E.Let _
+            | E.Iff _ | E.Xor _ ->
+              assert false
+          in
+          (*XXX TODO: internal skolems*)
+          let f = E.mk_or lit ded false in
+          let nlat = E.neg lit in
+          (* semantics: nlat ==> f *)
+          E.Tbl.add hcons.skolems nlat (mk_gf f)
+        in
+        new_vars := new_v;
+        xlit
+
+  let simplify hcons f new_vars new_abstr_vars =
+    let lem = ref E.Set.empty in
     let new_vars = ref new_vars in
+    let new_abstr_vars = ref new_abstr_vars in
     let rec simp topl ~parent_disj f =
       match E.form_view f with
       | E.Literal a ->
         let ff, l = mk_lit hcons a !new_vars in
         new_vars := l;
         ff
-      | E.Lemma _ -> abstract_lemma hcons abstr f topl lem new_vars
+      | E.Lemma _ -> abstract_lemma hcons f topl lem new_vars new_abstr_vars
       | E.Skolem _ -> mk_not (simp false ~parent_disj:false (E.neg f))
       | E.Unit (f1, f2) ->
         let x1 = simp topl ~parent_disj:false f1 in
@@ -815,7 +874,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         simp false ~parent_disj:false (E.elim_let ~recursive:true letin)
     in
     let res = simp true ~parent_disj:false f in
-    res, !lem, !new_vars
+    res, !lem, !new_vars, !new_abstr_vars
 
   (* CNF_ABSTR a la Tseitin *)
 
