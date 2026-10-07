@@ -86,7 +86,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let empty ?(selector = fun _ -> true) () =
     let ff_hcons_env = FF.empty_hcons_env () in
     { gamma = ME.empty;
-      satml = SAT.create (FF.atom_hcons_env ff_hcons_env);
+      satml = SAT.create ff_hcons_env;
       ff_hcons_env;
       nb_mrounds = 0;
       last_forced_normal = 0;
@@ -571,7 +571,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           add_reasons_graph _todo (SA.add a _done)
     in
     fun ~frugal env ->
-      let sa = SAT.instantiation_context env.satml env.ff_hcons_env in
+      let sa = SAT.instantiation_context env.satml in
       let sa =
         if frugal then sa else add_reasons_graph (SA.elements sa) SA.empty
       in
