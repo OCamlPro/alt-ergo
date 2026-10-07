@@ -44,8 +44,8 @@ let () =
     | Internal_error s -> Some (Format.sprintf "Internal error: %s" s)
     | _ -> None)
 
-module MI = Map.Make (Int)
-module SI = Set.Make (Int)
+module MI = Numbers.Int.Map
+module SI = Numbers.Int.Set
 module MS = Map.Make (String)
 module SS = Set.Make (String)
 

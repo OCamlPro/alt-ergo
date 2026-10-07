@@ -25,6 +25,23 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module Int = struct
+  module T0 = struct
+    type t = int
+
+    let print = Fmt.int
+
+    let equal = Int.equal
+
+    let compare = Int.compare
+
+    let hash : int -> int = Hashtbl.hash
+  end
+
+  include T0
+  include Container_types.Make (T0)
+end
+
 module Z = struct
   type t = Z.t
 
