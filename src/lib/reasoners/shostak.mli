@@ -28,6 +28,9 @@
 module Combine : sig
   include Sig.X
 
+  (* Note: comparison function is based on hashes, not structural *)
+  include Container_types.S_plus_stdlib with type t := r
+
   val src : Logs.src
 
   val top : r

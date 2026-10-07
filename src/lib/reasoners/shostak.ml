@@ -591,6 +591,18 @@ and AC : (Ac.S with type r = CX.r) = Ac.Make (CX)
 module Combine = struct
   include CX
 
+  include Container_types.Make (struct
+    type t = r
+
+    let equal = equal
+
+    let hash = hash
+
+    let compare = hash_cmp
+
+    let print = print
+  end)
+
   let src = Logs.Src.create ~doc:"Combine" "AltErgoLib__Combine"
 
   module Log = (val Logs.src_log src : Logs.LOG)
@@ -628,20 +640,9 @@ module Bitv = BITV
 module Adt = ADT
 module Polynome = TARITH
 module Ac = AC
-
-(** map of semantic values using Combine.hash_cmp *)
-module MXH = Map.Make (struct
-  type t = Combine.r
-
-  let compare = Combine.hash_cmp
-end)
-
-(** set of semantic values using Combine.hash_cmp *)
-module SXH = Set.Make (struct
-  type t = Combine.r
-
-  let compare = Combine.hash_cmp
-end)
+module MXH = Combine.Map
+module SXH = Combine.Set
+module HX = Combine.Tbl
 
 module L = Xliteral.Make (struct
   type t = Combine.r
@@ -652,11 +653,3 @@ module L = Xliteral.Make (struct
 end)
 
 module Literal = Literal.Make (L)
-
-module HX = Hashtbl.Make (struct
-  type t = Combine.r
-
-  let equal = Combine.equal
-
-  let hash = Combine.hash
-end)
