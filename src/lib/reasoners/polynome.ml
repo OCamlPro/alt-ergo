@@ -25,6 +25,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
+include Polynome_intf
 module Z = Numbers.Z
 module Q = Numbers.Q
 
@@ -36,98 +37,6 @@ module type S = sig
   include Sig.X
 
   val mult : r -> r -> r
-end
-
-module type T = sig
-  type r
-
-  type t
-
-  val compare : t -> t -> int
-
-  val equal : t -> t -> bool
-
-  val hash : t -> int
-
-  val create : (Q.t * r) list -> Q.t -> Ty.t -> t
-
-  val add : t -> t -> t
-
-  val sub : t -> t -> t
-
-  val mult : t -> t -> t
-
-  val mult_const : Q.t -> t -> t
-
-  val add_const : Q.t -> t -> t
-
-  val div : t -> t -> t * bool
-
-  val modulo : t -> t -> t
-
-  val is_const : t -> Q.t option
-
-  val is_empty : t -> bool
-
-  val find : r -> t -> Q.t
-
-  val choose : t -> Q.t * r
-
-  val subst : r -> t -> t -> t
-
-  val remove : r -> t -> t
-
-  val to_list : t -> (Q.t * r) list * Q.t
-
-  val leaves : t -> r list
-
-  val print : Format.formatter -> t -> unit
-
-  val type_info : t -> Ty.t
-
-  val is_monomial : t -> (Q.t * r * Q.t) option
-
-  val ppmc_denominators : t -> Q.t
-
-  val pgcd_numerators : t -> Q.t
-
-  val normal_form : t -> t * Q.t * Q.t
-
-  val normal_form_pos : t -> t * Q.t * Q.t
-
-  val abstract_selectors : t -> (r * r) list -> t * (r * r) list
-
-  val separate_constant : t -> t * Numbers.Q.t
-
-  module Set : Set.S with type elt = t
-
-  module Map : Map.S with type key = t
-
-  module Ints : sig
-    val of_bigint : Z.t -> t
-
-    val zero : t
-
-    val ( ~- ) : t -> t
-
-    val ( + ) : t -> t -> t
-
-    val ( - ) : t -> t -> t
-
-    val ( ~$$ ) : Z.t -> t
-
-    val ( +$$ ) : t -> Z.t -> t
-
-    val ( *$$ ) : t -> Z.t -> t
-  end
-end
-
-module type EXTENDED_Polynome = sig
-  include T
-
-  val extract : r -> t option
-
-  val embed : t -> r
 end
 
 module Make (X : S) = struct
