@@ -734,7 +734,10 @@ module Flat_Formula : FLAT_FORMULA = struct
 
   let nb_made_vars hcons = Atom.nb_made_vars hcons.atoms
 
-  let merge_and_check l1 l2 =
+  exception Merge_with_complement
+
+  (* All uses *MUST* be guarded with a [try ... with Merge_with_complement]. *)
+  let merge_and_check_exn l1 l2 =
     let rec merge_rec l1 l2 hd =
       match l1, l2 with
       | [], l2 -> l2
@@ -745,11 +748,11 @@ module Flat_Formula : FLAT_FORMULA = struct
         then merge_rec l1 t2 hd
         else if compare h1 h2 < 0
         then begin
-          if complements hd h1 then raise Exit;
+          if complements hd h1 then raise Merge_with_complement;
           h1 :: merge_rec t1 l2 h1
         end
         else begin
-          if complements hd h2 then raise Exit;
+          if complements hd h2 then raise Merge_with_complement;
           h2 :: merge_rec l1 t2 h2
         end
     in
@@ -772,7 +775,9 @@ module Flat_Formula : FLAT_FORMULA = struct
           List.fold_left
             (fun ((so, nso) as acc) e ->
               match e.view with
-              | AND l -> merge_and_check so l, nso
+              | AND l -> (
+                try merge_and_check_exn so l, nso
+                with Merge_with_complement -> raise Contradiction)
               | UNIT a
                 when (not (Options.get_disable_flat_formulas_simplification ()))
                      && a.Atom.var.Atom.level = 0 -> begin
@@ -804,7 +809,8 @@ module Flat_Formula : FLAT_FORMULA = struct
             in
             delta_u
         in
-        match merge_and_check so delta_u with
+        match merge_and_check_exn so delta_u with
+        | exception Merge_with_complement -> faux
         | [] -> vrai
         | [e] -> e
         | l -> make hcons (AND l) (OR (List.rev (List.rev_map mk_not l)))
@@ -908,7 +914,9 @@ module Flat_Formula : FLAT_FORMULA = struct
           List.fold_left
             (fun ((so, nso) as acc) e ->
               match e.view with
-              | OR l -> merge_and_check so l, nso
+              | OR l -> (
+                try merge_and_check_exn so l, nso
+                with Merge_with_complement -> raise Tautology)
               | UNIT a
                 when (not (Options.get_disable_flat_formulas_simplification ()))
                      && a.Atom.var.Atom.level = 0 -> begin
@@ -940,7 +948,8 @@ module Flat_Formula : FLAT_FORMULA = struct
             in
             delta_u
         in
-        match merge_and_check so delta_u with
+        match merge_and_check_exn so delta_u with
+        | exception Merge_with_complement -> vrai
         | [] -> faux
         | [e] -> e
         | l -> (
