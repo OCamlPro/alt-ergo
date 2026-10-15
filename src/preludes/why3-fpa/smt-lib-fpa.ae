@@ -59,6 +59,11 @@
      defined below.
    - pattern matching is written with conditionals.
    - lemmas are axioms, marked with a comment.
+   - triggers are added to the axioms that have none, and the comparisons
+     are removed from the triggers of [positive_to_real] and
+     [negative_to_real] (Alt-Ergo does not accept them as triggers).
+   - in the axioms that do not bind a variable of type ['t], the triggers and
+     bodies are annotated with ['t], otherwise Alt-Ergo drops the triggers.
    - [round_bound_ne] and [round_bound], at the end, generalize the lemmas of
      Why3's [Float32] and [Float64] modules. *)
 
@@ -208,12 +213,14 @@ predicate is_not_nan(eb: int, sb: int, x: 't) =
   is_finite(eb, sb, x) or is_infinite(eb, sb, x)
 
 axiom is_not_nan :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't
+    [is_finite(eb, sb, x) | is_infinite(eb, sb, x) | is_nan(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_not_nan(eb, sb, x) <-> not is_nan(eb, sb, x)
 
 axiom is_not_finite :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't
+    [is_finite(eb, sb, x) | is_infinite(eb, sb, x) | is_nan(eb, sb, x)].
   1 < eb and 1 < sb ->
     not is_finite(eb, sb, x) <-> (is_infinite(eb, sb, x) or is_nan(eb, sb, x))
 
@@ -291,9 +298,9 @@ logic of_int : int, int, RoundingMode, int -> 't
 logic to_int : int, int, RoundingMode, 't -> int
 
 axiom zero_of_int :
-  forall eb, sb: int, m: RoundingMode.
+  forall eb, sb: int, m: RoundingMode [(of_int(eb, sb, m, 0) : 't)].
   1 < eb and 1 < sb ->
-    zeroF(eb, sb) = of_int(eb, sb, m, 0)
+    zeroF(eb, sb) = (of_int(eb, sb, m, 0) : 't)
 
 (** {3 Arithmetic} *)
 
@@ -327,7 +334,7 @@ predicate in_int_range(eb: int, sb: int, i: int) =
   - max_int(eb, sb) <= i and i <= max_int(eb, sb)
 
 axiom is_finite :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [is_finite(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> in_range(eb, sb, to_real(eb, sb, x))
 
@@ -338,7 +345,7 @@ predicate no_overflow(eb: int, sb: int, m: RoundingMode, x: real) =
 (* Axioms on round *)
 
 axiom Bounded_real_no_overflow :
-  forall eb, sb: int, m: RoundingMode, x: real.
+  forall eb, sb: int, m: RoundingMode, x: real [round(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     in_range(eb, sb, x) -> no_overflow(eb, sb, m, x)
 
@@ -352,26 +359,27 @@ axiom Bounded_real_no_overflow :
      forall m1 m2:mode, x:real. round m1 (round m2 x) = round m2 x *)
 
 axiom Round_to_real :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't
+    [round(eb, sb, m, to_real(eb, sb, x))].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     round(eb, sb, m, to_real(eb, sb, x)) = to_real(eb, sb, x)
 
 (** rounding up and down *)
 axiom Round_down_le :
-  forall eb, sb: int, x: real.
+  forall eb, sb: int, x: real [round(eb, sb, RTN, x)].
   1 < eb and 1 < sb ->
     round(eb, sb, RTN, x) <= x
 axiom Round_up_ge :
-  forall eb, sb: int, x: real.
+  forall eb, sb: int, x: real [round(eb, sb, RTP, x)].
   1 < eb and 1 < sb ->
     round(eb, sb, RTP, x) >= x
 axiom Round_down_neg :
-  forall eb, sb: int, x: real.
+  forall eb, sb: int, x: real [round(eb, sb, RTN, - x)].
   1 < eb and 1 < sb ->
     round(eb, sb, RTN, - x) = - round(eb, sb, RTP, x)
 axiom Round_up_neg :
-  forall eb, sb: int, x: real.
+  forall eb, sb: int, x: real [round(eb, sb, RTP, - x)].
   1 < eb and 1 < sb ->
     round(eb, sb, RTP, - x) = - round(eb, sb, RTN, x)
 
@@ -390,7 +398,8 @@ predicate in_safe_int_range(eb: int, sb: int, i: int) =
 (** {4 round and integers} *)
 
 axiom Exact_rounding_for_integers :
-  forall eb, sb: int, m: RoundingMode, i: int.
+  forall eb, sb: int, m: RoundingMode, i: int
+    [round(eb, sb, m, real_of_int(i))].
   1 < eb and 1 < sb ->
     in_safe_int_range(eb, sb, i) ->
     round(eb, sb, m, real_of_int(i)) = real_of_int(i)
@@ -400,24 +409,27 @@ axiom Exact_rounding_for_integers :
 logic from_real : int, int, RoundingMode, real -> 't
 
 axiom from_real_in_range :
-  forall eb, sb: int, m: RoundingMode, r: real.
+  forall eb, sb: int, m: RoundingMode, r: real
+    [(from_real(eb, sb, m, r) : 't)].
   1 < eb and 1 < sb ->
     in_range(eb, sb, round(eb, sb, m, r)) ->
-    let f = from_real(eb, sb, m, r) in
+    let f = (from_real(eb, sb, m, r) : 't) in
       is_finite(eb, sb, f) and to_real(eb, sb, f) = round(eb, sb, m, r)
 
 axiom from_real_large_neg :
-  forall eb, sb: int, m: RoundingMode, r: real.
+  forall eb, sb: int, m: RoundingMode, r: real
+    [(from_real(eb, sb, m, r) : 't)].
   1 < eb and 1 < sb ->
     round(eb, sb, m, r) < - max_real(eb, sb) ->
-    let f = from_real(eb, sb, m, r) in
+    let f = (from_real(eb, sb, m, r) : 't) in
       is_infinite(eb, sb, f) and is_negative(eb, sb, f)
 
 axiom from_real_large_pos :
-  forall eb, sb: int, m: RoundingMode, r: real.
+  forall eb, sb: int, m: RoundingMode, r: real
+    [(from_real(eb, sb, m, r) : 't)].
   1 < eb and 1 < sb ->
     round(eb, sb, m, r) > max_real(eb, sb) ->
-    let f = from_real(eb, sb, m, r) in
+    let f = (from_real(eb, sb, m, r) : 't) in
       is_infinite(eb, sb, f) and is_positive(eb, sb, f)
 
 (** {3 Comparisons} *)
@@ -432,41 +444,41 @@ predicate diff_sign(eb: int, sb: int, x: 't, y: 't) =
   or (is_negative(eb, sb, x) and is_positive(eb, sb, y))
 
 axiom feq_eq :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_finite(eb, sb, y) ->
     not is_zero(eb, sb, x) -> eq(eb, sb, x, y) -> x = y
 
 axiom eq_feq :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_finite(eb, sb, y) -> x = y -> eq(eb, sb, x, y)
 
 axiom eq_refl :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [is_finite(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> eq(eb, sb, x, x)
 
 axiom eq_sym :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     eq(eb, sb, x, y) -> eq(eb, sb, y, x)
 
 axiom eq_trans :
-  forall eb, sb: int, x, y, z: 't.
+  forall eb, sb: int, x, y, z: 't [eq(eb, sb, x, y), eq(eb, sb, y, z)].
   1 < eb and 1 < sb ->
     eq(eb, sb, x, y) -> eq(eb, sb, y, z) -> eq(eb, sb, x, z)
 
 (* axiom eq_zero: zeroF .= (.- zeroF) *)
 
 axiom eq_to_real_finite :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     (is_finite(eb, sb, x) and is_finite(eb, sb, y)) ->
     (eq(eb, sb, x, y) <-> to_real(eb, sb, x) = to_real(eb, sb, y))
 
 axiom eq_special :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     eq(eb, sb, x, y) ->
     (is_not_nan(eb, sb, x) and is_not_nan(eb, sb, y)
@@ -488,25 +500,25 @@ axiom le_finite :
 
 (* lemma *)
 axiom le_lt_trans :
-  forall eb, sb: int, x, y, z: 't.
+  forall eb, sb: int, x, y, z: 't [le(eb, sb, x, y), lt(eb, sb, y, z)].
   1 < eb and 1 < sb ->
     (le(eb, sb, x, y) and lt(eb, sb, y, z)) -> lt(eb, sb, x, z)
 
 (* lemma *)
 axiom lt_le_trans :
-  forall eb, sb: int, x, y, z: 't.
+  forall eb, sb: int, x, y, z: 't [lt(eb, sb, x, y), le(eb, sb, y, z)].
   1 < eb and 1 < sb ->
     (lt(eb, sb, x, y) and le(eb, sb, y, z)) -> lt(eb, sb, x, z)
 
 (* lemma *)
 axiom le_ge_asym :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [le(eb, sb, x, y), le(eb, sb, y, x)].
   1 < eb and 1 < sb ->
     (le(eb, sb, x, y) and ge(eb, sb, x, y)) -> eq(eb, sb, x, y)
 
 (* lemma *)
 axiom not_lt_ge :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [lt(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     (not lt(eb, sb, x, y)
      and is_not_nan(eb, sb, x) and is_not_nan(eb, sb, y)) ->
@@ -514,7 +526,7 @@ axiom not_lt_ge :
 
 (* lemma *)
 axiom not_gt_le :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [lt(eb, sb, y, x)].
   1 < eb and 1 < sb ->
     (not gt(eb, sb, x, y)
      and is_not_nan(eb, sb, x) and is_not_nan(eb, sb, y)) ->
@@ -539,14 +551,13 @@ axiom lt_special :
           and is_plus_infinity(eb, sb, y))))
 
 axiom lt_lt_finite :
-  forall eb, sb: int, x, y, z: 't.
+  forall eb, sb: int, x, y, z: 't [lt(eb, sb, x, y), lt(eb, sb, y, z)].
   1 < eb and 1 < sb ->
     lt(eb, sb, x, y) -> lt(eb, sb, y, z) -> is_finite(eb, sb, y)
 
 (*  lemmas on sign *)
 axiom positive_to_real :
-  forall eb, sb: int, x: 't
-    [is_positive(eb, sb, x) | to_real(eb, sb, x) >= 0.0].
+  forall eb, sb: int, x: 't [is_positive(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_positive(eb, sb, x) -> to_real(eb, sb, x) >= 0.0
 axiom to_real_positive :
@@ -555,8 +566,7 @@ axiom to_real_positive :
     is_finite(eb, sb, x) -> to_real(eb, sb, x) > 0.0 -> is_positive(eb, sb, x)
 
 axiom negative_to_real :
-  forall eb, sb: int, x: 't
-    [is_negative(eb, sb, x) | to_real(eb, sb, x) <= 0.0].
+  forall eb, sb: int, x: 't [is_negative(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_negative(eb, sb, x) -> to_real(eb, sb, x) <= 0.0
 axiom to_real_negative :
@@ -565,24 +575,26 @@ axiom to_real_negative :
     is_finite(eb, sb, x) -> to_real(eb, sb, x) < 0.0 -> is_negative(eb, sb, x)
 
 axiom negative_xor_positive :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [is_positive(eb, sb, x) | is_negative(eb, sb, x)].
   1 < eb and 1 < sb ->
     not (is_positive(eb, sb, x) and is_negative(eb, sb, x))
 axiom negative_or_positive :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [is_finite(eb, sb, x) | is_infinite(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_not_nan(eb, sb, x) -> (is_positive(eb, sb, x) or is_negative(eb, sb, x))
 
 (* lemma *)
 axiom diff_sign_trans :
-  forall eb, sb: int, x, y, z: 't.
+  forall eb, sb: int, x, y, z: 't
+    [is_negative(eb, sb, y), is_positive(eb, sb, z), is_positive(eb, sb, x)
+    | is_positive(eb, sb, y), is_negative(eb, sb, z), is_negative(eb, sb, x)].
   1 < eb and 1 < sb ->
     (diff_sign(eb, sb, x, y) and diff_sign(eb, sb, y, z)) ->
     same_sign(eb, sb, x, z)
 
 (* lemma *)
 axiom diff_sign_product :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [is_finite(eb, sb, x), is_finite(eb, sb, y)].
   1 < eb and 1 < sb ->
     (is_finite(eb, sb, x) and is_finite(eb, sb, y)
      and to_real(eb, sb, x) * to_real(eb, sb, y) < 0.0) ->
@@ -590,7 +602,9 @@ axiom diff_sign_product :
 
 (* lemma *)
 axiom same_sign_product :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't
+    [is_positive(eb, sb, x), is_positive(eb, sb, y)
+    | is_negative(eb, sb, x), is_negative(eb, sb, y)].
   1 < eb and 1 < sb ->
     (is_finite(eb, sb, x) and is_finite(eb, sb, y)
      and same_sign(eb, sb, x, y)) ->
@@ -1001,49 +1015,52 @@ axiom sqrt_special :
 (* exact arithmetic with integers *)
 
 axiom of_int_add_exact :
-  forall eb, sb: int, m, n: RoundingMode, i, j: int.
+  forall eb, sb: int, m, n: RoundingMode, i, j: int
+    [(add(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't)].
   1 < eb and 1 < sb ->
     in_safe_int_range(eb, sb, i) -> in_safe_int_range(eb, sb, j) ->
     in_safe_int_range(eb, sb, i + j) ->
     eq(eb, sb, of_int(eb, sb, m, i + j),
-       add(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)))
+       (add(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't))
 
 axiom of_int_sub_exact :
-  forall eb, sb: int, m, n: RoundingMode, i, j: int.
+  forall eb, sb: int, m, n: RoundingMode, i, j: int
+    [(sub(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't)].
   1 < eb and 1 < sb ->
     in_safe_int_range(eb, sb, i) -> in_safe_int_range(eb, sb, j) ->
     in_safe_int_range(eb, sb, i - j) ->
     eq(eb, sb, of_int(eb, sb, m, i - j),
-       sub(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)))
+       (sub(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't))
 
 axiom of_int_mul_exact :
-  forall eb, sb: int, m, n: RoundingMode, i, j: int.
+  forall eb, sb: int, m, n: RoundingMode, i, j: int
+    [(mul(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't)].
   1 < eb and 1 < sb ->
     in_safe_int_range(eb, sb, i) -> in_safe_int_range(eb, sb, j) ->
     in_safe_int_range(eb, sb, i * j) ->
     eq(eb, sb, of_int(eb, sb, m, i * j),
-       mul(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)))
+       (mul(eb, sb, n, of_int(eb, sb, m, i), of_int(eb, sb, m, j)) : 't))
 
 (* min and max *)
 
 (* lemma *)
 axiom Min_r :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [min(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     le(eb, sb, y, x) -> eq(eb, sb, min(eb, sb, x, y), y)
 (* lemma *)
 axiom Min_l :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [min(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     le(eb, sb, x, y) -> eq(eb, sb, min(eb, sb, x, y), x)
 (* lemma *)
 axiom Max_r :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [max(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     le(eb, sb, y, x) -> eq(eb, sb, max(eb, sb, x, y), x)
 (* lemma *)
 axiom Max_l :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [max(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     le(eb, sb, x, y) -> eq(eb, sb, max(eb, sb, x, y), y)
 
@@ -1060,12 +1077,13 @@ logic is_int : int, int, 't -> prop
 (* axiom zeroF_is_int: is_int zeroF *)
 
 axiom of_int_is_int :
-  forall eb, sb: int, m: RoundingMode, x: int.
+  forall eb, sb: int, m: RoundingMode, x: int [(of_int(eb, sb, m, x) : 't)].
   1 < eb and 1 < sb ->
-    in_int_range(eb, sb, x) -> is_int(eb, sb, of_int(eb, sb, m, x))
+    in_int_range(eb, sb, x) -> is_int(eb, sb, (of_int(eb, sb, m, x) : 't))
 
 axiom big_float_is_int :
-  forall eb, sb: int, m: RoundingMode, i: 't.
+  forall eb, sb: int, m: RoundingMode, i: 't
+    [(of_int(eb, sb, m, pow2sb(eb, sb)) : 't), is_finite(eb, sb, i)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, i) ->
     (le(eb, sb, i, neg(eb, sb, of_int(eb, sb, m, pow2sb(eb, sb))))
@@ -1073,74 +1091,75 @@ axiom big_float_is_int :
     is_int(eb, sb, i)
 
 axiom roundToIntegral_is_int :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't [roundToIntegral(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     is_int(eb, sb, roundToIntegral(eb, sb, m, x))
 
 (* by propagation *)
 axiom eq_is_int :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
     eq(eb, sb, x, y) -> is_int(eb, sb, x) -> is_int(eb, sb, y)
 
 axiom add_int :
-  forall eb, sb: int, x, y: 't, m: RoundingMode.
+  forall eb, sb: int, x, y: 't, m: RoundingMode [add(eb, sb, m, x, y)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, y) ->
     is_finite(eb, sb, add(eb, sb, m, x, y)) ->
     is_int(eb, sb, add(eb, sb, m, x, y))
 
 axiom sub_int :
-  forall eb, sb: int, x, y: 't, m: RoundingMode.
+  forall eb, sb: int, x, y: 't, m: RoundingMode [sub(eb, sb, m, x, y)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, y) ->
     is_finite(eb, sb, sub(eb, sb, m, x, y)) ->
     is_int(eb, sb, sub(eb, sb, m, x, y))
 
 axiom mul_int :
-  forall eb, sb: int, x, y: 't, m: RoundingMode.
+  forall eb, sb: int, x, y: 't, m: RoundingMode [mul(eb, sb, m, x, y)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, y) ->
     is_finite(eb, sb, mul(eb, sb, m, x, y)) ->
     is_int(eb, sb, mul(eb, sb, m, x, y))
 
 axiom fma_int :
-  forall eb, sb: int, x, y, z: 't, m: RoundingMode.
+  forall eb, sb: int, x, y, z: 't, m: RoundingMode [fma(eb, sb, m, x, y, z)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, y) -> is_int(eb, sb, z) ->
     is_finite(eb, sb, fma(eb, sb, m, x, y, z)) ->
     is_int(eb, sb, fma(eb, sb, m, x, y, z))
 
 axiom neg_int :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [neg(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, neg(eb, sb, x))
 
 axiom abs_int :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [abs(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_int(eb, sb, abs(eb, sb, x))
 
 (** basic properties of float integers *)
 
 axiom is_int_of_int :
-  forall eb, sb: int, x: 't, m, m2: RoundingMode.
+  forall eb, sb: int, x: 't, m, m2: RoundingMode
+    [of_int(eb, sb, m2, to_int(eb, sb, m, x))].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> eq(eb, sb, x, of_int(eb, sb, m2, to_int(eb, sb, m, x)))
 
 axiom is_int_to_int :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't [to_int(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> in_int_range(eb, sb, to_int(eb, sb, m, x))
 
 axiom is_int_is_finite :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [is_int(eb, sb, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> is_finite(eb, sb, x)
 
 axiom int_to_real :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't [to_int(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> to_real(eb, sb, x) = real_of_int(to_int(eb, sb, m, x))
 
@@ -1150,7 +1169,7 @@ axiom int_to_real :
 (** rounding ints *)
 
 axiom truncate_int :
-  forall eb, sb: int, m: RoundingMode, i: 't.
+  forall eb, sb: int, m: RoundingMode, i: 't [roundToIntegral(eb, sb, m, i)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, i) ->
     eq(eb, sb, roundToIntegral(eb, sb, m, i), i)
@@ -1158,13 +1177,13 @@ axiom truncate_int :
 (** truncate *)
 
 axiom truncate_neg :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTZ, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_negative(eb, sb, x) ->
     roundToIntegral(eb, sb, RTZ, x) = roundToIntegral(eb, sb, RTP, x)
 
 axiom truncate_pos :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTZ, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_positive(eb, sb, x) ->
     roundToIntegral(eb, sb, RTZ, x) = roundToIntegral(eb, sb, RTN, x)
@@ -1172,25 +1191,27 @@ axiom truncate_pos :
 (** ceil *)
 
 axiom ceil_le :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTP, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> le(eb, sb, x, roundToIntegral(eb, sb, RTP, x))
 
 axiom ceil_lest :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't
+    [roundToIntegral(eb, sb, RTP, x), is_int(eb, sb, y)].
   1 < eb and 1 < sb ->
     (le(eb, sb, x, y) and is_int(eb, sb, y)) ->
     le(eb, sb, roundToIntegral(eb, sb, RTP, x), y)
 
 axiom ceil_to_real :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTP, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     to_real(eb, sb, roundToIntegral(eb, sb, RTP, x))
       = real_of_int(int_ceil(to_real(eb, sb, x)))
 
 axiom ceil_to_int :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't
+    [to_int(eb, sb, m, roundToIntegral(eb, sb, RTP, x))].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     to_int(eb, sb, m, roundToIntegral(eb, sb, RTP, x))
@@ -1199,25 +1220,27 @@ axiom ceil_to_int :
 (** floor *)
 
 axiom floor_le :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTN, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> le(eb, sb, roundToIntegral(eb, sb, RTN, x), x)
 
 axiom floor_lest :
-  forall eb, sb: int, x, y: 't.
+  forall eb, sb: int, x, y: 't
+    [roundToIntegral(eb, sb, RTN, x), is_int(eb, sb, y)].
   1 < eb and 1 < sb ->
     (le(eb, sb, y, x) and is_int(eb, sb, y)) ->
     le(eb, sb, y, roundToIntegral(eb, sb, RTN, x))
 
 axiom floor_to_real :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTN, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     to_real(eb, sb, roundToIntegral(eb, sb, RTN, x))
       = real_of_int(int_floor(to_real(eb, sb, x)))
 
 axiom floor_to_int :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't
+    [to_int(eb, sb, m, roundToIntegral(eb, sb, RTN, x))].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     to_int(eb, sb, m, roundToIntegral(eb, sb, RTN, x))
@@ -1226,21 +1249,21 @@ axiom floor_to_int :
 (* Rna *)
 
 axiom RNA_down :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTN, x)].
   1 < eb and 1 < sb ->
     lt(eb, sb, sub(eb, sb, RNE, x, roundToIntegral(eb, sb, RTN, x)),
        sub(eb, sb, RNE, roundToIntegral(eb, sb, RTP, x), x)) ->
     roundToIntegral(eb, sb, RNA, x) = roundToIntegral(eb, sb, RTN, x)
 
 axiom RNA_up :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTP, x)].
   1 < eb and 1 < sb ->
     gt(eb, sb, sub(eb, sb, RNE, x, roundToIntegral(eb, sb, RTN, x)),
        sub(eb, sb, RNE, roundToIntegral(eb, sb, RTP, x), x)) ->
     roundToIntegral(eb, sb, RNA, x) = roundToIntegral(eb, sb, RTP, x)
 
 axiom RNA_down_tie :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTN, x)].
   1 < eb and 1 < sb ->
     eq(eb, sb, sub(eb, sb, RNE, x, roundToIntegral(eb, sb, RTN, x)),
        sub(eb, sb, RNE, roundToIntegral(eb, sb, RTP, x), x)) ->
@@ -1248,7 +1271,7 @@ axiom RNA_down_tie :
     roundToIntegral(eb, sb, RNA, x) = roundToIntegral(eb, sb, RTN, x)
 
 axiom RNA_up_tie :
-  forall eb, sb: int, x: 't.
+  forall eb, sb: int, x: 't [roundToIntegral(eb, sb, RTP, x)].
   1 < eb and 1 < sb ->
     eq(eb, sb, sub(eb, sb, RNE, roundToIntegral(eb, sb, RTP, x), x),
        sub(eb, sb, RNE, x, roundToIntegral(eb, sb, RTN, x))) ->
@@ -1257,36 +1280,40 @@ axiom RNA_up_tie :
 
 (* to_int *)
 axiom to_int_roundToIntegral :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't [roundToIntegral(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     to_int(eb, sb, m, x) = to_int(eb, sb, m, roundToIntegral(eb, sb, m, x))
 
 axiom to_int_monotonic :
-  forall eb, sb: int, m: RoundingMode, x, y: 't.
+  forall eb, sb: int, m: RoundingMode, x, y: 't
+    [to_int(eb, sb, m, x), to_int(eb, sb, m, y)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_finite(eb, sb, y) -> le(eb, sb, x, y) ->
     to_int(eb, sb, m, x) <= to_int(eb, sb, m, y)
 
 axiom to_int_of_int :
-  forall eb, sb: int, m: RoundingMode, i: int.
+  forall eb, sb: int, m: RoundingMode, i: int
+    [to_int(eb, sb, m, (of_int(eb, sb, m, i) : 't))].
   1 < eb and 1 < sb ->
     in_safe_int_range(eb, sb, i) ->
-    to_int(eb, sb, m, of_int(eb, sb, m, i)) = i
+    to_int(eb, sb, m, (of_int(eb, sb, m, i) : 't)) = i
 
 axiom eq_to_int :
-  forall eb, sb: int, m: RoundingMode, x, y: 't.
+  forall eb, sb: int, m: RoundingMode, x, y: 't
+    [to_int(eb, sb, m, x), to_int(eb, sb, m, y)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> eq(eb, sb, x, y) ->
     to_int(eb, sb, m, x) = to_int(eb, sb, m, y)
 
 axiom neg_to_int :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't
+    [to_int(eb, sb, m, neg(eb, sb, x))].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) ->
     to_int(eb, sb, m, neg(eb, sb, x)) = - to_int(eb, sb, m, x)
 
 axiom roundToIntegral_is_finite :
-  forall eb, sb: int, m: RoundingMode, x: 't.
+  forall eb, sb: int, m: RoundingMode, x: 't [roundToIntegral(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     is_finite(eb, sb, roundToIntegral(eb, sb, m, x))
