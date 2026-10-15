@@ -161,3 +161,12 @@ disabling theories in smt-lib files with `set-option`
 
 This line is matched by Why3 to extract the number of steps. See `alt_ergo_common.drv` in the Why3 repository.
   $ echo '(set-logic ALL) (check-sat)' | alt-ergo 2>&1 | grep -E '^; File ".*", line [0-9]+, characters [0-9]+-[0-9]+:.*([0-9]+.?[0-9]*) steps)' >/dev/null
+
+A user trigger that does not cover all the variables and type variables of its
+formula is dropped, with a warning.
+  $ alt-ergo ignored_triggers.ae 2>&1
+  [Warning] File "ignored_triggers.ae", line 7, characters 0-51: a trigger of ignored_type is dropped: 
+            f('i~286')
+  [Warning] File "ignored_triggers.ae", line 13, characters 0-56: a trigger of ignored_var is dropped: 
+            g('i~288')
+  File "ignored_triggers.ae", line 15, characters 0-13: Valid (0.0088) (0 steps) (goal g)

@@ -1,0 +1,16 @@
+logic f : int -> 't
+logic c : 't
+logic g, h : int -> int
+
+(* The trigger [f(i)] is typed independently of the body: its type is not
+   related to the type variable of the formula, so it is dropped.
+   TODO: Dolmen should probably at least warn in this case *)
+axiom ignored_type : forall i: int [f(i)]. c = f(i)
+
+(* Annotating the trigger and the body with ['t] relates them. *)
+axiom kept_type : forall i: int [(f(i) : 't)]. c = (f(i) : 't)
+
+(* The trigger [g(i)] does not contain the variable [j]. *)
+axiom ignored_var : forall i, j: int [g(i)]. g(i) = h(j)
+
+goal g : true
