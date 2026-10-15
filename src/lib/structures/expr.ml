@@ -584,6 +584,11 @@ end
 let print ppf =
   if Options.get_output_smtlib () then SmtPrinter.pp ppf else AEPrinter.pp ppf
 
+let print_trigger ppf =
+  if Options.get_output_smtlib ()
+  then SmtPrinter.pp_trigger ppf
+  else AEPrinter.pp_trigger ppf
+
 let print_triggers ppf =
   if Options.get_output_smtlib ()
   then SmtPrinter.pp_triggers ppf
@@ -2044,20 +2049,19 @@ module Triggers = struct
       (fun v _ acc -> if Var.Set.mem v bv then Var.Set.add v acc else acc)
       t.vars acc
 
-  (* TODO: we should define here a predicate `good_triggers` and call it with
-     List.filter in the appropriate locations. *)
+  (* Check if the multi-trigger is pure and covers all the type and term
+     variables. *)
+  let good_trigger (bv, vty) { content = l; _ } =
+    (not (List.exists not_pure l))
+    &&
+    let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
+    let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
+    (* TODO: we can replace `Var.Set.subset bv s1` by `Var.Seq.equal bv s1`. By
+       construction `s1` is a subset of `bv`. *)
+    Var.Set.subset bv s1 && Ty.TvSet.subset vty s2
+
   let filter_good_triggers (bv, vty) trs =
-    List.filter
-      (fun { content = l; _ } ->
-        (* Check if the multi-trigger covers all the type and term variables. *)
-        (not (List.exists not_pure l))
-        &&
-        let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
-        let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
-        (* TODO: we can replace `Var.Set.subset bv s1` by `Var.Seq.equal bv s1`.
-           By construction `s1` is a subset of `bv`. *)
-        Var.Set.subset bv s1 && Ty.TvSet.subset vty s2)
-      trs
+    List.filter (good_trigger (bv, vty)) trs
 
   (* unused let check_triggers (bv, vty) (trs : trigger list) = if trs == []
      then failwith "There should be a trigger for every quantified formula \ in
@@ -2406,7 +2410,7 @@ module Triggers = struct
         STRS.add (e, free_vars_as_set e, e.vty) strs)
       terms terms
 
-  let check_user_triggers f toplevel binders trs0 ~decl_kind =
+  let check_user_triggers ~name ~loc f toplevel binders trs0 ~decl_kind =
     if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty
     then trs0
     else
@@ -2424,7 +2428,16 @@ module Triggers = struct
         [@ocaml.ppwarning
           "TODO: do it for this case once free-vars issues of theories axioms \
            with hypotheses fixed"]
-      else filter_good_triggers (vterm, vtype) trs0
+      else
+        List.filter
+          (fun tr ->
+            let good = good_trigger (vterm, vtype) tr in
+            if (not good) && tr.from_user
+            then
+              Printer.print_wrn ~header:true "%a a trigger of %s is dropped: %a"
+                Loc.report loc name print_trigger tr;
+            good)
+          trs0
 
   let make f binders decl_kind mconf =
     if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty
@@ -2525,7 +2538,9 @@ let mk_forall name loc binders trs f ~toplevel ~decl_kind =
   in
   let free_vty = free_type_vars_as_types f in
   let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in
-  let trs = Triggers.check_user_triggers f toplevel binders trs ~decl_kind in
+  let trs =
+    Triggers.check_user_triggers ~name ~loc f toplevel binders trs ~decl_kind
+  in
   mk_forall_bis
     { name;
       loc;
