@@ -19,7 +19,7 @@ All the files of this project, with the exception of the preludes and plugins, a
 As an exception, Alt-Ergo Club members at the Gold level can use these same files
 under the terms of [Apache Software License version 2.0](licenses/Apache-License-2.0.txt).
 
-Note that plugins or preludes may have different licenses. Please referer to
+Note that plugins or preludes may have different licenses. Please refer to
 their directory.
 
 In case of doubt, please refer to the header of each file to know under which
@@ -40,3 +40,8 @@ The packages of the free releases are suffixed with `-free` on the opam reposito
 Please refer to the `LICENSE.md` of each plugins:
 - `AB-Why3`: src/plugins/AB-Why3/LICENSE.md
 - `fm-simplex`: src/plugins/fm-simplex/LICENSE.md
+
+## Preludes
+
+The preludes of `src/preludes/why3-fpa` are derived from Why3, please refer to
+src/preludes/why3-fpa/LICENSE.md.

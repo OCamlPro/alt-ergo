@@ -86,6 +86,12 @@ let content = function
   | Nra -> Some nra_prelude
   | SmtFloat -> None
 
+let installed_file = function
+  | Fpa | Ria | Nra -> None
+  (* TODO: [Some "smt-lib-fpa.ae"] once [ae.float] is a builtin of the native
+     language. *)
+  | SmtFloat -> None
+
 let all_preludes = [Fpa; Ria; Nra; SmtFloat]
 
 (* SmtFloat is only activated when the user passes --enable-theories
