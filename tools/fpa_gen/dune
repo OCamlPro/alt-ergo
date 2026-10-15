@@ -1,3 +1,0 @@
-(executable
- (name main)
- (libraries dolmen dolmen_loop fmt cmdliner))
