@@ -41,16 +41,16 @@
      and guarded with [1 < eb and 1 < sb] (corresponding to the eb_gt_1 and
      sb_gt_1 axioms of Why3's axiomatization).
    - the top-level [eb], [sb], [eb_gt_1], [sb_gt_1] and the type [t] are
-     commented out, and [t] is the type variable ['t].
+     removed, and [t] is the type variable ['t].
    - [round] is not declared, since it is the builtin [ae.float].
-   - [Round_monotonic] is commented out, since the monotonicity of the
+   - [Round_monotonic] is removed, since the monotonicity of the
      builtin [ae.float] is handled by Alt-Ergo (see [src/preludes/fpa.ae]).
    - [Round_idempotent] is commented out (see the TODO above it).
    - the constants for special values ([plus_infinity], [minus_infinity],
      [not_a_number]) and the axioms on [zeroF] ([zeroF_is_positive],
-     [zeroF_is_zero], [eq_zero], [zeroF_is_int]) are commented out, since
+     [zeroF_is_zero], [eq_zero], [zeroF_is_int]) are removed, since
      float literals are builtin in Alt-Ergo.
-   - the notations ([.+], [.<=], ...) are commented, only the functions they
+   - the notations ([.+], [.<=], ...) are removed, only the functions they
      stand for are kept.
    - the type [mode] of rounding modes is Alt-Ergo's builtin [RoundingMode],
      [FromInt.from_int] is [real_of_int], [S.sqrt] is [sqrt_real],
@@ -90,33 +90,6 @@ predicate to_nearest(m: RoundingMode) = m = RNE or m = RNA
   point support will leave them uninterpreted.
 *)
 
-(* module GenericFloat *)
-
-(* use int.Int
-   use bv.Pow2int
-   use real.Abs as Abs
-   use real.FromInt as FromInt
-   use real.Truncate as Truncate
-   use real.RealInfix
-   use export RoundingMode *)
-
-(** {2 Part I - Public Interface}   *)
-
-(* constant eb : int *)
-(** the number of bits in the exponent.  *)
-
-(* constant sb : int *)
-(** the number of bits in the significand, including the hidden bit. *)
-
-(* axiom eb_gt_1: 1 < eb *)
-(* axiom sb_gt_1: 1 < sb *)
-
-(** {3 Sorts} *)
-
-(* type t *)
-(** abstract type to denote floating-point numbers, including the special values
-    for infinities and NaNs *)
-
 (** {3 Constructors and Constants} *)
 
 logic zeroF : int, int -> 't (** +0.0 *)
@@ -141,13 +114,6 @@ logic neg : int, int, 't -> 't (** Opposite *)
 logic fma : int, int, RoundingMode, 't, 't, 't -> 't
   (** Fused multiply-add: x * y + z *)
 logic sqrt : int, int, RoundingMode, 't -> 't (** Square root *)
-
-(* let function (.-_) (x:t)   : t = neg x
-   let function (.+)  (x y:t) : t = add RNE x y
-   let function (.-)  (x y:t) : t = sub RNE x y
-   let function ( .* ) (x y:t) : t = mul RNE x y
-   let function (./)  (x y:t) : t = div RNE x y *)
-  (** Notations for operations in the default mode RNE *)
 
 logic roundToIntegral : int, int, RoundingMode, 't -> 't
   (** Rounding to an integer *)
@@ -177,14 +143,6 @@ predicate ge(eb: int, sb: int, x: 't, y: 't) = le(eb, sb, y, x)
 predicate gt(eb: int, sb: int, x: 't, y: 't) = lt(eb, sb, y, x)
 logic eq : int, int, 't, 't -> prop
 (** equality on floats, different from = since not (eq NaN NaN) *)
-
-(* let predicate (.<=) (x:t) (y:t) = le x y
-   let predicate (.<)  (x:t) (y:t) = lt x y
-   let predicate (.>=) (x:t) (y:t) = ge x y
-   let predicate (.>)  (x:t) (y:t) = gt x y
-   let predicate (.=)  (x:t) (y:t) = eq x y *)
-(** Notations *)
-
 
 (** {3 Classification of numbers} *)
 
@@ -224,23 +182,6 @@ axiom is_not_finite :
   1 < eb and 1 < sb ->
     not is_finite(eb, sb, x) <-> (is_infinite(eb, sb, x) or is_nan(eb, sb, x))
 
-(** some constants for special values
-
-  it is not specified that these are unique, i.e. it is not true that
-
-  forall x. is_nan x -> x = not_a_number
-
-*)
-(* constant plus_infinity : t *)
-(* axiom plus_infinity_spec: is_plus_infinity plus_infinity *)
-
-(* constant minus_infinity : t *)
-(* axiom minus_infinity_spec: is_minus_infinity minus_infinity *)
-
-(* constant not_a_number : t *)
-(* axiom not_a_number_spec: is_nan not_a_number *)
-
-
 (** {3 Conversions from other sorts} *)
 
 (* from bitvec binary interchange                           *)
@@ -261,9 +202,6 @@ logic to_real : int, int, 't -> real
 (** {2 Part II - Private Axiomatisation} *)
 
 (** {3 Constructors and Constants} *)
-
-(* axiom zeroF_is_positive : is_positive zeroF *)
-(* axiom zeroF_is_zero     : is_zero zeroF *)
 
 axiom zero_to_real :
   forall eb, sb: int, x: 't [is_zero(eb, sb, x)].
@@ -311,7 +249,6 @@ axiom zero_of_int :
 (*                                                                       *)
 (* Note that this means round (+INF) > 0 is not true.                    *)
 (* Note also this means round (2*INF) > round (INF) is not true either.  *)
-(* function round mode real : real *)
 
 logic max_real : int, int -> real (* defined when cloning *)
 logic max_int : int, int -> int (* defined when cloning *)
@@ -468,8 +405,6 @@ axiom eq_trans :
   forall eb, sb: int, x, y, z: 't [eq(eb, sb, x, y), eq(eb, sb, y, z)].
   1 < eb and 1 < sb ->
     eq(eb, sb, x, y) -> eq(eb, sb, y, z) -> eq(eb, sb, x, z)
-
-(* axiom eq_zero: zeroF .= (.- zeroF) *)
 
 axiom eq_to_real_finite :
   forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
@@ -817,8 +752,6 @@ axiom fma_finite_rev_n :
            = round(eb, sb, m,
                to_real(eb, sb, x) * to_real(eb, sb, y) + to_real(eb, sb, z)))
 
-(* use real.Square as S *)
-
 axiom sqrt_finite :
   forall eb, sb: int, m: RoundingMode, x: 't [sqrt(eb, sb, m, x)].
   1 < eb and 1 < sb ->
@@ -1066,16 +999,12 @@ axiom Max_l :
 
 (* _____________ *)
 
-(* use real.Truncate as Truncate *)
-
 (* This predicate specify if a float is finite and is an integer *)
 logic is_int : int, int, 't -> prop
 
 (** characterizing integers *)
 
 (* by construction *)
-(* axiom zeroF_is_int: is_int zeroF *)
-
 axiom of_int_is_int :
   forall eb, sb: int, m: RoundingMode, x: int [(of_int(eb, sb, m, x) : 't)].
   1 < eb and 1 < sb ->
@@ -1162,9 +1091,6 @@ axiom int_to_real :
   forall eb, sb: int, m: RoundingMode, x: 't [to_int(eb, sb, m, x)].
   1 < eb and 1 < sb ->
     is_int(eb, sb, x) -> to_real(eb, sb, x) = real_of_int(to_int(eb, sb, m, x))
-
-(* axiom int_mode: forall m1 m2 x.
-     is_int x -> to_int m1 x = to_int m2 x  etc ... *)
 
 (** rounding ints *)
 
@@ -1317,8 +1243,6 @@ axiom roundToIntegral_is_finite :
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) ->
     is_finite(eb, sb, roundToIntegral(eb, sb, m, x))
-
-(* end of module GenericFloat *)
 
 (* Bounds on the rounding error: the [round_bound_ne] and [round_bound]
    lemmas of Why3's [Float32] and [Float64] modules, with the format-specific
