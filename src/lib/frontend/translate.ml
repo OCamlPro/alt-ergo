@@ -287,6 +287,10 @@ let ae_fpa_builtins =
        third one is the rounding mode, and the last one is the real to be
        rounded *)
     |> op "float" Float ([int; int; fpa_rounding_mode; real] ->. real)
+    (* same as [float] with the exponent and significand sizes [eb] and [sb] as
+       arguments, used by the SMT-LIB FPA prelude *)
+    |> op E.FP.Names.ae_float FloatEbSb
+         ([int; int; fpa_rounding_mode; real] ->. real)
     |> partial2 "float32" float32
     |> partial1 "float32d" float32d
     |> partial2 "float64" float64
