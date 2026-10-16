@@ -903,29 +903,9 @@ let is_fresh_ac_name t =
   | { f = Name { ns = Fresh_ac; _ }; xs = []; _ } -> true
   | _ -> false
 
-let positive_int i = mk_term (Sy.int i) [] Ty.Tint
+let int i = mk_term (Sy.int i) [] Ty.Tint
 
-let int i =
-  let len = String.length i in
-  assert (len >= 1);
-  match i.[0] with
-  | '-' ->
-    assert (len >= 2);
-    let pi = String.sub i 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [positive_int "0"; positive_int pi] Ty.Tint
-  | _ -> positive_int i
-
-let positive_real i = mk_term (Sy.real i) [] Ty.Treal
-
-let real r =
-  let len = String.length r in
-  assert (len >= 1);
-  match r.[0] with
-  | '-' ->
-    assert (len >= 2);
-    let pi = String.sub r 1 (len - 1) in
-    mk_term (Sy.Op Sy.Minus) [positive_real "0"; positive_real pi] Ty.Treal
-  | _ -> positive_real r
+let real r = mk_term (Sy.real r) [] Ty.Treal
 
 let bitv bt ty = mk_term (Sy.bitv bt) [] ty
 
