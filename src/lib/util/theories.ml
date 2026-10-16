@@ -71,7 +71,7 @@ let prelude_filename = function
   | Fpa -> "fpa.ae"
   | Ria -> "ria.ae"
   | Nra -> "nra.ae"
-  | SmtFloat -> "smt-lib-fpa.psmt2"
+  | SmtFloat -> "smt-lib-fpa.ae"
 
 let filename th = Fmt.str "<builtins>/%s" (prelude_filename th)
 
@@ -87,19 +87,15 @@ let ria_prelude = get_prelude Ria
 
 let nra_prelude = get_prelude Nra
 
-let smt_lib_fpa_prelude = get_prelude SmtFloat
-
 let content = function
   | Fpa -> Some fpa_prelude
   | Ria -> Some ria_prelude
   | Nra -> Some nra_prelude
-  | SmtFloat -> Some smt_lib_fpa_prelude
+  | SmtFloat -> None
 
 let installed_file = function
   | Fpa | Ria | Nra -> None
-  (* TODO: [Some "smt-lib-fpa.ae"] once [ae.float] is a builtin of the native
-     language. *)
-  | SmtFloat -> None
+  | SmtFloat -> Some "smt-lib-fpa.ae"
 
 let all_preludes = [Fpa; Ria; Nra; SmtFloat]
 
