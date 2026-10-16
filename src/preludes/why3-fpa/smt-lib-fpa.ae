@@ -561,11 +561,11 @@ predicate overflow_value(eb: int, sb: int, m: RoundingMode, x: 't) =
   else if m = RTP then
     (if is_positive(eb, sb, x)
      then is_infinite(eb, sb, x)
-     else is_finite(eb, sb, x) and to_real(eb, sb, x) = - max_real(eb, sb))
+     else (is_finite(eb, sb, x) and to_real(eb, sb, x) = - max_real(eb, sb)))
   else if m = RTZ then
     (if is_positive(eb, sb, x)
      then is_finite(eb, sb, x) and to_real(eb, sb, x) = max_real(eb, sb)
-     else is_finite(eb, sb, x) and to_real(eb, sb, x) = - max_real(eb, sb))
+     else (is_finite(eb, sb, x) and to_real(eb, sb, x) = - max_real(eb, sb)))
   else (* RNA | RNE *)
     is_infinite(eb, sb, x)
 
