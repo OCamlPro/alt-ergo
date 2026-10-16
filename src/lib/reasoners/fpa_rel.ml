@@ -421,6 +421,14 @@ let real_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Treal in
   E.Set.add lhs terms, mk_eq_fact lhs (E.Reals.of_Z literal) :: facts
 
+let zero_literal_fact eb sb (terms, facts) =
+  let ty = Ty.Tfloat (eb, sb) in
+  let lhs =
+    E.mk_term (Sy.name Names.zeroF) [E.Ints.of_int eb; E.Ints.of_int sb] ty
+  in
+  ( E.Set.add lhs terms,
+    mk_eq_fact lhs (E.float Fp_value.Plus_zero eb sb) :: facts )
+
 let compute_emax_min_exp eb sb =
   let bias = (1 lsl (eb - 1)) - 1 in
   let emax = bias + 1 in
@@ -465,6 +473,7 @@ let type_literal_facts env eb sb =
   |> real_literal_fact eb_t sb_t E.FP.Names.abs_err_rne_denom
        c.abs_err_rne_denom
   |> real_literal_fact eb_t sb_t E.FP.Names.abs_err_denom c.abs_err_denom
+  |> zero_literal_fact eb sb
 
 let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
     ~is_positive ~is_negative =

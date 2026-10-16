@@ -691,6 +691,10 @@ end
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP : sig
   module Names : sig
+    (** {2 Float literals} *)
+
+    val zeroF : string
+
     (** {2 Float conversion functions} *)
 
     val ae_float : string
