@@ -837,8 +837,10 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
                   | Some path -> Some (read_file path)
                   | None ->
                     fatal_error
-                      "cannot find the prelude '%s' of the theory %a (see \
-                       `alt-ergo --where preludes`)"
+                      "cannot find the prelude '%s' of the theory %a in the \
+                       preludes directories (see `alt-ergo --where preludes`). \
+                       When running from the build directory, it can be \
+                       installed there with `dune build @install`."
                       name Theories.pp_prelude theory))
             in
             match content with
