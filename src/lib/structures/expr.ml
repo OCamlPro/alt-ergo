@@ -3141,6 +3141,9 @@ end
     https://smt-lib.org/theories-FloatingPoint.shtml *)
 module FP = struct
   module Names = struct
+    (* float literals *)
+    let zeroF = "ae.fp.zeroF"
+
     (* float conversion function *)
     let ae_float = "ae.float"
 

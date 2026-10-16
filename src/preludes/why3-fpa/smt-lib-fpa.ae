@@ -49,7 +49,7 @@
    - the constants for special values ([plus_infinity], [minus_infinity],
      [not_a_number]) and the axioms on [zeroF] ([zeroF_is_positive],
      [zeroF_is_zero], [eq_zero], [zeroF_is_int]) are removed, since
-     float literals are builtin in Alt-Ergo.
+     float literals are builtin in Alt-Ergo, which interprets [zeroF] as +0.
    - the notations ([.+], [.<=], ...) are removed, only the functions they
      stand for are kept.
    - the type [mode] of rounding modes is Alt-Ergo's builtin [RoundingMode],
@@ -92,8 +92,7 @@ predicate to_nearest(m: RoundingMode) = m = RNE or m = RNA
 
 (** {3 Constructors and Constants} *)
 
-logic zeroF : int, int -> 't (** +0.0 *)
-(* TODO: interpret [zeroF(eb, sb)] as the literal +0 on the Alt-Ergo side. *)
+logic zeroF : int, int -> 't (** +0.0, interpreted by Alt-Ergo *)
 (* exp_bias = 2^(eb - 1) - 1 *)
 (* max_finite_exp = 2^sb - 2 - exp_bias = exp_bias *)
 (* max_significand = (2^eb + 2^eb - 1) * 2^(1-eb) *)
