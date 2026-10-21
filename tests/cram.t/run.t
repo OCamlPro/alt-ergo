@@ -15,6 +15,15 @@ appropriate here.
     (define-fun a2 () (Array Int Int) (as @a1 (Array Int Int)))
   )
 
+Model generation assigns the base of a power before the power. It used to
+assign `x ** 2` first, and then never found `x`.
+
+  $ alt-ergo --produce-models -o smtlib2 --timelimit 2 pow.ae 2>/dev/null
+  
+  unknown
+  
+  unknown
+
 Now we will test some semantic triggers.
 
   $ alt-ergo -o smtlib2 semantic_triggers.ae 2>/dev/null

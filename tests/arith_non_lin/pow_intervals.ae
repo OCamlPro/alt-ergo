@@ -1,0 +1,14 @@
+logic x, y : real
+logic i : int
+
+goal pow_lower_bound: x >= 3. -> x **. 2. >= 9.
+
+goal pow_nonneg: x **. 2. = y -> y < 0. -> false
+
+goal pow_int_gap: 2 <= i ** 2 -> i ** 2 <= 3 -> false
+
+goal pow_sum_nonneg: (x + y) **. 2. >= 0.
+
+(* TODO: Limitation/Regression: powers are not simplified so this is not proven,
+   and now we timeout intsead of just answering unknown quickly like before. *)
+goal pow_not_product: (x + 1.) **. 2. = x * x + 2. * x + 1.
