@@ -1,0 +1,11 @@
+logic x : real
+logic m : fpa_rounding_mode
+logic p : int
+
+goal g1 : m = NearestTiesToEven -> x = 1.5 -> float32(m, x) = 1.5
+
+goal g2 : m = NearestTiesToEven -> float32(m, x) = float32d(x)
+
+goal g3 : p = 24 -> float(p, 149, NearestTiesToEven, x) = float32d(x)
+
+goal g4 : integer_round(m, x) = 2 -> integer_round(m, x) + 1 = 3
