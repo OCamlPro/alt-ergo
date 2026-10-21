@@ -119,7 +119,7 @@ type t =
     new_uf : Uf.t;
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
-    floats : (int * int * Fpa_rounding.rounding_mode * E.t) ME.t;
+    floats : (E.t * E.t * E.t * E.t) ME.t;
     (* The terms [float(prec, exp, mode, x)], with their arguments. *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
@@ -1523,6 +1523,23 @@ let float_arg env x =
     let rx, ex = Uf.find env.new_uf x in
     if is_alien rx then Some (rx, ex, false) else None
 
+(* The values of the parameters of [float(prec, exp, mode, x)], with their
+   explanation, once they are known to be literals. *)
+let float_params env prec exp mode =
+  let int_param t =
+    let r, ex = Uf.find env.new_uf t in
+    match P.is_const (poly_of r) with
+    | Some q when Q.is_int q ->
+      Option.map (fun n -> n, ex) (Z.to_machine_int (Q.to_z q))
+    | _ -> None
+  in
+  let rm, ex_m = Uf.find env.new_uf mode in
+  match int_param prec, int_param exp, X.to_model_term rm with
+  | Some (prec, ex_p), Some (exp, ex_e), Some m ->
+    let mode = E.rounding_mode_view m in
+    Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
+  | _ -> None
+
 (* Adds to [eqs] the lower (or upper) bound on [rx] given by the preimage of the
    lower (or upper) bound of [it], the interval of [float(prec, exp, mode, x)],
    if it is tighter than the bound of [ix], the interval of [rx]. *)
@@ -1566,15 +1583,15 @@ let mk_bound prec exp mode ~is_int ~ex rx ix it is_lower eqs =
 let bounds_from_floats env eqs =
   ME.fold
     (fun t (prec, exp, mode, x) eqs ->
-      match float_arg env x with
-      | None -> eqs
-      | Some (rx, ex_x, is_int) ->
+      match float_params env prec exp mode, float_arg env x with
+      | Some (prec, exp, mode, ex_p), Some (rx, ex_x, is_int) ->
         let rt, ex_t = Uf.find env.new_uf t in
         let it = interval_of env rt in
         let ix = interval_of env rx in
-        let ex = Ex.union ex_t ex_x in
+        let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
         let mk_bound = mk_bound prec exp mode ~is_int ~ex rx ix it in
-        mk_bound false (mk_bound true eqs))
+        mk_bound false (mk_bound true eqs)
+      | _ -> eqs)
     env.floats eqs
 
 let count_splits env la =
@@ -1859,13 +1876,8 @@ let add =
       let env = { env with new_uf } in
       let env =
         match E.term_view t with
-        | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } -> (
-          (* Only terms with literal parameters are inverted. TODO: support
-             symbolic parameters (wait for them to become literals) *)
-          match E.(int_view prec, int_view exp, rounding_mode_view mode) with
-          | prec, exp, mode ->
-            { env with floats = ME.add t (prec, exp, mode, x) env.floats }
-          | exception Failure _ -> env)
+        | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } ->
+          { env with floats = ME.add t (prec, exp, mode, x) env.floats }
         | _ -> env
       in
       let p = poly_of r in
