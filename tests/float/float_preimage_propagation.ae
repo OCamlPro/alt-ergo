@@ -1,0 +1,26 @@
+logic x : real
+logic n : int
+
+goal nearest_even :
+  float32(NearestTiesToEven, x) = 16777216. -> 16777215.5 <= x <= 16777217.
+
+goal nearest_away :
+  float64(NearestTiesToAway, x) = 9007199254740992. ->
+  9007199254740991.5 <= x < 9007199254740993.
+
+goal nearest_strict :
+  1. < float32(NearestTiesToEven, x) <= 2. -> 1.00000005 < x <= 2.0000002
+
+goal up : float32(Up, x) = 1. -> 0.99999994 < x <= 1.
+
+goal down : float32(Down, x) = 1. -> 1. <= x < 1.0000002
+
+goal down_subnormal : float32(Down, x) = 0. -> 0. <= x < 2. **. (-149)
+
+goal to_zero_neg : float32(ToZero, x) = -1. -> -1.0000002 < x <= -1.
+
+goal integer :
+  float32(NearestTiesToEven, real_of_int(n)) = 16777216. ->
+  n = 16777216 or n = 16777217
+
+goal integer_empty : float32(ToZero, real_of_int(n)) <> 32.5
