@@ -43,9 +43,14 @@
    - the top-level [eb], [sb], [eb_gt_1], [sb_gt_1] and the type [t] are
      removed, and [t] is the type variable ['t].
    - [round] is not declared, since it is the builtin [ae.float].
+   - [max_int_spec] and [max_real_int] are guarded with [sb <= emax]:
+     otherwise the largest finite value is not an integer (e.g. 15.5 for
+     [eb = 3], [sb = 5]).
    - [Round_monotonic] is removed, since the monotonicity of the
      builtin [ae.float] is handled by Alt-Ergo (see [src/preludes/fpa.ae]).
    - [Round_idempotent] is commented out (see the TODO above it).
+   - [from_real_large_neg] and [from_real_large_pos] conclude [overflow_value]
+     instead of [is_infinite], since [ae.float] does not saturate.
    - the constants for special values ([plus_infinity], [minus_infinity],
      [not_a_number]) and the axioms on [zeroF] ([zeroF_is_positive],
      [zeroF_is_zero], [eq_zero], [zeroF_is_int]) are removed, since
@@ -256,11 +261,11 @@ function emax(eb: int, sb: int) : int = pow2(eb - 1)
 
 axiom max_int_spec :
   forall eb, sb: int.
-  1 < eb and 1 < sb ->
+  1 < eb and 1 < sb and sb <= emax(eb, sb) ->
     max_int(eb, sb) = pow2(emax(eb, sb)) - pow2(emax(eb, sb) - sb)
 axiom max_real_int :
   forall eb, sb: int.
-  1 < eb and 1 < sb ->
+  1 < eb and 1 < sb and sb <= emax(eb, sb) ->
     max_real(eb, sb) = real_of_int(max_int(eb, sb))
 
 predicate in_range(eb: int, sb: int, x: real) =
@@ -274,7 +279,8 @@ axiom is_finite :
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> in_range(eb, sb, to_real(eb, sb, x))
 
-(* used as a condition to propagate is_finite *)
+(* used as a condition to propagate is_finite. Since [round] doesn't saturate,
+   this is IEEE 754's overflow condition. *)
 predicate no_overflow(eb: int, sb: int, m: RoundingMode, x: real) =
   in_range(eb, sb, round(eb, sb, m, x))
 
@@ -351,22 +357,6 @@ axiom from_real_in_range :
     in_range(eb, sb, round(eb, sb, m, r)) ->
     let f = (from_real(eb, sb, m, r) : 't) in
       is_finite(eb, sb, f) and to_real(eb, sb, f) = round(eb, sb, m, r)
-
-axiom from_real_large_neg :
-  forall eb, sb: int, m: RoundingMode, r: real
-    [(from_real(eb, sb, m, r) : 't)].
-  1 < eb and 1 < sb ->
-    round(eb, sb, m, r) < - max_real(eb, sb) ->
-    let f = (from_real(eb, sb, m, r) : 't) in
-      is_infinite(eb, sb, f) and is_negative(eb, sb, f)
-
-axiom from_real_large_pos :
-  forall eb, sb: int, m: RoundingMode, r: real
-    [(from_real(eb, sb, m, r) : 't)].
-  1 < eb and 1 < sb ->
-    round(eb, sb, m, r) > max_real(eb, sb) ->
-    let f = (from_real(eb, sb, m, r) : 't) in
-      is_infinite(eb, sb, f) and is_positive(eb, sb, f)
 
 (** {3 Comparisons} *)
 
@@ -567,6 +557,27 @@ predicate overflow_value(eb: int, sb: int, m: RoundingMode, x: 't) =
      else (is_finite(eb, sb, x) and to_real(eb, sb, x) = - max_real(eb, sb)))
   else (* RNA | RNE *)
     is_infinite(eb, sb, x)
+
+(* [from_real_large_neg] and [from_real_large_pos] are moved here to use
+   [overflow_value]. Why3 concludes [is_infinite], which is only correct if
+   [round] is the IEEE rounding. The builtin [ae.float] does not saturate, so
+   the result is given by [overflow_value], as for the other operations. *)
+
+axiom from_real_large_neg :
+  forall eb, sb: int, m: RoundingMode, r: real
+    [(from_real(eb, sb, m, r) : 't)].
+  1 < eb and 1 < sb ->
+    round(eb, sb, m, r) < - max_real(eb, sb) ->
+    let f = (from_real(eb, sb, m, r) : 't) in
+      is_negative(eb, sb, f) and overflow_value(eb, sb, m, f)
+
+axiom from_real_large_pos :
+  forall eb, sb: int, m: RoundingMode, r: real
+    [(from_real(eb, sb, m, r) : 't)].
+  1 < eb and 1 < sb ->
+    round(eb, sb, m, r) > max_real(eb, sb) ->
+    let f = (from_real(eb, sb, m, r) : 't) in
+      is_positive(eb, sb, f) and overflow_value(eb, sb, m, f)
 
 (* This predicate is used to tell what is the sign of zero in the
    axioms specifying add and sub *)

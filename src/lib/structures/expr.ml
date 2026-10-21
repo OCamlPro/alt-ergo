@@ -3176,6 +3176,8 @@ module FP = struct
 
     let is_positive = "ae.fp.is_positive"
 
+    let is_finite = "ae.fp.is_finite"
+
     (* real conversion *)
     let to_real = "ae.fp.to_real"
 
