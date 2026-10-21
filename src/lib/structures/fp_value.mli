@@ -45,3 +45,7 @@ val mk_fp_literal :
     [mantissa] is the significand bits (without the hidden bit), [e] is the
     exponent width, and [s] is the significand width (including the hidden bit).
 *)
+
+val max_finite_q : int -> int -> Numbers.Q.t
+(** [max_finite_q eb sb] is the largest finite value of the format [(eb, sb)].
+*)

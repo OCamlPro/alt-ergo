@@ -152,3 +152,9 @@ let mk_fp_literal ~neg ~biased_exp ~mantissa ~e ~s =
     (* zero exponent + zero significand: signed zero *)
     if neg then Minus_zero else Plus_zero
   else Finite (bvs_to_q ~neg ~biased_exp ~mantissa e s)
+
+(* Largest finite value of the format (eb, sb): 2^emax - 2^(emax - sb). *)
+let max_finite_q eb sb =
+  let pow2_q = Fpa_rounding.mult_x_by_2_pow_n Q.one in
+  let emax = fp_bias eb + 1 in
+  Q.sub (pow2_q emax) (pow2_q (emax - sb))

@@ -69,6 +69,9 @@ val term_cst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
 val integer_log_2 : Numbers.Q.t -> int
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
 
+val mult_x_by_2_pow_n : Numbers.Q.t -> int -> Numbers.Q.t
+(** [mult_x_by_2_pow_n x n] is [x * 2^n]. *)
+
 val float_of_rational :
   int -> int -> rounding_mode -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int
 (** [float_of_rational prec exp mode x] float approx of a rational constant. The

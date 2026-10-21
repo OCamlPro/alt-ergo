@@ -764,6 +764,8 @@ module FP : sig
 
     val is_positive : string
 
+    val is_finite : string
+
     (** {2 Real conversion} *)
 
     val to_real : string
