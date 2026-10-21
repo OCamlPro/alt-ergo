@@ -252,10 +252,11 @@ let ae_fpa_builtins =
     in
     DE.Term.apply_cst cst [] []
   in
+  let rne = Fpa_rounding.(string_of_rounding_mode NearestTiesToEven) in
   let float32 = float (DE.Term.int "24") (DE.Term.int "149") in
-  let float32d x = float32 (mode "NearestTiesToEven") x in
+  let float32d x = float32 (mode rne) x in
   let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
-  let float64d x = float64 (mode "NearestTiesToEven") x in
+  let float64d x = float64 (mode rne) x in
   let partial1 name f =
     DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@ fun env s ->
     builtin_term @@ Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f

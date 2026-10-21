@@ -1,0 +1,7 @@
+logic x : real
+
+goal g1 : float64d(1.) = 1.
+
+goal g2 : float32d(16777217.) = 16777216.
+
+goal g3 : float32d(x) = float32(NearestTiesToEven, x)
