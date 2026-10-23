@@ -771,20 +771,19 @@ let arg_repr env x a =
   then e
   else fst (X.make a), Explanation.empty
 
-(* [Some (a, n, ex)] if [x] is [a ** b], and [b] is equal to an integer [n >= 2]
-   with [ex]. *)
-let as_pow uf x =
+(* [Some (a, n)] if [x] is [a ** n], with [n] an integer literal [>= 2]. *)
+let as_pow x =
   match X.term_extract x with
   | Some t, _ -> begin
     match E.term_view t with
     | { E.f = Sy.Op Sy.Pow; xs = [a; b]; _ } -> begin
-      let rb, exb = Uf.find uf b in
-      match P.is_const (poly_of rb) with
-      | Some n when Q.is_int n -> (
-        match Z.to_machine_int (Q.to_z n) with
-        | Some n when n >= 2 -> Some (a, n, exb)
-        | _ -> None)
-      | _ -> None
+      let n =
+        match (E.term_view b).f with
+        | Sy.Int n -> Z.to_machine_int n
+        | Sy.Real n when Q.is_int n -> Z.to_machine_int (Q.to_z n)
+        | _ -> None
+      in
+      match n with Some n when n >= 2 -> Some (a, n) | _ -> None
     end
     | _ -> None
   end
@@ -867,8 +866,8 @@ and update_monome are_eq expl use_x env x =
           in
           I.div ia ib, env
         | { E.f = Sy.Op Sy.Pow; _ } -> begin
-          match as_pow env.new_uf x with
-          | Some (a, n, eb) ->
+          match as_pow x with
+          | Some (a, n) ->
             let ra, ea = arg_repr env x a in
             let pa = poly_of ra in
             let env, ia =
@@ -881,7 +880,7 @@ and update_monome are_eq expl use_x env x =
             in
             if
               bound_not_too_large I.borne_inf && bound_not_too_large I.borne_sup
-            then I.power n (I.add_explanation ia (Explanation.union ea eb)), env
+            then I.power n (I.add_explanation ia ea), env
             else I.undefined ty, env
           | None -> I.undefined ty, env
         end
@@ -947,8 +946,8 @@ and tighten_div _ env _ = env
 
 and tighten_pow are_eq x env expl =
   let ty = X.type_info x in
-  match as_pow env.new_uf x with
-  | Some (a, 2, eb) -> (
+  match as_pow x with
+  | Some (a, 2) -> (
     let ra, ea = arg_repr env x a in
     if not (is_alien ra)
     then env
@@ -959,7 +958,7 @@ and tighten_pow are_eq x env expl =
           with Not_found -> I.undefined ty, SX.empty
         in
         let u = I.coerce ty (I.root 2 (I.coerce Treal u)) in
-        let u = I.add_explanation u (Explanation.union ea eb) in
+        let u = I.add_explanation u ea in
         let pu, use_pa =
           try MX.n_find ra env.monomes
           with Not_found -> I.undefined ty, SX.empty
@@ -1943,10 +1942,10 @@ let round_to_integers list =
     (List.rev list)
 
 (* Products, and powers computed from their base by [delayed_pow]. *)
-let is_product uf r =
+let is_product r =
   match X.ac_extract r with
   | Some { Sig.h = Sy.Op Sy.Mult; _ } -> true
-  | _ -> Option.is_some (as_pow uf r)
+  | _ -> Option.is_some (as_pow r)
 
 (* cannot replace directly with env.int_sim because of encoding *)
 let model_from_simplex sim is_int env uf =
@@ -1973,7 +1972,7 @@ let model_from_simplex sim is_int env uf =
         if
           SX.mem v env.known_eqs
           || (not (Uf.is_normalized uf v))
-          || is_product uf v
+          || is_product v
         then
           (* may happen because of incremental simplex on rationals *)
           (* For products, don't choose their value first, start with their factors *)
