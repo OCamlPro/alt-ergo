@@ -254,3 +254,77 @@ Quantified FP problems.
   > EOF
   
   unsat
+
+is_normal and is_subnormal are exclusive, one of the five properties always 
+holds, and definition by the real value.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (assert (fp.isNormal x))
+  > (assert (fp.isSubnormal x))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (assert (not (fp.isNaN x)))
+  > (assert (not (fp.isInfinite x)))
+  > (assert (not (fp.isZero x)))
+  > (assert (not (fp.isNormal x)))
+  > (assert (not (fp.isSubnormal x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (assert (fp.isSubnormal x))
+  > (assert (fp.gt x ((_ to_fp 8 24) RNE 0.5)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+isNormal/isSubnormal of the smallest and largest literals in (2, 3), (3, 5), 
+Float16 and Float32
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (define-fun cls () Bool (and
+  >   (fp.isSubnormal (fp #b0 #b00 #b01)) 
+  >   (fp.isSubnormal (fp #b1 #b00 #b11))
+  >   (fp.isNormal (fp #b0 #b01 #b00)) 
+  >   (fp.isNormal (fp #b1 #b10 #b11))
+  >   (fp.isSubnormal (fp #b0 #b000 #b0001))
+  >   (fp.isSubnormal (fp #b1 #b000 #b1111))
+  >   (fp.isNormal (fp #b0 #b001 #b0000))
+  >   (not (fp.isNormal (fp #b0 #b000 #b1111)))
+  >   (fp.isSubnormal (fp #b0 #b00000 #b0000000001))
+  >   (fp.isSubnormal (fp #b1 #b00000 #b1111111111))
+  >   (fp.isNormal (fp #b0 #b00001 #b0000000000))
+  >   (not (fp.isSubnormal (fp #b0 #b00001 #b0000000000)))
+  >   (fp.isSubnormal ((_ to_fp 8 24) #x00000001))
+  >   (fp.isSubnormal ((_ to_fp 8 24) #x807fffff))
+  >   (fp.isNormal ((_ to_fp 8 24) #x00800000))
+  >   (fp.isNormal ((_ to_fp 8 24) #xff7fffff))
+  >   (not (fp.isNormal (_ +zero 8 24))) 
+  >   (not (fp.isSubnormal (_ -zero 8 24)))
+  >   (not (fp.isNormal (_ +oo 3 5))) 
+  >   (not (fp.isSubnormal (_ NaN 2 3)))))
+  > (push 1)
+  > (assert (not cls))
+  > (check-sat)
+  > (pop 1)
+  > (assert cls)
+  > (check-sat)
+  > EOF
+  
+  unsat
+  
+  unknown

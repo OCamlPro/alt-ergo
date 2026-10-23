@@ -158,3 +158,15 @@ let max_finite_q eb sb =
   let pow2_q = Fpa_rounding.mult_x_by_2_pow_n Q.one in
   let emax = fp_bias eb + 1 in
   Q.sub (pow2_q emax) (pow2_q (emax - sb))
+
+(* Smallest positive normal value: 2^(1 - bias). *)
+let min_normal_q eb = Fpa_rounding.mult_x_by_2_pow_n Q.one (1 - fp_bias eb)
+
+(* [Finite q] is never zero. *)
+let is_normal eb = function
+  | Finite q -> Q.compare (Q.abs q) (min_normal_q eb) >= 0
+  | _ -> false
+
+let is_subnormal eb = function
+  | Finite q -> Q.compare (Q.abs q) (min_normal_q eb) < 0
+  | _ -> false
