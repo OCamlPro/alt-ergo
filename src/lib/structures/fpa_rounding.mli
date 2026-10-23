@@ -82,6 +82,26 @@ val float_of_rational :
     function also returns the mantissa and the exponent. i.e. if
     [res, m, e = float_of_rational prec exp mode x], then [res = m * 2^e] **)
 
+val preimage_lower :
+  int ->
+  int ->
+  rounding_mode ->
+  strict:bool ->
+  Numbers.Q.t ->
+  Numbers.Q.t * bool
+(** [preimage_lower prec exp mode ~strict lo] returns [(b, large)] such that
+    [lo <= float(prec, exp, mode, x)] ([lo <] if [strict]) holds iff [b <= x]
+    ([b < x] if not [large]). *)
+
+val preimage_upper :
+  int ->
+  int ->
+  rounding_mode ->
+  strict:bool ->
+  Numbers.Q.t ->
+  Numbers.Q.t * bool
+(** Same as [preimage_lower] for [float(prec, exp, mode, x) <= hi]. *)
+
 val round_to_integer : rounding_mode -> Numbers.Q.t -> Numbers.Q.t
 (** [round_to_integer mode x] rounds the rational [x] to an integer depending on
     the rounding mode [mode] *)

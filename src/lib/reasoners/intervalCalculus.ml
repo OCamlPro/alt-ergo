@@ -119,6 +119,8 @@ type t =
     new_uf : Uf.t;
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
+    floats : (E.t * E.t * E.t * E.t) ME.t;
+    (* The terms [float(prec, exp, mode, x)], with their arguments. *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
   }
@@ -706,6 +708,7 @@ let empty uf =
       int_sim = Sim.Solve.solve (Sim.Core.empty ~is_int:true ~check_invs:false);
       th_axioms = ME.empty;
       linear_dep = ME.empty;
+      floats = ME.empty;
       syntactic_matching = []
     },
     Uf.domains uf )
@@ -1499,6 +1502,98 @@ let equalities_from_intervals env eqs =
   let env, eqs = equalities_from_polynomes env eqs in
   equalities_from_monomes env eqs
 
+let interval_of env r =
+  match P.is_const (poly_of r) with
+  | Some c -> I.point c (X.type_info r) Ex.empty
+  | None ->
+    let i, _, _ = generic_find r env in
+    i
+
+(* The term bounded from [float(prec, exp, mode, x)], and whether it is an
+   integer: [i] if [x] is [real_of_int(i)], so that its bounds are rounded,
+   otherwise [x] if it is an atom. *)
+let float_arg env x =
+  match E.term_view x with
+  | { f = Sy.Op Sy.Real_of_int; xs = [i]; _ } ->
+    let ri, ex = Uf.find env.new_uf i in
+    if Option.is_some (P.is_const (poly_of ri))
+    then None
+    else Some (ri, ex, true)
+  | _ ->
+    let rx, ex = Uf.find env.new_uf x in
+    if is_alien rx then Some (rx, ex, false) else None
+
+(* The values of the parameters of [float(prec, exp, mode, x)], with their
+   explanation, once they are known to be literals. *)
+let float_params env prec exp mode =
+  let int_param t =
+    let r, ex = Uf.find env.new_uf t in
+    match P.is_const (poly_of r) with
+    | Some q when Q.is_int q ->
+      Option.map (fun n -> n, ex) (Z.to_machine_int (Q.to_z q))
+    | _ -> None
+  in
+  let rm, ex_m = Uf.find env.new_uf mode in
+  match int_param prec, int_param exp, X.to_model_term rm with
+  | Some (prec, ex_p), Some (exp, ex_e), Some m ->
+    let mode = E.rounding_mode_view m in
+    Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
+  | _ -> None
+
+(* Adds to [eqs] the lower (or upper) bound on [rx] given by the preimage of the
+   lower (or upper) bound of [it], the interval of [float(prec, exp, mode, x)],
+   if it is tighter than the bound of [ix], the interval of [rx]. *)
+let mk_bound prec exp mode ~is_int ~ex rx ix it is_lower eqs =
+  let bound, preimage =
+    if is_lower
+    then I.borne_inf, Fpa_rounding.preimage_lower
+    else I.borne_sup, Fpa_rounding.preimage_upper
+  in
+  match bound it with
+  | exception I.No_finite_bound -> eqs
+  | c, ex_c, c_large ->
+    let b, large = preimage prec exp mode ~strict:(not c_large) c in
+    let b, large =
+      match is_int, is_lower, large with
+      | false, _, _ -> b, large
+      | true, true, true -> Q.ceiling b, true
+      | true, true, false -> Q.add (Q.floor b) Q.one, true
+      | true, false, true -> Q.floor b, true
+      | true, false, false -> Q.sub (Q.ceiling b) Q.one, true
+    in
+    (* Only bounds tighter than the known bound of [x] are added. *)
+    let better =
+      match bound ix with
+      | c, _, l ->
+        let k = Q.compare b c in
+        let k = if is_lower then k else -k in
+        k > 0 || (k = 0 && l && not large)
+      | exception I.No_finite_bound -> true
+    in
+    if not better
+    then eqs
+    else
+      let ty = if is_int then Ty.Tint else Ty.Treal in
+      let rb = alien_of (P.create [] b ty) in
+      let args = if is_lower then [rb; rx] else [rx; rb] in
+      let a = LR.mkv_builtin true (if large then L.LE else L.LT) args in
+      (a, None, Ex.union ex_c ex, Th_util.Other) :: eqs
+
+(* Bounds [x] by the preimage of the bounds of [float(prec, exp, mode, x)]. *)
+let bounds_from_floats env eqs =
+  ME.fold
+    (fun t (prec, exp, mode, x) eqs ->
+      match float_params env prec exp mode, float_arg env x with
+      | Some (prec, exp, mode, ex_p), Some (rx, ex_x, is_int) ->
+        let rt, ex_t = Uf.find env.new_uf t in
+        let it = interval_of env rt in
+        let ix = interval_of env rx in
+        let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
+        let mk_bound = mk_bound prec exp mode ~is_int ~ex rx ix it in
+        mk_bound false (mk_bound true eqs)
+      | _ -> eqs)
+    env.floats eqs
+
 let count_splits env la =
   let nb =
     List.fold_left
@@ -1665,6 +1760,7 @@ let assume ~query env uf la =
       let env = Sim_Wrap.solve env 1 in
       let env = loop_update_intervals are_eq env 0 in
       let env, eqs = equalities_from_intervals env eqs in
+      let eqs = bounds_from_floats env eqs in
       Debug.env env;
       let to_assume = Rel_utils.assume_nontrivial_eqs eqs la in
       Debug.implied_equalities to_assume;
@@ -1778,6 +1874,12 @@ let add =
     Debug.env env;
     try
       let env = { env with new_uf } in
+      let env =
+        match E.term_view t with
+        | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } ->
+          { env with floats = ME.add t (prec, exp, mode, x) env.floats }
+        | _ -> env
+      in
       let p = poly_of r in
       Debug.add p;
       if is_num r
