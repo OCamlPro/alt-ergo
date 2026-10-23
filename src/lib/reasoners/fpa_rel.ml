@@ -68,7 +68,9 @@ module Domain = struct
       is_zero : status;
       is_infinite : status;
       is_positive : status;
-      is_negative : status
+      is_negative : status;
+      is_normal : status;
+      is_subnormal : status
     }
 
   let unknown =
@@ -76,7 +78,9 @@ module Domain = struct
       is_zero = Unknown;
       is_infinite = Unknown;
       is_positive = Unknown;
-      is_negative = Unknown
+      is_negative = Unknown;
+      is_normal = Unknown;
+      is_subnormal = Unknown
     }
 
   let pp_status ppf = function
@@ -85,9 +89,10 @@ module Domain = struct
     | False _ -> Fmt.pf ppf "F"
 
   let pp ppf d =
-    Fmt.pf ppf "{nan=%a zero=%a inf=%a pos=%a neg=%a}" pp_status d.is_nan
-      pp_status d.is_zero pp_status d.is_infinite pp_status d.is_positive
-      pp_status d.is_negative
+    Fmt.pf ppf "{nan=%a zero=%a inf=%a pos=%a neg=%a normal=%a subnormal=%a}"
+      pp_status d.is_nan pp_status d.is_zero pp_status d.is_infinite pp_status
+      d.is_positive pp_status d.is_negative pp_status d.is_normal pp_status
+      d.is_subnormal
 
   let status_equal ts1 ts2 =
     match ts1, ts2 with
@@ -100,6 +105,8 @@ module Domain = struct
     && status_equal d1.is_infinite d2.is_infinite
     && status_equal d1.is_positive d2.is_positive
     && status_equal d1.is_negative d2.is_negative
+    && status_equal d1.is_normal d2.is_normal
+    && status_equal d1.is_subnormal d2.is_subnormal
 
   let merge_status st1 st2 =
     match st1, st2 with
@@ -119,6 +126,8 @@ module Domain = struct
     | Infinite
     | Positive
     | Negative
+    | Normal
+    | Subnormal
 
   let pp_pred ppf = function
     | Nan -> Fmt.string ppf "nan"
@@ -126,6 +135,8 @@ module Domain = struct
     | Infinite -> Fmt.string ppf "infinite"
     | Positive -> Fmt.string ppf "positive"
     | Negative -> Fmt.string ppf "negative"
+    | Normal -> Fmt.string ppf "normal"
+    | Subnormal -> Fmt.string ppf "subnormal"
 
   let get_pred_status p d =
     match p with
@@ -134,6 +145,8 @@ module Domain = struct
     | Infinite -> d.is_infinite
     | Positive -> d.is_positive
     | Negative -> d.is_negative
+    | Normal -> d.is_normal
+    | Subnormal -> d.is_subnormal
 
   let upd_pred_status p st d =
     let st = merge_status (get_pred_status p d) st in
@@ -143,14 +156,18 @@ module Domain = struct
     | Infinite -> { d with is_infinite = st }
     | Positive -> { d with is_positive = st }
     | Negative -> { d with is_negative = st }
+    | Normal -> { d with is_normal = st }
+    | Subnormal -> { d with is_subnormal = st }
 
   (* When [p] is true, the predicates in [exclusive_of p] must be false. *)
   let exclusive_of = function
-    | Nan -> [Zero; Infinite; Positive; Negative]
-    | Zero -> [Nan; Infinite]
-    | Infinite -> [Nan; Zero]
+    | Nan -> [Zero; Infinite; Positive; Negative; Normal; Subnormal]
+    | Zero -> [Nan; Infinite; Normal; Subnormal]
+    | Infinite -> [Nan; Zero; Normal; Subnormal]
     | Positive -> [Nan; Negative]
     | Negative -> [Nan; Positive]
+    | Normal -> [Nan; Zero; Infinite; Subnormal]
+    | Subnormal -> [Nan; Zero; Infinite; Normal]
 
   let pred_of_name name =
     if String.equal name Names.is_nan
@@ -163,6 +180,10 @@ module Domain = struct
     then Some Positive
     else if String.equal name Names.is_negative
     then Some Negative
+    else if String.equal name Names.is_normal
+    then Some Normal
+    else if String.equal name Names.is_subnormal
+    then Some Subnormal
     else None
 
   let rec apply p ~ex ~is_true d =
@@ -195,7 +216,20 @@ module Domain = struct
     | False ex_nan, False ex_p, Unknown ->
       (* not NaN & not positive -> negative *)
       apply Negative ~ex:(Ex.union ex_nan ex_p) ~is_true:true d
-    | _ -> d
+    | _ -> (
+      (* A float is NaN, infinite, zero, normal or subnormal: if all the classes
+         except one are false, that one is true. *)
+      let classes = [Nan; Infinite; Zero; Normal; Subnormal] in
+      let unknown, ex =
+        List.fold_left
+          (fun (unknown, ex) p ->
+            match get_pred_status p d with
+            | Unknown -> p :: unknown, ex
+            | False ex' -> unknown, Ex.union ex ex'
+            | True _ -> p :: p :: unknown, ex)
+          ([], Ex.empty) classes
+      in
+      match unknown with [p] -> apply p ~ex ~is_true:true d | _ -> d)
 
   let merge ~ex d1 d2 =
     let apply_if_known p st d =
@@ -209,6 +243,8 @@ module Domain = struct
     |> apply_if_known Infinite d2.is_infinite
     |> apply_if_known Positive d2.is_positive
     |> apply_if_known Negative d2.is_negative
+    |> apply_if_known Normal d2.is_normal
+    |> apply_if_known Subnormal d2.is_subnormal
 
   let set_pred p is_neg ex d = apply p ~ex ~is_true:(not is_neg) d
 
@@ -395,14 +431,16 @@ type t =
   { pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
     literals_cache : (int * int, precision_literals) Hashtbl.t;
-    new_terms : E.Set.t
+    new_terms : E.Set.t;
+    defs : E.Set.t
   }
 
 let empty uf =
   ( { pending_types = IntPairSet.empty;
       pending_literals = [];
       literals_cache = Hashtbl.create 16;
-      new_terms = E.Set.empty
+      new_terms = E.Set.empty;
+      defs = E.Set.empty
     },
     Uf.domains uf
     |> Uf.GlobalDomains.add (module Domains) Domains.empty
@@ -513,6 +551,17 @@ let fp_literal_facts eb sb term v =
          ~is_positive:(Q.sign q > 0)
          ~is_negative:(Q.sign q < 0)
 
+(* [is_normal] and [is_subnormal] of a literal. *)
+let normal_literal_facts eb sb term v =
+  let mk_fact name b =
+    ( E.mk_term (Sy.name name)
+        [E.Ints.of_int eb; E.Ints.of_int sb; term]
+        Ty.Tbool,
+      if b then E.vrai else E.faux )
+  in
+  [ mk_fact Names.is_normal (Fp_value.is_normal eb v);
+    mk_fact Names.is_subnormal (Fp_value.is_subnormal eb v) ]
+
 let process_pred uf ex a domains =
   match E.lit_view a with
   | E.Pred (t, is_neg) -> (
@@ -570,6 +619,43 @@ let register_aefloat_arg_watch uf term ds =
     Uf.GlobalDomains.add (module AEFloat_arg_watch) fw ds
   | _ -> ds
 
+let normal_pred term =
+  match E.term_view term with
+  | { E.f = Sy.Name { hs; _ }; xs = [_; _; x]; ty = Ty.Tbool; _ } -> (
+    let name = Hstring.view hs in
+    match E.term_view x with
+    | { E.f = Sy.Float _; _ } -> None
+    | { E.ty = Ty.Tfloat (eb, sb); _ }
+      when String.equal name Names.is_normal
+           || String.equal name Names.is_subnormal ->
+      Some (String.equal name Names.is_normal, eb, sb, x)
+    | _ -> None)
+  | _ -> None
+
+(* [is_normal x <-> is_finite x /\ (to_real x <= -c \/ c <= to_real x)] and
+   [is_subnormal x <-> is_finite x /\ not is_zero x /\ -c < to_real x < c]. *)
+let normal_definition term (normal, eb, sb, x) =
+  let c = Fp_value.min_normal_q eb in
+  let r = E.FP.to_real ~eb ~sb x in
+  let is_finite = E.FP.is_finite ~eb ~sb x in
+  let minus_c = E.Reals.of_Q (Q.minus c) in
+  let c = E.Reals.of_Q c in
+  let body =
+    if normal
+    then
+      E.mk_and is_finite
+        (E.mk_or E.Reals.(r <= minus_c) E.Reals.(c <= r) false)
+        false
+    else
+      E.mk_and is_finite
+        (E.mk_and
+           (E.neg (E.FP.is_zero ~eb ~sb x))
+           (E.mk_and E.Reals.(minus_c < r) E.Reals.(r < c) false)
+           false)
+        false
+  in
+  E.mk_iff term body
+
 let add env uf _r term =
   if not (Options.get_smt_lib_fpa ())
   then env, Uf.domains uf, []
@@ -595,7 +681,9 @@ let add env uf _r term =
               "queueing literal facts for %a" E.print term;
           { env with
             pending_literals =
-              fp_literal_facts eb sb term v @ env.pending_literals
+              fp_literal_facts eb sb term v
+              @ normal_literal_facts eb sb term v
+              @ env.pending_literals
           }
         | _ -> env
       in
@@ -604,7 +692,13 @@ let add env uf _r term =
       (* ae.float applies ae.round on reals *)
       let ds = register_aefloat_arg_watch uf term (Uf.domains uf) in
       env, ds, []
-    | _ -> env, Uf.domains uf, []
+    | _ ->
+      let env =
+        if Option.is_some (normal_pred term)
+        then { env with defs = E.Set.add term env.defs }
+        else env
+      in
+      env, Uf.domains uf, []
 
 let mk_aefloat_eq_fact term (eb, sb, mode, ex) =
   match E.term_view term with
@@ -688,6 +782,37 @@ let optimizing_objective _env _uf _o = None
 
 let new_terms env = env.new_terms
 
-let instantiate ~do_syntactic_matching:_ _ env _ _ = env, []
+(* Instantiates the definitions of the applications of [is_normal] and
+   [is_subnormal]. *)
+let instantiate ~do_syntactic_matching:_ _ env _uf selector =
+  if not (Options.get_smt_lib_fpa ())
+  then env, []
+  else
+    let insts =
+      E.Set.fold
+        (fun term acc ->
+          let ff = normal_definition term (Option.get (normal_pred term)) in
+          if selector ff ff
+          then
+            let gf =
+              { E.ff;
+                origin_name = "fpa_normal_definition";
+                trigger_depth = 0;
+                gdist = -1;
+                hdist = -1;
+                nb_reductions = 0;
+                age = 0;
+                mf = true;
+                gf = false;
+                lem = None;
+                from_terms = [term];
+                theory_elim = false
+              }
+            in
+            ([], gf, Ex.empty) :: acc
+          else acc)
+        env.defs []
+    in
+    env, insts
 
 let assume_th_elt t _ _ = t

@@ -699,7 +699,9 @@ module Main_Default : S = struct
       List.fold_left
         (fun acc ((hyps : Expr.t list), gf, _) ->
           match gf.Expr.lem with
-          | None -> assert false
+          | None ->
+            (* Ground lemmas of theories, e.g. [Fpa_rel.instantiate]. *)
+            acc
           | Some lem ->
             let inst = try MF.find lem acc with Not_found -> MF.empty in
             MF.add lem (MF.add gf.Expr.ff hyps inst) acc)
