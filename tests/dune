@@ -1,4 +1,5 @@
 (cram
+ (applies_to :whole_subtree)
  (package alt-ergo)
  (deps %{bin:alt-ergo}))
 
