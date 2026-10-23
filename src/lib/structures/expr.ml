@@ -1277,6 +1277,16 @@ let mk_distinct ~iff args =
   done;
   !acc
 
+let mk_distinct_fact args =
+  match args with
+  | [] | [_] -> vrai
+  | [a; b] -> neg (mk_eq ~iff:true a b)
+  | a :: _ when type_info a == Ty.Tbool -> mk_distinct ~iff:true args
+  | _ ->
+    (* The negation of the n-ary equality literal built by [mk_nary_eq] is the
+       n-ary distinct literal. *)
+    neg (mk_nary_eq args)
+
 let mk_builtin ~is_pos n l =
   let pos =
     mk_positive_lit (Sy.Lit (Sy.L_built n)) (Sy.Lit (Sy.L_neg_built n)) l

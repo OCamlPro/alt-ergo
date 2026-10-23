@@ -759,11 +759,15 @@ let mk_rounding fpar =
 
 (** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
 
-    Builds an Alt-Ergo hashconsed expression from a dolmen term *)
+    Builds an Alt-Ergo hashconsed expression from a dolmen term.
+
+    If [fact] is [true], the term is a formula asserted at the top level. The
+    [distinct] at the top level of its conjunctions are built as single n-ary
+    literals (see {!Expr.mk_distinct_fact}). *)
 let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
-    ~decl_kind dt =
+    ?(fact = false) ~decl_kind dt =
   let name_tag = ref 0 in
-  let rec aux_mk_expr ?(toplevel = false)
+  let rec aux_mk_expr ?(toplevel = false) ?(fact = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
     let mk = aux_mk_expr in
     let res =
@@ -862,7 +866,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
             res
         end
         | B.Distinct, _ ->
-          E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
+          let args = List.map (fun t -> aux_mk_expr t) args in
+          (* A [distinct] over n terms is expanded into binary disequalities,
+             unless it is asserted at the top level. *)
+          if fact then E.mk_distinct_fact args else E.mk_distinct ~iff:true args
         | B.Coercion, [x] -> begin
           match DT.view (DE.Term.ty x), DT.view term_ty with
           | `Int, `Real -> op Real_of_int
@@ -884,8 +891,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
           (* Associative builtins *)
           | And, h :: (_ :: _ as t) ->
             List.fold_left
-              (fun acc x -> E.mk_and acc (aux_mk_expr x) false)
-              (aux_mk_expr h) t
+              (fun acc x -> E.mk_and acc (aux_mk_expr ~fact x) false)
+              (aux_mk_expr ~fact h) t
           | Or, h :: (_ :: _ as t) ->
             List.fold_left
               (fun acc x -> E.mk_or acc (aux_mk_expr x) false)
@@ -1416,7 +1423,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
       Fmt.failwith "%aInvalid semantic trigger: %a" Loc.report loc DE.Term.print
         t
   in
-  aux_mk_expr ~toplevel dt
+  aux_mk_expr ~toplevel ~fact dt
 
 and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind ~(in_theory : bool)
     (name : string) (hyp : E.t list) ((e, from_user) : DE.term * bool) =
@@ -1513,13 +1520,16 @@ let pp_query ?(hyps = []) t =
   let axioms, goal = intro_hypothesis t in
   List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
-let make_form name_base f loc ~decl_kind =
-  let ff = mk_expr ~loc ~name_base ~toplevel:true ~decl_kind f in
+let make_form_aux ?fact name_base f loc ~decl_kind =
+  let ff = mk_expr ~loc ~name_base ~toplevel:true ?fact ~decl_kind f in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.TvSet.is_empty (E.free_type_vars ff)
   then ff
   else E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
+
+let make_form name_base f loc ~decl_kind =
+  make_form_aux name_base f loc ~decl_kind
 
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
@@ -1681,7 +1691,8 @@ let make file acc stmt =
           E.Dtheory, th_assume
         | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
       in
-      let e = make_form name t st_loc ~decl_kind in
+      let fact = Option.is_none theory in
+      let e = make_form_aux ~fact name t st_loc ~decl_kind in
       let st_decl = assume name e in
       C.{ st_decl; st_loc } :: acc
     (* Function and predicate definitions *)
