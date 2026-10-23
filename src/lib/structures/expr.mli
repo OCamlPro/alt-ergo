@@ -847,6 +847,8 @@ module FP : sig
 
   val is_positive : eb:int -> sb:int -> t -> t
 
+  val is_finite : eb:int -> sb:int -> t -> t
+
   (** {2 Real conversion} *)
 
   val to_real : eb:int -> sb:int -> t -> t

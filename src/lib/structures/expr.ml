@@ -3313,6 +3313,8 @@ module FP = struct
 
   let is_positive ~eb ~sb x = fp_prelude_op eb sb Names.is_positive [x] Ty.Tbool
 
+  let is_finite ~eb ~sb x = fp_prelude_op eb sb Names.is_finite [x] Ty.Tbool
+
   (* real conversion *)
   let to_real ~eb ~sb x = fp_prelude_op eb sb Names.to_real [x] Ty.Treal
 end

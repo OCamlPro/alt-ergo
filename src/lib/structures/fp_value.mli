@@ -49,3 +49,15 @@ val mk_fp_literal :
 val max_finite_q : int -> int -> Numbers.Q.t
 (** [max_finite_q eb sb] is the largest finite value of the format [(eb, sb)].
 *)
+
+val min_normal_q : int -> Numbers.Q.t
+(** [min_normal_q eb] is the smallest positive normal value of the formats with
+    [eb] exponent bits. *)
+
+val is_normal : int -> t -> bool
+(** [is_normal eb v] holds if [v] is a normal value of a format with [eb]
+    exponent bits. *)
+
+val is_subnormal : int -> t -> bool
+(** [is_subnormal eb v] holds if [v] is a subnormal value of a format with [eb]
+    exponent bits. *)
