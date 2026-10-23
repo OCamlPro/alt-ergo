@@ -1,5 +1,10 @@
 ## unreleased
 
+ - Support parsing and reasoning over most SMT-LIB FPA Theory symbols (except
+   fp.rem, fp.to_fp, and bv/fp conversion operations), usable with
+   `--enable-theory smt.float`. The semantics of the FPA Theory symbols are
+   given by an axiomatization translated from Why3's `GenericFloat` theory
+   (LGPL, installed separately from the binary). (#1364, #1371)
  - Support the `int.pow2` function, which takes an integer `n` and computes
    `ae.pow_int 2 n` (#1365)
  - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
