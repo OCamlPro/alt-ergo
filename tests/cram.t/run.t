@@ -18,11 +18,20 @@ appropriate here.
 Model generation assigns the base of a power before the power. It used to
 assign `x ** 2` first, and then never found `x`.
 
-  $ alt-ergo --produce-models -o smtlib2 --timelimit 2 pow.ae 2>/dev/null
+  $ alt-ergo --dump-models --dump-models-on stdout -o smtlib2 --timelimit 2 pow.ae 2>/dev/null
   
   unknown
+  (
+    (define-fun x () Int (- 2))
+    (define-fun y () Real 0.0)
+  )
   
   unknown
+  (
+    (define-fun x () Int 0)
+    (define-fun y () Real
+     (/ (- 1494526701137481091502001714669284239577573783772172483018723595) 950032499122154297427733350361285046988679237571311250832359424))
+  )
 
 Now we will test some semantic triggers.
 
