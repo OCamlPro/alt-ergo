@@ -1941,8 +1941,8 @@ let round_to_integers list =
       x, if Q.compare (Q.sub q1 f) (Q.sub c q1) > 0 then f else c)
     (List.rev list)
 
-(* Products, and powers computed from their base by [delayed_pow]. *)
-let is_product r =
+(* Products and literal powers computed from their base by [delayed_pow]. *)
+let is_product_or_power r =
   match X.ac_extract r with
   | Some { Sig.h = Sy.Op Sy.Mult; _ } -> true
   | _ -> Option.is_some (as_pow r)
@@ -1972,11 +1972,11 @@ let model_from_simplex sim is_int env uf =
         if
           SX.mem v env.known_eqs
           || (not (Uf.is_normalized uf v))
-          || is_product v
+          || is_product_or_power v
         then
           (* may happen because of incremental simplex on rationals *)
-          (* For products, don't choose their value first, start with their
-             operands *)
+          (* For products and powers, don't choose their value first, start with
+            their operands *)
           acc
         else
           let t = fct q in
