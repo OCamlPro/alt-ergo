@@ -7,3 +7,4 @@
 (assert (<= 3.0 (+ (* x x) (* y y))))
 (assert (<= (+ (* x x) (* y y)) 5.0))
 (check-sat)
+(get-model)

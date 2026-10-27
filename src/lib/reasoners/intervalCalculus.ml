@@ -763,13 +763,13 @@ let cannot_be_equal_to_zero env p ip =
   with Util.Unsolvable ->
     Entailed { ex = Explanation.empty; classes = env.classes }
 
-(* The representative of the argument [a] of the term [x], or [a] itself if the
-   representative contains [x] (otherwise, we loop). *)
+(* Returns the representative of the argument [a] of the term [x], or [a] itself
+   if the representative of [a] contains [x] (to avoid loops). *)
 let arg_repr env x a =
-  let ((ra, _) as e) = Uf.find env.new_uf a in
-  if List.filter (X.equal x) (X.leaves ra) == []
-  then e
-  else fst (X.make a), Explanation.empty
+  let ((ra, _) as ra_ex) = Uf.find env.new_uf a in
+  if List.exists (X.equal x) (X.leaves ra)
+  then fst (X.make a), Explanation.empty
+  else ra_ex
 
 (* [Some (a, n)] if [x] is [a ** n], with [n] an integer literal [>= 2]. *)
 let as_pow x =
@@ -780,7 +780,7 @@ let as_pow x =
       let n =
         match (E.term_view b).f with
         | Sy.Int n -> Z.to_machine_int n
-        | Sy.Real n when Q.is_int n -> Z.to_machine_int (Q.to_z n)
+        | Sy.Real q when Q.is_int q -> Z.to_machine_int (Q.to_z q)
         | _ -> None
       in
       match n with Some n when n >= 2 -> Some (a, n) | _ -> None
@@ -1975,7 +1975,8 @@ let model_from_simplex sim is_int env uf =
           || is_product v
         then
           (* may happen because of incremental simplex on rationals *)
-          (* For products, don't choose their value first, start with their factors *)
+          (* For products, don't choose their value first, start with their
+             operands *)
           acc
         else
           let t = fct q in
