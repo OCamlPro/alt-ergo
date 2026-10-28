@@ -9,6 +9,7 @@ on:
     branches:
       - next
       - main
+      - v2.6.4+matching
 
 jobs:
   build-macos-static:
