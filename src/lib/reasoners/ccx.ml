@@ -577,20 +577,9 @@ module Main : S = struct
         | A.Eq (r1, r2) ->
           if X.hash_cmp r1 r2 = 0 then env else assume_eq env facts r1 r2 ex
         | A.Distinct (true, lt) ->
-          (* nary equality *)
-          let lt = List.fast_sort X.hash_cmp lt in
-          let env, _ =
-            match lt with
-            | [] | [_] -> assert false
-            | e :: lt ->
-              List.fold_left
-                (fun (env, u) v ->
-                  ( (if X.hash_cmp u v = 0
-                     then env
-                     else assume_eq env facts u v ex),
-                    v ))
-                (env, e) lt
-          in
+          (* nary equality -- this does not mean all arguments are equal, but
+             that some pair of arguments is equal. Unfortunately we can't really
+             do any useful propagation from here. *)
           env
         | _ -> assert false
       in
