@@ -70,7 +70,10 @@ module Triggers = struct
       | [] -> (
         try HEI.find trs_tbl (q.E.main, mconf)
         with Not_found ->
-          let trs = E.make_triggers q.E.main q.E.binders q.E.kind mconf in
+          let trs =
+            E.make_triggers ~name:q.E.name ~loc:q.E.loc q.E.main q.E.binders
+              q.E.kind mconf
+          in
           HEI.add trs_tbl (q.E.main, mconf) trs;
           trs)
     in

@@ -363,9 +363,16 @@ val max_ground_terms_rec_of_form : t -> Set.t
 (** skolemization and other smart constructors for formulas **)
 
 val make_triggers :
-  t -> binders -> decl_kind -> Util.triggers_env -> trigger list
-(** [make_triggers f binders decl menv] generate multi-triggers for the formula
-    [f] and binders [binders].
+  name:string ->
+  loc:Loc.t ->
+  t ->
+  binders ->
+  decl_kind ->
+  Util.triggers_env ->
+  trigger list
+(** [make_triggers ~name ~loc f binders decl menv] generate multi-triggers for
+    the formula [f] and binders [binders]. [name] and [loc] are the name and
+    location of the quantified formula, used in warnings.
 
     An {e escaped variable} of a pattern is a variable that is not in [binders]
     (but the variable is bound by an inner quantified formula). We can replace
