@@ -448,35 +448,54 @@ module Make (X : Arg) : S with type theory = X.t = struct
         ) [sg] pats xs
     with Invalid_argument _ -> raise Echec
 
+  let extra_patterns_for_linear_arithmetic (f : Symbols.t) ps ty =
+    match f, ps with
+    | Op Plus, [p1; p2] when E.is_ground p1 || E.is_ground p2 ->
+      [f, [p2; p1], ty]
+    | _ -> []
+
+  let match_expanded_pats mconf env tbox pat0 lsbt_acc pats sg =
+    let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
+    let f_aux pats ty t xs lsbt =
+      (* maybe put 3 as a rational parameter in the future *)
+      let too_big = E.depth t > 3 * env.max_t_depth in
+      if too_big
+      then lsbt
+      else
+        try
+          Debug.match_one_pat_against sg pat0 t;
+          let s_ty = Ty.matching sty ty (E.type_info t) in
+          let gen, but = infos max ( || ) t g b env in
+          let sg =
+            { sg with
+              sty = s_ty;
+              gen;
+              goal = but;
+              s_term_orig = t :: sg.s_term_orig
+            }
+          in
+          let aux = match_list mconf env tbox sg pats xs in
+          List.rev_append aux lsbt
+        with Echec | Ty.TypeClash _ -> lsbt
+    in
+    List.fold_left
+      (fun lsbt_acc (f, pats, ty) ->
+        try ME.fold (f_aux pats ty) (Symbols.Map.find f env.fils) lsbt_acc
+        with Not_found -> lsbt_acc)
+      lsbt_acc pats
+
   let match_one_pat mconf env tbox pat0 lsbt_acc sg =
-    Steps.incr (Steps.Matching);
+    Steps.incr Steps.Matching;
     Debug.match_one_pat sg pat0;
     let pat = E.apply_subst (sg.sbs, sg.sty) pat0 in
     let { E.f = f; xs = pats; ty = ty; _ } = E.term_view pat in
     match f with
     | Symbols.Var v -> all_terms v ty env tbox sg lsbt_acc
     | _ ->
-      let Matching_types.{ sty; gen = g; goal = b; _ } = sg in
-      let f_aux t xs lsbt =
-        (* maybe put 3 as a rational parameter in the future *)
-        let too_big = (E.depth t) > 3 * env.max_t_depth in
-        if too_big then lsbt
-        else
-          try
-            Debug.match_one_pat_against sg pat0 t;
-            let s_ty = Ty.matching sty ty (E.type_info t) in
-            let gen, but = infos max (||) t g b env in
-            let sg =
-              { sg with
-                sty = s_ty; gen = gen; goal = but;
-                s_term_orig = t::sg.s_term_orig }
-            in
-            let aux = match_list mconf env tbox sg pats xs in
-            List.rev_append aux lsbt
-          with Echec | Ty.TypeClash _ -> lsbt
+      let pats =
+        (f, pats, ty) :: extra_patterns_for_linear_arithmetic f pats ty
       in
-      try ME.fold f_aux (Symbols.Map.find f env.fils) lsbt_acc
-      with Not_found -> lsbt_acc
+      match_expanded_pats mconf env tbox pat0 lsbt_acc pats sg
 
   let match_pats_modulo mconf env tbox lsubsts pat =
     Debug.match_pats_modulo pat lsubsts;
