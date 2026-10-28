@@ -757,13 +757,16 @@ let mk_rounding fpar =
   let ty = Fpa_rounding.fpa_rounding_mode in
   E.mk_constr tcst [] ty
 
-(** [mk_expr ~loc ~name_base ~toplevel ~decl_kind term]
+(** [mk_expr ~loc ~name_base ~toplevel ~fact ~decl_kind term]
 
     Builds an Alt-Ergo hashconsed expression from a dolmen term.
 
-    If [fact] is [true], the term is a formula asserted at the top level. The
-    [distinct] at the top level of its conjunctions are built as single n-ary
-    literals (see {!Expr.mk_distinct_fact}). *)
+    - [toplevel] means that the term is in prenex position, where polymorphic
+      quantifiers are allowed;
+    - [fact] means that the term is an asserted formula, which can never be
+      assumed false. Its [distinct] conjuncts, which are true whenever the
+      formula is, are built as single n-ary literals (see
+      {!Expr.mk_distinct_fact}). *)
 let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
     ?(fact = false) ~decl_kind dt =
   let name_tag = ref 0 in
@@ -867,8 +870,12 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
         end
         | B.Distinct, _ ->
           let args = List.map (fun t -> aux_mk_expr t) args in
-          (* A [distinct] over n terms is expanded into binary disequalities,
-             unless it is asserted at the top level. *)
+          (* The negation of an n-ary [distinct] means that at least two of its
+             arguments are equal, which is a disjunction that cannot be
+             represented by the negation of a single literal. Therefore, a
+             [distinct] is expanded into binary disequalities, unless it is part
+             of an asserted fact, in which case it is never negated. See
+             https://github.com/OCamlPro/alt-ergo/issues/889 *)
           if fact then E.mk_distinct_fact args else E.mk_distinct ~iff:true args
         | B.Coercion, [x] -> begin
           match DT.view (DE.Term.ty x), DT.view term_ty with
