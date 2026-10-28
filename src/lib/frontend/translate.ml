@@ -1744,12 +1744,21 @@ let make file acc stmt =
                  let e = E.mk_term sy (List.rev rev_args) rty in
                  binders, e
                in
+               let mk_body ~decl_kind =
+                 match DStd.Tag.get tags DE.Tags.named with
+                 | Some _ ->
+                   (* The body of a named term [(! F :named n)] is closed and
+                      stands for [F] itself, so its quantifiers are in prenex
+                      position. *)
+                   mk_expr ~loc:st_loc ~name_base ~prenex:true
+                     ~decl_kind:E.Daxiom body
+                 | None ->
+                   mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
+               in
                begin match DStd.Tag.get tags DE.Tags.predicate with
                | Some () ->
                  let decl_kind = E.Dpredicate defn in
-                 let ff =
-                   mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
-                 in
+                 let ff = mk_body ~decl_kind in
                  let qb = E.mk_eq ~iff:true defn ff in
                  let ff =
                    E.mk_forall name_base st_loc binders [] qb ~prenex:true
@@ -1767,9 +1776,7 @@ let make file acc stmt =
                  Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
                | None ->
                  let decl_kind = E.Dfunction defn in
-                 let ff =
-                   mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
-                 in
+                 let ff = mk_body ~decl_kind in
                  let iff = Ty.equal (Expr.type_info defn) Ty.Tbool in
                  let qb = E.mk_eq ~iff defn ff in
                  let ff =
