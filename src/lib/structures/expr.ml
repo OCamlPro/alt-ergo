@@ -66,7 +66,7 @@ and bind_kind =
 and quantified =
   { name : string;
     main : t;
-    toplevel : bool;
+    prenex : bool;
     user_trs : trigger list;
     binders : binders;
     sko_v : t list; (* This list has to be ordered for the skolemization. *)
@@ -357,7 +357,7 @@ module SmtPrinter = struct
     else pp_boxed ppf main
 
   and pp_quantified bind ppf q =
-    if q.toplevel && (not @@ Ty.TvSet.is_empty q.main.vty)
+    if q.prenex && (not @@ Ty.TvSet.is_empty q.main.vty)
     then
       Fmt.pf ppf "@[<2>(par (%a)@, %a)@]"
         Fmt.(box @@ iter ~sep:sp Ty.TvSet.iter DE.Ty.Var.print)
@@ -1103,12 +1103,12 @@ let mk_forall_ter =
         let d = new_q.main.depth in
         (* + 1 ?? *)
         let nb_nodes = new_q.main.nb_nodes + 1 in
-        (* prenex polymorphism. If sko_vty is not empty, then we are at toplevel
-           and all free_vtys of lem.main are quantified in this lemma. Otherwise
-           (if not toplevel), the free vtys of the lemma are those of
+        (* prenex polymorphism. If sko_vty is not empty, then we are in prenex
+           position and all free_vtys of lem.main are quantified in this lemma.
+           Otherwise (if not prenex), the free vtys of the lemma are those of
            lem.main *)
         let vty =
-          if new_q.toplevel then Ty.TvSet.empty else free_type_vars new_q.main
+          if new_q.prenex then Ty.TvSet.empty else free_type_vars new_q.main
         in
         let vars =
           Var.Map.filter
@@ -2421,11 +2421,11 @@ module Triggers = struct
         STRS.add (e, free_vars_as_set e, e.vty) strs)
       terms terms
 
-  let check_user_triggers ~name ~loc f toplevel binders trs0 ~decl_kind =
+  let check_user_triggers ~name ~loc f prenex binders trs0 ~decl_kind =
     if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty
     then trs0
     else
-      let vtype = if toplevel then f.vty else Ty.TvSet.empty in
+      let vtype = if prenex then f.vty else Ty.TvSet.empty in
       let vterm =
         Var.Map.fold (fun v _ s -> Var.Set.add v s) binders Var.Set.empty
       in
@@ -2518,13 +2518,14 @@ let make_triggers = Triggers.make
 
 let clean_trigger = Triggers.clean_trigger
 
-let mk_forall name loc binders trs f ~toplevel ~decl_kind =
+let mk_forall name loc binders trs f ~prenex ~decl_kind =
   let decl_kind =
-    if toplevel
+    if prenex
     then decl_kind
     else
       match decl_kind with
-      | Dpredicate _ | Dfunction _ -> Daxiom (* pred and func only toplevel*)
+      | Dpredicate _ | Dfunction _ ->
+        Daxiom (* pred and func only in prenex position *)
       | _ -> decl_kind
   in
   let binders =
@@ -2540,15 +2541,15 @@ let mk_forall name loc binders trs f ~toplevel ~decl_kind =
       []
   in
   let free_vty = free_type_vars_as_types f in
-  let sko_vty = if toplevel then [] else Ty.Set.elements free_vty in
+  let sko_vty = if prenex then [] else Ty.Set.elements free_vty in
   let trs =
-    Triggers.check_user_triggers ~name ~loc f toplevel binders trs ~decl_kind
+    Triggers.check_user_triggers ~name ~loc f prenex binders trs ~decl_kind
   in
   mk_forall_bis
     { name;
       loc;
       binders;
-      toplevel;
+      prenex;
       user_trs = trs;
       main = f;
       sko_v;
@@ -2556,19 +2557,19 @@ let mk_forall name loc binders trs f ~toplevel ~decl_kind =
       kind = decl_kind
     }
 
-let mk_exists name loc binders trs f ~toplevel ~decl_kind =
-  if (not toplevel) || Ty.TvSet.is_empty f.vty
-  then neg (mk_forall name loc binders trs (neg f) ~toplevel ~decl_kind)
+let mk_exists name loc binders trs f ~prenex ~decl_kind =
+  if (not prenex) || Ty.TvSet.is_empty f.vty
+  then neg (mk_forall name loc binders trs (neg f) ~prenex ~decl_kind)
   else
-    (* If there are type variables in a toplevel exists: 1 - we add a forall
+    (* If there are type variables in a prenex exists: 1 - we add a forall
        quantification without term variables (ie. only with type variables). 2 -
        we keep the triggers of 'exists' to try to instantiate these type
        variables *)
     let nm = Format.sprintf "#%s#sub-%d" name 0 in
     let tmp =
-      neg (mk_forall nm loc binders trs (neg f) ~toplevel:false ~decl_kind)
+      neg (mk_forall nm loc binders trs (neg f) ~prenex:false ~decl_kind)
     in
-    mk_forall name loc Var.Map.empty trs tmp ~toplevel ~decl_kind
+    mk_forall name loc Var.Map.empty trs tmp ~prenex ~decl_kind
 
 let is_pure e = e.pure
 
