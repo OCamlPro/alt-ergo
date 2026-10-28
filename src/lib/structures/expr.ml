@@ -2260,8 +2260,140 @@ module Triggers = struct
     | [] -> mono
     | _ -> m
 
+  type expr_view =
+    | Var of Var.t
+    | App of Sy.t * t list
+    | Binder of bind_kind
+
+  let is_ac_or_interpreted_ac (f : Sy.t) =
+    match f with
+    | Op (Plus | Mult) (* arithmetic *)
+    | Op (BVadd | BVmul) (* bitvector arithmetic *)
+    | Op (BVand | BVor | BVxor) (* bitvector logic *) ->
+      true
+    | _ -> Sy.is_ac f
+
+  let expr_view e =
+    match e.bind with
+    | B_none -> (
+      match e.f with
+      | Var var -> Var var
+      | sy when is_ac_or_interpreted_ac sy && false ->
+        let rec ac_view sy xs ty acc =
+          List.fold_left
+            (fun acc x ->
+              if Sy.equal sy x.f && Ty.equal ty x.ty
+              then ac_view sy x.xs ty acc
+              else x :: acc)
+            acc xs
+        in
+        App (sy, ac_view sy e.xs e.ty [] |> List.sort compare)
+      | _ -> App (e.f, e.xs))
+    | (B_lemma _ | B_skolem _ | B_let _) as bind_kind ->
+      assert (Compat.List.is_empty e.xs);
+      Binder bind_kind
+
+  let list_existsi f xs =
+    let rec loop i = function
+      | [] -> false
+      | x :: xs -> f i x || loop (i + 1) xs
+    in
+    loop 0 xs
+
+  (* [p1] is a _looping sub-trigger_ of [p2] if there is a substitution [sbs]
+     such that [sbs(p1) = p2], where [p1] and [p2] have the same sets of free
+     (term and type) variables.
+
+     If the substitution is not a renaming (i.e. it does not only map variables
+     to variables), then we should not keep [p1] in the set of triggers of a
+     quantifier having [p2] as a sub-term, as that would cause a matching loop.
+
+     Note: this also applies to types. For instance, [(nil : 'a list)] is a
+     looping sub-trigger of [(nil : ('a * 'a) list)]. *)
+  let is_looping_sub_trigger vterm p1 p2 =
+    let module Cache = Set.Make (struct
+      type t = expr * expr
+
+      let compare (e1, e2) (e1', e2') =
+        let c = compare e1 e1' in
+        if c <> 0 then c else compare e2 e2'
+    end) in
+    let rec loop ~cache sbs tysbs todo =
+      match todo with
+      | [] ->
+        Var.Map.exists
+          (fun _ e -> match e.f with Var _ -> false | _ -> true)
+          sbs
+        || Ty.TvMap.exists
+             (fun _ e -> match e with Ty.Tvar _ -> false | _ -> true)
+             tysbs
+      | (e1, e2) :: todo -> (
+        match Ty.matching tysbs e1.ty e2.ty with
+        | exception Ty.TypeClash _ -> false
+        | tysbs -> (
+          match expr_view e1 with
+          | Binder _ -> false
+          | Var x1 -> (
+            let loop sbs = loop ~cache sbs tysbs todo in
+            if not (Var.Set.mem x1 vterm)
+            then
+              (* Only allow substitutions of variables bound by the current
+                 quantifier *)
+              equal e1 e2 && loop sbs
+            else
+              match Var.Map.find x1 sbs with
+              | exception Not_found -> loop (Var.Map.add x1 e2 sbs)
+              | e2' -> equal e2 e2' && loop sbs)
+          | App (f1, xs1) -> (
+            let loop xs1 xs2 =
+              let cache, todo =
+                List.fold_left2
+                  (fun (cache, todo) e1 e2 ->
+                    if Cache.mem (e1, e2) cache
+                    then cache, todo
+                    else Cache.add (e1, e2) cache, (e1, e2) :: todo)
+                  (cache, todo) xs1 xs2
+              in
+              loop ~cache sbs tysbs todo
+            in
+            match expr_view e2 with
+            | Binder _ | Var _ -> false
+            | App (f2, xs2) ->
+              Sy.equal f1 f2 && List.compare_lengths xs1 xs2 = 0 && loop xs1 xs2
+            )))
+    in
+    (* No need to put [p1, p2] in the cache as they cannot be subterms of
+       themselves. *)
+    loop ~cache:Cache.empty Var.Map.empty Ty.esubst [p1, p2]
+
+  let filter_looping_triggers vterm triggers =
+    List.filteri
+      (fun i1 (e1, vars1, tyvars1) ->
+        match expr_view e1 with
+        | Var _ ->
+          (* We need to keep the variable patterns for greedy [triggers_var]
+             configurations. *)
+          true
+        | Binder _ -> false
+        | App _ ->
+          not
+            (list_existsi
+               (fun i2 (e2, vars2, tyvars2) ->
+                 i1 <> i2 && Var.Set.equal vars1 vars2
+                 && Ty.TvSet.equal tyvars1 tyvars2
+                 &&
+                 if is_looping_sub_trigger vterm e1 e2
+                 then (
+                   Format.eprintf "looping sub-pattern: %a of %a@." print e1
+                     print e2;
+                   true)
+                 else false)
+               triggers))
+      triggers
+
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
+    let trs = filter_looping_triggers vterm trs in
     let mono = mono_triggers menv vterm vtype trs in
     let mono = filter_interpreted_arith mono in
     if menv.Util.greedy
