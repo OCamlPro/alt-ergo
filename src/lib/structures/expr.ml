@@ -2049,19 +2049,40 @@ module Triggers = struct
       (fun v _ acc -> if Var.Set.mem v bv then Var.Set.add v acc else acc)
       t.vars acc
 
+  let dropped_trigger_warn ?hint ~name ~loc ~from_user tr reason =
+    if from_user
+    then
+      Printer.print_wrn ~header:true
+        "%a a trigger of %s is dropped because it %s: %a%a" Loc.report loc name
+        reason print_trigger tr
+        Fmt.(option (any "@,Hint: " ++ string))
+        hint;
+    false
+
   (* Check if the multi-trigger is pure and covers all the type and term
      variables. *)
-  let good_trigger (bv, vty) { content = l; _ } =
-    (not (List.exists not_pure l))
-    &&
-    let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
-    let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
-    (* TODO: we can replace `Var.Set.subset bv s1` by `Var.Seq.equal bv s1`. By
-       construction `s1` is a subset of `bv`. *)
-    Var.Set.subset bv s1 && Ty.TvSet.subset vty s2
+  let good_trigger ~name ~loc (bv, vty) ({ content = l; from_user; _ } as tr) =
+    if List.exists not_pure l
+    then
+      dropped_trigger_warn ~name ~loc ~from_user tr
+        "contains an if-then-else, a let or a formula"
+    else
+      let s1 = List.fold_left (vars_of_term bv) Var.Set.empty l in
+      let s2 = List.fold_left vty_of_term Ty.TvSet.empty l in
+      if not (Var.Set.subset bv s1)
+      then
+        dropped_trigger_warn ~name ~loc ~from_user tr
+          ~hint:"use a multi-trigger to cover the missing variables"
+          "does not contain all the variables"
+      else if not (Ty.TvSet.subset vty s2)
+      then
+        dropped_trigger_warn ~name ~loc ~from_user tr
+          ~hint:"add type annotations to relate the trigger to the formula"
+          "does not contain all the type variables"
+      else true
 
-  let filter_good_triggers (bv, vty) trs =
-    List.filter (good_trigger (bv, vty)) trs
+  let filter_good_triggers ~name ~loc (bv, vty) trs =
+    List.filter (good_trigger ~name ~loc (bv, vty)) trs
 
   (* unused let check_triggers (bv, vty) (trs : trigger list) = if trs == []
      then failwith "There should be a trigger for every quantified formula \ in
@@ -2428,18 +2449,9 @@ module Triggers = struct
         [@ocaml.ppwarning
           "TODO: do it for this case once free-vars issues of theories axioms \
            with hypotheses fixed"]
-      else
-        List.filter
-          (fun tr ->
-            let good = good_trigger (vterm, vtype) tr in
-            if (not good) && tr.from_user
-            then
-              Printer.print_wrn ~header:true "%a a trigger of %s is dropped: %a"
-                Loc.report loc name print_trigger tr;
-            good)
-          trs0
+      else filter_good_triggers ~name ~loc (vterm, vtype) trs0
 
-  let make f binders decl_kind mconf =
+  let make ~name ~loc f binders decl_kind mconf =
     if Var.Map.is_empty binders && Ty.TvSet.is_empty f.vty
     then []
     else
@@ -2460,7 +2472,8 @@ module Triggers = struct
         in
         let tt = max_terms defn ~exclude:e in
         let tt = List.fast_sort (fun a b -> depth b - depth a) tt in
-        filter_good_triggers (vterm, vtype) @@ triggers_of_list [[e]; tt]
+        filter_good_triggers ~name ~loc (vterm, vtype)
+        @@ triggers_of_list [[e]; tt]
       | _, { f = Sy.Form Sy.F_Iff; xs = [e1; e2]; _ } when is_literal e1 ->
         let f_trs1, lets = potential_triggers (vterm, vtype) e1 in
         let f_trs1 = expand_lets f_trs1 lets in

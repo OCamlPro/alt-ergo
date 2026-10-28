@@ -13,4 +13,7 @@ axiom kept_type : forall i: int [(f(i) : 't)]. c = (f(i) : 't)
 (* The trigger [g(i)] does not contain the variable [j]. *)
 axiom ignored_var : forall i, j: int [g(i)]. g(i) = h(j)
 
+(* The trigger [g(if i = 0 then 1 else i)] is not pure. *)
+axiom impure : forall i: int [g(if i = 0 then 1 else i)]. g(i) = i
+
 goal g : true

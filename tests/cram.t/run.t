@@ -162,10 +162,14 @@ disabling theories in smt-lib files with `set-option`
 This line is matched by Why3 to extract the number of steps. See `alt_ergo_common.drv` in the Why3 repository.
   $ echo '(set-logic ALL) (check-sat)' | alt-ergo 2>&1 | grep -E '^; File ".*", line [0-9]+, characters [0-9]+-[0-9]+:.*([0-9]+.?[0-9]*) steps)' >/dev/null
 
-A user trigger that does not cover all the variables and type variables of its
-formula is dropped, with a warning.
-  $ alt-ergo dropped_triggers.ae 2>&1 | grep -A1 Warning
-  [Warning] File "dropped_triggers.ae", line 8, characters 0-51: a trigger of ignored_type is dropped: 
+A user trigger that is not pure or does not cover all the variables and type
+variables of its formula is dropped, with a warning.
+  $ alt-ergo dropped_triggers.ae 2>&1 >/dev/null
+  [Warning] File "dropped_triggers.ae", line 8, characters 0-51: a trigger of ignored_type is dropped because it does not contain all the type variables: 
             f('i~286')
-  [Warning] File "dropped_triggers.ae", line 14, characters 0-56: a trigger of ignored_var is dropped: 
+            Hint: add type annotations to relate the trigger to the formula
+  [Warning] File "dropped_triggers.ae", line 14, characters 0-56: a trigger of ignored_var is dropped because it does not contain all the variables: 
             g('i~288')
+            Hint: use a multi-trigger to cover the missing variables
+  [Warning] File "dropped_triggers.ae", line 17, characters 0-66: a trigger of impure is dropped because it contains an if-then-else, a let or a formula: 
+            g(ite((0 = 'i~290'), 1, 'i~290'))
