@@ -1527,16 +1527,14 @@ let pp_query ?(hyps = []) t =
   let axioms, goal = intro_hypothesis t in
   List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
-let make_form_aux ?fact name_base f loc ~decl_kind =
-  let ff = mk_expr ~loc ~name_base ~toplevel:true ?fact ~decl_kind f in
+let make_form name_base f loc ~decl_kind =
+  let fact = match decl_kind with E.Daxiom -> true | _ -> false in
+  let ff = mk_expr ~loc ~name_base ~toplevel:true ~fact ~decl_kind f in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.TvSet.is_empty (E.free_type_vars ff)
   then ff
   else E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
-
-let make_form name_base f loc ~decl_kind =
-  make_form_aux name_base f loc ~decl_kind
 
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
@@ -1698,8 +1696,7 @@ let make file acc stmt =
           E.Dtheory, th_assume
         | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
       in
-      let fact = Option.is_none theory in
-      let e = make_form_aux ~fact name t st_loc ~decl_kind in
+      let e = make_form name t st_loc ~decl_kind in
       let st_decl = assume name e in
       C.{ st_decl; st_loc } :: acc
     (* Function and predicate definitions *)
