@@ -833,12 +833,12 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
                 match Theories.installed_file theory with
                 | None -> None
                 | Some name -> (
-                  match Config.lookup_prelude name with
+                  match Config.lookup_plugin name with
                   | Some path -> Some (read_file path)
                   | None ->
                     fatal_error
                       "cannot find the prelude '%s' of the theory %a (see \
-                       `alt-ergo --where preludes`)"
+                       `alt-ergo --where plugins`)"
                       name Theories.pp_prelude theory))
             in
             match content with
