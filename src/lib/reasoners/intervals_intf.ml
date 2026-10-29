@@ -423,10 +423,10 @@ module type Union = sig
 
       [f] is represented by the pair [(f_lb, f_ub)] of functions that are such
       that for any [x], [f_lb x = f x = f_ub x] if [x] is in the domain of [f],
-      and [f_ub x < f_lb x] otherwise.
+      and [f_lb x < f_ub x] otherwise.
 
       {b Warning}: The functions [f_lb] and [f_ub] must themselve be (weakly)
-      increasing. Moreover, the inequality [f_ub x <= f_lb x] must hold
+      increasing. Moreover, the inequality [f_lb x <= f_ub x] must hold
       everywhere; if [f_lb] and [f_ub] are imprecise approximations of [f], use
       {!approx_map_inc_to_set} instead. *)
 
