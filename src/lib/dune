@@ -57,13 +57,8 @@
  )
 )
 
-; To make sure that only the preludes at the root of the dir are loaded
-(subdir embedded_preludes
- (copy_files
-  (files ../../preludes/*.ae)))
-
 (rule
  (target preludes.ml)
- (deps (glob_files embedded_preludes/*.ae))
+ (deps (source_tree ../preludes))
  (action
-  (run ocaml-crunch -o %{target} -m plain embedded_preludes)))
+  (run ocaml-crunch -o %{target} -m plain ../preludes)))

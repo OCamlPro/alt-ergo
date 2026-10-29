@@ -36,6 +36,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (odoc :with-doc)
   (camlzip (>= 1.07))
  )
+
  (sites (share preludes) (lib plugins))
 )
 
