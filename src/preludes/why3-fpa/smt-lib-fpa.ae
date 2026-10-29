@@ -57,7 +57,9 @@
      [Abs.abs] is [abs_real], [Truncate.floor] is [int_floor],
      [Truncate.ceil] is [int_ceil] (Alt-Ergo builtins), and [to_nearest] is
      defined below.
-   - pattern matching is written with conditionals.
+   - pattern matching is written with conditionals because the rounding modes
+     are not constructors in Alt-Ergo's native language but builtin symbols:
+     in a pattern, [RTN] would be a variable matching any rounding mode.
    - lemmas are axioms, marked with a comment.
    - triggers are added to the axioms that have none, and the comparisons
      are removed from the triggers of [positive_to_real] and
