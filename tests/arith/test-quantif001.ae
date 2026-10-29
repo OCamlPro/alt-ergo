@@ -1,0 +1,8 @@
+logic P : int -> bool
+
+axiom a : forall x : int [x + 1]. P(x + 1)
+
+logic x : int
+
+goal g : P(1 + x)
+
