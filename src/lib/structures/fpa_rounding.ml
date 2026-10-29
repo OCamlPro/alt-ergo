@@ -257,30 +257,6 @@ let succ prec exp x =
 let pred prec exp x =
   round prec exp Down (Q.sub x (div_x_by_2_pow_n Q.one (exp + 1)))
 
-let preimage_lower prec exp mode ~strict lo =
-  let v = round prec exp Up lo in
-  let v = if strict && Q.equal v lo then succ prec exp v else v in
-  let p = pred prec exp v in
-  match mode with
-  | Down -> v, true
-  | Up -> p, false
-  | ToZero -> if Q.sign v > 0 then v, true else p, false
-  | NearestTiesToEven | NearestTiesToAway ->
-    let m = Q.div (Q.add p v) two in
-    m, Q.equal (round prec exp mode m) v
-
-let preimage_upper prec exp mode ~strict hi =
-  let v = round prec exp Down hi in
-  let v = if strict && Q.equal v hi then pred prec exp v else v in
-  let s = succ prec exp v in
-  match mode with
-  | Up -> v, true
-  | Down -> s, false
-  | ToZero -> if Q.sign v < 0 then v, true else s, false
-  | NearestTiesToEven | NearestTiesToAway ->
-    let m = Q.div (Q.add v s) two in
-    m, Q.equal (round prec exp mode m) v
-
 let round_to_integer mode q = Q.from_z (round_big_int mode q)
 
 let empty_cache () = cache := MQ.empty

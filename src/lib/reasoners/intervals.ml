@@ -553,6 +553,55 @@ module QAlgebraicType = struct
       | None -> Pos_infinite
       | Some x -> Finite (Eq, x))
 
+  (* The smallest [x] such that [float(prec, exp, mode, x)] is above the lower
+     bound [b]. Below a float [f], the previous float [p] rounds down, and the
+     midpoint of [p] and [f] rounds to [f] if it wins the tie. *)
+  let float_preimage_lb ~prec ~exp mode b =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      let f = Fpa_rounding.round prec exp Up v in
+      let f =
+        match k with
+        | Gt when Q.equal f v -> Fpa_rounding.succ prec exp f
+        | Lt | Eq | Gt -> f
+      in
+      let p = Fpa_rounding.pred prec exp f in
+      match mode with
+      | Fpa_rounding.Down -> Finite (Eq, f)
+      | Up -> Finite (Gt, p)
+      | ToZero -> if Q.sign f > 0 then Finite (Eq, f) else Finite (Gt, p)
+      | NearestTiesToEven | NearestTiesToAway ->
+        let m = Q.div (Q.add p f) (Q.of_int 2) in
+        let k =
+          if Q.equal (Fpa_rounding.round prec exp mode m) f then Eq else Gt
+        in
+        Finite (k, m))
+
+  (* The largest [x] such that [float(prec, exp, mode, x)] is below the upper
+     bound [b], symmetrically. *)
+  let float_preimage_ub ~prec ~exp mode b =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      let f = Fpa_rounding.round prec exp Down v in
+      let f =
+        match k with
+        | Lt when Q.equal f v -> Fpa_rounding.pred prec exp f
+        | Lt | Eq | Gt -> f
+      in
+      let s = Fpa_rounding.succ prec exp f in
+      match mode with
+      | Fpa_rounding.Up -> Finite (Eq, f)
+      | Down -> Finite (Lt, s)
+      | ToZero -> if Q.sign f < 0 then Finite (Eq, f) else Finite (Lt, s)
+      | NearestTiesToEven | NearestTiesToAway ->
+        let m = Q.div (Q.add f s) (Q.of_int 2) in
+        let k =
+          if Q.equal (Fpa_rounding.round prec exp mode m) f then Eq else Lt
+        in
+        Finite (k, m))
+
   let ( + ) = add
 
   let ( * ) = mul
@@ -568,7 +617,16 @@ end)
 
 type 'a union = 'a Core.union
 
-module Real = AlgebraicField (Core) (QAlgebraicType)
+module Real = struct
+  include AlgebraicField (Core) (QAlgebraicType)
+
+  let float_preimage ~prec ~exp mode u =
+    of_set_checked
+    @@ approx_map_inc_to_set
+         (QAlgebraicType.float_preimage_lb ~prec ~exp mode)
+         (QAlgebraicType.float_preimage_ub ~prec ~exp mode)
+         u
+end
 
 module Int = struct
   include EuclideanRing (Core) (ZEuclideanType)
@@ -815,6 +873,10 @@ module Legacy = struct
   let root n = function
     | Real u -> of_real @@ check @@ Real.root n u
     | Int _ -> invalid_arg "root: cannot take integral root"
+
+  let float_preimage ~prec ~exp mode = function
+    | Real u -> of_real @@ check @@ Real.float_preimage ~prec ~exp mode u
+    | Int _ -> invalid_arg "float_preimage"
 
   let add = map2 "add" Real.add Int.add
 
