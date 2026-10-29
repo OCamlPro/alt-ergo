@@ -159,7 +159,7 @@ let builtin_term t = Dl.Typer.T.builtin_term t
 
 let builtin_ty t = Dl.Typer.T.builtin_ty t
 
-let fpa_rounding_mode, rounding_modes, add_rounding_modes =
+let fpa_rounding_mode, add_rounding_modes =
   let smt_constrs =
     DE.Term.Const.Float.
       [ "RNE", roundNearestTiesToEven;
@@ -168,7 +168,6 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
         "RTN", roundTowardNegative;
         "RTZ", roundTowardZero ]
   in
-  let constrs = List.map snd smt_constrs in
   let add_constrs map =
     List.fold_left
       (fun map (name, c) ->
@@ -181,7 +180,6 @@ let fpa_rounding_mode, rounding_modes, add_rounding_modes =
       map smt_constrs
   in
   ( DE.Ty.roundingMode,
-    constrs,
     fun map ->
       map
       |> DStd.Id.Map.add
@@ -251,22 +249,11 @@ let ae_fpa_builtins =
   let float prec exp mode x =
     DE.Term.apply_cst float_cst [] [prec; exp; mode; x]
   in
-  let mode m =
-    let cst =
-      List.find
-        (fun cst ->
-          match cst.DE.path with
-          | Absolute { name; _ } -> String.equal name m
-          | Local _ -> false)
-        rounding_modes
-    in
-    DE.Term.apply_cst cst [] []
-  in
-  let rne = Fpa_rounding.(string_of_rounding_mode NearestTiesToEven) in
+  let rne = DE.Term.Float.roundNearestTiesToEven in
   let float32 = float (DE.Term.int "24") (DE.Term.int "149") in
-  let float32d x = float32 (mode rne) x in
+  let float32d x = float32 rne x in
   let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
-  let float64d x = float64 (mode rne) x in
+  let float64d x = float64 rne x in
   let partial1 name f =
     DStd.Id.Map.add { name = DStd.Name.simple name; ns = Term } @@ fun env s ->
     builtin_term @@ Dolmen_type.Base.term_app1 (module Dl.Typer.T) env s f
