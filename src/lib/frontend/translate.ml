@@ -757,20 +757,20 @@ let mk_rounding fpar =
   let ty = Fpa_rounding.fpa_rounding_mode in
   E.mk_constr tcst [] ty
 
-(** [mk_expr ~loc ~name_base ~toplevel ~fact ~decl_kind term]
+(** [mk_expr ~loc ~name_base ~prenex ~fact ~decl_kind term]
 
     Builds an Alt-Ergo hashconsed expression from a dolmen term.
 
-    - [toplevel] means that the term is in prenex position, where polymorphic
+    - [prenex] means that the term is in prenex position, where polymorphic
       quantifiers are allowed;
     - [fact] means that the term is an asserted formula, which can never be
       assumed false. Its [distinct] conjuncts, which are true whenever the
       formula is, are built as single n-ary literals (see
       {!Expr.mk_distinct_fact}). *)
-let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
+let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
     ?(fact = false) ~decl_kind dt =
   let name_tag = ref 0 in
-  let rec aux_mk_expr ?(toplevel = false) ?(fact = false)
+  let rec aux_mk_expr ?(prenex = false) ?(fact = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
     let mk = aux_mk_expr in
     let res =
@@ -1287,14 +1287,14 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
              [@ocaml.ppwarning "TODO: should introduce fresh vars"]))
           body binders
       | Binder (((Forall (tyvl, tvl) | Exists (tyvl, tvl)) as e), body) ->
-        if (not toplevel) && tyvl != []
+        if (not prenex) && tyvl != []
         then
           Fmt.failwith "Non-prenex polymorphism in the term %a" DE.Term.print
             term
         else if tvl == []
         then begin
           Cache.store_tyvl tyvl;
-          aux_mk_expr ~toplevel:true body
+          aux_mk_expr ~prenex:true body
         end
         else
           let name =
@@ -1337,7 +1337,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
             end
           in
           let in_theory = decl_kind == E.Dtheory in
-          let f = aux_mk_expr ~toplevel:false body in
+          let f = aux_mk_expr ~prenex:false body in
           let qbody = E.purify_form f in
           (* All the triggers that are encoutered at this level are assumed to
              be user-defined. *)
@@ -1355,7 +1355,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
             | _ -> assert false (* unreachable *)
             end
           in
-          mk name loc binders triggers qbody ~toplevel ~decl_kind
+          mk name loc binders triggers qbody ~prenex ~decl_kind
       | _ -> unsupported "Term %a" DE.Term.print term
     in
     match DStd.Tag.get root_tags DE.Tags.named with
@@ -1430,7 +1430,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(toplevel = false)
       Fmt.failwith "%aInvalid semantic trigger: %a" Loc.report loc DE.Term.print
         t
   in
-  aux_mk_expr ~toplevel ~fact dt
+  aux_mk_expr ~prenex ~fact dt
 
 and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind ~(in_theory : bool)
     (name : string) (hyp : E.t list) ((e, from_user) : DE.term * bool) =
@@ -1529,12 +1529,12 @@ let pp_query ?(hyps = []) t =
 
 let make_form name_base f loc ~decl_kind =
   let fact = match decl_kind with E.Daxiom -> true | _ -> false in
-  let ff = mk_expr ~loc ~name_base ~toplevel:true ~fact ~decl_kind f in
+  let ff = mk_expr ~loc ~name_base ~prenex:true ~fact ~decl_kind f in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.TvSet.is_empty (E.free_type_vars ff)
   then ff
-  else E.mk_forall name_base loc Var.Map.empty [] ff ~toplevel:true ~decl_kind
+  else E.mk_forall name_base loc Var.Map.empty [] ff ~prenex:true ~decl_kind
 
 (* Helper function used to check if the expression defining an objective
    function is a pure term. *)
@@ -1552,7 +1552,7 @@ let make file acc stmt =
     match stmt with
     (* Optimize terms *)
     | { contents = `Optimize (t, is_max); _ } ->
-      let e = mk_expr t ~loc:st_loc ~toplevel:true ~decl_kind:Dobjective in
+      let e = mk_expr t ~loc:st_loc ~prenex:true ~decl_kind:Dobjective in
       let fn = Objective.Function.mk ~is_max e in
       if not @@ is_pure_term e
       then begin
@@ -1748,12 +1748,11 @@ let make file acc stmt =
                | Some () ->
                  let decl_kind = E.Dpredicate defn in
                  let ff =
-                   mk_expr ~loc:st_loc ~name_base ~toplevel:false ~decl_kind
-                     body
+                   mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
                  in
                  let qb = E.mk_eq ~iff:true defn ff in
                  let ff =
-                   E.mk_forall name_base st_loc binders [] qb ~toplevel:true
+                   E.mk_forall name_base st_loc binders [] qb ~prenex:true
                      ~decl_kind
                  in
                  assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -1763,19 +1762,18 @@ let make file acc stmt =
                    then ff
                    else
                      E.mk_forall name_base st_loc Var.Map.empty [] ff
-                       ~toplevel:true ~decl_kind
+                       ~prenex:true ~decl_kind
                  in
                  Some C.{ st_decl = C.PredDef (e, name_base); st_loc }
                | None ->
                  let decl_kind = E.Dfunction defn in
                  let ff =
-                   mk_expr ~loc:st_loc ~name_base ~toplevel:false ~decl_kind
-                     body
+                   mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
                  in
                  let iff = Ty.equal (Expr.type_info defn) Ty.Tbool in
                  let qb = E.mk_eq ~iff defn ff in
                  let ff =
-                   E.mk_forall name_base st_loc binders [] qb ~toplevel:true
+                   E.mk_forall name_base st_loc binders [] qb ~prenex:true
                      ~decl_kind
                  in
                  assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
@@ -1785,7 +1783,7 @@ let make file acc stmt =
                    then ff
                    else
                      E.mk_forall name_base st_loc Var.Map.empty [] ff
-                       ~toplevel:true ~decl_kind
+                       ~prenex:true ~decl_kind
                  in
                  if Options.get_verbose ()
                  then Format.eprintf "defining term of %a@." DE.Term.print body;
