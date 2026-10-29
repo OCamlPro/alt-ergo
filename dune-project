@@ -36,13 +36,6 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (odoc :with-doc)
   (camlzip (>= 1.07))
  )
- ; Provides the prelude of the theory smt.float, which is not distributed
- ; under the license of Alt-Ergo (see src/plugins/smt-float/LICENSE.md).
- (depopts alt-ergo-smt-float-plugin)
- (conflicts
-  (alt-ergo-smt-float-plugin (<> :version))
- )
-
  (sites (share preludes) (lib plugins))
 )
 
@@ -55,8 +48,11 @@ An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived fr
 See more details on https://alt-ergo.ocamlpro.com/"
  )
  (license "LGPL-2.1-only WITH OCaml-LGPL-linking-exception")
+ ; The prelude is installed in the preludes site of alt-ergo, which must
+ ; therefore be installed first.
  (depends
   dune
+  (alt-ergo (= :version))
  )
 )
 
