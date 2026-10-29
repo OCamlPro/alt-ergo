@@ -31,6 +31,8 @@ type t
 
 include Container_types.S_plus_stdlib with type t := t
 
+module Table = Tbl [@@deprecated "Use Expr.Tbl instead"]
+
 type binders = Ty.t Var.Map.t
 
 type decl_kind =

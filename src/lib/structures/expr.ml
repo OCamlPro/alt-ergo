@@ -561,6 +561,7 @@ module T0 = struct
 end
 
 include Container_types.Make (T0)
+module Table = Tbl [@@deprecated "Use Tbl instead"]
 
 module H = struct
   type elt = t
