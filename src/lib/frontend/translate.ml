@@ -1745,14 +1745,15 @@ let make file acc stmt =
                  binders, e
                in
                let mk_body ~decl_kind =
-                 match DStd.Tag.get tags DE.Tags.named with
-                 | Some _ ->
-                   (* The body of a named term [(! F :named n)] is closed and
-                      stands for [F] itself, so its quantifiers are in prenex
-                      position. *)
+                 if Compat.List.is_empty tyvars && Compat.List.is_empty terml
+                 then
+                   (* A definition without type variables nor parameters stands
+                      for its body, which is closed: the quantifiers of the body
+                      are in prenex position. This covers named terms and
+                      nullary [define-fun]s. *)
                    mk_expr ~loc:st_loc ~name_base ~prenex:true
                      ~decl_kind:E.Daxiom body
-                 | None ->
+                 else
                    mk_expr ~loc:st_loc ~name_base ~prenex:false ~decl_kind body
                in
                begin match DStd.Tag.get tags DE.Tags.predicate with
