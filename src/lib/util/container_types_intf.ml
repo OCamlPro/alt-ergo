@@ -68,7 +68,7 @@ module type Map = sig
 
   module Set : Set with type elt = key
 
-  type +'a t
+  type +!'a t
 
   val print : 'a Fmt.t -> 'a t Fmt.t
 
@@ -84,7 +84,7 @@ end
 module type Tbl = sig
   type key
 
-  type 'a t
+  type !'a t
 
   val print : 'a Fmt.t -> 'a t Fmt.t
 end
