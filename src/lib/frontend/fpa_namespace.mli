@@ -18,7 +18,7 @@
 
 (** Loading of the SMT-LIB FPA prelude.
 
-    The statements of the prelude [src/preludes/why3-fpa/smt-lib-fpa.ae] are
+    The statements of the prelude [src/plugins/smt-float/smt-lib-fpa.ae] are
     renamed before type-checking: the declared and defined symbols are prefixed
     with [ae.fp.] ([add] becomes [ae.fp.add]), [pow2] is the builtin [int.pow2]
     and [round] is the builtin [ae.float].
