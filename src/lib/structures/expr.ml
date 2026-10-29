@@ -2261,6 +2261,18 @@ module Triggers = struct
     | _ -> m
 
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
+    let trs =
+      STRS.fold
+        (fun (e, vars, tyvars) trs ->
+          (* Full commutative (or AC) matching would be expensive, but at least
+             make sure to match [x + C] with [C + x] when [C] is ground. *)
+          match e.f, e.xs with
+          | Op (Plus | Mult | BVadd | BVmul | BVand | BVor | BVxor), [e1; e2]
+            when is_ground e1 || is_ground e2 ->
+            STRS.add (mk_term e.f [e2; e1] e.ty, vars, tyvars) trs
+          | _ -> trs)
+        trs trs
+    in
     let trs = STRS.elements trs in
     let mono = mono_triggers menv vterm vtype trs in
     let mono = filter_interpreted_arith mono in
