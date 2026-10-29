@@ -41,11 +41,22 @@ type 'a union
     integer and real unions. *)
 
 (** Union-of-intervals over real numbers. *)
-module Real :
-  AlgebraicField
-    with type explanation := Explanation.t
-     and type value := Q.t
-     and type 'a union = 'a union
+module Real : sig
+  include
+    AlgebraicField
+      with type explanation := Explanation.t
+       and type value := Q.t
+       and type 'a union = 'a union
+
+  val float_preimage :
+    prec:int ->
+    exp:int ->
+    Fpa_rounding.rounding_mode ->
+    t ->
+    (t, Explanation.t) kind
+  (** [float_preimage ~prec ~exp mode u] is the set of the [x] such that
+      [float(prec, exp, mode, x)] is in [u]. *)
+end
 
 (** Union-of-intervals over integers. *)
 module Int : sig
@@ -147,6 +158,13 @@ module Legacy : sig
   val power : int -> t -> t
 
   val root : int -> t -> t
+
+  val float_preimage :
+    prec:int -> exp:int -> Fpa_rounding.rounding_mode -> t -> t
+  (** See {!Real.float_preimage}. The interval must be a real interval.
+
+      @raise NotConsistent if the preimage is empty.
+      @raise Invalid_argument if the interval is an integer interval. *)
 
   val add : t -> t -> t
 

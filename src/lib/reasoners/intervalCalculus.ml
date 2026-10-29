@@ -1540,28 +1540,13 @@ let float_params env prec exp mode =
     Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
   | _ -> None
 
-(* Adds to [eqs] the lower (or upper) bound on [rx] given by the preimage of the
-   lower (or upper) bound of [it], the interval of [float(prec, exp, mode, x)],
-   if it is tighter than the bound of [ix], the interval of [rx]. *)
-let mk_bound prec exp mode ~is_int ~ex rx ix it is_lower eqs =
-  let bound, preimage =
-    if is_lower
-    then I.borne_inf, Fpa_rounding.preimage_lower
-    else I.borne_sup, Fpa_rounding.preimage_upper
-  in
-  match bound it with
+(* Adds to [eqs] the lower (or upper) bound of [pre] on [rx], if it is tighter
+   than the bound of [ix], the interval of [rx]. *)
+let mk_bound ty rx ~ix ~pre is_lower eqs =
+  let bound = if is_lower then I.borne_inf else I.borne_sup in
+  match bound pre with
   | exception I.No_finite_bound -> eqs
-  | c, ex_c, c_large ->
-    let b, large = preimage prec exp mode ~strict:(not c_large) c in
-    let b, large =
-      match is_int, is_lower, large with
-      | false, _, _ -> b, large
-      | true, true, true -> Q.ceiling b, true
-      | true, true, false -> Q.add (Q.floor b) Q.one, true
-      | true, false, true -> Q.floor b, true
-      | true, false, false -> Q.sub (Q.ceiling b) Q.one, true
-    in
-    (* Only bounds tighter than the known bound of [x] are added. *)
+  | b, ex, large ->
     let better =
       match bound ix with
       | c, _, l ->
@@ -1573,23 +1558,26 @@ let mk_bound prec exp mode ~is_int ~ex rx ix it is_lower eqs =
     if not better
     then eqs
     else
-      let ty = if is_int then Ty.Tint else Ty.Treal in
       let rb = alien_of (P.create [] b ty) in
       let args = if is_lower then [rb; rx] else [rx; rb] in
       let a = LR.mkv_builtin true (if large then L.LE else L.LT) args in
-      (a, None, Ex.union ex_c ex, Th_util.Other) :: eqs
+      (a, None, ex, Th_util.Other) :: eqs
 
-(* Bounds [x] by the preimage of the bounds of [float(prec, exp, mode, x)]. *)
+(* Bounds [x] by the preimage of the interval of [float(prec, exp, mode, x)]. *)
 let bounds_from_floats env eqs =
   ME.fold
     (fun t (prec, exp, mode, x) eqs ->
       match float_params env prec exp mode, float_arg env x with
       | Some (prec, exp, mode, ex_p), Some (rx, ex_x, is_int) ->
         let rt, ex_t = Uf.find env.new_uf t in
-        let it = interval_of env rt in
-        let ix = interval_of env rx in
+        let ty = if is_int then Ty.Tint else Ty.Treal in
         let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
-        let mk_bound = mk_bound prec exp mode ~is_int ~ex rx ix it in
+        let pre =
+          I.add_explanation (interval_of env rt) ex
+          |> I.float_preimage ~prec ~exp mode
+          |> I.coerce ty
+        in
+        let mk_bound = mk_bound ty rx ~ix:(interval_of env rx) ~pre in
         mk_bound false (mk_bound true eqs)
       | _ -> eqs)
     env.floats eqs
