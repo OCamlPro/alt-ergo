@@ -27,17 +27,10 @@
 
 module DE = Dolmen.Std.Expr
 
-(** The rounding modes for the Floating Point Arithmetic theory. In the legacy
-    frontend, the rounding mode type was `fpa_rounding_mode` and defined 5
-    rounding modes (see the [rounding_mode] type below). The SMT2 standard
-    defines the exact same rounding modes, but with different identifiers. *)
-
-type rounding_mode =
-  | NearestTiesToEven
-  | ToZero
-  | Up
-  | Down
-  | NearestTiesToAway
+type rounding_mode = unit Dolmen.Std.Builtin.Float.t
+(** We reuse Dolmen's own representation of the rounding modes (the type
+    [Dolmen.Std.Builtin.Float.t], restricted to its five nullary "Round*"
+    constructors). *)
 
 val compare_rounding_mode : rounding_mode -> rounding_mode -> int
 
@@ -75,6 +68,9 @@ val term_cst_of_rounding_mode : rounding_mode -> Dolmen.Std.Expr.term_cst
 
 val integer_log_2 : Numbers.Q.t -> int
 (** Integer part of binary logarithm for NON-ZERO POSITIVE number **)
+
+val mult_x_by_2_pow_n : Numbers.Q.t -> int -> Numbers.Q.t
+(** [mult_x_by_2_pow_n x n] is [x * 2^n]. *)
 
 val float_of_rational :
   int -> int -> rounding_mode -> Numbers.Q.t -> Numbers.Q.t * Numbers.Z.t * int

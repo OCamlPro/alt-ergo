@@ -1,0 +1,6 @@
+(cram
+ (package alt-ergo)
+ (deps
+  %{bin:alt-ergo}
+  (package alt-ergo)
+  (package alt-ergo-fpa-prelude)))

@@ -20,6 +20,10 @@ depends: [
   "odoc" {with-doc}
   "camlzip" {>= "1.07"}
 ]
+depopts: ["alt-ergo-fpa-prelude"]
+conflicts: [
+  "alt-ergo-fpa-prelude" {!= version}
+]
 build: [
   ["dune" "subst"] {dev}
   [

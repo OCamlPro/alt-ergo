@@ -814,10 +814,36 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       @@ fun () ->
       Options.Time.start ();
       let builtin_dir = "<builtin>" in
+      (* Using [`File] sources with preludes is currently broken, see
+         https://github.com/Gbury/dolmen/issues/248 and
+         https://github.com/OCamlPro/alt-ergo/issues/1330 *)
+      let read_file path =
+        let ch = open_in_bin path in
+        let s = really_input_string ch (in_channel_length ch) in
+        close_in ch;
+        s
+      in
       let theory_preludes =
         Options.get_theory_preludes ()
         |> List.filter_map (fun theory ->
-            match Theories.content theory with
+            let content =
+              match Theories.content theory with
+              | Some _ as content -> content
+              | None -> (
+                match Theories.installed_file theory with
+                | None -> None
+                | Some name -> (
+                  match Config.lookup_prelude name with
+                  | Some path -> Some (read_file path)
+                  | None ->
+                    fatal_error
+                      "cannot find the prelude '%s' of the theory %a in the \
+                       preludes directories (see `alt-ergo --where preludes`). \
+                       When running from the build directory, it can be \
+                       installed there with `dune build @install`."
+                      name Theories.pp_prelude theory))
+            in
+            match content with
             | None ->
               Printer.print_wrn
                 "Theory prelude for %a is not yet implemented; ignoring."
@@ -831,20 +857,20 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         theory_preludes
         @ List.map
             (fun path ->
-              (* Using [`File] sources with preludes is currently broken, see
-                 https://github.com/Gbury/dolmen/issues/248 and
-                 https://github.com/OCamlPro/alt-ergo/issues/1330 *)
-              let dir, source =
-                let content =
-                  let ch = open_in_bin path in
-                  let s = really_input_string ch (in_channel_length ch) in
-                  close_in ch;
-                  s
-                in
-                Filename.dirname path, `Raw (Filename.basename path, content)
-              in
-              State.mk_file dir source)
+              State.mk_file (Filename.dirname path)
+                (`Raw (Filename.basename path, read_file path)))
             (Options.get_preludes ())
+      in
+      (* The statements of the SMT-LIB FPA prelude are rewritten before being
+         type-checked, see [Fpa_namespace]. *)
+      let fpa_namespace = Fpa_namespace.create () in
+      let rewrite_fpa_namespace st stmt =
+        match State.get State.logic_file st with
+        | { dir; source = `Raw (filename, _); _ }
+          when String.equal dir builtin_dir
+               && String.equal filename (Theories.filename SmtFloat) ->
+          st, `Continue (Fpa_namespace.rewrite fpa_namespace stmt)
+        | _ -> st, `Continue stmt
       in
       let g = Parser.parse_logic ~preludes logic_file in
       let all_used_context = Frontend.init_all_used_context () in
@@ -855,7 +881,8 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         run ~finally g st
           (fix
              (op ~name:"expand" Parser.expand)
-             (op ~name:"debug_pre" debug_parsed_pipe
+             (op ~name:"fpa_namespace" rewrite_fpa_namespace
+             @>|> op ~name:"debug_pre" debug_parsed_pipe
              @>|> op ~name:"typecheck" Typer_Pipe.typecheck
              @>|> op ~name:"debug_post" debug_typed_pipe
              @>|> op_i (handle_stmts all_used_context)

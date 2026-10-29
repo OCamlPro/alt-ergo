@@ -290,19 +290,23 @@ struct
         P.add p (P.mult_const coef p3), ctx
     (*** <begin>: partial handling of some arith/FPA operators **)
     | Sy.Op Float, [prec; exp; mode; x] ->
+      (* On symbolic arguments, [ae.float] is treated as an uninterpreted
+         function (see [mk_partial_interpretation_1]). With
+         [Options.get_smt_lib_fpa ()], fpa_rel updates it when the rounding mode
+         is substituted with a literal. *)
       let aux_func e =
         match E.int_view prec, E.int_view exp, E.rounding_mode_view mode with
-        | prec, exp, mode ->
+        | prec, exp, Some mode ->
           let res, _, _ = Fpa_rounding.float_of_rational prec exp mode e in
           res
-        | exception Failure _ -> raise Exit
+        | _, _, None | (exception Failure _) -> raise Exit
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
     | Sy.Op Sy.Integer_round, [mode; x] ->
       let aux_func e =
         match E.rounding_mode_view mode with
-        | mode -> Fpa_rounding.round_to_integer mode e
-        | exception Failure _ -> raise Exit
+        | Some mode -> Fpa_rounding.round_to_integer mode e
+        | None -> raise Exit
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
     | Sy.Op (Sy.Abs_int | Sy.Abs_real), [x] ->
