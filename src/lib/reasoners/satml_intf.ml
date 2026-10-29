@@ -1,0 +1,109 @@
+(**************************************************************************)
+(*                                                                        *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                 *)
+(*     Copyright (C) --- OCamlPro SAS                                     *)
+(*                                                                        *)
+(*     This file is distributed under the terms of OCamlPro               *)
+(*     Non-Commercial Purpose License, version 1.                         *)
+(*                                                                        *)
+(*     As an exception, Alt-Ergo Club members at the Gold level can       *)
+(*     use this file under the terms of the Apache Software License       *)
+(*     version 2.0.                                                       *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
+(*     The Alt-Ergo theorem prover                                        *)
+(*                                                                        *)
+(*     Sylvain Conchon, Evelyne Contejean, Francois Bobot                 *)
+(*     Mohamed Iguernelala, Stephane Lescuyer, Alain Mebsout              *)
+(*                                                                        *)
+(*     CNRS - INRIA - Universite Paris Sud                                *)
+(*                                                                        *)
+(*     ---------------------------------------------------------------    *)
+(*                                                                        *)
+(*     More details can be found in the directory licenses/               *)
+(*                                                                        *)
+(**************************************************************************)
+
+open Satml_types
+
+type conflict_origin =
+  | C_none
+  | C_bool of Atom.clause
+  | C_theory of Explanation.t
+
+module type SAT_ML = sig
+  (*module Make (Dummy : sig end) : sig*)
+  type th
+
+  type t
+
+  val solve : t -> unit
+
+  val compute_concrete_model :
+    declared_ids:Id.typed list -> t -> Models.t Lazy.t * Objective.Model.t
+
+  val set_new_proxies : t -> Flat_Formula.proxies -> unit
+
+  val new_vars :
+    t ->
+    nbv:int ->
+    (* nb made vars *)
+    Satml_types.Atom.var list ->
+    Satml_types.Atom.atom list list ->
+    Satml_types.Atom.atom list list ->
+    Satml_types.Atom.atom list list * Satml_types.Atom.atom list list
+
+  val assume :
+    t ->
+    Satml_types.Atom.atom list list ->
+    Satml_types.Atom.atom list list ->
+    Expr.t ->
+    cnumber:int ->
+    Flat_Formula.Set.t ->
+    dec_lvl:int ->
+    unit
+
+  val boolean_model : t -> Satml_types.Atom.atom list
+
+  val instantiation_context :
+    t -> Satml_types.Flat_Formula.hcons_env -> Satml_types.Atom.Set.t
+
+  val current_tbox : t -> th
+
+  val set_current_tbox : t -> th -> unit
+
+  val create : Atom.hcons_env -> t
+
+  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+
+  val decision_level : t -> int
+
+  val assertion_level : t -> int
+  (** Returns the number of active assertion levels, that is the number of
+      levels introduced with [push] that have not yet been popped. *)
+
+  val cancel_until : t -> int -> unit
+
+  val exists_in_lazy_cnf : t -> Flat_Formula.t -> bool
+
+  val known_lazy_formulas : t -> int Flat_Formula.Map.t
+
+  val reason_of_deduction : Atom.atom -> Atom.Set.t
+
+  val do_case_split : t -> Util.case_split_policy -> conflict_origin
+
+  val conflict_analyze_and_fix : t -> conflict_origin -> unit
+
+  val push : t -> Expr.t
+  (** [push env] adds a new assertion level and returns a guard [g] that must be
+      used to guard all formulas asserted at this level. *)
+
+  val pop : t -> unit
+  (** [pop env] pops the latest assertion level. *)
+
+  val optimize : t -> Objective.Function.t -> unit
+  (** [optimize env fn] adds the objection [fn] to the environment [env].
+
+      @raise invalid_argurment if the decision level of [env] is not zero. *)
+end

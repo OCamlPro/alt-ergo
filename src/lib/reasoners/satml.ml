@@ -59,6 +59,7 @@
       even if [b] or [c] are later asserted (again, unless they appear in other
       formulas). *)
 
+include Satml_intf
 module E = Expr
 module Atom = Satml_types.Atom
 module FF = Satml_types.Flat_Formula
@@ -76,80 +77,8 @@ exception Last_UIP_reason of Atom.Set.t
 
 exception Restart
 
-type conflict_origin =
-  | C_none
-  | C_bool of Atom.clause
-  | C_theory of Ex.t
-
 (* not even the final one *)
 let vraie_form = E.vrai
-
-module type SAT_ML = sig
-  (*module Make (Dummy : sig end) : sig*)
-  type th
-
-  type t
-
-  val solve : t -> unit
-
-  val compute_concrete_model :
-    declared_ids:Id.typed list -> t -> Models.t Lazy.t * Objective.Model.t
-
-  val set_new_proxies : t -> FF.proxies -> unit
-
-  val new_vars :
-    t ->
-    nbv:int ->
-    (* nb made vars *)
-    Atom.var list ->
-    Atom.atom list list ->
-    Atom.atom list list ->
-    Atom.atom list list * Atom.atom list list
-
-  val assume :
-    t ->
-    Atom.atom list list ->
-    Atom.atom list list ->
-    E.t ->
-    cnumber:int ->
-    FF.Set.t ->
-    dec_lvl:int ->
-    unit
-
-  val boolean_model : t -> Atom.atom list
-
-  val instantiation_context : t -> FF.hcons_env -> Satml_types.Atom.Set.t
-
-  val current_tbox : t -> th
-
-  val set_current_tbox : t -> th -> unit
-
-  val create : Atom.hcons_env -> t
-
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
-
-  val decision_level : t -> int
-
-  val assertion_level : t -> int
-
-  val cancel_until : t -> int -> unit
-
-  val exists_in_lazy_cnf : t -> FF.t -> bool
-
-  val known_lazy_formulas : t -> int FF.Map.t
-
-  val reason_of_deduction : Atom.atom -> Atom.Set.t
-
-  val do_case_split : t -> Util.case_split_policy -> conflict_origin
-
-  val conflict_analyze_and_fix : t -> conflict_origin -> unit
-
-  val push : t -> E.t
-
-  val pop : t -> unit
-
-  val optimize : t -> Objective.Function.t -> unit
-end
 
 module MFF = FF.Map
 module SFF = FF.Set
