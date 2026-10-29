@@ -5,10 +5,10 @@
         "homepage": "",
         "owner": "Gbury",
         "repo": "dolmen",
-        "rev": "3c77a22b2aac2eb85aca76f198797d40ca3ec4a3",
-        "sha256": "0qsl5f0mh4azmqvq99l24cna8brvw00x9703wyd98gm0pbmsc3pm",
+        "rev": "2d642d2dbecbaeea031f5b6020b818ad01d36a9c",
+        "sha256": "087pdnxc9rijmssy4x780rgnrsxm1crihzdficifx14pa5qjjs1l",
         "type": "tarball",
-        "url": "https://github.com/Gbury/dolmen/archive/3c77a22b2aac2eb85aca76f198797d40ca3ec4a3.tar.gz",
+        "url": "https://github.com/Gbury/dolmen/archive/2d642d2dbecbaeea031f5b6020b818ad01d36a9c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
         "version": "0.10"
     },

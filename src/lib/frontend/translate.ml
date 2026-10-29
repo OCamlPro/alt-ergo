@@ -798,9 +798,13 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           | Plus_zero { e; s } -> E.float Fp_value.Plus_zero e s
           | Minus_zero { e; s } -> E.float Fp_value.Minus_zero e s
           | NaN { e; s } -> E.float Fp_value.NaN e s
-          | RoundingMode | RoundNearestTiesToEven | RoundNearestTiesToAway
-          | RoundTowardPositive | RoundTowardNegative | RoundTowardZero | T _
-          | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _
+          | RoundingMode
+          | RM RoundNearestTiesToEven
+          | RM RoundNearestTiesToAway
+          | RM RoundTowardPositive
+          | RM RoundTowardNegative
+          | RM RoundTowardZero
+          | T _ | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _
           | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ | Max _ | Leq _ | Lt _
           | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _ | IsZero _
           | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
@@ -1180,11 +1184,11 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
         (* Floating-point builtins *)
         | B.Float builtin, args -> (
           match builtin, args with
-          | RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
-          | RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
-          | RoundTowardPositive, _ -> mk_rounding Up
-          | RoundTowardNegative, _ -> mk_rounding Down
-          | RoundTowardZero, _ -> mk_rounding ToZero
+          | RM RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
+          | RM RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
+          | RM RoundTowardPositive, _ -> mk_rounding Up
+          | RM RoundTowardNegative, _ -> mk_rounding Down
+          | RM RoundTowardZero, _ -> mk_rounding ToZero
           | Fp { e; s }, [sign_t; exp_t; sig_t] when Options.get_smt_lib_fpa ()
             ->
             E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
