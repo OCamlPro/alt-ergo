@@ -20,6 +20,10 @@ depends: [
   "odoc" {with-doc}
   "camlzip" {>= "1.07"}
 ]
+depopts: ["alt-ergo-fpa-prelude"]
+conflicts: [
+  "alt-ergo-fpa-prelude" {!= version}
+]
 build: [
   ["dune" "subst"] {dev}
   [
@@ -44,5 +48,4 @@ tags: "org:OCamlPro"
 license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
-  "LGPL-2.1-only WITH OCaml-LGPL-linking-exception"
 ]

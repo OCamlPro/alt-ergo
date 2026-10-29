@@ -2,10 +2,10 @@
 ; under the license of Why3 (see LICENSE.md), not under the license of
 ; Alt-Ergo. They are not embedded in the binary (unlike the preludes at the
 ; root of src/preludes), but installed along with their license in the
-; preludes site of Alt-Ergo, from where they are loaded when the corresponding
-; theory is enabled.
+; preludes site of Alt-Ergo by the separate package alt-ergo-fpa-prelude, from
+; where they are loaded when the corresponding theory is enabled.
 
 (install
  (section (site (alt-ergo preludes)))
- (package alt-ergo)
+ (package alt-ergo-fpa-prelude)
  (files smt-lib-fpa.ae WHY3-LICENSE LICENSE.md))
