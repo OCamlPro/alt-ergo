@@ -37,17 +37,17 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (camlzip (>= 1.07))
  )
  ; Provides the prelude of the theory smt.float, which is not distributed
- ; under the license of Alt-Ergo (see src/preludes/why3-fpa/LICENSE.md).
- (depopts alt-ergo-fpa-prelude)
+ ; under the license of Alt-Ergo (see src/plugins/smt-float/LICENSE.md).
+ (depopts alt-ergo-smt-float-plugin)
  (conflicts
-  (alt-ergo-fpa-prelude (<> :version))
+  (alt-ergo-smt-float-plugin (<> :version))
  )
 
  (sites (share preludes) (lib plugins))
 )
 
 (package
- (name alt-ergo-fpa-prelude)
+ (name alt-ergo-smt-float-plugin)
  (synopsis "The SMT-LIB FPA prelude of the Alt-Ergo SMT prover")
  (description "\
 An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived from Why3. It is loaded by Alt-Ergo when the theory smt.float is enabled (--enable-theory smt.float).

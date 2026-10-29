@@ -40,8 +40,4 @@ The packages of the free releases are suffixed with `-free` on the opam reposito
 Please refer to the `LICENSE.md` of each plugins:
 - `AB-Why3`: src/plugins/AB-Why3/LICENSE.md
 - `fm-simplex`: src/plugins/fm-simplex/LICENSE.md
-
-## Preludes
-
-The preludes of `src/preludes/why3-fpa` are derived from Why3, please refer to
-src/preludes/why3-fpa/LICENSE.md.
+- `smt-float`: src/plugins/smt-float/LICENSE.md
