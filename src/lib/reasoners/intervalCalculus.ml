@@ -120,7 +120,8 @@ type t =
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
     floats : (E.t * E.t * E.t * E.t) ME.t;
-    (* The terms [float(prec, exp, mode, x)], with their arguments. *)
+    (* The terms [float(prec, exp, mode, x)], with their arguments ([i] instead
+       of [x] if [x] is [real_of_int(i)]). *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
   }
@@ -1513,15 +1514,11 @@ let interval_of env r =
    integer: [i] if [x] is [real_of_int(i)], so that its bounds are rounded,
    otherwise [x] if it is an atom. *)
 let float_arg env x =
-  match E.term_view x with
-  | { f = Sy.Op Sy.Real_of_int; xs = [i]; _ } ->
-    let ri, ex = Uf.find env.new_uf i in
-    if Option.is_some (P.is_const (poly_of ri))
-    then None
-    else Some (ri, ex, true)
-  | _ ->
-    let rx, ex = Uf.find env.new_uf x in
-    if is_alien rx then Some (rx, ex, false) else None
+  let rx, ex = Uf.find env.new_uf x in
+  match E.type_info x with
+  | Ty.Tint ->
+    if Option.is_some (P.is_const (poly_of rx)) then None else Some (rx, ex)
+  | _ -> if is_alien rx then Some (rx, ex) else None
 
 (* The values of the parameters of [float(prec, exp, mode, x)], with their
    explanation, once they are known to be literals. *)
@@ -1568,9 +1565,9 @@ let bounds_from_floats env eqs =
   ME.fold
     (fun t (prec, exp, mode, x) eqs ->
       match float_params env prec exp mode, float_arg env x with
-      | Some (prec, exp, mode, ex_p), Some (rx, ex_x, is_int) ->
+      | Some (prec, exp, mode, ex_p), Some (rx, ex_x) ->
         let rt, ex_t = Uf.find env.new_uf t in
-        let ty = if is_int then Ty.Tint else Ty.Treal in
+        let ty = E.type_info x in
         let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
         let pre =
           I.add_explanation (interval_of env rt) ex
@@ -1865,7 +1862,11 @@ let add =
       let env =
         match E.term_view t with
         | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } ->
-          let x = match E.term_view x with { f = Op Real_of_int ; xs = [x]; _ } -> x | _ -> x in
+          let x =
+            match E.term_view x with
+            | { f = Op Real_of_int; xs = [x]; _ } -> x
+            | _ -> x
+          in
           { env with floats = ME.add t (prec, exp, mode, x) env.floats }
         | _ -> env
       in
