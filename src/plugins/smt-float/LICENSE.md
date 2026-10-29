@@ -14,5 +14,4 @@ of Alt-Ergo.
 
 For this reason, `smt-lib-fpa.ae` is not embedded in the Alt-Ergo binary, but
 installed separately along with `WHY3-LICENSE` by the opam package
-`alt-ergo-smt-float-plugin` (an optional dependency of `alt-ergo`), to be
-loaded by `--enable-theory smt.float`.
+`alt-ergo-smt-float-plugin`, to be loaded by `--enable-theory smt.float`.
