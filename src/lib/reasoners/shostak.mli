@@ -28,8 +28,8 @@
 module Combine : sig
   include Sig.X
 
-  (* Note: comparison function is based on hashes, not structural *)
   include Container_types.S_plus_stdlib with type t := r
+  (** The comparison function is based on hashes, not structural *)
 
   val src : Logs.src
 
