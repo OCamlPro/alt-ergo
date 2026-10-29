@@ -405,24 +405,36 @@ let new_splits uf_mod uf env =
 (* For each disequality `r <> s` where `r` and `s` are two arrays, we produce
    the formula: exists i:ty. (select r i) <> (select s i), where `ty` denotes
    the type of indices of `r` and `s`. *)
+let extensionality_pair ((env, acc) as accu) dep r s =
+  match X.type_info r, X.term_extract r, X.term_extract s with
+  | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _) ->
+    let i = E.fresh_name ty in
+    let g1 = E.ArraysEx.select t1 i in
+    let g2 = E.ArraysEx.select t2 i in
+    let d = E.mk_distinct ~iff:false [g1; g2] in
+    let acc = Conseq.add (d, dep) acc in
+    let env =
+      { env with new_terms = E.Set.add g2 (E.Set.add g1 env.new_terms) }
+    in
+    env, acc
+  | _ -> accu
+
 let extensionality accu la =
   List.fold_left
-    (fun ((env, acc) as accu) (a, _, dep, _) ->
+    (fun accu (a, _, dep, _) ->
       match a with
-      | A.Distinct (false, [r; s]) -> begin
-        match X.type_info r, X.term_extract r, X.term_extract s with
-        | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _) ->
-          let i = E.fresh_name ty in
-          let g1 = E.ArraysEx.select t1 i in
-          let g2 = E.ArraysEx.select t2 i in
-          let d = E.mk_distinct ~iff:false [g1; g2] in
-          let acc = Conseq.add (d, dep) acc in
-          let env =
-            { env with new_terms = E.Set.add g2 (E.Set.add g1 env.new_terms) }
-          in
-          env, acc
-        | _ -> accu
-      end
+      | A.Distinct (false, (_ :: _ :: _ as l)) ->
+        let rec aux accu = function
+          | [] | [_] -> accu
+          | r :: rl ->
+            let accu =
+              List.fold_left
+                (fun accu s -> extensionality_pair accu dep r s)
+                accu rl
+            in
+            aux accu rl
+        in
+        aux accu l
       | _ -> accu)
     accu la
 

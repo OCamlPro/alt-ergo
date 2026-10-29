@@ -297,6 +297,15 @@ val mk_eq : iff:bool -> t -> t -> t
 
 val mk_distinct : iff:bool -> t list -> t
 
+val mk_distinct_fact : t list -> t
+(** [mk_distinct_fact l] builds [distinct l] as a single n-ary literal, while
+    [mk_distinct] expands it into the conjunction of all the binary
+    disequalities.
+
+    The negation of this literal does not have the semantics of the negation of
+    [distinct]. This literal must only be used where it cannot be assumed false,
+    i.e. for facts asserted at the top level. *)
+
 val mk_builtin : is_pos:bool -> Symbols.builtin -> t list -> t
 
 (** simple smart constructors for formulas *)

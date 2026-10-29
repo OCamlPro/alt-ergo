@@ -576,10 +576,14 @@ module Main : S = struct
             assume_dist env facts [r1; r3] ex
         | A.Eq (r1, r2) ->
           if X.hash_cmp r1 r2 = 0 then env else assume_eq env facts r1 r2 ex
-        | A.Distinct (true, lt) ->
-          (* nary equality -- this does not mean all arguments are equal, but
-             that some pair of arguments is equal. Unfortunately we can't really
-             do any useful propagation from here. *)
+        | A.Distinct (true, ([_; _; _] | _ :: _ :: _ :: _)) ->
+          (* The negation of an n-ary distinct literal means that at least two
+             of its arguments are equal, which cannot be assumed as a
+             conjunction of equalities.
+
+             These literals are only built for asserted facts, so their negation
+             can only be assumed when the fact is disabled (e.g. by a [pop]):
+             ignoring it is sound. *)
           env
         | _ -> assert false
       in
