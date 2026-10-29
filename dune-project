@@ -48,7 +48,7 @@ An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived fr
 See more details on https://alt-ergo.ocamlpro.com/"
  )
  (license "LGPL-2.1-only WITH OCaml-LGPL-linking-exception")
- ; The prelude is installed in the preludes site of alt-ergo, which must
+ ; The prelude is installed in the plugins site of alt-ergo, which must
  ; therefore be installed first.
  (depends
   dune
