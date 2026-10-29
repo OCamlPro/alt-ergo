@@ -836,10 +836,19 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
                   match Config.lookup_plugin name with
                   | Some path -> Some (read_file path)
                   | None ->
+                    let hint =
+                      match theory with
+                      | Theories.SmtFloat ->
+                        Some
+                          "install the opam package alt-ergo-smt-float-plugin"
+                      | Fpa | Ria | Nra -> None
+                    in
                     fatal_error
-                      "cannot find the prelude '%s' of the theory %a (see \
-                       `alt-ergo --where plugins`)"
-                      name Theories.pp_prelude theory))
+                      "cannot find the prelude '%s' of the theory %a in the \
+                       plugins directories (see `alt-ergo --where plugins`)%a"
+                      name Theories.pp_prelude theory
+                      Fmt.(option (any "@,Hint: " ++ string))
+                      hint))
             in
             match content with
             | None ->
