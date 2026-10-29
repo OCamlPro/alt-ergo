@@ -14,6 +14,7 @@ doc: "https://ocamlpro.github.io/alt-ergo"
 bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
 depends: [
   "dune" {>= "3.14"}
+  "alt-ergo" {= version}
   "odoc" {with-doc}
 ]
 build: [

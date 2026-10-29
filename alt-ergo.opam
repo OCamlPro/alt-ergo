@@ -20,10 +20,6 @@ depends: [
   "odoc" {with-doc}
   "camlzip" {>= "1.07"}
 ]
-depopts: ["alt-ergo-smt-float-plugin"]
-conflicts: [
-  "alt-ergo-smt-float-plugin" {!= version}
-]
 build: [
   ["dune" "subst"] {dev}
   [
