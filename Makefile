@@ -249,6 +249,7 @@ FILES_DEST=public-release/$(PUBLIC_RELEASE)
 	tests \
 	alt-ergo.opam \
 	alt-ergo-lib.opam \
+	alt-ergo-fpa-prelude.opam \
 	dune-project \
 	Makefile \
 	README.md \

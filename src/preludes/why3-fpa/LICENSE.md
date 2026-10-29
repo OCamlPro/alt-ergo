@@ -13,5 +13,6 @@ of Alt-Ergo.
 `WHY3-LICENSE` is the `LICENSE` file of Why3, which the Why3 headers refer to.
 
 For this reason, `smt-lib-fpa.ae` is not embedded in the Alt-Ergo binary, but
-installed separately along with `WHY3-LICENSE`, to be loaded by
+installed separately along with `WHY3-LICENSE` by the opam package
+`alt-ergo-fpa-prelude` (an optional dependency of `alt-ergo`), to be loaded by
 `--enable-theory smt.float`.

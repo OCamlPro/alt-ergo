@@ -36,8 +36,28 @@ See more details on https://alt-ergo.ocamlpro.com/")
   (odoc :with-doc)
   (camlzip (>= 1.07))
  )
+ ; Provides the prelude of the theory smt.float, which is not distributed
+ ; under the license of Alt-Ergo (see src/preludes/why3-fpa/LICENSE.md).
+ (depopts alt-ergo-fpa-prelude)
+ (conflicts
+  (alt-ergo-fpa-prelude (<> :version))
+ )
 
  (sites (share preludes) (lib plugins))
+)
+
+(package
+ (name alt-ergo-fpa-prelude)
+ (synopsis "The SMT-LIB FPA prelude of the Alt-Ergo SMT prover")
+ (description "\
+An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived from Why3. It is loaded by Alt-Ergo when the theory smt.float is enabled (--enable-theory smt.float).
+
+See more details on https://alt-ergo.ocamlpro.com/"
+ )
+ (license "LGPL-2.1-only WITH OCaml-LGPL-linking-exception")
+ (depends
+  dune
+ )
 )
 
 (package
