@@ -1865,6 +1865,7 @@ let add =
       let env =
         match E.term_view t with
         | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } ->
+          let x = match E.term_view x with { f = Op Real_of_int ; xs = [x]; _ } -> x | _ -> x in
           { env with floats = ME.add t (prec, exp, mode, x) env.floats }
         | _ -> env
       in
