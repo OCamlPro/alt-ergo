@@ -833,7 +833,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
                 match Theories.installed_file theory with
                 | None -> None
                 | Some name -> (
-                  match Config.lookup_plugin name with
+                  match Config.lookup_prelude name with
                   | Some path -> Some (read_file path)
                   | None ->
                     let hint =
@@ -845,7 +845,8 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
                     in
                     fatal_error
                       "cannot find the prelude '%s' of the theory %a in the \
-                       plugins directories (see `alt-ergo --where plugins`)%a"
+                       preludes directories (see `alt-ergo --where \
+                       preludes`)%a"
                       name Theories.pp_prelude theory
                       Fmt.(option (any "@,Hint: " ++ string))
                       hint))
