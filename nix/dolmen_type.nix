@@ -1,18 +1,19 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage, dolmen
+, pp_loc, spelll, uutf }:
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   pname = "dolmen_type";
-  inherit (ocamlPackages.dolmen) version src strictDeps;
+  inherit (dolmen) version src strictDeps;
 
   minimalOCamlVersion = "4.08";
   duneVersion = "3";
 
   propagatedBuildInputs = [
-    ocamlPackages.dolmen
-    ocamlPackages.pp_loc
-    ocamlPackages.spelll
-    ocamlPackages.uutf
+    dolmen
+    pp_loc
+    spelll
+    uutf
   ];
 
-  meta = ocamlPackages.dolmen.meta;
+  meta = dolmen.meta;
 }

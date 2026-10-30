@@ -1,5 +1,4 @@
-{ sources, lib, buildDunePackage
-, gen, zarith, dolmen, dolmen_type }:
+{ buildDunePackage, gen, zarith, dolmen, dolmen_type }:
 
 buildDunePackage {
   pname = "dolmen_loop";
