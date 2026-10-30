@@ -439,7 +439,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
     { tbl : t HT.t;
       cpt : int ref;
       atoms : Atom.hcons_env;
-      proxies : proxy_defn Numbers.Int.Tbl.t;
+      proxies : proxy_defn Numbers.Int.Tbl.t
           (** Map from flat formula tags to their proxy definitions. If flat
               formula [f] is associated to [p, l, is_and], then [p] is an atom
               that represents [f] (so that deciding on [p] forces [f] to take
@@ -459,9 +459,6 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
               Note: the [proxies] map contains either a flat formula or its
               negation; [get_proxy_of] tries both possibilities. *)
-      distinct_clauses : t Numbers.Int.Tbl.t
-          (** Map from the variables of the n-ary [distinct] literals to their
-              clause (see [distinct_clause]). *)
     }
 
   let make hcons pos neg =
@@ -505,8 +502,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       { tbl = HT.create 4096;
         cpt = ref 0;
         atoms = Atom.empty_hcons_env ();
-        proxies = Numbers.Int.Tbl.create 4096;
-        distinct_clauses = Numbers.Int.Tbl.create 17
+        proxies = Numbers.Int.Tbl.create 4096
       }
     in
     let vrai = mk_lit empty_hcons E.vrai [] |> fst in
@@ -514,8 +510,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       { tbl = HT.copy empty_hcons.tbl;
         cpt = ref !(empty_hcons.cpt);
         atoms = Atom.copy_hcons_env empty_hcons.atoms;
-        proxies = Numbers.Int.Tbl.copy empty_hcons.proxies;
-        distinct_clauses = Numbers.Int.Tbl.copy empty_hcons.distinct_clauses
+        proxies = Numbers.Int.Tbl.copy empty_hcons.proxies
       }
     in
     f_empty_hcons, vrai
@@ -798,30 +793,23 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
   let distinct_clause hcons ~fact a new_vars =
     match E.lit_view a with
     | Distinct (_ :: _ :: _ :: _) when fact -> None, new_vars
-    | (Distinct (_ :: _ :: _ :: _ as l) | Eql l) as v -> (
+    | (Distinct (_ :: _ :: _ :: _ as l) | Eql l) as v ->
       let d = match v with Distinct _ -> a | _ -> E.neg a in
-      let d_at, new_vars = Atom.add_expr_atom hcons.atoms d new_vars in
-      let vid = d_at.Atom.var.Atom.vid in
-      match Numbers.Int.Tbl.find_opt hcons.distinct_clauses vid with
-      | Some cl -> Some cl, new_vars
-      | None ->
-        let rec eqs acc = function
-          | [] -> acc
-          | x :: l ->
-            eqs
-              (List.fold_left (fun acc y -> E.mk_eq ~iff:true x y :: acc) acc l)
-              l
-        in
-        let cl, new_vars =
-          List.fold_left
-            (fun (cl, new_vars) e ->
-              let ff, new_vars = mk_lit hcons e new_vars in
-              ff :: cl, new_vars)
-            ([], new_vars) (d :: eqs [] l)
-        in
-        let cl = mk_or hcons cl in
-        Numbers.Int.Tbl.add hcons.distinct_clauses vid cl;
-        Some cl, new_vars)
+      let rec eqs acc = function
+        | [] -> acc
+        | x :: l ->
+          eqs
+            (List.fold_left (fun acc y -> E.mk_eq ~iff:true x y :: acc) acc l)
+            l
+      in
+      let cl, new_vars =
+        List.fold_left
+          (fun (cl, new_vars) e ->
+            let ff, new_vars = mk_lit hcons e new_vars in
+            ff :: cl, new_vars)
+          ([], new_vars) (d :: eqs [] l)
+      in
+      Some (mk_or hcons cl), new_vars
     | _ -> None, new_vars
 
   let simplify hcons f abstr new_vars =
