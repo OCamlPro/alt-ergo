@@ -1,6 +1,13 @@
 name: Linter
 
-on: [push,pull_request]
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*.*.*"
+    branches:
+      - next
+      - main
 
 env:
   OCAML_DEFAULT_VERSION: "4.14"

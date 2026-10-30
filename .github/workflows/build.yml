@@ -1,8 +1,13 @@
 name: Build
 
 on:
-  push:
   pull_request:
+  push:
+    tags:
+      - "v*.*.*"
+    branches:
+      - next
+      - main
 
 # Restrict the GITHUB_TOKEN
 permissions: {}
