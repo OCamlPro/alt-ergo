@@ -1,7 +1,8 @@
 { pkgs ? import ./nix { } }:
 
 let
-  inherit (pkgs) lib python3Packages ocamlPackages;
+  inherit (pkgs) lib python3Packages;
+  ocamlPackages = pkgs.ocaml-ng.ocamlPackages_4_14;
 in
 
 pkgs.mkShell {
@@ -17,9 +18,10 @@ pkgs.mkShell {
     dune_3
     ocaml-lsp
     ocp-indent
-    dune-release
     dune-site
     crunch
+    # The version in NixOS 26.05 is insecure (CVE-2026-87732)
+    # dune-release
   ];
 
   buildInputs = [ pkgs.nodejs ] ++ (with ocamlPackages; [
@@ -38,8 +40,6 @@ pkgs.mkShell {
     zarith_stubs_js
     cmdliner_2
     odoc
-    landmarks
-    landmarks-ppx
     qcheck
     utop
     opam-ed

@@ -32,8 +32,6 @@ import sources.nixpkgs {
             then ocamlPackages.overrideScope ocamlOverrides
             else ocamlPackages)
           pkgs.ocaml-ng;
-
-        ocamlPackages = final.ocaml-ng.ocamlPackages_4_14;
       })
   ];
 }
