@@ -112,7 +112,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   end)
 
   type t =
-    { hcons_env : Atom.hcons_env;
+    { hcons_env : FF.hcons_env;
       (* si vrai, les contraintes sont deja fausses *)
       mutable is_unsat : bool;
       mutable unsat_core : Atom.clause list option;
@@ -390,6 +390,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       next_split = None;
       next_optimized_split = None
     }
+
+  let atom_hcons_env { hcons_env; _ } = FF.atom_hcons_env hcons_env
 
   let insert_var_order env (v : Atom.var) = Vheap.insert env.order v
 
@@ -726,7 +728,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     Vec.shrink watched !new_sz_w
 
   let acts_add_decision_lit env lit =
-    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom (atom_hcons_env env) lit [] in
     if atom.var.level < 0
     then (
       assert ((not atom.is_true) && not atom.neg.is_true);
@@ -734,7 +736,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     else assert (atom.is_true || atom.neg.is_true)
 
   let acts_add_split env lit =
-    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom (atom_hcons_env env) lit [] in
     if atom.var.level < 0
     then (
       assert ((not atom.is_true) && not atom.neg.is_true);
@@ -747,7 +749,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
        We can't update the theory inside this function, because it is called
        from within the theory. *)
-    let atom, _ = Atom.add_atom env.hcons_env lit [] in
+    let atom, _ = Atom.add_atom (atom_hcons_env env) lit [] in
     env.next_optimized_split <- Some (fn, value, atom)
 
   let[@inline] theory_slice env : _ Th_util.acts =
@@ -1949,13 +1951,13 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let boolean_model env = Vec.to_list env.trail
 
-  let instantiation_context env hcons =
+  let instantiation_context env =
     if Options.get_cdcl_tableaux_th ()
     then
       (* use atoms from theory environment if tableaux method is used for
          theories *)
       E.Set.fold
-        (fun a accu -> SA.add (FF.get_atom hcons a) accu)
+        (fun a accu -> SA.add (FF.get_atom env.hcons_env a) accu)
         (Th.get_assumed env.tenv) SA.empty
     else if Options.get_cdcl_tableaux_inst ()
     then
@@ -1985,8 +1987,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let known_lazy_formulas env = env.ff_lvl
 
   let push env =
-    let expr_guard, var_guard = Atom.fresh_var env.hcons_env in
-    let nbv = Atom.nb_made_vars env.hcons_env in
+    let expr_guard, var_guard = Atom.fresh_var (atom_hcons_env env) in
+    let nbv = Atom.nb_made_vars (atom_hcons_env env) in
     let unit, nunit = new_vars env ~nbv [var_guard] [] [] in
     assert (unit == [] && nunit == []);
     assert (not (is_assigned var_guard.pa));
