@@ -32,11 +32,7 @@ module type T = sig
 
   type t
 
-  val compare : t -> t -> int
-
-  val equal : t -> t -> bool
-
-  val hash : t -> int
+  include Container_types.S_plus_stdlib with type t := t
 
   val create : (Q.t * r) list -> Q.t -> Ty.t -> t
 
@@ -70,8 +66,6 @@ module type T = sig
 
   val leaves : t -> r list
 
-  val print : Format.formatter -> t -> unit
-
   val type_info : t -> Ty.t
 
   val is_monomial : t -> (Q.t * r * Q.t) option
@@ -92,10 +86,6 @@ module type T = sig
   val abstract_selectors : t -> (r * r) list -> t * (r * r) list
 
   val separate_constant : t -> t * Numbers.Q.t
-
-  module Set : Set.S with type elt = t
-
-  module Map : Map.S with type key = t
 
   module Ints : sig
     (** Helper functions for manipulating polynomials of type [Tint]. *)

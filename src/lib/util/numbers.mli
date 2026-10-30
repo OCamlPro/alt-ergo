@@ -25,6 +25,10 @@
 (*                                                                        *)
 (**************************************************************************)
 
+module Int : sig
+  include Container_types.S_plus_stdlib with type t = int
+end
+
 (** Integers implementation. **)
 module Z : sig
   type t = Z.t

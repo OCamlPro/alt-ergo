@@ -27,9 +27,13 @@
 
 (** Data structures *)
 
-type binders = Ty.t Var.Map.t
-
 type t
+
+include Container_types.S_plus_stdlib with type t := t
+
+module Table = Tbl [@@deprecated "Use Expr.Tbl instead"]
+
+type binders = Ty.t Var.Map.t
 
 type decl_kind =
   | Dtheory
@@ -139,12 +143,6 @@ and trigger = private
     from_user : bool
   }
 
-module Table : Hashtbl.S with type key = t
-
-module Set : Set.S with type elt = t
-
-module Map : Map.S with type key = t
-
 type subst = t Var.Map.t * Ty.subst
 
 type lit_view = private
@@ -188,8 +186,6 @@ val rounding_mode_view : t -> Fpa_rounding.rounding_mode
 
 (** pretty printing *)
 
-val print : Format.formatter -> t -> unit
-
 val print_list : Format.formatter -> t list -> unit
 
 val print_list_sep : string -> Format.formatter -> t list -> unit
@@ -201,12 +197,6 @@ val pp_smtlib : t Fmt.t
     SMT-LIB standard. *)
 
 (** Comparison and hashing functions *)
-
-val compare : t -> t -> int
-
-val equal : t -> t -> bool
-
-val hash : t -> int
 
 val uid : t -> int
 

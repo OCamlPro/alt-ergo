@@ -325,17 +325,19 @@ module Make (X : S) = struct
 
   (* Operators and helpers for readability *)
 
-  module Set = Set.Make (struct
+  module T0 = struct
     type nonrec t = t
 
-    let compare = compare
-  end)
+    let print = print
 
-  module Map = Map.Make (struct
-    type nonrec t = t
+    let equal = equal
+
+    let hash = hash
 
     let compare = compare
-  end)
+  end
+
+  include Container_types.Make (T0)
 
   module Ints = struct
     let of_bigint n = create [] (Q.from_z n) Tint

@@ -27,6 +27,8 @@
 
 type t
 
+include Container_types.S_plus_stdlib with type t := t
+
 val of_hstring : Hstring.t -> t
 (** Create a *fresh* variable with the given name.
 
@@ -45,20 +47,12 @@ val is_local : t -> bool
 (** Indicates whether the given variable is a local variable (see {!local} above
     for details). *)
 
-val compare : t -> t -> int
-
-val equal : t -> t -> bool
-
-val hash : t -> int
-
 val uid : t -> int
 (** Globally unique identifier for the variable. *)
 
 val underscore : t
 (** Unique special variable. Used to indicate fields that should be ignored in
     pattern matching and triggers. *)
-
-val print : Format.formatter -> t -> unit
 
 val to_string : t -> string
 
@@ -69,11 +63,3 @@ val reinit_cnt : unit -> unit
 (** Reinitializes the counter to the saved value with [save_cnt], 1 if no value
     is saved, since after the initialization of the modules [cnt] is set to 1
     when initializing the [underscore] constant in the Symbols module *)
-
-module Set : Set.S with type elt = t
-
-module Map : sig
-  include Map.S with type key = t
-
-  val pp : 'a Fmt.t -> 'a t Fmt.t
-end

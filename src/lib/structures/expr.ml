@@ -125,198 +125,6 @@ type form_view =
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
 
-(** Comparison and hashing functions *)
-
-(* We keep true and false as repr * ordering is influenced by
-   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
-   that fresh vars will be smaller *)
-(* XXX Uf.term_repr sensitive to the way this function is coded *)
-let compare t1 t2 =
-  if t1 == t2
-  then 0
-  else
-    let c = t1.depth - t2.depth in
-    if c <> 0 then c else t1.tag - t2.tag
-
-let equal t1 t2 = t1 == t2
-
-let hash t = t.tag
-
-let uid t = t.tag
-
-let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  let c = Ty.compare_subst s_ty1 s_ty2 in
-  if c <> 0 then c else Var.Map.compare compare s_t1 s_t2
-
-let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
-  Ty.equal_subst s_ty1 s_ty2 || Var.Map.equal equal s_t1 s_t2
-
-let compare_let let1 let2 =
-  let c = Var.compare let1.let_v let2.let_v in
-  if c <> 0
-  then c
-  else
-    let c = compare let1.let_e let2.let_e in
-    if c <> 0 then c else compare let1.in_e let2.in_e
-
-let compare_binders = Var.Map.compare Ty.compare
-
-let[@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
-  try
-    List.iter2
-      (fun s t ->
-        let c = cmp_xxx s t in
-        if c <> 0 then raise (Util.Cmp c))
-      sk1 sk2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length sk1 - List.length sk2
-
-let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
-
-let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
-
-let compare_lists l1 l2 cmp_elts =
-  let res = Util.cmp_lists l1 l2 cmp_elts in
-  if res <> 0 then raise (Util.Cmp res)
-
-let compare_triggers trs1 trs2 =
-  try
-    List.iter2
-      (fun tr1 tr2 ->
-        compare_lists tr1.content tr2.content compare;
-        compare_lists tr1.hyp tr2.hyp compare;
-        compare_lists tr1.semantic tr2.semantic (fun a b ->
-            Util.compare_algebraic a b (function
-              | Interval (s, b1, b2), Interval (t, c1, c2) ->
-                let c = compare s t in
-                if c <> 0
-                then c
-                else
-                  let c = Sy.compare_bounds b1 c1 in
-                  if c <> 0 then c else Sy.compare_bounds b2 c2
-              | MapsTo (h1, t1), MapsTo (h2, t2) ->
-                let c = compare t1 t2 in
-                if c <> 0 then c else Var.compare h1 h2
-              | NotTheoryConst a, NotTheoryConst b
-              | IsTheoryConst a, IsTheoryConst b ->
-                compare a b
-              | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
-                let c = compare s1 s2 in
-                if c <> 0 then c else compare t1 t2
-              | ( _,
-                  ( Interval _ | MapsTo _ | NotTheoryConst _ | IsTheoryConst _
-                  | LinearDependency _ ) ) ->
-                assert false)))
-      trs1 trs2;
-    0
-  with
-  | Util.Cmp c -> c
-  | Invalid_argument _ -> List.length trs1 - List.length trs2
-
-let compare_quant
-    { main = f1;
-      binders = b1;
-      sko_v = sko_v1;
-      sko_vty = free_vty1;
-      user_trs = trs1;
-      _
-    }
-    { main = f2;
-      binders = b2;
-      sko_v = sko_v2;
-      sko_vty = free_vty2;
-      user_trs = trs2;
-      _
-    } =
-  let c = compare f1 f2 in
-  if c <> 0
-  then c
-  else
-    let c = compare_binders b1 b2 in
-    if c <> 0
-    then c
-    else
-      let c = compare_sko_vars sko_v1 sko_v2 in
-      if c <> 0
-      then c
-      else
-        let c = compare_sko_vty free_vty1 free_vty2 in
-        if c <> 0 then c else compare_triggers trs1 trs2
-
-module Msbt : Map.S with type key = expr Var.Map.t = Map.Make (struct
-  type t = expr Var.Map.t
-
-  let compare a b = Var.Map.compare compare a b
-end)
-
-module Msbty : Map.S with type key = Ty.subst = Map.Make (struct
-  type t = Ty.subst
-
-  let compare = Ty.compare_subst
-end)
-
-module TSet : Set.S with type elt = expr = Set.Make (struct
-  type t = expr
-
-  let compare = compare
-end)
-
-module TMap : Map.S with type key = expr = Map.Make (struct
-  type t = expr
-
-  let compare = compare
-end)
-
-module H = struct
-  type elt = t
-
-  type t = elt
-
-  let eq t1 t2 =
-    try
-      Sy.equal t1.f t2.f
-      && List.for_all2 ( == ) t1.xs t2.xs
-      && Ty.equal t1.ty t2.ty
-      && Util.compare_algebraic t1.bind t2.bind (function
-           | B_lemma q1, B_lemma q2 | B_skolem q1, B_skolem q2 ->
-             compare_quant q1 q2
-           | B_let a, B_let b -> compare_let a b
-           | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false)
-         = 0
-    with Invalid_argument _ -> false
-
-  let equal = eq
-
-  let hash t =
-    abs
-    @@ List.fold_left
-         (fun acc x -> (acc * 23) + x.tag)
-         ((7 * Hashtbl.hash t.bind) + (5 * Sy.hash t.f) + Ty.hash t.ty)
-         t.xs
-
-  let set_id tag x = { x with tag }
-
-  let initial_size = 9001
-
-  let disable_weaks () = Options.get_disable_weaks ()
-end
-
-module Labels = Hashtbl.Make (H)
-module HC = Hconsing.Make (H)
-module Hsko = Hashtbl.Make (H)
-
-module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
-  type t' = t
-
-  type t = t'
-
-  let hash = hash
-
-  let equal = equal
-end)
-
 (** pretty printing *)
 
 module SmtPrinter = struct
@@ -608,6 +416,201 @@ let pp_binders ppf =
   then SmtPrinter.pp_binders ppf
   else AEPrinter.pp_binders ppf
 
+(** Comparison and hashing functions *)
+
+(* We keep true and false as repr * ordering is influenced by
+   depth. Constants are smaller. Otherwise, we compare tag1 - tag2 so
+   that fresh vars will be smaller *)
+(* XXX Uf.term_repr sensitive to the way this function is coded *)
+let compare t1 t2 =
+  if t1 == t2
+  then 0
+  else
+    let c = t1.depth - t2.depth in
+    if c <> 0 then c else t1.tag - t2.tag
+
+let equal t1 t2 = t1 == t2
+
+let hash t = t.tag
+
+let uid t = t.tag
+
+let compare_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+  let c = Ty.compare_subst s_ty1 s_ty2 in
+  if c <> 0 then c else Var.Map.compare compare s_t1 s_t2
+
+let equal_subst (s_t1, s_ty1) (s_t2, s_ty2) =
+  Ty.equal_subst s_ty1 s_ty2 || Var.Map.equal equal s_t1 s_t2
+
+let compare_let let1 let2 =
+  let c = Var.compare let1.let_v let2.let_v in
+  if c <> 0
+  then c
+  else
+    let c = compare let1.let_e let2.let_e in
+    if c <> 0 then c else compare let1.in_e let2.in_e
+
+let compare_binders = Var.Map.compare Ty.compare
+
+let[@inline always] compare_sko_xxx sk1 sk2 cmp_xxx =
+  try
+    List.iter2
+      (fun s t ->
+        let c = cmp_xxx s t in
+        if c <> 0 then raise (Util.Cmp c))
+      sk1 sk2;
+    0
+  with
+  | Util.Cmp c -> c
+  | Invalid_argument _ -> List.length sk1 - List.length sk2
+
+let compare_sko_vars sk1 sk2 = compare_sko_xxx sk1 sk2 compare
+
+let compare_sko_vty sk1 sk2 = compare_sko_xxx sk1 sk2 Ty.compare
+
+let compare_lists l1 l2 cmp_elts =
+  let res = Util.cmp_lists l1 l2 cmp_elts in
+  if res <> 0 then raise (Util.Cmp res)
+
+let compare_triggers trs1 trs2 =
+  try
+    List.iter2
+      (fun tr1 tr2 ->
+        compare_lists tr1.content tr2.content compare;
+        compare_lists tr1.hyp tr2.hyp compare;
+        compare_lists tr1.semantic tr2.semantic (fun a b ->
+            Util.compare_algebraic a b (function
+              | Interval (s, b1, b2), Interval (t, c1, c2) ->
+                let c = compare s t in
+                if c <> 0
+                then c
+                else
+                  let c = Sy.compare_bounds b1 c1 in
+                  if c <> 0 then c else Sy.compare_bounds b2 c2
+              | MapsTo (h1, t1), MapsTo (h2, t2) ->
+                let c = compare t1 t2 in
+                if c <> 0 then c else Var.compare h1 h2
+              | NotTheoryConst a, NotTheoryConst b
+              | IsTheoryConst a, IsTheoryConst b ->
+                compare a b
+              | LinearDependency (s1, t1), LinearDependency (s2, t2) ->
+                let c = compare s1 s2 in
+                if c <> 0 then c else compare t1 t2
+              | ( _,
+                  ( Interval _ | MapsTo _ | NotTheoryConst _ | IsTheoryConst _
+                  | LinearDependency _ ) ) ->
+                assert false)))
+      trs1 trs2;
+    0
+  with
+  | Util.Cmp c -> c
+  | Invalid_argument _ -> List.length trs1 - List.length trs2
+
+let compare_quant
+    { main = f1;
+      binders = b1;
+      sko_v = sko_v1;
+      sko_vty = free_vty1;
+      user_trs = trs1;
+      _
+    }
+    { main = f2;
+      binders = b2;
+      sko_v = sko_v2;
+      sko_vty = free_vty2;
+      user_trs = trs2;
+      _
+    } =
+  let c = compare f1 f2 in
+  if c <> 0
+  then c
+  else
+    let c = compare_binders b1 b2 in
+    if c <> 0
+    then c
+    else
+      let c = compare_sko_vars sko_v1 sko_v2 in
+      if c <> 0
+      then c
+      else
+        let c = compare_sko_vty free_vty1 free_vty2 in
+        if c <> 0 then c else compare_triggers trs1 trs2
+
+module Msbt : Map.S with type key = expr Var.Map.t = Map.Make (struct
+  type t = expr Var.Map.t
+
+  let compare a b = Var.Map.compare compare a b
+end)
+
+module Msbty : Map.S with type key = Ty.subst = Map.Make (struct
+  type t = Ty.subst
+
+  let compare = Ty.compare_subst
+end)
+
+module T0 = struct
+  type t = expr
+
+  let print = print
+
+  let equal = equal
+
+  let hash = hash
+
+  let compare = compare
+end
+
+include Container_types.Make (T0)
+module Table = Tbl [@@deprecated "Use Tbl instead"]
+
+module H = struct
+  type elt = t
+
+  type t = elt
+
+  let eq t1 t2 =
+    try
+      Sy.equal t1.f t2.f
+      && List.for_all2 ( == ) t1.xs t2.xs
+      && Ty.equal t1.ty t2.ty
+      && Util.compare_algebraic t1.bind t2.bind (function
+           | B_lemma q1, B_lemma q2 | B_skolem q1, B_skolem q2 ->
+             compare_quant q1 q2
+           | B_let a, B_let b -> compare_let a b
+           | _, (B_none | B_lemma _ | B_skolem _ | B_let _) -> assert false)
+         = 0
+    with Invalid_argument _ -> false
+
+  let equal = eq
+
+  let hash t =
+    abs
+    @@ List.fold_left
+         (fun acc x -> (acc * 23) + x.tag)
+         ((7 * Hashtbl.hash t.bind) + (5 * Sy.hash t.f) + Ty.hash t.ty)
+         t.xs
+
+  let set_id tag x = { x with tag }
+
+  let initial_size = 9001
+
+  let disable_weaks () = Options.get_disable_weaks ()
+end
+
+module Labels = Hashtbl.Make (H)
+module HC = Hconsing.Make (H)
+module Hsko = Hashtbl.Make (H)
+
+module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
+  type t' = t
+
+  type t = t'
+
+  let hash = hash
+
+  let equal = equal
+end)
+
 (** different views of an expression *)
 
 let lit_view t =
@@ -730,7 +733,7 @@ let print_tagged_classes =
   fun fmt l ->
     List.iter
       (fun cl ->
-        let cl = List.filter is_labeled (TSet.elements cl) in
+        let cl = List.filter is_labeled (Set.elements cl) in
         if cl != [] then Format.fprintf fmt "\n{ %a }" (print_list_sep " , ") cl)
       l
 
@@ -1342,7 +1345,7 @@ let no_capture_issue s_t binders =
   then true
   else begin
     Printer.print_wrn "captures between@,%aand%a!@,(captured = %a)"
-      (Var.Map.pp print) s_t pp_binders binders pp_binders capt_bind;
+      (Var.Map.print print) s_t pp_binders binders pp_binders capt_bind;
     false
   end
 
@@ -1591,18 +1594,18 @@ and find_particular_subst =
     end
 
 let apply_subst, clear_subst_cache =
-  let (cache : t Msbty.t Msbt.t TMap.t ref) = ref TMap.empty in
+  let (cache : t Msbty.t Msbt.t Map.t ref) = ref Map.empty in
   let apply_subst ((sbt, sbty) as s) f =
     let ch = !cache in
-    try TMap.find f ch |> Msbt.find sbt |> Msbty.find sbty
+    try Map.find f ch |> Msbt.find sbt |> Msbty.find sbty
     with Not_found ->
       let nf = apply_subst_aux s f in
-      let c_sbt = try TMap.find f ch with Not_found -> Msbt.empty in
+      let c_sbt = try Map.find f ch with Not_found -> Msbt.empty in
       let c_sbty = try Msbt.find sbt c_sbt with Not_found -> Msbty.empty in
-      cache := TMap.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
+      cache := Map.add f (Msbt.add sbt (Msbty.add sbty nf c_sbty) c_sbt) ch;
       nf
   in
-  let clear_subst_cache () = cache := TMap.empty in
+  let clear_subst_cache () = cache := Map.empty in
   apply_subst, clear_subst_cache
 
 let apply_subst s t =
@@ -1620,14 +1623,14 @@ let max_pure_subterms =
     | _ -> e.xs
   in
   let rec aux acc e =
-    if e.pure then TSet.add e acc else List.fold_left aux acc (args_of e)
+    if e.pure then Set.add e acc else List.fold_left aux acc (args_of e)
   in
-  fun e -> aux TSet.empty e
+  fun e -> aux Set.empty e
 
 let rec sub_terms acc e =
   match e.f with
   | Sy.Form _ | Sy.Lit _ -> acc
-  | _ -> List.fold_left sub_terms (TSet.add e acc) e.xs
+  | _ -> List.fold_left sub_terms (Set.add e acc) e.xs
 
 let args_of_lit e =
   match e.f with
@@ -1636,7 +1639,7 @@ let args_of_lit e =
   | _ when e.ty == Ty.Tbool -> [e]
   | _ -> assert false
 
-let max_terms_of_lit e = TSet.of_list @@ args_of_lit e
+let max_terms_of_lit e = Set.of_list @@ args_of_lit e
 
 let max_ground_terms_of_lit =
   let rec max_sub_ground acc e =
@@ -1644,16 +1647,16 @@ let max_ground_terms_of_lit =
     | Sy.Form _ | Sy.Lit _ -> assert false
     | _ ->
       if is_ground e
-      then TSet.add e acc
+      then Set.add e acc
       else List.fold_left max_sub_ground acc e.xs
   in
-  fun e -> List.fold_left max_sub_ground TSet.empty (args_of_lit e)
+  fun e -> List.fold_left max_sub_ground Set.empty (args_of_lit e)
 
 let atoms_rec_of_form =
   let rec atoms only_ground acc f =
     match form_view f with
     | Literal a ->
-      if (not only_ground) || is_ground a then TSet.add a acc else acc
+      if (not only_ground) || is_ground a then Set.add a acc else acc
     | Lemma { main = f; _ } | Skolem { main = f; _ } -> atoms only_ground acc f
     | Unit (f1, f2) | Clause (f1, f2, _) | Iff (f1, f2) | Xor (f1, f2) ->
       atoms only_ground (atoms only_ground acc f1) f2
@@ -1666,10 +1669,10 @@ let atoms_rec_of_form =
   fun ~only_ground f acc -> atoms only_ground acc f
 
 let max_ground_terms_rec_of_form f =
-  TSet.fold
-    (fun a acc -> TSet.union acc (max_ground_terms_of_lit a))
-    (atoms_rec_of_form ~only_ground:false f TSet.empty)
-    TSet.empty
+  Set.fold
+    (fun a acc -> Set.union acc (max_ground_terms_of_lit a))
+    (atoms_rec_of_form ~only_ground:false f Set.empty)
+    Set.empty
 
 (** Other smart constructors and skolemization functions **)
 
@@ -1682,7 +1685,7 @@ let resolution_of_literal a binders free_vty acc =
       let vars = free_vars t Var.Map.empty in
       Var.Map.for_all (fun v _ -> Var.Map.mem v vars) binders
     in
-    if cond then TSet.add t acc else acc
+    if cond then Set.add t acc else acc
   | _ -> acc
 
 let rec resolution_of_disj is_back f binders free_vty acc =
@@ -1717,7 +1720,7 @@ let sub_terms_of_formula f =
       then aux xx.let_e acc
       else sub_terms acc xx.let_e
   in
-  aux f TSet.empty
+  aux f Set.empty
 
 (* unification/matching like function, to detect when a backward triggers is too
    permessive (general) *)
@@ -1745,16 +1748,16 @@ let resolution_triggers ~is_back { kind; main = f; binders; _ } =
     | Daxiom | Dgoal ->
       let free_vty = f.vty in
       let cand =
-        resolution_of_toplevel_conj is_back f binders free_vty TSet.empty
+        resolution_of_toplevel_conj is_back f binders free_vty Set.empty
       in
       let others =
-        TSet.filter (fun t -> not (TSet.mem t cand)) (sub_terms_of_formula f)
+        Set.filter (fun t -> not (Set.mem t cand)) (sub_terms_of_formula f)
       in
-      TSet.fold
+      Set.fold
         (fun t acc ->
           if
             type_info t != Ty.Tbool
-            || TSet.exists (cand_is_more_general t) others
+            || Set.exists (cand_is_more_general t) others
           then acc
           else mk_trigger ~depth:t.depth [t] :: acc)
         cand []
@@ -1901,7 +1904,7 @@ let elim_iff f1 f2 ~with_conj =
 
 module Triggers = struct
   (* Set of patterns with their sets of free term and type variables. *)
-  module STRS = Set.Make (struct
+  module STRS = Stdlib.Set.Make (struct
     type t = expr * Var.Set.t * Ty.TvSet.t
 
     let compare (t1, _, _) (t2, _, _) = compare t1 t2
@@ -2099,7 +2102,7 @@ module Triggers = struct
       let l = unique_stable_sort l in
       List.rev (atmost [] n l)
 
-  module SLLT = Set.Make (struct
+  module SLLT = Stdlib.Set.Make (struct
     type t = expr list * Var.Set.t * Ty.TvSet.t
 
     let compare (a, y1, _) (b, y2, _) =
@@ -2289,22 +2292,22 @@ module Triggers = struct
         let s =
           List.fold_left
             (fun s t ->
-              if TMap.mem t s then s else TMap.add t (sub_terms TSet.empty t) s)
-            TMap.empty trig.content
+              if Map.mem t s then s else Map.add t (sub_terms Set.empty t) s)
+            Map.empty trig.content
         in
         let res =
-          TMap.fold
+          Map.fold
             (fun t _ acc ->
-              let rm = TMap.remove t acc in
-              if TMap.exists (fun _ sub -> TSet.mem t sub) rm then rm else acc)
+              let rm = Map.remove t acc in
+              if Map.exists (fun _ sub -> Set.mem t sub) rm then rm else acc)
             s s
         in
         let sz_l = List.length trig.content in
-        let sz_s = TMap.cardinal res in
+        let sz_s = Map.cardinal res in
         if sz_l = sz_s
         then trig
         else
-          let content = TMap.fold (fun t _ acc -> t :: acc) res [] in
+          let content = Map.fold (fun t _ acc -> t :: acc) res [] in
           let content = List.stable_sort pat_weight content in
           if Options.get_verbose ()
           then
@@ -2775,9 +2778,6 @@ let purify_form f =
   Purification.lets_counter := 0;
   Purification.purify_form f
 
-module Set = TSet
-module Map = TMap
-
 (******)
 
 type gformula =
@@ -3184,11 +3184,3 @@ module ArraysEx = struct
 
   let store a i v = mk_term Sy.(Op Set) [a; i; v] (type_info a)
 end
-
-module Table = Hashtbl.Make (struct
-  type nonrec t = t
-
-  let hash = hash
-
-  let equal = equal
-end)

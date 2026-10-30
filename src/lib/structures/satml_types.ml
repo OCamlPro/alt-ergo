@@ -310,17 +310,19 @@ module Atom : ATOM = struct
       end;
       !l
 
-  module Set = Set.Make (struct
+  module T0 = struct
     type t = atom
 
-    let compare = cmp_atom
-  end)
-
-  module Map = Map.Make (struct
-    type t = atom
+    let equal = eq_atom
 
     let compare = cmp_atom
-  end)
+
+    let hash = hash_atom
+
+    let print = pr_atom
+  end
+
+  include Container_types.Make (T0)
 end
 
 (******************************************************************************)
@@ -882,15 +884,17 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   let reinit_cpt () = cpt := 0
 
-  module Set = Set.Make (struct
+  module T0 = struct
     type nonrec t = t
 
     let compare = compare
-  end)
 
-  module Map = Map.Make (struct
-    type nonrec t = t
+    let equal = equal
 
-    let compare = compare
-  end)
+    let hash f = f.tag
+
+    let print = print
+  end
+
+  include Container_types.Make (T0)
 end

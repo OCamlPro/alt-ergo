@@ -2318,7 +2318,7 @@ let new_facts_for_axiom ~do_syntactic_matching menv uf selector optimized substs
           then
             Printer.print_dbg ~flushed:false ~module_name:"IntervalCalculus"
               ~function_name:"new_facts_for_axiom"
-              "try to extend synt sbt %a of ax %a@ " (Var.Map.pp E.print) sbs
+              "try to extend synt sbt %a of ax %a@ " (Var.Map.print E.print) sbs
               E.print orig;
           if tr.E.semantic == [] && not do_syntactic_matching
           then
@@ -2339,7 +2339,7 @@ let new_facts_for_axiom ~do_syntactic_matching menv uf selector optimized substs
               if get_debug_fpa () >= 2
               then
                 Printer.print_dbg ~header:false
-                  "semantic matching succeeded:@ %a" (Var.Map.pp E.print)
+                  "semantic matching succeeded:@ %a" (Var.Map.print E.print)
                   (fst sbs);
               let nf = E.apply_subst sbs f in
               (* incrementality/push. Although it's not supported for

@@ -64,6 +64,8 @@ module type ATOM = sig
 
   and premise = clause list
 
+  include Container_types.S_plus_stdlib with type t := atom
+
   type hcons_env
 
   val empty_hcons_env : unit -> hcons_env
@@ -135,16 +137,14 @@ module type ATOM = sig
   val add_expr_atom : hcons_env -> Expr.t -> var list -> atom * var list
 
   val fresh_var : hcons_env -> Expr.t * var
-
-  module Set : Set.S with type elt = atom
-
-  module Map : Map.S with type key = atom
 end
 
 module type FLAT_FORMULA = sig
   module Atom : ATOM
 
   type t
+
+  include Container_types.S_plus_stdlib with type t := t
 
   type view = private
     | UNIT of Atom.atom
@@ -234,8 +234,4 @@ module type FLAT_FORMULA = sig
 
   val reinit_cpt : unit -> unit
   (** Resets to 0 the counter *)
-
-  module Set : Set.S with type elt = t
-
-  module Map : Map.S with type key = t
 end
