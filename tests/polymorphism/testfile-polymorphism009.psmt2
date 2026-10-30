@@ -1,0 +1,18 @@
+; The negation of an n-ary `distinct` means that two of its arguments are
+; equal. When the axiom is instantiated at type `Bool`, this literal used to be
+; rebuilt as `(p = q) = r`, which is false here although `p = q`, so the
+; problem was wrongly reported as `unsat`.
+(set-logic ALL)
+(declare-fun f (par (a) (a a a) Bool))
+(declare-const p Bool)
+(declare-const q Bool)
+(declare-const r Bool)
+(assert
+ (par (a)
+  (forall ((x a) (y a) (z a))
+   (! (=> (f x y z) (not (distinct x y z))) :pattern ((f x y z))))))
+(assert (f p q r))
+(assert p)
+(assert q)
+(assert (not r))
+(check-sat)
