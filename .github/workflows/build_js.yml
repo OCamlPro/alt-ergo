@@ -2,7 +2,14 @@ name: Build Javascript
 
 # this worflow try to build and test the nodejs compatible version of Alt-Ergo
 # and try to build the webworker of Alt-Ergo
-on: [push,pull_request]
+on:
+  push:
+    tags:
+      - "v*.*.*"
+    branches:
+      - next
+      - main
+  pull_request:
 
 env:
   OCAML_DEFAULT_VERSION: "4.14"
