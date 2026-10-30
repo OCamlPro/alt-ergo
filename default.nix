@@ -1,9 +1,16 @@
 { sources ? import ./nix/sources.nix
+, useFlambda ? false
 , pkgs ? import ./nix { inherit sources; }
 }:
 
 let
-  inherit (pkgs) lib ocamlPackages;
+  inherit (pkgs) lib;
+  ocamlPackages =
+    if useFlambda
+    then pkgs.ocamlPackages.overrideScope (self: super: {
+      ocaml = super.ocaml.override { flambdaSupport = true; };
+    })
+    else pkgs.ocamlPackages;
   version = "dev";
   src = lib.cleanSource ./.;
   alt-ergo-lib = ocamlPackages.buildDunePackage rec {
