@@ -599,7 +599,7 @@ let get_verbose_t =
   Arg.(value & flag & info ["v"; "verbose"] ~doc)
 
 let mk_opts file () () debug_flags ddebug_flags dddebug_flags backtrace rule ()
-    halt_opt gc limits () () () () () () () =
+    halt_opt gc limits () () () () () () () () =
   Debug.mk ~verbosity:1 debug_flags;
   Debug.mk ~verbosity:2 ddebug_flags;
   Debug.mk ~verbosity:3 dddebug_flags;
@@ -1501,6 +1501,23 @@ let parse_fmt_opt =
   in
   Term.(ret (const mk_output_channel_opt $ regular_output $ diagnostic_output))
 
+let parse_extra_opt =
+  let open Term.Syntax in
+  (let+ extra_options =
+     let docs = s_debug in
+     let docv = "OPTION" in
+     let doc = "(undocumented and unstable)" in
+     Arg.(value & opt_all string [] & info ["X"] ~docs ~doc ~docv)
+   in
+   Result.map_error
+     (fun msg -> `Msg msg)
+     (List.fold_left
+        (fun result extra_option ->
+          Result.bind result (fun () ->
+              Util.Extra_options.parse_and_set extra_option))
+        (Ok ()) extra_options))
+  |> Term.term_result
+
 let main =
   let file =
     let doc =
@@ -1566,7 +1583,8 @@ let main =
        $ Debug.backtrace_flag $ Rule.flag_term $ parse_execution_opt
        $ parse_halt_opt $ parse_internal_opt $ parse_limit_opt
        $ parse_profiling_opt $ parse_quantifiers_opt $ parse_sat_opt
-       $ parse_term_opt $ parse_output_opt $ parse_theory_opt $ parse_fmt_opt))
+       $ parse_term_opt $ parse_output_opt $ parse_theory_opt $ parse_fmt_opt
+       $ parse_extra_opt))
   in
   let info = Cmd.info "alt-ergo" ~version:Version._version ~doc ~exits ~man in
   Cmd.v info term
