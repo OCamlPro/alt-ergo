@@ -411,10 +411,10 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         try
           if inst_quantif a
           then
-            let ({ E.ff = f; _ } as gf) = FF.expand_skolem env.ff_hcons_env a in
+            let f = FF.expand_skolem env.ff_hcons_env a in
             if (not (Options.get_cdcl_tableaux ())) && ME.mem f env.gamma
             then acc
-            else gf :: acc
+            else mk_gf f :: acc
           else acc
         with Not_found -> acc)
       acc sa
