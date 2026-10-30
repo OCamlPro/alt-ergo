@@ -249,6 +249,7 @@ FILES_DEST=public-release/$(PUBLIC_RELEASE)
 	tests \
 	alt-ergo.opam \
 	alt-ergo-lib.opam \
+	alt-ergo-smt-float-plugin.opam \
 	dune-project \
 	Makefile \
 	README.md \

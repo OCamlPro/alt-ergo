@@ -33,7 +33,7 @@
   ; modules that make up the lib
   (modules
     ; frontend
-    Translate D_loop D_state_option Frontend Models
+    Translate D_loop D_state_option Frontend Models Fpa_namespace
     ; reasoners
     Ac Arith Arrays_rel Bitv Ccx Shostak Relation
     Fun_sat Fun_sat_frontend Inequalities Bitv_rel Th_util Adt Adt_rel

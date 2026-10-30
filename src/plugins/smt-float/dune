@@ -1,0 +1,11 @@
+; The prelude of this directory is derived from Why3 and is distributed under
+; the license of Why3 (see LICENSE.md), not under the license of Alt-Ergo. It
+; is not embedded in the binary (unlike the preludes of src/preludes), but
+; installed along with its license in the preludes site of Alt-Ergo by the
+; separate package alt-ergo-smt-float-plugin, from where it is loaded when the
+; theory smt.float is enabled.
+
+(install
+ (section (site (alt-ergo preludes)))
+ (package alt-ergo-smt-float-plugin)
+ (files smt-lib-fpa.ae WHY3-LICENSE LICENSE.md))
