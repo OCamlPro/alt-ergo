@@ -1,10 +1,10 @@
-{ sources, lib, ocamlPackages, cmdliner_2, opam-file-format }:
+{ sources, lib, buildDunePackage, cmdliner_2, opam-file-format }:
 
 let
   opam-ed = sources.opam-ed;
 in
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "opam-ed";
   inherit (opam-ed) version;
@@ -12,7 +12,7 @@ ocamlPackages.buildDunePackage {
   minimalOCamlVersion = "4.08";
   duneVersion = "3";
 
-  propagatedBuildInputs = with ocamlPackages; [
+  propagatedBuildInputs = [
     cmdliner_2
     opam-file-format
   ];
