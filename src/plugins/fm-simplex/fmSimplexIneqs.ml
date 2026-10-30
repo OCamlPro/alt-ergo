@@ -37,8 +37,6 @@ module Container : Inequalities.Container_SIG = struct
     module SCache = Simplex_cache.MAKE (struct
       type t = X.r
 
-      let compare = X.hash_cmp
-
       include X
     end)
 
