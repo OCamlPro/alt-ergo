@@ -78,14 +78,14 @@ dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
 pin-depends: [
   [
     "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
   ]
   [
     "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
   ]
   [
     "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#a0f1bc66e7256fff1068ac0df525a2d23c1f3ea7"
+    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
   ]
 ]

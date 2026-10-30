@@ -363,7 +363,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         in
         mk ~default:Dolmen_loop.Report.Warning.Status.Enabled
         |> disable "unused-type-var" |> disable "unused-term-var"
-        |> disable "extra-dstr" |> disable "shadowing")
+        |> disable "extra-dstr" |> disable "shadowing" |> disable "dumb-poly")
     in
     let logic_file, response_file = mk_files src in
     ( logic_file,
