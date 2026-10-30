@@ -461,12 +461,12 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
               negation; [get_proxy_of] tries both possibilities. *)
       abstr_of_axs : (t * Atom.atom) E.Tbl.t;
       axs_of_abstr : (E.t * Atom.atom) E.Tbl.t;
-      skolems : E.gformula E.Tbl.t
-          (** The semantics of an an entry [lit -> gf] in [skolems], then the
+      skolems : E.t E.Tbl.t
+          (** The semantics of an entry [lit -> gf] in [skolems], then the
               implication [lit ==> gf] holds.
 
               Note: in that case, there is an entry [neg lit -> (f, at)] in
-              [axs_of_abstr], with [gf = lit \/ f]. *)
+              [axs_of_abstr], with [gf = neg lit \/ skolemize (neg f)]. *)
     }
 
   let make hcons pos neg =
@@ -778,20 +778,17 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   let expand_skolem hcons a = E.Tbl.find hcons.skolems a
 
-  let mk_gf f =
-    { E.ff = f;
-      trigger_depth = max_int;
-      nb_reductions = 0;
-      origin_name = "<none>";
-      age = 0;
-      lem = None;
-      mf = false;
-      gf = false;
-      gdist = -1;
-      hdist = -1;
-      from_terms = [];
-      theory_elim = true
-    }
+  let register_skolem hcons lit f =
+    let ded =
+      match E.form_view f with
+      | E.Skolem q -> E.skolemize q
+      | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _ | E.Let _
+      | E.Iff _ | E.Xor _ ->
+        assert false
+    in
+    (*XXX TODO: internal skolems*)
+    (* semantics: lit ==> ded *)
+    E.Tbl.add hcons.skolems lit (E.mk_or (E.neg lit) ded false)
 
   let abstract_lemma hcons (f : E.t) tl lem new_vars new_abstr_vars =
     match E.Tbl.find hcons.abstr_of_axs f with
@@ -810,28 +807,14 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit new_v in
         if Options.(get_debug_sat () && get_verbose ())
         then
-          Printer.print_dbg ~module_name:"Satml_frontend"
+          Printer.print_dbg ~module_name:"Satml_types"
             ~function_name:"register_abstraction" "abstraction of %a is %a"
             E.print f print xlit;
         assert (Atom.level at_lit < 0);
         new_abstr_vars := at_lit :: !new_abstr_vars;
         E.Tbl.add hcons.abstr_of_axs f (xlit, at_lit);
         E.Tbl.add hcons.axs_of_abstr lit (f, at_lit);
-        let () =
-          (* Register skolem *)
-          let ded =
-            match E.neg f |> E.form_view with
-            | E.Skolem q -> E.skolemize q
-            | E.Unit _ | E.Clause _ | E.Literal _ | E.Lemma _ | E.Let _
-            | E.Iff _ | E.Xor _ ->
-              assert false
-          in
-          (*XXX TODO: internal skolems*)
-          let f = E.mk_or lit ded false in
-          let nlat = E.neg lit in
-          (* semantics: nlat ==> f *)
-          E.Tbl.add hcons.skolems nlat (mk_gf f)
-        in
+        register_skolem hcons (E.neg lit) (E.neg f);
         new_vars := new_v;
         xlit
 
