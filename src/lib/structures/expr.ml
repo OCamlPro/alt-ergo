@@ -2393,7 +2393,10 @@ module Triggers = struct
 
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
-    let trs = filter_looping_triggers vterm trs in
+    let trs =
+      (* Keep looping triggers in greedy rounds. *)
+      if menv.Util.greedy then trs else filter_looping_triggers vterm trs
+    in
     let mono = mono_triggers menv vterm vtype trs in
     let mono = filter_interpreted_arith mono in
     if menv.Util.greedy
