@@ -1266,25 +1266,12 @@ let mk_nary_eq l =
   with Exit -> vrai
 
 let mk_distinct ~iff args =
-  (* This hot fix makes sure that the smart constructor agrees with the usual
-     semantic of distinct when used with at least 3 arguments. To prevent a
-     soundness bug, we translate the expected expression into a conjonction of
-     binary disequations. See issue:
-     https://github.com/OCamlPro/alt-ergo/issues/889 *)
-  let args = Array.of_list args in
-  let acc = ref vrai in
-  for i = 0 to Array.length args - 1 do
-    for j = i + 1 to Array.length args - 1 do
-      acc := mk_and (neg (mk_eq ~iff args.(i) args.(j))) !acc false
-    done
-  done;
-  !acc
-
-let mk_distinct_fact args =
   match args with
-  | [] | [_] -> vrai
-  | [a; b] -> neg (mk_eq ~iff:true a b)
-  | a :: _ when type_info a == Ty.Tbool -> mk_distinct ~iff:true args
+  | [] | [_] -> assert false
+  | [a; b] -> neg (mk_eq ~iff a b)
+  | a :: _ when type_info a == Ty.Tbool ->
+    (* Three booleans cannot be pairwise distinct. *)
+    faux
   | _ ->
     (* The negation of the n-ary equality literal built by [mk_nary_eq] is the
        n-ary distinct literal. *)

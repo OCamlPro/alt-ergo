@@ -792,6 +792,25 @@ module Make (Th : Theory.S) = struct
           | E.Literal a ->
             let lits = (a, ff, dep, env.dlevel, env.plevel) :: lits in
             let acc = env, true, true, ap_delta, lits in
+            let acc =
+              match E.lit_view a with
+              | Eql l ->
+                (* The negation of an n-ary [distinct] means that at least two
+                   of its arguments are equal, so we propagate this
+                   disjunction. *)
+                let rec disj acc = function
+                  | [] -> acc
+                  | x :: l ->
+                    let acc =
+                      List.fold_left
+                        (fun acc y -> E.mk_or (E.mk_eq ~iff:true x y) acc false)
+                        acc l
+                    in
+                    disj acc l
+                in
+                asm_aux acc [{ ff with E.ff = disj E.faux l }, dep]
+              | _ -> acc
+            in
             (* ground preds bahave like proxies of lazy CNF *)
             begin match Inst.ground_pred_defn a env.inst with
             | Some (guard, af, adep) ->

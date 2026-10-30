@@ -581,9 +581,9 @@ module Main : S = struct
              of its arguments are equal, which cannot be assumed as a
              conjunction of equalities.
 
-             These literals are only built for asserted facts, so their negation
-             can only be assumed when the fact is disabled (e.g. by a [pop]):
-             ignoring it is sound. *)
+             The SAT solvers add the disjunction of these equalities when this
+             literal is assumed (see [Satml_types.Flat_Formula.simplify] and
+             [Fun_sat.asm_aux]), so it can be ignored here. *)
           env
         | _ -> assert false
       in
