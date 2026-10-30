@@ -39,6 +39,10 @@ let is_mult h = Sy.equal (Sy.Op Sy.Mult) h
 
 let mod_symb = Sy.name ~ns:Internal "@mod"
 
+let power_too_large (c : Q.t) n =
+  let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
+  sz <> 0 && Stdlib.abs n > 100_000 / sz
+
 let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   (* d must be integral and if we work on integer exponentation, d must be
      positive*)
@@ -48,8 +52,7 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
     match Z.to_machine_int (Q.to_z d) with Some n -> n | None -> raise Exit
   in
   (* This lines prevent overflow from computation *)
-  let sz = Z.numbits (Q.num c) + Z.numbits (Q.den c) in
-  if sz <> 0 && Stdlib.abs n > 100_000 / sz then raise Exit;
+  if power_too_large c n then raise Exit;
   let res = Q.power c n in
   assert (ty != Ty.Tint || Q.is_int c);
   res
