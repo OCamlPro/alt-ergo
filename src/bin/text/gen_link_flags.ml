@@ -35,7 +35,7 @@ let () =
     | "static", "linux" -> [], ["-static"; "-no-pie"]
     | "mixed", "linux" ->
       let cclib = mixed_cclib @ List.map (fun s -> "-l" ^ s) libs in
-      mixed_flags, "-Wl,-Bdynamic" :: "-Wl,-Bstatic" :: cclib
+      mixed_flags, ("-Wl,-Bstatic" :: cclib) @ ["-Wl,-Bdynamic"]
     | "mixed", "macosx" ->
       let cclib =
         mixed_cclib
