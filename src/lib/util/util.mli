@@ -150,3 +150,35 @@ module Syntax : sig
           ...
       ]} *)
 end
+
+module Extra_options : sig
+  (** This module allows to define new [-X] options.
+
+      [-X] options can be passed on the command line as [-X name=value].
+
+      {b Note}: [-X] options are intended for internal use only. They are not
+      documented in the output of [--help] and may be removed without notice. *)
+
+  val string : string -> string -> string -> unit -> string
+  (** [string __LOC__ name default] defines a new extra option which accepts
+      arbitrary strings. *)
+
+  val int : string -> string -> int -> unit -> int
+  (** [int __LOC__ name default] defines a new extra option which accepts only
+      integers. *)
+
+  val bool : string -> string -> unit -> bool
+  (** [bool __LOC__ name] defines a new extra option which accepts booleans
+      written as the integers '0' and '1'. In addition, [-X name] is equivalent
+      to [-X name=1].
+
+      Boolean options define a pair of options: [name] and [no-name], which are
+      inverses of each others. *)
+
+  val symbol : string -> string -> 'a -> (string * 'a) list -> unit -> 'a
+  (** [symbol __LOC__ name default spec] defines a new extra option which
+      accepts only the strings in [spec] and associates them with the
+      corresponding value. *)
+
+  val parse_and_set : string -> (unit, string) result
+end
