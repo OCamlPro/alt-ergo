@@ -732,11 +732,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             else
               { acc with activate = FF.Set.add ff acc.activate; updated = true }
           else
-            let ff_abstr, new_proxies, new_vars =
-              FF.cnf_abstr env.ff_hcons_env ff acc.new_vars
-            in
-            let nunit =
-              List.fold_left FF.expand_proxy_defn acc.nunit new_proxies
+            let ff_abstr, new_vars, nunit =
+              FF.cnf_abstr env.ff_hcons_env ff acc.new_vars acc.nunit
             in
             let acc =
               { acc with
