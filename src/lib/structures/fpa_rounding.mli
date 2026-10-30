@@ -82,6 +82,18 @@ val float_of_rational :
     function also returns the mantissa and the exponent. i.e. if
     [res, m, e = float_of_rational prec exp mode x], then [res = m * 2^e] **)
 
+val round : int -> int -> rounding_mode -> Numbers.Q.t -> Numbers.Q.t
+(** [round prec exp mode x] is the first component of
+    [float_of_rational prec exp mode x]. *)
+
+val succ : int -> int -> Numbers.Q.t -> Numbers.Q.t
+(** [succ prec exp x] is the next float of the format after [x], which must be a
+    float of the format. *)
+
+val pred : int -> int -> Numbers.Q.t -> Numbers.Q.t
+(** [pred prec exp x] is the float of the format before [x], which must be a
+    float of the format. *)
+
 val round_to_integer : rounding_mode -> Numbers.Q.t -> Numbers.Q.t
 (** [round_to_integer mode x] rounds the rational [x] to an integer depending on
     the rounding mode [mode] *)

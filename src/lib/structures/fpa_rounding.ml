@@ -246,6 +246,17 @@ let float_of_rational prec exp mode x =
     cache := MQ.add input (res, m, e) !cache;
     res, m, e
 
+let round prec exp mode x =
+  let res, _, _ = float_of_rational prec exp mode x in
+  res
+
+(* Two floats of the format are at least [2^-exp] apart. *)
+let succ prec exp x =
+  round prec exp Up (Q.add x (div_x_by_2_pow_n Q.one (exp + 1)))
+
+let pred prec exp x =
+  round prec exp Down (Q.sub x (div_x_by_2_pow_n Q.one (exp + 1)))
+
 let round_to_integer mode q = Q.from_z (round_big_int mode q)
 
 let empty_cache () = cache := MQ.empty
