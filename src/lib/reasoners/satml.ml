@@ -216,7 +216,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
               - [ff] is the flat formula that the atom [a] represents (either
                 directly if [ff] is an UNIT formula, or indirectly as a proxy --
                 in which case, [a] is the proxy associated with [ff] in
-                [proxies]).
+                the [hcons_env]; see [FF.get_proxy_of]).
 
               - [parents] is the set of _disjunctive_ flat formulas that contain
                 [ff] ([parents] is a map whose entries are always of the form

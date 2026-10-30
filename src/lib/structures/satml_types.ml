@@ -449,8 +449,8 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
               [UNIT] flat formulas do not need a proxy, as they are already
               atoms.
 
-              Note: Integer maps (keyed on tags) are used for historical reasons
-              (and possibly slight performance boost).
+              Note: Integer hash tables (keyed on tags) are used for historical
+              reasons (and possibly slight performance boost).
 
               Note: If [ff] is a flat formula of shape [OR fl] (resp. [AND fl]),
               then the corresponding [is_and] entry is [false] (resp. [true]),
