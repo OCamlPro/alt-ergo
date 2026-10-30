@@ -19,9 +19,14 @@ let starts_with ~prefix s =
 
 let () =
   let mixed_flags = ["-noautolink"] in
-  (* Note: for OCaml 5, use -lcamlstrnat and -lunixnat and mind zlib
-     https://github.com/ocaml/ocaml/issues/12562 *)
-  let mixed_cclib = ["-lcamlzip"; "-lzarith"; "-lcamlstr"; "-lunix"; "-lz"] in
+  (* Note: mind zlib https://github.com/ocaml/ocaml/issues/12562 *)
+  let ocaml5 = Scanf.sscanf Sys.ocaml_version "%d." (fun major -> major >= 5) in
+  let mixed_cclib =
+    if ocaml5 then
+      ["-lcamlzip"; "-lzarith"; "-lcamlstrnat"; "-lunixnat"; "-lz"]
+    else
+      ["-lcamlzip"; "-lzarith"; "-lcamlstr"; "-lunix"; "-lz"]
+  in
   let libs = ["gmp"] in
   let link_mode = Sys.argv.(1) and os = Sys.argv.(2) in
   let flags, cclib =
