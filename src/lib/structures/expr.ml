@@ -1246,7 +1246,9 @@ let mk_eq ~iff t1 t2 =
           res
     else mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
 
-let mk_nary_eq l =
+(* [mk_not_nary_distinct l] builds [not (distinct l)], i.e. at least two
+   elements of [l] are equal. [l] has at least three elements. *)
+let mk_not_nary_distinct l =
   try
     let l = List.fast_sort (fun a b -> compare b a) l in
     (* decreasing *)
@@ -1274,9 +1276,9 @@ let mk_distinct ~iff args =
     (* Three booleans cannot be pairwise distinct. *)
     faux
   | _ ->
-    (* The negation of the n-ary equality literal built by [mk_nary_eq] is the
-       n-ary distinct literal. *)
-    neg (mk_nary_eq args)
+    (* The negation of the n-ary equality literal built by
+       [mk_not_nary_distinct] is the n-ary distinct literal. *)
+    neg (mk_not_nary_distinct args)
 
 let mk_builtin ~is_pos n l =
   let pos =
@@ -1404,7 +1406,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         match xs' with
         | [] | [_] -> assert false
         | [a; b] -> mk_eq ~iff:true a b
-        | _ -> mk_nary_eq xs'
+        | _ -> mk_not_nary_distinct xs'
       end
       | Sy.Lit Sy.L_neg_eq, _ -> mk_distinct ~iff:true xs'
       | Sy.Lit Sy.L_neg_pred, _ ->
@@ -2618,7 +2620,7 @@ module Purification = struct
         match l with
         | [] | [_] -> failwith "unexpected expression in purify_eq"
         | [a; b] -> mk_eq ~iff:true a b
-        | l -> mk_nary_eq l)
+        | l -> mk_not_nary_distinct l)
       l
 
   and purify_distinct l = purify_generic (fun l -> mk_distinct ~iff:true l) l
