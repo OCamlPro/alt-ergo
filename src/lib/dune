@@ -48,7 +48,7 @@
     ; util
     Emap Gc_debug Hconsing Hstring Heap Numbers Uqueue
     Options Timers Util Vec Version Steps Printer
-    My_list Theories Nest Compat Loc
+    My_list Theories Nest Compat Loc Fasthash
     Preludes Container_types_intf Container_types
   )
 
