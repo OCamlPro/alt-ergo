@@ -210,31 +210,30 @@ module Extra_options = struct
     | String : string descr
     | Symbol : (string * 'a) list -> 'a descr
 
-  let wrong opt arg expected =
-    raise (Bad_option { name = arg; actual = opt; expected })
+  let wrong name actual expected = raise (Bad_option { name; actual; expected })
 
-  let parse_bool arg opt =
-    match opt with
+  let parse_bool name value =
+    match value with
     | "0" -> false
     | "1" -> true
-    | _ -> wrong opt arg "'0' or '1'"
+    | _ -> wrong name value "'0' or '1'"
 
-  let parse_int arg opt =
-    match int_of_string_opt opt with
+  let parse_int name value =
+    match int_of_string_opt value with
     | Some i -> i
-    | None -> wrong opt arg "an integer"
+    | None -> wrong value name "an integer"
 
-  let parse_string _ opt = opt
+  let parse_string _ value = value
 
   let make_symlist ~sep flags =
     match flags with
     | [] -> "<none>"
-    | (h, _) :: t -> List.fold_left (fun x (y, _) -> x ^ sep ^ y) h t
+    | (_, _) :: _ -> String.concat sep (List.map fst flags)
 
-  let parse_symbol symbols arg opt =
-    try List.assoc opt symbols
+  let parse_symbol symbols name value =
+    try List.assoc value symbols
     with Not_found ->
-      wrong opt arg ("one of: " ^ make_symlist ~sep:" " symbols)
+      wrong value name ("one of: " ^ make_symlist ~sep:" " symbols)
 
   type 'a parser = string -> string -> 'a
 
@@ -266,11 +265,11 @@ module Extra_options = struct
        | None -> Hashtbl.replace extra_params kwd (O (r, descr, loc)));
     fun () -> !r
 
-  let string loc kwd default = register loc (ref default) String kwd
+  let string ~loc kwd ~default = register loc (ref default) String kwd
 
-  let int loc kwd default = register loc (ref default) Int kwd
+  let int ~loc kwd ~default = register loc (ref default) Int kwd
 
-  let bool loc kwd =
+  let bool ~loc kwd =
     if Compat.String.starts_with ~prefix:"no-" kwd
     then
       let kwd = String.sub kwd 3 (String.length kwd - 3) in
@@ -278,7 +277,7 @@ module Extra_options = struct
       fun () -> not (read ())
     else register loc (ref false) Bool kwd
 
-  let symbol loc kwd default symbols =
+  let symbol ~loc kwd ~default symbols =
     register loc (ref default) (Symbol symbols) kwd
 
   let cut_at s c =

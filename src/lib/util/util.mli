@@ -154,29 +154,39 @@ end
 module Extra_options : sig
   (** This module allows to define new [-X] options.
 
+      The functions below are intended to be used with partial application to
+      define options at the top-level of a module:
+
+      {[
+        let discombobulate = bool ~loc:__LOC__ "discombobulate"
+      ]}
+
+      and used in code as [if discombobulate () then ...].
+
       [-X] options can be passed on the command line as [-X name=value].
 
       {b Note}: [-X] options are intended for internal use only. They are not
       documented in the output of [--help] and may be removed without notice. *)
 
-  val string : string -> string -> string -> unit -> string
-  (** [string __LOC__ name default] defines a new extra option which accepts
-      arbitrary strings. *)
+  val string : loc:string -> string -> default:string -> unit -> string
+  (** [string ~loc:__LOC__ name ~default] defines a new extra option which
+      accepts arbitrary strings. *)
 
-  val int : string -> string -> int -> unit -> int
-  (** [int __LOC__ name default] defines a new extra option which accepts only
-      integers. *)
+  val int : loc:string -> string -> default:int -> unit -> int
+  (** [int ~loc:__LOC__ name ~default] defines a new extra option which accepts
+      only integers. *)
 
-  val bool : string -> string -> unit -> bool
-  (** [bool __LOC__ name] defines a new extra option which accepts booleans
+  val bool : loc:string -> string -> unit -> bool
+  (** [bool ~loc:__LOC__ name] defines a new extra option which accepts booleans
       written as the integers '0' and '1'. In addition, [-X name] is equivalent
       to [-X name=1].
 
       Boolean options define a pair of options: [name] and [no-name], which are
       inverses of each others. *)
 
-  val symbol : string -> string -> 'a -> (string * 'a) list -> unit -> 'a
-  (** [symbol __LOC__ name default spec] defines a new extra option which
+  val symbol :
+    loc:string -> string -> default:'a -> (string * 'a) list -> unit -> 'a
+  (** [symbol ~loc:__LOC__ name ~default spec] defines a new extra option which
       accepts only the strings in [spec] and associates them with the
       corresponding value. *)
 
