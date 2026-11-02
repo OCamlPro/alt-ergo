@@ -392,17 +392,19 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Optimize fn -> check_if_over (internal_optimize ~loc:d.st_loc fn) env
     with
     | SAT.Sat ->
+      env.res <- `Sat;
       (* This case should mainly occur when a query has a non-unsat result, so
          we want to print the status in this case. *)
-      hook_on_status (Sat d) (Steps.get_steps ());
-      env.res <- `Sat
-    | SAT.Unsat expl ->
-      (* This case should mainly occur when a new assumption results in an unsat
+      hook_on_status (Sat d) (Steps.get_steps ())
+    | SAT.Unsat expl -> env.res <- `Unsat expl
+    (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
          status should be printed at the next query. *)
-      (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env.res <- `Unsat expl
+    (* print_status (Inconsistent d) (Steps.get_steps ()); *)
     | SAT.I_dont_know ->
+      (* TODO: Is it an appropriate behaviour? *)
+      (*       if timeout != NoTimeout then raise Util.Timeout; *)
+      env.res <- `Unknown;
       (* TODO: always print Unknown for why3 ? *)
       let ur = SAT.get_unknown_reason env.sat_env in
       let status =
@@ -410,10 +412,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         | Some (Sat_solver_sig.Timeout _) -> Timeout (Some d)
         | _ -> Unknown d
       in
-      hook_on_status status (Steps.get_steps ());
-      (* TODO: Is it an appropriate behaviour? *)
-      (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env.res <- `Unknown
+      hook_on_status status (Steps.get_steps ())
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status, since we exit
          right after *)
