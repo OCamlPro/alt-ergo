@@ -1246,28 +1246,6 @@ let mk_eq ~iff t1 t2 =
           res
     else mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) [t1; t2]
 
-(* [mk_not_nary_distinct l] builds [not (distinct l)], i.e. at least two
-   elements of [l] are equal. [l] has at least three elements. *)
-let mk_not_nary_distinct l =
-  try
-    let l = List.fast_sort (fun a b -> compare b a) l in
-    (* decreasing *)
-    match l with
-    | [] | [_] | [_; _] -> assert false
-    | e :: r ->
-      let _ =
-        List.fold_left
-          (fun last e ->
-            if equal last e then raise Exit;
-            e)
-          e r
-      in
-      if type_info e == Ty.Tbool
-      then (* Three booleans always contain two equal ones. *)
-        vrai
-      else mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l
-  with Exit -> vrai
-
 let mk_distinct ~iff args =
   match args with
   | [] | [_] -> assert false
@@ -1275,10 +1253,21 @@ let mk_distinct ~iff args =
   | a :: _ :: _ :: _ when type_info a == Ty.Tbool ->
     (* Three booleans cannot be pairwise distinct. *)
     faux
-  | _ ->
-    (* The negation of the n-ary equality literal built by
-       [mk_not_nary_distinct] is the n-ary distinct literal. *)
-    neg (mk_not_nary_distinct args)
+  | _ -> (
+    (* decreasing *)
+    match List.fast_sort (fun a b -> compare b a) args with
+    | [] -> assert false
+    | e :: r as l -> (
+      try
+        let _ =
+          List.fold_left
+            (fun last e ->
+              if equal last e then raise Exit;
+              e)
+            e r
+        in
+        neg (mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l)
+      with Exit -> faux))
 
 let mk_builtin ~is_pos n l =
   let pos =
@@ -1406,7 +1395,7 @@ let rec apply_subst_aux (s_t, s_ty) t =
         match xs' with
         | [] | [_] -> assert false
         | [a; b] -> mk_eq ~iff:true a b
-        | _ -> mk_not_nary_distinct xs'
+        | _ -> neg (mk_distinct ~iff:true xs')
       end
       | Sy.Lit Sy.L_neg_eq, _ -> mk_distinct ~iff:true xs'
       | Sy.Lit Sy.L_neg_pred, _ ->
@@ -2620,7 +2609,7 @@ module Purification = struct
         match l with
         | [] | [_] -> failwith "unexpected expression in purify_eq"
         | [a; b] -> mk_eq ~iff:true a b
-        | l -> mk_not_nary_distinct l)
+        | l -> neg (mk_distinct ~iff:true l))
       l
 
   and purify_distinct l = purify_generic (fun l -> mk_distinct ~iff:true l) l
