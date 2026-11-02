@@ -17,5 +17,5 @@ Tableaux solver.
   unsat
   unsat-core:
     h_x_0
-    h_y_0
+  
   

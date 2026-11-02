@@ -234,7 +234,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         end;
         Unknown (Some mdl)
       end
-      | `Unsat -> Unsat
+      | `Unsat _ -> Unsat
     with Util.Timeout ->
       (* It is still necessary to leave this catch here, because we may trigger
          this exception in between calls of the sat solver. *)
