@@ -757,20 +757,16 @@ let mk_rounding fpar =
   let ty = Fpa_rounding.fpa_rounding_mode in
   E.mk_constr tcst [] ty
 
-(** [mk_expr ~loc ~name_base ~prenex ~fact ~decl_kind term]
+(** [mk_expr ~loc ~name_base ~prenex ~decl_kind term]
 
     Builds an Alt-Ergo hashconsed expression from a dolmen term.
 
-    - [prenex] means that the term is in prenex position, where polymorphic
-      quantifiers are allowed;
-    - [fact] means that the term is an asserted formula, which can never be
-      assumed false. Its [distinct] conjuncts, which are true whenever the
-      formula is, are built as single n-ary literals (see
-      {!Expr.mk_distinct_fact}). *)
+    [prenex] means that the term is in prenex position, where polymorphic
+    quantifiers are allowed. *)
 let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
-    ?(fact = false) ~decl_kind dt =
+    ~decl_kind dt =
   let name_tag = ref 0 in
-  let rec aux_mk_expr ?(prenex = false) ?(fact = false)
+  let rec aux_mk_expr ?(prenex = false)
       (DE.{ term_descr; term_ty; term_tags = root_tags; _ } as term) =
     let mk = aux_mk_expr in
     let res =
@@ -873,14 +869,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             res
         end
         | B.Distinct, _ ->
-          let args = List.map (fun t -> aux_mk_expr t) args in
-          (* The negation of an n-ary [distinct] means that at least two of its
-             arguments are equal, which is a disjunction that cannot be
-             represented by the negation of a single literal. Therefore, a
-             [distinct] is expanded into binary disequalities, unless it is part
-             of an asserted fact, in which case it is never negated. See
-             https://github.com/OCamlPro/alt-ergo/issues/889 *)
-          if fact then E.mk_distinct_fact args else E.mk_distinct ~iff:true args
+          E.mk_distinct ~iff:true (List.map (fun t -> aux_mk_expr t) args)
         | B.Coercion, [x] -> begin
           match DT.view (DE.Term.ty x), DT.view term_ty with
           | `Int, `Real -> op Real_of_int
@@ -902,8 +891,8 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           (* Associative builtins *)
           | And, h :: (_ :: _ as t) ->
             List.fold_left
-              (fun acc x -> E.mk_and acc (aux_mk_expr ~fact x) false)
-              (aux_mk_expr ~fact h) t
+              (fun acc x -> E.mk_and acc (aux_mk_expr x) false)
+              (aux_mk_expr h) t
           | Or, h :: (_ :: _ as t) ->
             List.fold_left
               (fun acc x -> E.mk_or acc (aux_mk_expr x) false)
@@ -1434,7 +1423,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
       Fmt.failwith "%aInvalid semantic trigger: %a" Loc.report loc DE.Term.print
         t
   in
-  aux_mk_expr ~prenex ~fact dt
+  aux_mk_expr ~prenex dt
 
 and make_trigger ?(loc = Loc.dummy) ~name_base ~decl_kind ~(in_theory : bool)
     (name : string) (hyp : E.t list) ((e, from_user) : DE.term * bool) =
@@ -1532,8 +1521,7 @@ let pp_query ?(hyps = []) t =
   List.rev_append (List.rev_map (elim_toplevel_forall false) hyps) axioms, goal
 
 let make_form name_base f loc ~decl_kind =
-  let fact = match decl_kind with E.Daxiom -> true | _ -> false in
-  let ff = mk_expr ~loc ~name_base ~prenex:true ~fact ~decl_kind f in
+  let ff = mk_expr ~loc ~name_base ~prenex:true ~decl_kind f in
   assert (Var.Map.is_empty (E.free_vars ff Var.Map.empty));
   let ff = E.purify_form ff in
   if Ty.TvSet.is_empty (E.free_type_vars ff)
