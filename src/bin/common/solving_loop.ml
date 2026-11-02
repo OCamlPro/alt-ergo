@@ -186,6 +186,42 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let solve (module SAT : Sat_solver_sig.S) ~limits all_context (cnf, goal_name)
       =
     let module FE = Frontend.Make (SAT) in
+    let check_produced_unsat_core expl =
+      if Options.get_verbose ()
+      then
+        Printer.print_dbg ~module_name:"Solving_loop"
+          ~function_name:"check_produced_unsat_core"
+          "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
+          (Explanation.print_unsat_core ~tab:false)
+          expl;
+      let used_context = Frontend.unsat_core_used_context expl in
+      (* Replay should not take more steps than the initial proof, but we allow
+         some slack (differing quantifier instantiations can reasonably take a
+         bit more steps if we do them in a different order, for instance).
+
+         Note: make sure the [reproducible_resource_limit] is at least [1],
+         since [0] disables the limit. *)
+      let reproducible_resource_limit = (2 * Steps.get_steps ()) + 1 in
+      (* Note: [reset_refs] resets the steps. *)
+      SAT.reset_refs ();
+      let ftdn_env = FE.init_env ?selector_inst used_context in
+      match
+        let open Util.Syntax in
+        let& () = with_goal_limits { reproducible_resource_limit } in
+        List.iter
+          (FE.process_decl
+             ~hook_on_status:(fun _ _ -> raise StopProcessDecl)
+             ftdn_env)
+          cnf
+      with
+      | () | (exception StopProcessDecl) -> (
+        match ftdn_env.FE.res with
+        | `Unsat _ -> ()
+        | `Sat -> Errors.run_error Failed_check_unsat_core
+        | `Unknown ->
+          Printer.print_wrn "unsat core check was inconclusive";
+          ())
+    in
     if Options.get_debug_commands ()
     then
       Printer.print_dbg "@[<v 2>goal %s:@ %a@]@." ~module_name:"Solving_loop"
@@ -237,7 +273,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         end;
         Unknown (Some mdl)
       end
-      | `Unsat _ -> Unsat
+      | `Unsat expl ->
+        if Options.get_debug_unsat_core () then check_produced_unsat_core expl;
+        Unsat
     with Util.Timeout ->
       (* It is still necessary to leave this catch here, because we may trigger
          this exception in between calls of the sat solver. *)

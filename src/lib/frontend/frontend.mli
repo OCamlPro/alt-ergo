@@ -31,6 +31,8 @@ val init_all_used_context : unit -> used_context
 
 val choose_used_context : used_context -> goal_name:string -> used_context
 
+val unsat_core_used_context : Explanation.t -> used_context
+
 type status =
   | Unsat of Commands.sat_tdecl * Explanation.t
   | Inconsistent of Commands.sat_tdecl

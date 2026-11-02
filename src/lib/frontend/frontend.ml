@@ -149,6 +149,13 @@ module type S = sig
   val print_model : sat_env Fmt.t
 end
 
+let unsat_core_used_context expl =
+  Some
+    (List.fold_left
+       (fun s r -> Util.SS.add r.Explanation.name s)
+       Util.SS.empty
+       (Explanation.get_unsat_core expl))
+
 let init_with_replay_used acc f =
   assert (Sys.file_exists f);
   let cin = open_in f in
@@ -223,57 +230,6 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     let cfmt = Format.formatter_of_out_channel cout in
     Ex.print_unsat_core cfmt dep;
     close_out cout
-
-  let check_produced_unsat_core dep =
-    if get_verbose ()
-    then
-      Printer.print_dbg ~module_name:"Frontend"
-        ~function_name:"check_produced_unsat_core"
-        "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
-        (Ex.print_unsat_core ~tab:false)
-        dep;
-    try
-      let pb = E.Set.elements (Ex.formulas_of dep) in
-      let satenv = SAT.empty () in
-      let () =
-        List.iter
-          (fun f ->
-            SAT.assume satenv
-              { E.ff = f;
-                origin_name = "";
-                gdist = -1;
-                hdist = -1;
-                trigger_depth = max_int;
-                nb_reductions = 0;
-                age = 0;
-                lem = None;
-                mf = false;
-                gf = false;
-                from_terms = [];
-                theory_elim = true
-              }
-              Ex.empty)
-          pb
-      in
-      ignore
-        (SAT.unsat satenv
-           { E.ff = E.vrai;
-             origin_name = "";
-             gdist = -1;
-             hdist = -1;
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age = 0;
-             lem = None;
-             mf = false;
-             gf = false;
-             from_terms = [];
-             theory_elim = true
-           });
-      Errors.run_error Errors.Failed_check_unsat_core
-    with
-    | SAT.Unsat _ -> ()
-    | (SAT.Sat | SAT.I_dont_know) as e -> raise e
 
   let mk_root_dep name f loc =
     if Options.get_unsat_core ()
@@ -355,7 +311,6 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           }
       | `Unsat expl -> expl
     in
-    if get_debug_unsat_core () then check_produced_unsat_core expl;
     if get_save_used_context () then output_used_context n expl;
     env.res <- `Unsat expl
 
@@ -445,7 +400,6 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
          status should be printed at the next query. *)
-      if get_debug_unsat_core () then check_produced_unsat_core expl;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env.res <- `Unsat expl
     | SAT.I_dont_know ->

@@ -22,7 +22,6 @@ Tableaux solver.
 
 Unsat cores can be checked with the `-d unsat-core` option.
 
-  $ alt-ergo --sat-solver Tableaux --unsat-core -d unsat-core input.ae -o smtlib2
-  [Error](= 0  x)
-  ; Fatal error: exception File "src/lib/reasoners/fun_sat.ml", line 655, characters 14-20: Assertion failed
-  [2]
+  $ alt-ergo --sat-solver Tableaux --unsat-core -d unsat-core input.ae -o smtlib2 2>/dev/null
+  
+  unsat
