@@ -165,6 +165,15 @@ let interactive_prompt st =
     Some "alt-ergo>"
   | _ -> None
 
+let with_time_limit ~scope =
+  Options.with_timelimit_if (Options.get_timelimit_per_goal ()) scope
+
+let with_goal_limits { reproducible_resource_limit } ~scope =
+  let open Util.Syntax in
+  let& () = with_time_limit in
+  let& () = Steps.with_step_limit reproducible_resource_limit in
+  scope ()
+
 let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let () = Dolmen_loop.Code.init [] in
   let hook_on_status status i =
@@ -174,7 +183,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       exit_as_timeout ()
     | _ -> raise StopProcessDecl
   in
-  let solve (module SAT : Sat_solver_sig.S) ~limit all_context (cnf, goal_name)
+  let solve (module SAT : Sat_solver_sig.S) ~limits all_context (cnf, goal_name)
       =
     let module FE = Frontend.Make (SAT) in
     if Options.get_debug_commands ()
@@ -186,21 +195,15 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
     let used_context = Frontend.choose_used_context all_context ~goal_name in
     Signals_profiling.init_profiling ();
     try
-      if Options.get_timelimit_per_goal ()
-      then begin
-        Options.Time.start ();
-        Options.Time.set_timeout (Options.get_timelimit ())
-      end;
       SAT.reset_refs ();
       let ftdn_env = FE.init_env ?selector_inst used_context in
       let () =
         try
           let open Util.Syntax in
-          let& () = Steps.with_step_limit limit in
+          let& () = with_goal_limits limits in
           List.iter (FE.process_decl ~hook_on_status ftdn_env) cnf
         with StopProcessDecl -> ()
       in
-      if Options.get_timelimit_per_goal () then Options.Time.unset_timeout ();
       if Options.get_profiling ()
       then
         Profiling.print true (Steps.get_steps ())
@@ -694,9 +697,11 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         in
         let solve_res =
           solve
-            ~limit:
-              (State.get_or ~default:limits.reproducible_resource_limit
-                 reproducible_resource_limit st)
+            ~limits:
+              { reproducible_resource_limit =
+                  State.get_or ~default:limits.reproducible_resource_limit
+                    reproducible_resource_limit st
+              }
             (DO.SatSolverModule.get st)
             all_context (cnf, name)
         in
