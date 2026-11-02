@@ -1261,7 +1261,8 @@ let mk_nary_eq l =
           e r
       in
       if type_info e == Ty.Tbool
-      then List.fold_left (fun x y -> mk_iff x y) e r
+      then (* Three booleans always contain two equal ones. *)
+        vrai
       else mk_positive_lit (Sy.Lit Sy.L_eq) (Sy.Lit Sy.L_neg_eq) l
   with Exit -> vrai
 
