@@ -1,16 +1,21 @@
 { sources ? import ./nix/sources.nix
 , useFlambda ? false
+, ocamlVersion ? "4.14"
 , pkgs ? import ./nix { inherit sources; }
 }:
 
 let
   inherit (pkgs) lib;
   ocamlPackages =
+    let
+      ocamlPackages = pkgs.ocaml-ng."ocamlPackages_${
+        builtins.replaceStrings [ "." ] [ "_" ] ocamlVersion}";
+    in
     if useFlambda
-    then pkgs.ocamlPackages.overrideScope (self: super: {
+    then ocamlPackages.overrideScope (self: super: {
       ocaml = super.ocaml.override { flambdaSupport = true; };
     })
-    else pkgs.ocamlPackages;
+    else ocamlPackages;
   version = "dev";
   src = lib.cleanSource ./.;
   alt-ergo-lib = ocamlPackages.buildDunePackage rec {
