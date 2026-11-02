@@ -29,46 +29,44 @@ module DStd = Dolmen.Std
 module DE = DStd.Expr
 module Q = Numbers.Q
 module Z = Numbers.Z
+module RM = DStd.Builtin.Float
 
-(** The five standard rounding modes of the SMTLIB. Note that the SMTLIB defines
-    these rounding modes to be the only possible modes.
+type rounding_mode = Dolmen.Std.Builtin.Float.rounding_mode
+(** We reuse Dolmen's own representation of the rounding modes. *)
 
-    Note: keep the constructors in the same order as in the definition in
-    [rounding_mode_to_int] so that it gets simplified to the identity. *)
-type rounding_mode =
-  | NearestTiesToEven
-  | ToZero
-  | Up
-  | Down
-  | NearestTiesToAway
-
-let[@inline] rounding_mode_to_int = function
-  | NearestTiesToEven -> 0
-  | ToZero -> 1
-  | Up -> 2
-  | Down -> 3
-  | NearestTiesToAway -> 4
+let[@inline] rounding_mode_to_int : RM.rounding_mode -> int = function
+  | RM.RoundNearestTiesToEven -> 0
+  | RM.RoundTowardZero -> 1
+  | RM.RoundTowardPositive -> 2
+  | RM.RoundTowardNegative -> 3
+  | RM.RoundNearestTiesToAway -> 4
 
 let compare_rounding_mode rm1 rm2 =
   Int.compare (rounding_mode_to_int rm1) (rounding_mode_to_int rm2)
 
-let constrs = [NearestTiesToEven; ToZero; Up; Down; NearestTiesToAway]
+let constrs =
+  RM.
+    [ RoundNearestTiesToEven;
+      RoundTowardZero;
+      RoundTowardPositive;
+      RoundTowardNegative;
+      RoundNearestTiesToAway ]
 
-let to_smt_string = function
-  | NearestTiesToEven -> "RNE"
-  | ToZero -> "RTZ"
-  | Up -> "RTP"
-  | Down -> "RTN"
-  | NearestTiesToAway -> "RNA"
+let to_smt_string : RM.rounding_mode -> string = function
+  | RM.RoundNearestTiesToEven -> "RNE"
+  | RM.RoundTowardZero -> "RTZ"
+  | RM.RoundTowardPositive -> "RTP"
+  | RM.RoundTowardNegative -> "RTN"
+  | RM.RoundNearestTiesToAway -> "RNA"
 
 let pp_rounding_mode = Fmt.of_to_string to_smt_string
 
-let to_ae_string = function
-  | NearestTiesToEven -> "NearestTiesToEven"
-  | ToZero -> "ToZero"
-  | Up -> "Up"
-  | Down -> "Down"
-  | NearestTiesToAway -> "NearestTiesToAway"
+let to_ae_string : RM.rounding_mode -> string = function
+  | RM.RoundNearestTiesToEven -> "NearestTiesToEven"
+  | RM.RoundTowardZero -> "ToZero"
+  | RM.RoundTowardPositive -> "Up"
+  | RM.RoundTowardNegative -> "Down"
+  | RM.RoundNearestTiesToAway -> "NearestTiesToAway"
 
 let fpa_rounding_mode_ae_type_name = "fpa_rounding_mode"
 
@@ -176,12 +174,12 @@ let signed_one y =
   assert (tmp <> 0);
   if tmp > 0 then Z.one else Z.m_one
 
-let round_big_int (mode : rounding_mode) y =
+let round_big_int (mode : RM.rounding_mode) y =
   match mode with
-  | Up -> Q.num (Q.ceiling y)
-  | Down -> Q.num (Q.floor y)
-  | ToZero -> Q.truncate y
-  | NearestTiesToEven ->
+  | RM.RoundTowardPositive -> Q.num (Q.ceiling y)
+  | RM.RoundTowardNegative -> Q.num (Q.floor y)
+  | RM.RoundTowardZero -> Q.truncate y
+  | RM.RoundNearestTiesToEven ->
     let z = Q.truncate y in
     let diff = Q.abs (Q.sub y (Q.from_z z)) in
     if Q.sign diff = 0
@@ -195,7 +193,7 @@ let round_big_int (mode : rounding_mode) y =
       else if Z.testbit z 0
       then Z.add z (signed_one y)
       else z
-  | NearestTiesToAway ->
+  | RM.RoundNearestTiesToAway ->
     let z = Q.truncate y in
     let diff = Q.abs (Q.sub y (Q.from_z z)) in
     if Q.sign diff = 0
@@ -218,7 +216,7 @@ let to_mantissa_exp prec exp mode x =
     r_y, e'
 
 module MQ = Map.Make (struct
-  type t = int * int * rounding_mode * Q.t
+  type t = int * int * RM.rounding_mode * Q.t
 
   let compare (prec1, exp1, mode1, x1) (prec2, exp2, mode2, x2) =
     let c = Q.compare x1 x2 in
