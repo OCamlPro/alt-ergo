@@ -140,6 +140,16 @@ val union :
   r ->
   Explanation.t ->
   t * (r * (r * r * Explanation.t) list * r) list
+(** [union uf r1 r2 ex] records the equality [r1 = r2] with explanation [ex],
+    merging the corresponding equivalence classes.
+
+    It returns a pair [new_uf, sbs] of the new environment and a list of
+    substitutions that were applied, in order. Each substitution is a triple
+    [(p, touched, v)] recording the substitution of leaf [p] with representative
+    [v]. [touched] is a list of triples [r, nrr, ex_r] of semantic values [r]
+    containing [p], new representative [nrr = X.subst p v rr] (where [rr] is the
+    current representative of [r]) and combined explanation [ex_r] justifying
+    the equality [r = nrr]. *)
 
 val distinct : t -> r list -> Explanation.t -> t
 

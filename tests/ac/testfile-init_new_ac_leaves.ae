@@ -1,0 +1,8 @@
+logic ac g, h : int, int -> int
+logic x, y, z, w : int
+logic u : int -> int
+
+(* [g(h(z, x), y)] is added with normal form [g(h(z, x), 1)], which must be
+   added as an AC leaf upon initialisation or we miss the congruence on [u]. *)
+goal g :
+  y = 1 -> w = g(h(z, x), y) -> u(g(h(x, z), y)) = u(w)
