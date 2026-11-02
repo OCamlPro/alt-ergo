@@ -2020,14 +2020,16 @@ module Triggers = struct
     if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
 
   let unique_stable_sort =
-    let rec unique l acc =
+    let rec unique compare l acc =
       match l with
       | [] -> List.rev acc
       | [e] -> List.rev @@ (e :: acc)
       | a :: (b :: _ as l) ->
-        if cmp_trig_term_list a b = 0 then unique l acc else unique l (a :: acc)
+        if compare a b = 0
+        then unique compare l acc
+        else unique compare l (a :: acc)
     in
-    fun l -> unique (List.stable_sort cmp_trig_term_list l) []
+    fun compare l -> unique compare (List.stable_sort compare l) []
 
   let vty_of_term acc t = Ty.TvSet.union acc t.vty
 
@@ -2095,8 +2097,8 @@ module Triggers = struct
       | _, [] -> acc
       | n, x :: l -> atmost (x :: acc) (n - 1) l
     in
-    fun n l ->
-      let l = unique_stable_sort l in
+    fun compare n l ->
+      let l = unique_stable_sort compare l in
       List.rev (atmost [] n l)
 
   module SLLT = Set.Make (struct
@@ -2228,8 +2230,8 @@ module Triggers = struct
     let mv = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mv in
     let mt = List.sort (fun l1 l2 -> List.length l1 - List.length l2) mt in
     let lm = if menv.Util.triggers_var then mt @ mv else mt in
-    let m = at_most menv.Util.nb_triggers lm in
-    at_most menv.Util.nb_triggers m
+    let m = at_most cmp_trig_term_list menv.Util.nb_triggers lm in
+    at_most cmp_trig_term_list menv.Util.nb_triggers m
 
   let mono_triggers menv vterm vtype trs =
     (* We only keep mono-trigger that cover all the free variables [vterm] and
@@ -2242,7 +2244,9 @@ module Triggers = struct
     in
     let trs_v, trs_nv = List.partition (fun (t, _, _) -> is_var t) mono in
     let base = if menv.Util.triggers_var then trs_nv @ trs_v else trs_nv in
-    at_most menv.Util.nb_triggers (List.map (fun (t, _, _) -> [t]) base)
+    at_most
+      (fun (t1, _, _) (t2, _, _) -> cmp_trig_term_list [t1] [t2])
+      menv.Util.nb_triggers base
 
   let filter_interpreted_arith mono =
     let m =
@@ -2311,7 +2315,7 @@ module Triggers = struct
      Note: this also applies to types. For instance, [(nil : 'a list)] is a
      looping sub-trigger of [(nil : ('a * 'a) list)]. *)
   let is_looping_sub_trigger vterm p1 p2 =
-    let module Cache = Set.Make (struct
+    let module Cache = Stdlib.Set.Make (struct
       type t = expr * expr
 
       let compare (e1, e2) (e1', e2') =
@@ -2381,23 +2385,18 @@ module Triggers = struct
                (fun i2 (e2, vars2, tyvars2) ->
                  i1 <> i2 && Var.Set.equal vars1 vars2
                  && Ty.TvSet.equal tyvars1 tyvars2
-                 &&
-                 if is_looping_sub_trigger vterm e1 e2
-                 then (
-                   Format.eprintf "looping sub-pattern: %a of %a@." print e1
-                     print e2;
-                   true)
-                 else false)
+                 && is_looping_sub_trigger vterm e1 e2)
                triggers))
       triggers
 
   let make_triggers menv vterm vtype (trs : STRS.t) ~escaped_vars =
     let trs = STRS.elements trs in
-    let trs =
-      (* Keep looping triggers in greedy rounds. *)
-      if menv.Util.greedy then trs else filter_looping_triggers vterm trs
-    in
     let mono = mono_triggers menv vterm vtype trs in
+    let mono =
+      (* Keep looping triggers in greedy rounds. *)
+      if menv.Util.greedy then mono else filter_looping_triggers vterm mono
+    in
+    let mono = List.map (fun (t, _, _) -> [t]) mono in
     let mono = filter_interpreted_arith mono in
     if menv.Util.greedy
     then
