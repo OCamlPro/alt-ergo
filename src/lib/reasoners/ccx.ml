@@ -476,7 +476,7 @@ module Main : S = struct
       Options.tool_req 3 "TR-CCX-AddTerm";
       Debug.add_to_use t;
       (* we add t's arguments in env *)
-      let { E.xs; _ } = E.term_view t in
+      let { E.f; E.xs; _ } = E.term_view t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
       (* we update uf and use *)
       let nuf, ctx = Uf.add env.uf t in
@@ -493,13 +493,14 @@ module Main : S = struct
       (* We add terms made from relations as fact *)
       List.iter (fun (a, ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;
       Use.print nuse;
+      let env = { uf = nuf; use = nuse; relation = rel } in
       (* we compute terms to consider for congruence *)
       (* we do this only for non-atomic terms with uninterpreted
          head-symbol *)
-      let st_uset = Use.congr_add nuse lvs in
-      (* we check the congruence of each term *)
-      let env = { uf = nuf; use = nuse; relation = rel } in
-      congruents env facts t st_uset;
+      if (not (Compat.List.is_empty xs)) && not (X.fully_interpreted f)
+      then
+        (* we check the congruence of each term *)
+        SE.iter (equal_only_by_congruence env facts t) (Use.congr_add nuse lvs);
       env
     end
 
