@@ -129,3 +129,62 @@ jobs:
         with:
           asset_name: alt-ergo-$tag-x86_64-linux-musl
           file: _destdir/opt/alt-ergo/bin/alt-ergo
+
+  build-nix:
+    name: Build relocatable binaries with nix
+
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          # cache-nix-action collects garbage before creating a cache, make
+          # sure the output of our build keep their dependencies alive
+          extra_nix_config: |
+            keep-outputs = true
+
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('default.nix', 'nix/**') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 3G
+
+      - name: Retrieve annotated tags (https://github.com/actions/checkout/issues/290)
+        run: git fetch --tags --force
+
+      - name: Substitute version and commit
+        run: $(nix-build ./nix -A dune_3 --no-out-link)/bin/dune subst
+
+      - name: Build static and mixed binaries
+        run: |
+          for mode in static mixed; do
+            nix-instantiate -A alt-ergo --argstr linkMode $mode \
+              --arg useFlambda true --add-root drv-$mode
+            nix-build drv-$mode -o alt-ergo-$mode
+          done
+
+      - name: Test binaries
+        run: |
+          echo 'goal g: forall x:int. x + 1 > x' > test.ae
+          alt-ergo-static/bin/alt-ergo test.ae | grep Valid
+          alt-ergo-mixed/bin/alt-ergo test.ae | grep Valid
+          alt-ergo-mixed/bin/alt-ergo --inequalities-plugin fm-simplex test.ae \
+            | grep Valid
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alt-ergo-x86_64-linux-static
+          path: alt-ergo-static/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: alt-ergo-x86_64-linux-mixed
+          path: alt-ergo-mixed/
