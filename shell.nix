@@ -38,7 +38,7 @@ pkgs.mkShell {
     lwt_ppx
     data-encoding
     zarith_stubs_js
-    cmdliner_2
+    cmdliner
     odoc
     qcheck
     utop
