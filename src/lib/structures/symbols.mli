@@ -44,8 +44,8 @@ type operator =
   | Constr of Dolmen.Std.Expr.term_cst
   | Destruct of Dolmen.Std.Expr.term_cst
   (* Arrays *)
-  | Get
-  | Set
+  | Select
+  | Store
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
@@ -275,9 +275,9 @@ val fresh_skolem_name : string -> t
 
 (** Resets to 0 the fresh symbol counter *)
 
-val is_get : t -> bool
+val is_select : t -> bool
 
-val is_set : t -> bool
+val is_store : t -> bool
 
 val print_bound : Format.formatter -> bound -> unit
 

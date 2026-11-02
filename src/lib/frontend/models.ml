@@ -111,11 +111,11 @@ module Pp_smtlib_term = struct
           _ ) ->
         assert false
     end
-    | Sy.Op Sy.Get, [e1; e2] ->
+    | Sy.Op Sy.Select, [e1; e2] ->
       if Options.get_output_smtlib ()
       then fprintf fmt "(select %a %a)" print e1 print e2
       else fprintf fmt "%a[%a]" print e1 print e2
-    | Sy.Op Sy.Set, [e1; e2; e3] ->
+    | Sy.Op Sy.Store, [e1; e2; e3] ->
       if Options.get_output_smtlib ()
       then fprintf fmt "(store %a %a %a)" print e1 print e2 print e3
       else fprintf fmt "%a[%a<-%a]" print e1 print e2 print e3

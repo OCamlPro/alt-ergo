@@ -1161,13 +1161,13 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           match builtin, args with
           | Select, [x; y] ->
             let rty = dty_to_ty term_ty in
-            E.mk_term (Sy.Op Sy.Get) [aux_mk_expr x; aux_mk_expr y] rty
+            E.mk_term (Sy.Op Sy.Select) [aux_mk_expr x; aux_mk_expr y] rty
           | Store, [x; y; z] ->
             let ty = dty_to_ty term_ty in
             let e1 = aux_mk_expr x in
             let e2 = aux_mk_expr y in
             let e3 = aux_mk_expr z in
-            E.mk_term (Sy.Op Sy.Set) [e1; e2; e3] ty
+            E.mk_term (Sy.Op Sy.Store) [e1; e2; e3] ty
           | (Select | Store), _ -> invalid_app_term ()
           | Const, _ -> unsupported_app_term ()
           (* Cannot be applied *)
