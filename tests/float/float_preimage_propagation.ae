@@ -1,5 +1,5 @@
-logic x : real
-logic n : int
+logic x, y : real
+logic n, m : int
 
 goal nearest_even :
   float32(NearestTiesToEven, x) = 16777216. -> 16777215.5 <= x <= 16777217.
@@ -24,3 +24,11 @@ goal integer :
   n = 16777216 or n = 16777217
 
 goal integer_empty : float32(ToZero, real_of_int(n)) <> 32.5
+
+goal sum : float32(Down, x + y) = 1. -> 1. <= x + y < 1.0000002
+
+goal offset : float32(Up, x + 1.) = 2. -> 0.99999988 < x <= 1.
+
+goal integer_sum :
+  float32(NearestTiesToEven, real_of_int(n + m)) = 16777216. ->
+  n + m = 16777216 or n + m = 16777217

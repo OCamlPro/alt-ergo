@@ -553,55 +553,6 @@ module QAlgebraicType = struct
       | None -> Pos_infinite
       | Some x -> Finite (Eq, x))
 
-  (* The smallest [x] such that [float(prec, exp, mode, x)] is above the lower
-     bound [b]. Below a float [f], the previous float [p] rounds down, and the
-     midpoint of [p] and [f] rounds to [f] if it wins the tie. *)
-  let float_preimage_lb ~prec ~exp mode b =
-    match b with
-    | Neg_infinite | Pos_infinite -> b
-    | Finite (k, v) -> (
-      let f = Fpa_rounding.round prec exp Up v in
-      let f =
-        match k with
-        | Gt when Q.equal f v -> Fpa_rounding.succ prec exp f
-        | Lt | Eq | Gt -> f
-      in
-      let p = Fpa_rounding.pred prec exp f in
-      match mode with
-      | Fpa_rounding.Down -> Finite (Eq, f)
-      | Up -> Finite (Gt, p)
-      | ToZero -> if Q.sign f > 0 then Finite (Eq, f) else Finite (Gt, p)
-      | NearestTiesToEven | NearestTiesToAway ->
-        let m = Q.div (Q.add p f) (Q.of_int 2) in
-        let k =
-          if Q.equal (Fpa_rounding.round prec exp mode m) f then Eq else Gt
-        in
-        Finite (k, m))
-
-  (* The largest [x] such that [float(prec, exp, mode, x)] is below the upper
-     bound [b], symmetrically. *)
-  let float_preimage_ub ~prec ~exp mode b =
-    match b with
-    | Neg_infinite | Pos_infinite -> b
-    | Finite (k, v) -> (
-      let f = Fpa_rounding.round prec exp Down v in
-      let f =
-        match k with
-        | Lt when Q.equal f v -> Fpa_rounding.pred prec exp f
-        | Lt | Eq | Gt -> f
-      in
-      let s = Fpa_rounding.succ prec exp f in
-      match mode with
-      | Fpa_rounding.Up -> Finite (Eq, f)
-      | Down -> Finite (Lt, s)
-      | ToZero -> if Q.sign f < 0 then Finite (Eq, f) else Finite (Lt, s)
-      | NearestTiesToEven | NearestTiesToAway ->
-        let m = Q.div (Q.add f s) (Q.of_int 2) in
-        let k =
-          if Q.equal (Fpa_rounding.round prec exp mode m) f then Eq else Lt
-        in
-        Finite (k, m))
-
   let ( + ) = add
 
   let ( * ) = mul
@@ -620,11 +571,81 @@ type 'a union = 'a Core.union
 module Real = struct
   include AlgebraicField (Core) (QAlgebraicType)
 
+  (* The smallest [x] such that [float(prec, exp, mode, x) >= b]. *)
+  let float_preimage_lb ~prec ~exp mode (b : QAlgebraicType.t) =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      (* The smallest float allowed by [b], and the float just below it. *)
+      let lowest_float, prev_float =
+        let f = Fpa_rounding.round prec exp Up v in
+        match k with
+        | Gt when Q.equal f v -> Fpa_rounding.succ prec exp f, f
+        | Lt | Eq | Gt -> f, Fpa_rounding.pred prec exp f
+      in
+      (* Rounding is increasing, so any [x <= prev_float] rounds to at most
+         [prev_float], and any [x >= lowest_float] to at least [lowest_float].
+         The mode decides where the [x] in between go. *)
+      match mode with
+      | Fpa_rounding.Down -> Finite (Eq, lowest_float)
+      | Up -> Finite (Gt, prev_float)
+      | ToZero ->
+        if Q.sign lowest_float > 0
+        then Finite (Eq, lowest_float)
+        else Finite (Gt, prev_float)
+      | NearestTiesToEven | NearestTiesToAway ->
+        (* [x] rounds to the nearer of [prev_float] and [lowest_float], so
+           [float(prec, exp, mode, x) >= b] for the [x] above their midpoint.
+           The midpoint itself is included only if it rounds to
+           [lowest_float]. *)
+        let mid = Q.div (Q.add prev_float lowest_float) (Q.of_int 2) in
+        let k : QAlgebraicType.kind =
+          if Q.equal (Fpa_rounding.round prec exp mode mid) lowest_float
+          then Eq
+          else Gt
+        in
+        Finite (k, mid))
+
+  (* The largest [x] such that [float(prec, exp, mode, x) <= b]. *)
+  let float_preimage_ub ~prec ~exp mode (b : QAlgebraicType.t) =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      (* The largest float allowed by [b], and the float just above it. *)
+      let highest_float, next_float =
+        let f = Fpa_rounding.round prec exp Down v in
+        match k with
+        | Lt when Q.equal f v -> Fpa_rounding.pred prec exp f, f
+        | Lt | Eq | Gt -> f, Fpa_rounding.succ prec exp f
+      in
+      (* Rounding is increasing, so any [x >= next_float] rounds to at least
+         [next_float], and any [x <= highest_float] to at most [highest_float].
+         The mode decides where the [x] in between go. *)
+      match mode with
+      | Fpa_rounding.Up -> Finite (Eq, highest_float)
+      | Down -> Finite (Lt, next_float)
+      | ToZero ->
+        if Q.sign highest_float < 0
+        then Finite (Eq, highest_float)
+        else Finite (Lt, next_float)
+      | NearestTiesToEven | NearestTiesToAway ->
+        (* [x] rounds to the nearer of [highest_float] and [next_float], so
+           [float(prec, exp, mode, x) <= b] for the [x] below their midpoint.
+           The midpoint itself is included only if it rounds to
+           [highest_float]. *)
+        let mid = Q.div (Q.add highest_float next_float) (Q.of_int 2) in
+        let k : QAlgebraicType.kind =
+          if Q.equal (Fpa_rounding.round prec exp mode mid) highest_float
+          then Eq
+          else Lt
+        in
+        Finite (k, mid))
+
   let float_preimage ~prec ~exp mode u =
     of_set_checked
     @@ approx_map_inc_to_set
-         (QAlgebraicType.float_preimage_lb ~prec ~exp mode)
-         (QAlgebraicType.float_preimage_ub ~prec ~exp mode)
+         (float_preimage_lb ~prec ~exp mode)
+         (float_preimage_ub ~prec ~exp mode)
          u
 end
 

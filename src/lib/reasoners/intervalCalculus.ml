@@ -1510,16 +1510,6 @@ let interval_of env r =
     let i, _, _ = generic_find r env in
     i
 
-(* The term bounded from [float(prec, exp, mode, x)], and whether it is an
-   integer: [i] if [x] is [real_of_int(i)], so that its bounds are rounded,
-   otherwise [x] if it is an atom. *)
-let float_arg env x =
-  let rx, ex = Uf.find env.new_uf x in
-  match E.type_info x with
-  | Ty.Tint ->
-    if Option.is_some (P.is_const (poly_of rx)) then None else Some (rx, ex)
-  | _ -> if is_alien rx then Some (rx, ex) else None
-
 (* The values of the parameters of [float(prec, exp, mode, x)], with their
    explanation, once they are known to be literals. *)
 let float_params env prec exp mode =
@@ -1537,47 +1527,46 @@ let float_params env prec exp mode =
     Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
   | _ -> None
 
-(* Adds to [eqs] the lower (or upper) bound of [pre] on [rx], if it is tighter
-   than the bound of [ix], the interval of [rx]. *)
-let mk_bound ty rx ~ix ~pre is_lower eqs =
-  let bound = if is_lower then I.borne_inf else I.borne_sup in
-  match bound pre with
-  | exception I.No_finite_bound -> eqs
-  | b, ex, large ->
-    let better =
-      match bound ix with
-      | c, _, l ->
-        let k = Q.compare b c in
-        let k = if is_lower then k else -k in
-        k > 0 || (k = 0 && l && not large)
-      | exception I.No_finite_bound -> true
-    in
-    if not better
-    then eqs
-    else
-      let rb = alien_of (P.create [] b ty) in
-      let args = if is_lower then [rb; rx] else [rx; rb] in
-      let a = LR.mkv_builtin true (if large then L.LE else L.LT) args in
-      (a, None, ex, Th_util.Other) :: eqs
-
-(* Bounds [x] by the preimage of the interval of [float(prec, exp, mode, x)]. *)
-let bounds_from_floats env eqs =
+(* Narrows the interval of the argument [x] of each [float] term to the preimage
+   of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
+   The [float] terms whose argument is a constant are removed, as there is
+   nothing left to propagate. *)
+let update_floats env =
   ME.fold
-    (fun t (prec, exp, mode, x) eqs ->
-      match float_params env prec exp mode, float_arg env x with
-      | Some (prec, exp, mode, ex_p), Some (rx, ex_x) ->
-        let rt, ex_t = Uf.find env.new_uf t in
-        let ty = E.type_info x in
-        let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
-        let pre =
-          I.add_explanation (interval_of env rt) ex
-          |> I.float_preimage ~prec ~exp mode
-          |> I.coerce ty
-        in
-        let mk_bound = mk_bound ty rx ~ix:(interval_of env rx) ~pre in
-        mk_bound false (mk_bound true eqs)
-      | _ -> eqs)
-    env.floats eqs
+    (fun t (prec, exp, mode, x) env ->
+      let rx, ex_x = Uf.find env.new_uf x in
+      let p = poly_of rx in
+      if Option.is_some (P.is_const p)
+      then { env with floats = ME.remove t env.floats }
+      else
+        match float_params env prec exp mode with
+        | None -> env
+        | Some (prec, exp, mode, ex_p) ->
+          let rt, ex_t = Uf.find env.new_uf t in
+          let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
+          let pre =
+            I.add_explanation (interval_of env rt) ex
+            |> I.float_preimage ~prec ~exp mode
+            |> I.coerce (X.type_info rx)
+          in
+          if is_alien rx
+          then
+            let ix, use_x =
+              try MX.n_find rx env.monomes
+              with Not_found -> I.undefined (X.type_info rx), SX.empty
+            in
+            MX.n_add rx (I.intersect ix pre, use_x) ix env
+          else
+            (* p = (np + c) * d *)
+            let np, c, d = P.normal_form_pos p in
+            let pre = I.affine_scale ~const:(Q.minus c) ~coef:(Q.inv d) pre in
+            let ip =
+              try MP.n_find np env.polynomes
+              with Not_found -> I.undefined (X.type_info rx)
+            in
+            let i = I.intersect ip pre in
+            update_monomes_from_poly np i (MP.n_add np i ip env))
+    env.floats env
 
 let count_splits env la =
   let nb =
@@ -1638,6 +1627,7 @@ let rec loop_update_intervals are_eq env cpt =
   let cpt = cpt + 1 in
   let env = { env with improved_p = SP.empty; improved_x = SX.empty } in
   let env = update_non_lin_monomes_intervals are_eq env in
+  let env = update_floats env in
   let env = Sim_Wrap.solve env 1 in
   let env = update_polynomes_intervals env in
   let env = Sim_Wrap.solve env 1 in
@@ -1745,7 +1735,6 @@ let assume ~query env uf la =
       let env = Sim_Wrap.solve env 1 in
       let env = loop_update_intervals are_eq env 0 in
       let env, eqs = equalities_from_intervals env eqs in
-      let eqs = bounds_from_floats env eqs in
       Debug.env env;
       let to_assume = Rel_utils.assume_nontrivial_eqs eqs la in
       Debug.implied_equalities to_assume;
