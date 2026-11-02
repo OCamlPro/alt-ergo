@@ -188,7 +188,7 @@ module Domains = struct
          for it. *)
       let nd = Domain.unknown (X.type_info r) in
       internal_update r nd t
-    | Alien _ | Constr _ | Select _ -> t
+    | Alien _ | Constr _ | Destr _ -> t
 
   (** [tighten r d t] replaces the domain of [r] in [t] by a domain [d]
       contained in the current domain of [r]. The representative [r] is marked
@@ -440,7 +440,7 @@ let build_constr_eq r c =
     (* The semantic value [r] is already a constructor application, so we don't
        need to produce a new equation in this case. *)
     None
-  | Select _ -> assert false
+  | Destr _ -> assert false
 
 let propagate_domains new_terms domains =
   Domains.propagate

@@ -41,12 +41,12 @@ type 'a abstract =
       }
   (* [Cons { c_name; c_ty; c_args }] represents the application of the
      constructor [c_name] of the ADT [ty] with the arguments [c_args]. *)
-  | Select of
+  | Destr of
       { d_name : DE.term_cst;
         d_ty : Ty.t;
         d_arg : 'a
       }
-  (* [Select { d_name; d_ty; d_arg }] represents the destructor [d_name] of the
+  (* [Destr { d_name; d_ty; d_arg }] represents the destructor [d_name] of the
      ADT [d_ty] on the ADT value [d_arg]. *)
   | Alien of 'a
 (* [Alien r] represents a uninterpreted ADT semantic value. *)
@@ -117,7 +117,7 @@ module Shostak (X : ALIEN) = struct
         Fmt.pf ppf "(%a %a)" DE.Term.Const.print c_name
           Fmt.(box @@ list ~sep:sp @@ pair nop X.print)
           c_args
-    | Select d ->
+    | Destr d ->
       Fmt.pf ppf "%a#!!%a" X.print d.d_arg DE.Term.Const.print d.d_name
 
   let is_mine u =
@@ -125,7 +125,7 @@ module Shostak (X : ALIEN) = struct
     | Alien r -> r
     | Constr _ ->
       X.embed u [@ocaml.ppwarning "TODO: canonize Constr(list of selects)"]
-    | Select { d_arg; d_name; _ } -> (
+    | Destr { d_arg; d_name; _ } -> (
       match embed d_arg with
       | Constr c -> begin
         try
@@ -154,7 +154,7 @@ module Shostak (X : ALIEN) = struct
       | Exit -> false
       | _ -> assert false
       end
-    | Select d1, Select d2 ->
+    | Destr d1, Destr d2 ->
       DE.Term.Const.equal d1.d_name d2.d_name
       && Ty.equal d1.d_ty d2.d_ty && X.equal d1.d_arg d2.d_arg
     | _ -> false
@@ -214,12 +214,12 @@ module Shostak (X : ALIEN) = struct
         (fun acc (_, r) -> (acc * 7) + X.hash r)
         (DE.Term.Const.hash c_name + (7 * Ty.hash c_ty))
         c_args
-    | Select { d_name; d_ty; d_arg } ->
+    | Destr { d_name; d_ty; d_arg } ->
       ((DE.Term.Const.hash d_name + (11 * Ty.hash d_ty)) * 11) + X.hash d_arg
 
   let leaves r =
     match r with
-    | Alien r | Select { d_arg = r; _ } -> X.leaves r
+    | Alien r | Destr { d_arg = r; _ } -> X.leaves r
     | Constr { c_args; _ } ->
       SX.elements
       @@ List.fold_left
@@ -229,7 +229,7 @@ module Shostak (X : ALIEN) = struct
 
   let is_constant r =
     match r with
-    | Alien r | Select { d_arg = r; _ } -> X.is_constant r
+    | Alien r | Destr { d_arg = r; _ } -> X.is_constant r
     | Constr { c_args; _ } ->
       List.for_all (fun (_, r) -> X.is_constant r) c_args
   [@@ocaml.ppwarning "TODO: not sure"]
@@ -242,7 +242,7 @@ module Shostak (X : ALIEN) = struct
   let type_info = function
     | Alien r -> X.type_info r
     | Constr { c_ty; _ } -> c_ty
-    | Select { d_ty; _ } -> d_ty
+    | Destr { d_ty; _ } -> d_ty
 
   let compare s1 s2 =
     match embed s1, embed s2 with
@@ -272,7 +272,7 @@ module Shostak (X : ALIEN) = struct
         end
     | Constr _, _ -> 1
     | _, Constr _ -> -1
-    | Select d1, Select d2 ->
+    | Destr d1, Destr d2 ->
       let c = DE.Term.Const.compare d1.d_name d2.d_name in
       if c <> 0
       then c
@@ -299,7 +299,7 @@ module Shostak (X : ALIEN) = struct
         ( is_mine p,
           (acc [@ocaml.ppwarning "TODO: abstract Selectors: case to test"]) )
     (* assert false should probably reconstruct a new 'p' using args *)
-    | ((Select ({ d_arg; _ } as s))
+    | ((Destr ({ d_arg; _ } as s))
        [@ocaml.ppwarning "TODO: abstract Selectors"]) ->
       (* no need to abstract THIS selector. It's necessiraly
          toplevel in ADTs *)
@@ -311,9 +311,9 @@ module Shostak (X : ALIEN) = struct
       let s_arg, acc = X.abstract_selectors d_arg acc in
       if not (X.equal s_arg d_arg) [@ocaml.ppwarning "TODO: abstract Selectors"]
       then assert false;
-      let x = is_mine @@ Select { s with d_arg = s_arg } in
+      let x = is_mine @@ Destr { s with d_arg = s_arg } in
       begin match embed x with
-      | Select ({ d_name; d_arg; _ } as s) ->
+      | Destr ({ d_name; d_arg; _ } as s) ->
         let { Ty.constr; destrs } =
           constr_of_destr (X.type_info d_arg) d_name
         in
@@ -326,7 +326,7 @@ module Shostak (X : ALIEN) = struct
             X.print d_arg E.print cons;
         let cons, _ = make cons in
         let acc = (d_arg, cons) :: acc in
-        let xx = is_mine @@ Select { s with d_arg = cons } in
+        let xx = is_mine @@ Destr { s with d_arg = cons } in
         if Options.get_debug_adt ()
         then
           Printer.print_dbg ~header:false "%a becomes %a" X.print x X.print xx;
@@ -343,7 +343,7 @@ module Shostak (X : ALIEN) = struct
         "solve %a = %a" X.print r1 X.print r2;
     assert (not @@ Options.get_disable_adts ());
     match embed r1, embed r2 with
-    | Select _, _ | _, Select _ -> assert false (* should be eliminated *)
+    | Destr _, _ | _, Destr _ -> assert false (* should be eliminated *)
     | Alien _, Alien _ ->
       Sig.
         { pb with
@@ -381,7 +381,7 @@ module Shostak (X : ALIEN) = struct
            { c with
              c_args = List.map (fun (lbl, u) -> lbl, X.subst p v u) c.c_args
            }
-    | Select d -> is_mine @@ Select { d with d_arg = X.subst p v d.d_arg }
+    | Destr d -> is_mine @@ Destr { d with d_arg = X.subst p v d.d_arg }
 
   let color _ = assert false
 
@@ -397,6 +397,6 @@ module Shostak (X : ALIEN) = struct
     | Constr { c_name; c_ty; c_args } ->
       let args = My_list.try_map (fun (_, arg) -> X.to_model_term arg) c_args in
       Option.bind args @@ fun args -> Some (E.mk_constr c_name args c_ty)
-    | Select _ -> None
+    | Destr _ -> None
     | Alien a -> X.to_model_term a
 end
