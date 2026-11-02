@@ -1,10 +1,10 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage }:
 
 let
   landmarks = sources.landmarks;
 in
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "landmarks";
   inherit (landmarks) version;

@@ -1,6 +1,6 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage, num, logs }:
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "ocplib-simplex";
   inherit (sources.ocplib-simplex) version;
@@ -10,7 +10,7 @@ ocamlPackages.buildDunePackage {
 
   src = sources.ocplib-simplex;
 
-  propagatedBuildInputs = [ ocamlPackages.num ocamlPackages.logs ];
+  propagatedBuildInputs = [ num logs ];
 
   meta = with lib; {
     inherit (sources.ocplib-simplex) homepage description;

@@ -1,10 +1,10 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage }:
 
 let
   zarith_stubs_js = sources.zarith_stubs_js;
 in
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "zarith_stubs_js";
   inherit (zarith_stubs_js) version;

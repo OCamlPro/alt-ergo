@@ -1,16 +1,16 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage, landmarks, ppxlib }:
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   pname = "landmarks-ppx";
-  inherit (ocamlPackages.landmarks) version src strictDeps;
+  inherit (landmarks) version src strictDeps;
 
   minimalOCamlVersion = "4.08";
   duneVersion = "3";
 
   propagatedBuildInputs = [
-    ocamlPackages.landmarks
-    ocamlPackages.ppxlib
+    landmarks
+    ppxlib
   ];
 
-  meta = ocamlPackages.landmarks.meta;
+  meta = landmarks.meta;
 }

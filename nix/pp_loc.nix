@@ -1,6 +1,6 @@
-{ sources, lib, ocamlPackages }:
+{ sources, lib, buildDunePackage }:
 
-ocamlPackages.buildDunePackage {
+buildDunePackage {
   strictDeps = true;
   pname = "pp_loc";
   inherit (sources.pp_loc) version;
