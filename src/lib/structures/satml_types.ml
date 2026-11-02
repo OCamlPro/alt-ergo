@@ -777,13 +777,47 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
                [@ocaml.ppwarning "xlit or at_lit is probably redundant"];
           xlit)
 
+  (* returns the clause of the n-ary [distinct] literal [a] (or of its
+     negation):
+
+     [distinct(x_1, ..., x_n) \/ x_1 = x_2 \/ ... \/ x_(n-1) = x_n]
+
+     The theories ignore the negation of [distinct], so this clause makes the
+     SAT solver split on the equalities. The clause is added to the formula
+     containing [a], as CDCL-Tableaux only decides atoms of formulas. It is not
+     needed when [a] is asserted as a fact. *)
+  let distinct_clause hcons ~fact a new_vars =
+    match E.lit_view a with
+    | Distinct (_ :: _ :: _ :: _) when fact -> None, new_vars
+    | (Distinct (_ :: _ :: _ :: _ as l) | Eql l) as v ->
+      let d = match v with Distinct _ -> a | _ -> E.neg a in
+      let rec eqs acc = function
+        | [] -> acc
+        | x :: l ->
+          eqs
+            (List.fold_left (fun acc y -> E.mk_eq ~iff:true x y :: acc) acc l)
+            l
+      in
+      let cl, new_vars =
+        List.fold_left
+          (fun (cl, new_vars) e ->
+            let ff, new_vars = mk_lit hcons e new_vars in
+            ff :: cl, new_vars)
+          ([], new_vars) (d :: eqs [] l)
+      in
+      Some (mk_or hcons cl), new_vars
+    | _ -> None, new_vars
+
   let simplify hcons f abstr new_vars =
     let lem = ref [] in
+    let clauses = ref [] in
     let new_vars = ref new_vars in
     let rec simp topl ~parent_disj f =
       match E.form_view f with
       | E.Literal a ->
         let ff, l = mk_lit hcons a !new_vars in
+        let cl, l = distinct_clause hcons ~fact:topl a l in
+        Option.iter (fun cl -> clauses := cl :: !clauses) cl;
         new_vars := l;
         ff
       | E.Lemma _ -> abstract_lemma hcons abstr f topl lem new_vars
@@ -815,6 +849,9 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         simp false ~parent_disj:false (E.elim_let ~recursive:true letin)
     in
     let res = simp true ~parent_disj:false f in
+    let res =
+      match !clauses with [] -> res | cls -> mk_and hcons (res :: cls)
+    in
     res, !lem, !new_vars
 
   (* CNF_ABSTR a la Tseitin *)
