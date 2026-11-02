@@ -35,18 +35,14 @@ val src : Logs.src
 
 val empty : t
 
-val find : r -> t -> Expr.Set.t * SA.t
+val find : r -> t -> SA.t
 
-val add : r -> Expr.Set.t * SA.t -> t -> t
+val add : r -> SA.t -> t -> t
 
 val mem : r -> t -> bool
 
 val print : t -> unit
 
-val up_add : t -> Expr.t -> r -> r list -> t
-
-val congr_add : t -> r list -> Expr.Set.t
-
 val up_close_up : t -> r -> r -> t
 
-val congr_close_up : t -> r -> r list -> Expr.Set.t * SA.t
+val congr_close_up : t -> r -> r list -> SA.t

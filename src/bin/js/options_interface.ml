@@ -104,7 +104,7 @@ let set_options r =
   set_options_opt Options.set_debug_types r.debug_types;
   set_options_opt Options.set_debug_uf r.debug_uf;
   set_options_opt Options.set_debug_unsat_core r.debug_unsat_core;
-  set_options_opt Options.set_debug_use r.debug_use;
+  set_options_opt Options.set_debug_congr r.debug_congr;
   set_options_opt Options.set_rule r.rule;
   set_options_opt Options.set_case_split_policy
     (get_case_split_policy r.case_split_policy);

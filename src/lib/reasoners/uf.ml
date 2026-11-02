@@ -741,24 +741,13 @@ module Env = struct
         })
       set env
 
-  (* Patch modudo AC for CC: if p is a leaf different from r and r is AC and
-     reduced by p, then r --> nrr should be added as a PIVOT, not just as
-     TOUCHED by p |-> ... This is required for a correct update of USE *)
-  let update_global_tch global_tch p r nrr ex =
-    if X.equal p r
-    then global_tch
-    else
-      match X.ac_extract r with
-      | None -> global_tch
-      | Some _ -> (r, [r, nrr, ex], nrr) :: global_tch
-
-  let apply_sigma_uf env (p, v, dep) global_tch =
+  let apply_sigma_uf env (p, v, dep) tch =
     assert (MapX.mem p env.gamma);
     let use_p = MapX.find p env.gamma in
     try
-      let env, touched_p, global_tch, neqs_to_up =
+      let env, tch, neqs_to_up =
         SetX.fold
-          (fun r ((env, touched_p, global_tch, neqs_to_up) as acc) ->
+          (fun r ((env, tch, neqs_to_up) as acc) ->
             Options.exec_thread_yield ();
             let rr, ex = MapX.find r env.repr in
             let nrr = X.subst p v rr in
@@ -772,15 +761,11 @@ module Env = struct
                   gamma = add_to_gamma r nrr env.gamma
                 }
               in
-              ( env,
-                (r, nrr, ex) :: touched_p,
-                update_global_tch global_tch p r nrr ex,
-                SetXX.add (rr, nrr, dep) neqs_to_up ))
-          use_p
-          (env, [], global_tch, SetXX.empty)
+              env, r :: tch, SetXX.add (rr, nrr, dep) neqs_to_up)
+          use_p (env, tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
-      update_aux dep neqs_to_up env, touched_p, global_tch
+      update_aux dep neqs_to_up env, tch
     with Not_found -> assert false
 
   let up_uf_rs dep env tch =
@@ -802,10 +787,7 @@ module Env = struct
                   gamma = add_to_gamma r nrr env.gamma
                 }
               in
-              let tch =
-                if X.is_a_leaf r then (r, [r, nrr, ex], nrr) :: tch else tch
-              in
-              env, tch, SetXX.add (rr, nrr, ex_nrr) neqs_to_up)
+              env, r :: tch, SetXX.add (rr, nrr, ex_nrr) neqs_to_up)
           env.repr (env, tch, SetXX.empty)
       in
       (* Correction : Do not update neqs twice for the same r *)
@@ -815,8 +797,8 @@ module Env = struct
     let env = init_leaves env p in
     let env = init_leaves env v in
     let env = apply_sigma_ac eqs env sigma in
-    let env, touched_sigma, tch = apply_sigma_uf env sigma tch in
-    up_uf_rs dep env ((p, touched_sigma, v) :: tch)
+    let env, tch = apply_sigma_uf env sigma tch in
+    up_uf_rs dep env tch
 end
 
 let add env t =

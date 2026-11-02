@@ -168,8 +168,8 @@ val set_debug_uf : bool -> unit
 val set_debug_unsat_core : bool -> unit
 (** Set [debug_unsat_core] accessible with {!val:get_debug_unsat_core} *)
 
-val set_debug_use : bool -> unit
-(** Set [debug_use] accessible with {!val:get_debug_use} *)
+val set_debug_congr : bool -> unit
+(** Set [debug_congr] accessible with {!val:get_debug_congr} *)
 
 val set_debug_commands : bool -> unit
 (** Set [debug_commands] accessible with {!val:get_debug_commands} *)
@@ -469,7 +469,7 @@ val get_debug_cc : unit -> bool
 val get_debug_gc : unit -> bool
 (** Prints some debug info about the GC's activity. *)
 
-val get_debug_use : unit -> bool
+val get_debug_congr : unit -> bool
 (** Get the debugging flag of use. *)
 
 val get_debug_uf : unit -> bool
