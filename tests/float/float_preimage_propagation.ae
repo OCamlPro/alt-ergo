@@ -32,3 +32,5 @@ goal offset : float32(Up, x + 1.) = 2. -> 0.99999988 < x <= 1.
 goal integer_sum :
   float32(NearestTiesToEven, real_of_int(n + m)) = 16777216. ->
   n + m = 16777216 or n + m = 16777217
+
+goal constant : x = y -> y = 2.6 -> float32(Down, x) < 2.6

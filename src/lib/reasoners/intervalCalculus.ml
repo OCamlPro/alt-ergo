@@ -1529,16 +1529,31 @@ let float_params env prec exp mode =
 
 (* Narrows the interval of the argument [x] of each [float] term to the preimage
    of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
-   The [float] terms whose argument is a constant are removed, as there is
+   Once [x] is a constant, the term is set to its value and removed, as there is
    nothing left to propagate. *)
 let update_floats env =
   ME.fold
     (fun t (prec, exp, mode, x) env ->
       let rx, ex_x = Uf.find env.new_uf x in
       let p = poly_of rx in
-      if Option.is_some (P.is_const p)
-      then { env with floats = ME.remove t env.floats }
-      else
+      match P.is_const p with
+      | Some c -> (
+        match float_params env prec exp mode with
+        | None -> env
+        | Some (prec, exp, mode, ex_p) ->
+          let rt, ex_t = Uf.find env.new_uf t in
+          let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
+          let v = I.point (Fpa_rounding.round prec exp mode c) Ty.Treal ex in
+          let env = { env with floats = ME.remove t env.floats } in
+          if is_alien rt
+          then
+            let it, use_t =
+              try MX.n_find rt env.monomes
+              with Not_found -> I.undefined Ty.Treal, SX.empty
+            in
+            MX.n_add rt (I.intersect it v, use_t) it env
+          else env)
+      | None -> (
         match float_params env prec exp mode with
         | None -> env
         | Some (prec, exp, mode, ex_p) ->
@@ -1565,7 +1580,7 @@ let update_floats env =
               with Not_found -> I.undefined (X.type_info rx)
             in
             let i = I.intersect ip pre in
-            update_monomes_from_poly np i (MP.n_add np i ip env))
+            update_monomes_from_poly np i (MP.n_add np i ip env)))
     env.floats env
 
 let count_splits env la =
