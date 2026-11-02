@@ -1270,7 +1270,7 @@ let mk_distinct ~iff args =
   match args with
   | [] | [_] -> assert false
   | [a; b] -> neg (mk_eq ~iff a b)
-  | a :: _ when type_info a == Ty.Tbool ->
+  | a :: _ :: _ :: _ when type_info a == Ty.Tbool ->
     (* Three booleans cannot be pairwise distinct. *)
     faux
   | _ ->
