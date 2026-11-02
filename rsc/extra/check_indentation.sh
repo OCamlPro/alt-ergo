@@ -6,6 +6,12 @@
 # option of ocamlformat.
 # It is notably called in the travis scripts
 
+# Fail early instead of silently checking nothing
+if ! command -v ocamlformat >/dev/null 2>&1 ; then
+	echo "failure: ocamlformat is not installed"
+	exit 1
+fi
+
 # Perform all actions relative to the git root
 git_repo=`git rev-parse --show-toplevel`
 
@@ -21,7 +27,7 @@ cpt=0
 
 # Loop to check each file
 for f in $files ; do
-	ocamlformat -i $f
+	ocamlformat -i $f || exit 1
 	cpt=$((cpt+1))
 done
 

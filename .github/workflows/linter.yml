@@ -17,15 +17,8 @@ env:
 
 jobs:
   check_indentation:
-    # Check that all `.ml` and `.mli` file are correctly indent with ocp-indent
+    # Check that all `.ml` and `.mli` files are formatted with ocamlformat
     name: Check indentation
-
-    strategy:
-      matrix:
-        ocp-indent-version:
-          # Fixed ocp-indent version. A PR with updated indented code is needed
-          # if this version is changed
-          - 1.9.0
 
     runs-on: ubuntu-latest
 
@@ -42,13 +35,12 @@ jobs:
           ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
           dune-cache: true
 
-      # Install ocp-indent with the fixed version
-      # Do nothing if ocp-indent is already installed
-      - name: Install ocp-indent ${{ matrix.ocp-indent-version }}
-        run: opam install ocp-indent.${{ matrix.ocp-indent-version }}
+      # Install the version of ocamlformat pinned in .ocamlformat
+      - name: Install ocamlformat
+        run: opam install "ocamlformat.$(sed -n 's/^version=//p' .ocamlformat)"
 
       # Run indentation script, this script returns exit code 1 if some files
-      # are not well indented
+      # are not formatted
       - name: Run check_indentation.sh script
         run: opam exec -- rsc/extra/check_indentation.sh
 
