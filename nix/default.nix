@@ -14,13 +14,6 @@ import sources.nixpkgs {
           dolmen_loop = self.callPackage ./dolmen_loop.nix { };
           landmarks = self.callPackage ./landmarks.nix { };
           landmarks-ppx = self.callPackage ./landmarks-ppx.nix { };
-          cmdliner_2 = self.cmdliner.overrideAttrs (_: rec {
-            version = "2.1.0";
-            src = pkgs.fetchurl {
-              url = "https://erratique.ch/software/cmdliner/releases/cmdliner-${version}.tbz";
-              hash = "sha256-iBTGFM1D1S/R68ivWjHZElwhTEmPpgVmDk7Rlf+ENOk=";
-            };
-          });
           zarith_stubs_js = self.callPackage ./zarith_stubs_js.nix { };
           opam-ed = self.callPackage ./opam-ed.nix { };
         };
@@ -32,8 +25,6 @@ import sources.nixpkgs {
             then ocamlPackages.overrideScope ocamlOverrides
             else ocamlPackages)
           pkgs.ocaml-ng;
-
-        ocamlPackages = final.ocaml-ng.ocamlPackages_4_14;
       })
   ];
 }

@@ -1,4 +1,4 @@
-{ sources, lib, buildDunePackage, cmdliner_2, opam-file-format }:
+{ sources, lib, buildDunePackage, cmdliner, opam-file-format }:
 
 let
   opam-ed = sources.opam-ed;
@@ -13,7 +13,7 @@ buildDunePackage {
   duneVersion = "3";
 
   propagatedBuildInputs = [
-    cmdliner_2
+    cmdliner
     opam-file-format
   ];
 
