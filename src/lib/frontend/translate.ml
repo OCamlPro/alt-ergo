@@ -252,7 +252,9 @@ let ae_fpa_builtins =
     in
     DE.Term.apply_cst cst [] []
   in
-  let rne = Fpa_rounding.(string_of_rounding_mode NearestTiesToEven) in
+  let rne =
+    Fpa_rounding.string_of_rounding_mode B.Float.RoundNearestTiesToEven
+  in
   let float32 = float (DE.Term.int "24") (DE.Term.int "149") in
   let float32d x = float32 (mode rne) x in
   let float64 = float (DE.Term.int "53") (DE.Term.int "1074") in
@@ -1173,11 +1175,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
         (* Floating-point builtins *)
         | B.Float builtin, args -> (
           match builtin, args with
-          | RM RoundNearestTiesToEven, _ -> mk_rounding NearestTiesToEven
-          | RM RoundNearestTiesToAway, _ -> mk_rounding NearestTiesToAway
-          | RM RoundTowardPositive, _ -> mk_rounding Up
-          | RM RoundTowardNegative, _ -> mk_rounding Down
-          | RM RoundTowardZero, _ -> mk_rounding ToZero
+          | RM rm, _ -> mk_rounding rm
           | Fp { e; s }, [sign_t; exp_t; sig_t] when Options.get_smt_lib_fpa ()
             ->
             E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) e s
