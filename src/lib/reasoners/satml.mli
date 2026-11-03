@@ -30,7 +30,7 @@ open Satml_intf
 
 exception Sat
 
-exception Unsat of Satml_types.Atom.clause list option
+exception Unsat of Expr.Labeled.Set.t option
 
 exception Last_UIP_reason of Atom.Set.t
 

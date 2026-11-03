@@ -25,7 +25,7 @@ Unsat cores can be checked with the `-d unsat-core` option.
   
   ; 
   unsat
-
+ 
 Unsat cores can be used in the SMT-LIB format as well.
 
   $ cat > input.smt2 << EOF
@@ -45,6 +45,24 @@ Unsat cores can be used in the SMT-LIB format as well.
   unsat
   (h_x_0)
 
+Unsat cores also work with the default CDCL-Tableaux solver.
+
+  $ alt-ergo --unsat-core input.ae -o smtlib2 2>/dev/null
+  
+  unsat
+  unsat-core:
+    h_x_0
+  
+
+  $ alt-ergo --unsat-core -d unsat-core input.ae -o smtlib2 2>/dev/null
+  
+  unsat
+
+  $ alt-ergo input.smt2 2>/dev/null
+  
+  unsat
+  (h_x_0)
+
 Unsat core generation (but not printing) can also be enabled from the command
 line with `--produce-unsat-cores`.
 
@@ -59,13 +77,13 @@ line with `--produce-unsat-cores`.
   > (get-unsat-core)
   > EOF
 
-  $ alt-ergo --sat-solver Tableaux input.smt2 2>/dev/null
+  $ alt-ergo input.smt2 2>/dev/null
   
   unsat
   (error "input.smt2:8.0: Unsat core generation disabled (try --produce-unsat-cores)")
   [1]
 
-  $ alt-ergo --sat-solver Tableaux --produce-unsat-cores input.smt2 2>/dev/null
+  $ alt-ergo --produce-unsat-cores input.smt2 2>/dev/null
   
   unsat
   (h_x_0)
