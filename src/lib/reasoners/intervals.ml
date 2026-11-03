@@ -572,13 +572,14 @@ module Real = struct
   include AlgebraicField (Core) (QAlgebraicType)
 
   (* The smallest [x] such that [float(prec, exp, mode, x) >= b]. *)
-  let float_preimage_lb ~prec ~exp mode (b : QAlgebraicType.t) =
+  let float_preimage_lb ~prec ~exp (mode : Fpa_rounding.rounding_mode)
+      (b : QAlgebraicType.t) =
     match b with
     | Neg_infinite | Pos_infinite -> b
     | Finite (k, v) -> (
       (* The smallest float allowed by [b], and the float just below it. *)
       let lowest_float, prev_float =
-        let f = Fpa_rounding.round prec exp Up v in
+        let f = Fpa_rounding.round prec exp RoundTowardPositive v in
         match k with
         | Gt when Q.equal f v -> Fpa_rounding.succ prec exp f, f
         | Lt | Eq | Gt -> f, Fpa_rounding.pred prec exp f
@@ -587,13 +588,13 @@ module Real = struct
          [prev_float], and any [x >= lowest_float] to at least [lowest_float].
          The mode decides where the [x] in between go. *)
       match mode with
-      | Fpa_rounding.Down -> Finite (Eq, lowest_float)
-      | Up -> Finite (Gt, prev_float)
-      | ToZero ->
+      | RoundTowardNegative -> Finite (Eq, lowest_float)
+      | RoundTowardPositive -> Finite (Gt, prev_float)
+      | RoundTowardZero ->
         if Q.sign lowest_float > 0
         then Finite (Eq, lowest_float)
         else Finite (Gt, prev_float)
-      | NearestTiesToEven | NearestTiesToAway ->
+      | RoundNearestTiesToEven | RoundNearestTiesToAway ->
         (* [x] rounds to the nearer of [prev_float] and [lowest_float], so
            [float(prec, exp, mode, x) >= b] for the [x] above their midpoint.
            The midpoint itself is included only if it rounds to
@@ -607,13 +608,14 @@ module Real = struct
         Finite (k, mid))
 
   (* The largest [x] such that [float(prec, exp, mode, x) <= b]. *)
-  let float_preimage_ub ~prec ~exp mode (b : QAlgebraicType.t) =
+  let float_preimage_ub ~prec ~exp (mode : Fpa_rounding.rounding_mode)
+      (b : QAlgebraicType.t) =
     match b with
     | Neg_infinite | Pos_infinite -> b
     | Finite (k, v) -> (
       (* The largest float allowed by [b], and the float just above it. *)
       let highest_float, next_float =
-        let f = Fpa_rounding.round prec exp Down v in
+        let f = Fpa_rounding.round prec exp RoundTowardNegative v in
         match k with
         | Lt when Q.equal f v -> Fpa_rounding.pred prec exp f, f
         | Lt | Eq | Gt -> f, Fpa_rounding.succ prec exp f
@@ -622,13 +624,13 @@ module Real = struct
          [next_float], and any [x <= highest_float] to at most [highest_float].
          The mode decides where the [x] in between go. *)
       match mode with
-      | Fpa_rounding.Up -> Finite (Eq, highest_float)
-      | Down -> Finite (Lt, next_float)
-      | ToZero ->
+      | RoundTowardPositive -> Finite (Eq, highest_float)
+      | RoundTowardNegative -> Finite (Lt, next_float)
+      | RoundTowardZero ->
         if Q.sign highest_float < 0
         then Finite (Eq, highest_float)
         else Finite (Lt, next_float)
-      | NearestTiesToEven | NearestTiesToAway ->
+      | RoundNearestTiesToEven | RoundNearestTiesToAway ->
         (* [x] rounds to the nearer of [highest_float] and [next_float], so
            [float(prec, exp, mode, x) <= b] for the [x] below their midpoint.
            The midpoint itself is included only if it rounds to
