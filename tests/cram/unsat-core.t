@@ -18,7 +18,6 @@ Tableaux solver.
   unsat-core:
     h_x_0
   
-  
 
 Unsat cores can be checked with the `-d unsat-core` option.
 

@@ -27,7 +27,7 @@
 
 type t
 
-type rootdep =
+type rootdep = Expr.Labeled.t =
   { name : string;
     f : Expr.t;
     loc : Loc.t
@@ -71,7 +71,9 @@ val add_fresh : exp -> t -> t
 
 val print : Format.formatter -> t -> unit
 
-val get_unsat_core : t -> rootdep list
+val to_unsat_core : t -> Expr.Labeled.Set.t
+
+val from_assumptions : Expr.Labeled.Set.t -> t
 
 val print_unsat_core : ?tab:bool -> Format.formatter -> t -> unit
 
