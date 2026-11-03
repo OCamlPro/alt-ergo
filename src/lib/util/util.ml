@@ -195,3 +195,132 @@ let internal_error msg =
 module Syntax = struct
   let ( let& ) f scope = f ~scope
 end
+
+module Extra_options = struct
+  exception
+    Bad_option of
+      { name : string;
+        actual : string;
+        expected : string
+      }
+
+  type 'a descr =
+    | Bool : bool descr
+    | Int : int descr
+    | String : string descr
+    | Symbol : (string * 'a) list -> 'a descr
+
+  let wrong name actual expected = raise (Bad_option { name; actual; expected })
+
+  let parse_bool name value =
+    match value with
+    | "0" -> false
+    | "1" -> true
+    | _ -> wrong name value "'0' or '1'"
+
+  let parse_int name value =
+    match int_of_string_opt value with
+    | Some i -> i
+    | None -> wrong value name "an integer"
+
+  let parse_string _ value = value
+
+  let make_symlist ~sep flags =
+    match flags with
+    | [] -> "<none>"
+    | (_, _) :: _ -> String.concat sep (List.map fst flags)
+
+  let parse_symbol symbols name value =
+    try List.assoc value symbols
+    with Not_found ->
+      wrong value name ("one of: " ^ make_symlist ~sep:" " symbols)
+
+  type 'a parser = string -> string -> 'a
+
+  let parser (type a) (descr : a descr) : a parser =
+    match descr with
+    | Bool -> parse_bool
+    | Int -> parse_int
+    | String -> parse_string
+    | Symbol symbols -> parse_symbol symbols
+
+  type extra_option = O : 'a ref * 'a descr * string -> extra_option
+
+  let extra_params : (string, extra_option) Hashtbl.t = Hashtbl.create 17
+
+  let register loc r descr kwd =
+    (if Compat.String.starts_with ~prefix:"no-" kwd
+     then (
+       Printf.eprintf "Error: cannot define extra option '-X %s':\n" kwd;
+       Printf.eprintf
+         "  Names starting with 'no-' are reserved for boolean option\n";
+       Printf.eprintf "  Option defined at: %s\n" loc)
+     else
+       match Hashtbl.find_opt extra_params kwd with
+       | Some (O (_, _, loc2)) ->
+         Printf.eprintf "Warning: extra option '-X %s' is already defined:\n"
+           kwd;
+         Printf.eprintf "  First definition: %s\n" loc2;
+         Printf.eprintf "  New definition: %s\n" loc
+       | None -> Hashtbl.replace extra_params kwd (O (r, descr, loc)));
+    fun () -> !r
+
+  let string ~loc kwd ~default = register loc (ref default) String kwd
+
+  let int ~loc kwd ~default = register loc (ref default) Int kwd
+
+  let bool ~loc kwd =
+    if Compat.String.starts_with ~prefix:"no-" kwd
+    then
+      let kwd = String.sub kwd 3 (String.length kwd - 3) in
+      let read = register loc (ref false) Bool kwd in
+      fun () -> not (read ())
+    else register loc (ref false) Bool kwd
+
+  let symbol ~loc kwd ~default symbols =
+    register loc (ref default) (Symbol symbols) kwd
+
+  let cut_at s c =
+    let pos = String.index s c in
+    String.sub s 0 pos, String.sub s (pos + 1) (String.length s - pos - 1)
+
+  let parse_and_set name =
+    let unknown_option () =
+      Error (Format.asprintf "unknown option '-X %s'" name)
+    in
+    let name, is_no_option =
+      if Compat.String.starts_with ~prefix:"no-" name
+      then String.sub name 3 (String.length name - 3), true
+      else name, false
+    in
+    match cut_at name '=' with
+    | exception Not_found -> (
+      match Hashtbl.find_opt extra_params name with
+      | Some (O (option, Bool, _loc)) ->
+        option := not is_no_option;
+        Ok ()
+      | _ ->
+        Error
+          (Format.asprintf
+             "wrong argument '%s'; option '-X' expects a name=value pair" name))
+    | name, v -> (
+      match Hashtbl.find_opt extra_params name with
+      | Some (O (option, descr, _loc)) -> (
+        match parser descr name v with
+        | v ->
+          if is_no_option
+          then
+            match descr with
+            | Bool ->
+              option := not v;
+              Ok ()
+            | _ -> unknown_option ()
+          else (
+            option := v;
+            Ok ())
+        | exception Bad_option { name; actual; expected } ->
+          Error
+            (Format.asprintf "wrong argument '%s'; option '-X %s' expects %s"
+               actual name expected))
+      | None -> unknown_option ())
+end
