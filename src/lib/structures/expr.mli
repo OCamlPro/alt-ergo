@@ -162,6 +162,16 @@ type form_view = private
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
 
+module Labeled : sig
+  type nonrec t =
+    { name : string;
+      f : t;
+      loc : Loc.t
+    }
+
+  include Container_types.S_plus_stdlib with type t := t
+end
+
 (** different views of an expression *)
 
 val term_view : t -> term_view

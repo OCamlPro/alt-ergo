@@ -47,7 +47,7 @@ module type S = sig
 
   exception Sat
 
-  exception Unsat of Explanation.t
+  exception Unsat of Expr.Labeled.Set.t
 
   exception I_dont_know
 
@@ -80,17 +80,17 @@ module type S = sig
 
       @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
-  val assume : t -> Expr.gformula -> Explanation.t -> unit
+  val assume : t -> Expr.gformula -> Expr.Labeled.Set.t -> unit
   (** [assume env f dep] assumes the ground formula [f] in [env]. The [dep]
       argument can be used to generate an unsat core.
 
       @raise Unsat if [f] is unsatisfiable in [env]. *)
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> unit
+  val assume_th_elt : t -> Expr.th_elt -> Expr.Labeled.Set.t -> unit
   (** [assume env f exp] assumes a new formula [f] with the explanation [exp] in
       the theory environment of [env]. *)
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> unit
+  val pred_def : t -> Expr.t -> string -> Expr.Labeled.Set.t -> Loc.t -> unit
   (** [pred_def env f] assumes a new predicate definition [f] in [env]. *)
 
   val optimize : t -> Objective.Function.t -> unit
@@ -99,7 +99,7 @@ module type S = sig
       After optimization, the value of this objective is returned by
       [get_objectives]. *)
 
-  val unsat : t -> Expr.gformula -> Explanation.t
+  val unsat : t -> Expr.gformula -> Expr.Labeled.Set.t
   (** [unsat env f] checks the unsatisfiability of [f] in [env].
 
       @raise I_dont_know

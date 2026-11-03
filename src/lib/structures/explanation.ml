@@ -27,7 +27,7 @@
 
 module E = Expr
 
-type rootdep =
+type rootdep = E.Labeled.t =
   { name : string;
     f : Expr.t;
     loc : Loc.t
@@ -48,7 +48,7 @@ module S = Set.Make (struct
     | Fresh i1, Fresh i2 -> i1 - i2
     | Literal a, Literal b -> Satml_types.Atom.cmp_atom a b
     | Dep e1, Dep e2 -> E.compare e1 e2
-    | RootDep r1, RootDep r2 -> E.compare r1.f r2.f
+    | RootDep r1, RootDep r2 -> E.Labeled.compare r1 r2
     | Bj e1, Bj e2 -> E.compare e1 e2
     | Literal _, _ -> -1
     | _, Literal _ -> 1
@@ -105,20 +105,23 @@ let print fmt ex =
         | Literal a -> fprintf fmt "{Literal:%a}, " Satml_types.Atom.pr_atom a
         | Fresh i -> fprintf fmt "{Fresh:%i}" i
         | Dep f -> fprintf fmt "{Dep:%a}" E.print f
-        | RootDep r -> fprintf fmt "{RootDep:%s}" r.name
+        | RootDep r -> fprintf fmt "{RootDep:%a}" E.Labeled.print r
         | Bj f -> fprintf fmt "{BJ:%a}" E.print f)
       ex;
     fprintf fmt "}"
   end
 
-let get_unsat_core dep =
+let to_unsat_core dep =
   fold_atoms
     (fun a acc ->
       match a with
-      | RootDep r -> r :: acc
+      | RootDep r -> E.Labeled.Set.add r acc
       | Dep _ -> acc
       | Bj _ | Fresh _ | Literal _ -> assert false)
-    dep []
+    dep E.Labeled.Set.empty
+
+let from_assumptions deps =
+  E.Labeled.Set.fold (fun r acc -> S.add (RootDep r) acc) deps S.empty
 
 let print_unsat_core ?(tab = false) fmt dep =
   iter_atoms
