@@ -30,6 +30,9 @@ val src : Logs.src
 val power_too_large : Numbers.Q.t -> int -> bool
 (** [power_too_large x n] is [true] if [x ** n] is too large to be computed. *)
 
+val literal_exponent : Expr.t -> int option
+(** [literal_exponent t] is [Some n] if [t] is an integer literal [n >= 2]. *)
+
 val calc_power : Numbers.Q.t -> Numbers.Q.t -> Ty.t -> Numbers.Q.t
 (** [calc_power x y t] Compute x^y. Raise Exit if y is not an Int (castable in
     Int). *)

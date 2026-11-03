@@ -60,14 +60,31 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
 let calc_power_opt (c : Q.t) (d : Q.t) (ty : Ty.t) =
   try Some (calc_power c d ty) with Exit -> None
 
+(* [Some n] if [t] is an integer literal [n >= 2]. *)
+let literal_exponent t =
+  let n =
+    match (E.term_view t).f with
+    | Sy.Int n -> Z.to_machine_int n
+    | Sy.Real q when Q.is_int q -> Z.to_machine_int (Q.to_z q)
+    | _ -> None
+  in
+  match n with Some n when n >= 2 -> Some n | _ -> None
+
 module Type (X : Sig.X) : Polynome.T with type r = X.r = struct
   include Polynome.Make (struct
     include X
     module Ac = Ac.Make (X)
 
+    (* Products of non-distributed products, i.e. powers, are not distributed
+       either. *)
+    let distributes v =
+      match X.ac_extract v with
+      | Some { h; distribute; _ } when Sy.equal h (Sy.Op Sy.Mult) -> distribute
+      | _ -> true
+
     let mult v1 v2 =
       X.ac_embed
-        { distribute = true;
+        { distribute = distributes v1 && distributes v2;
           h = Sy.Op Sy.Mult;
           t = X.type_info v1;
           l =
@@ -227,6 +244,41 @@ struct
       | _ -> P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
     with Exit -> P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
 
+  (* The product of [l], with its constant and monomial factors multiplied out,
+     but not distributed over its factors that are sums. *)
+  let undistributed_product ty l =
+    let c, l =
+      List.fold_left
+        (fun (c, acc) (r, n) ->
+          let p = embed r in
+          match P.is_const p, P.is_monomial p with
+          | Some q, _ -> Q.mult c (calc_power q (Q.from_int n) ty), acc
+          | None, Some (a, x, z) when Q.is_zero z ->
+            let l =
+              match X.ac_extract x with
+              | Some { h; l; _ } when is_mult h ->
+                List.map (fun (y, m) -> y, m * n) l
+              | _ -> [x, n]
+            in
+            Q.mult c (calc_power a (Q.from_int n) ty), List.rev_append l acc
+          | _ -> c, (r, n) :: acc)
+        (Q.one, []) l
+    in
+    let l =
+      List.fold_left
+        (fun acc (r, n) ->
+          match List.partition (fun (r', _) -> X.equal r r') acc with
+          | [(_, m)], acc -> (r, m + n) :: acc
+          | _ -> (r, n) :: acc)
+        [] l
+    in
+    match l with
+    | [] -> P.create [] c ty
+    | [(x, 1)] -> P.create [c, x] Q.zero ty
+    | l ->
+      let m = X.ac_embed { h = Sy.Op Sy.Mult; l; t = ty; distribute = false } in
+      P.create [c, m] Q.zero ty
+
   let rec mke coef p t ctx =
     let { E.f = sb; xs; ty; _ } = E.term_view t in
     match sb, xs with
@@ -334,6 +386,25 @@ struct
         Q.from_int (Fpa_rounding.integer_log_2 q)
       in
       mk_partial_interpretation_1 aux_func coef p ty t x, ctx
+    | Sy.Op Sy.Pow, [x; y] when not (Options.get_no_nla ()) -> (
+      let px, ctx = mke Q.one (empty_polynome ty) x ctx in
+      match P.is_const px, literal_exponent y with
+      | None, Some n -> (
+        (* [x ** n] is the product [x^n], not distributed if [x] is a sum. *)
+        try
+          ( P.add p
+              (P.mult_const coef (undistributed_product ty [is_mine px, n])),
+            ctx )
+        with Exit ->
+          ( mk_partial_interpretation_2
+              (fun x y -> calc_power x y ty)
+              coef p ty t x y,
+            ctx ))
+      | _ ->
+        ( mk_partial_interpretation_2
+            (fun x y -> calc_power x y ty)
+            coef p ty t x y,
+          ctx ))
     | Sy.Op Sy.Pow, [x; y] ->
       ( mk_partial_interpretation_2
           (fun x y -> calc_power x y ty)
@@ -399,9 +470,19 @@ struct
         match X.ac_extract x with Some ac -> kind ac | _ -> false)
       (fst (P.to_list p))
 
+  (* Number of non-constant factors of a product, with multiplicity. *)
+  let degree l =
+    List.fold_left
+      (fun acc (r, n) ->
+        if Option.is_none (P.is_const (embed r)) then acc + n else acc)
+      0 l
+
   let color ac =
     match ac.Sig.l with
     | [(_, 1)] -> assert false
+    | l when (not ac.distribute) && degree l >= 2 -> (
+      (* Not distributed and non-linear: do not compute the expansion. *)
+      try is_mine (undistributed_product ac.t l) with Exit -> X.ac_embed ac)
     | _ ->
       let p = unsafe_ac_to_arith ac in
       if not ac.distribute

@@ -1,0 +1,3 @@
+logic x, y, a : real
+
+goal pow_root_of_sum: x = a + y -> x **. 4. <= 16. -> a + y <= 2.
