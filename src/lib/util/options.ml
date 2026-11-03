@@ -528,6 +528,8 @@ let get_timelimit_per_goal () = !timelimit_per_goal
 
 let produce_models = ref false
 
+let produce_unsat_cores = ref false
+
 let strict_mode = ref false
 
 let dump_models = ref false
@@ -543,6 +545,8 @@ let infer_output_format = ref true
 let unsat_core = ref false
 
 let set_produce_models b = produce_models := b
+
+let set_produce_unsat_cores b = produce_unsat_cores := b
 
 let set_strict_mode b = strict_mode := b
 
@@ -584,6 +588,8 @@ let get_model_type_constraints () = equal_mode_type !model_type Constraints
 let get_infer_output_format () = !infer_output_format
 
 let get_unsat_core () = !unsat_core || !save_used_context || !debug_unsat_core
+
+let get_produce_unsat_cores () = !produce_unsat_cores || get_unsat_core ()
 
 (** Profiling options *)
 

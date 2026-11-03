@@ -29,7 +29,12 @@
 
 type sat_decl_aux =
   | Decl of Id.typed
-  | Assume of string * Expr.t * bool
+  | Assume of
+      { name : string;
+        expr : Expr.t;
+        mf : bool;
+        label : string option
+      }
   | PredDef of Expr.t * string (*name of the predicate*)
   | Optimize of Objective.Function.t
   | Query of string * Expr.t * Ty.goal_sort
