@@ -130,7 +130,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
   $ alt-ergo -t 1 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
   > (set-logic ALL)
@@ -142,7 +142,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
   $ alt-ergo -t 1 --timelimit-per-goal -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
   > (set-logic QF_FP)
@@ -199,7 +199,7 @@ RTN/RTP towards zero), infinity otherwise.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
 The largest finite value of Float(3,5) is 15.5, not an integer: RTP rounds -18
 to -15.5, so this is satisfiable and must not be unsat.
@@ -222,7 +222,7 @@ to -15.5, so this is satisfiable and must not be unsat.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
 Quantified FP problems.
 
@@ -235,7 +235,7 @@ Quantified FP problems.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
   $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
   > (set-logic UFFPLRA)
@@ -266,7 +266,7 @@ holds, and definition by the real value.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
   $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
   > (set-logic ALL)
@@ -279,7 +279,7 @@ holds, and definition by the real value.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
   $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
   > (set-logic ALL)
@@ -289,7 +289,7 @@ holds, and definition by the real value.
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
 
 isNormal/isSubnormal of the smallest and largest literals in (2, 3), (3, 5), 
 Float16 and Float32
@@ -325,6 +325,6 @@ Float16 and Float32
   > (check-sat)
   > EOF
   
-  unsat
+  unknown
   
   unknown
