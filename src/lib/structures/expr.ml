@@ -3134,18 +3134,18 @@ module FP = struct
       invalid_arg
         "fp applications are currently only supported for bitvector literals"
 
-  let fp sign_t exp_t sig_t e s =
+  let fp sign_t exp_t sig_t eb sb =
     let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
     let biased_exp = z_to_int (bv_literal_to_z exp_t) in
     let mantissa = bv_literal_to_z sig_t in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb) eb sb
 
-  let ieee_format_to_fp bv_t e s =
+  let ieee_format_to_fp bv_t eb sb =
     let bv_z = bv_literal_to_z bv_t in
-    let mantissa = Z.extract bv_z 0 (s - 1) in
-    let biased_exp = z_to_int (Z.extract bv_z (s - 1) e) in
-    let neg = Z.testbit bv_z (e + s - 1) in
-    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa e) e s
+    let mantissa = Z.extract bv_z 0 (sb - 1) in
+    let biased_exp = z_to_int (Z.extract bv_z (sb - 1) eb) in
+    let neg = Z.testbit bv_z (eb + sb - 1) in
+    float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb) eb sb
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality
