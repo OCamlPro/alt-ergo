@@ -53,6 +53,7 @@ let hex_of_q q =
   let sign = if Q.sign q < 0 then "-" else "" in
   let num = Z.abs (Q.num q) in
   let k = Z.numbits (Q.den q) - 1 in
+  assert (Z.equal (Q.den q) (Z.shift_left Z.one k));
   Fmt.str "%s0x%sp-%d" sign (Z.format "%x" num) k
 
 let pp ppf = function
@@ -76,8 +77,7 @@ let q_to_bvs eb sb q =
   let neg = Q.sign q < 0 in
   (* (r, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
   let r, m, e =
-    Fpa_rounding.float_of_rational sb min_exp
-      Dolmen.Std.Builtin.Float.RoundNearestTiesToEven (Q.abs q)
+    Fpa_rounding.float_of_rational sb min_exp RoundNearestTiesToEven (Q.abs q)
   in
   (* q is decoded from a float literal, so assert that rounding is exact which
      means that m < 2^sb. *)
