@@ -470,7 +470,7 @@ let mk_limit_opt age_bound fm_cross_limit timelimit_interpretation steps_bound
     `Ok Solving_loop.{ reproducible_resource_limit }
 
 let mk_output_opt produce_models objectives_in_interpretation unsat_core
-    output_format model_type () () () () =
+    output_format model_type () () () () () =
   set_infer_output_format (Option.is_none output_format);
   let output_format =
     match output_format with None -> Native | Some fmt -> fmt
@@ -1162,11 +1162,19 @@ let parse_output_opt =
     Term.(const Output.set_dump_models $ dump_models_on)
   in
   let set_frontend = Term.(const ignore $ frontend) in
+  let set_produce_unsat_cores =
+    let produce_unsat_cores =
+      let doc = "Enable unsat core generation." in
+      Arg.(value & flag & info ["produce-unsat-cores"] ~doc ~docs:s_output)
+    in
+    Term.(const Options.set_produce_unsat_cores $ produce_unsat_cores)
+  in
   Term.(
     ret
       (const mk_output_opt $ interpretation $ objectives_in_interpretation
      $ unsat_core $ output_format $ model_type $ set_dump_models
-     $ set_dump_models_on $ set_sat_options $ set_frontend))
+     $ set_dump_models_on $ set_sat_options $ set_frontend
+     $ set_produce_unsat_cores))
 
 let parse_profiling_opt =
   let docs = s_profiling in

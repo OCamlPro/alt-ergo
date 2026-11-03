@@ -33,7 +33,12 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type sat_decl_aux =
   | Decl of Id.typed
-  | Assume of string * Expr.t * bool
+  | Assume of
+      { name : string;
+        expr : Expr.t;
+        mf : bool;
+        label : string option
+      }
   | PredDef of Expr.t * string (*name of the predicate*)
   | Optimize of Objective.Function.t
   | Query of string * Expr.t * Ty.goal_sort
@@ -51,7 +56,7 @@ let print_aux fmt = function
     Fmt.pf fmt "declare %a with type (%a) -> %a" Id.pp id
       Fmt.(list ~sep:comma Ty.print)
       arg_tys Ty.print ret_ty
-  | Assume (name, e, b) ->
+  | Assume { name; expr = e; mf = b; label = _ } ->
     Format.fprintf fmt "assume %s(%b): @[<hov>%a@]" name b Expr.print e
   | PredDef (e, name) ->
     Format.fprintf fmt "pred-def %s: @[<hov>%a@]" name Expr.print e
