@@ -16,9 +16,9 @@ env:
   OPAMYES: true
 
 jobs:
-  check_indentation:
+  check_formatting:
     # Check that all `.ml` and `.mli` files are formatted with ocamlformat
-    name: Check indentation
+    name: Check formatting
 
     runs-on: ubuntu-latest
 
