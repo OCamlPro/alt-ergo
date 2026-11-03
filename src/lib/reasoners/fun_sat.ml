@@ -157,7 +157,7 @@ module Make (Th : Theory.S) = struct
 
   exception Sat of t
 
-  exception Unsat of Explanation.t
+  exception Unsat of Expr.Labeled.Set.t
 
   exception I_dont_know of t
 
@@ -1443,13 +1443,13 @@ module Make (Th : Theory.S) = struct
       let env, _ = semantic_th_inst env env.inst ~rm_clauses:true ~loop:4 in
       let d = back_tracking env in
       assert (Ex.has_no_bj d);
-      d
+      Ex.to_unsat_core d
     with
     | IUnsat (dep, classes) ->
       Debug.bottom classes;
       Debug.unsat ();
       assert (Ex.has_no_bj dep);
-      dep
+      Ex.to_unsat_core dep
     | Util.Timeout -> model_gen_on_timeout env
     | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
 
@@ -1458,10 +1458,10 @@ module Make (Th : Theory.S) = struct
     { gf with E.ff = E.mk_imp current_guard gf.E.ff }
 
   let assume env fg dep =
-    try assume env [add_guard env fg, dep] with
+    try assume env [add_guard env fg, Ex.from_assumptions dep] with
     | IUnsat (d, classes) ->
       Debug.bottom classes;
-      raise (Unsat d)
+      raise (Unsat (Ex.to_unsat_core d))
     | Util.Timeout ->
       (* don't attempt to compute a model if timeout before calling unsat
          function *)
@@ -1475,7 +1475,10 @@ module Make (Th : Theory.S) = struct
     Debug.pred_def f;
     let gf = mk_gf f name true false in
     let guard = env.guards.current_guard in
-    { env with inst = Inst.add_predicate env.inst ~guard ~name gf dep }
+    { env with
+      inst =
+        Inst.add_predicate env.inst ~guard ~name gf (Ex.from_assumptions dep)
+    }
 
   let unsat env fg =
     Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () -> unsat env fg
@@ -1531,11 +1534,13 @@ module Make (Th : Theory.S) = struct
         declare_tail = Stack.create ()
       }
     in
-    assume env gf_true Ex.empty
+    assume env gf_true Expr.Labeled.Set.empty
   (*maybe usefull when -no-theory is on*)
 
   let assume_th_elt env th_elt dep =
-    { env with tbox = Th.assume_th_elt env.tbox th_elt dep }
+    { env with
+      tbox = Th.assume_th_elt env.tbox th_elt (Ex.from_assumptions dep)
+    }
 
   (** returns the latest model stored in the env if any *)
   let get_model env = Option.map Lazy.force !(env.last_saved_model)

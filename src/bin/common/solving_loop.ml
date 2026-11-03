@@ -192,7 +192,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         Printer.print_dbg ~module_name:"Solving_loop"
           ~function_name:"check_produced_unsat_core"
           "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
-          (Explanation.print_unsat_core ~tab:false)
+          Fmt.(iter Expr.Labeled.Set.iter (box Expr.Labeled.print) |> vbox)
           expl;
       let used_context = Frontend.unsat_core_used_context expl in
       (* Replay should not take more steps than the initial proof, but we allow

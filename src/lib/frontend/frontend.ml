@@ -38,7 +38,7 @@ let unused_context name context =
   match context with None -> false | Some s -> not (Util.SS.mem name s)
 
 type status =
-  | Unsat of Commands.sat_tdecl * Ex.t
+  | Unsat of Commands.sat_tdecl * Expr.Labeled.Set.t
   | Inconsistent of Commands.sat_tdecl
   | Sat of Commands.sat_tdecl
   | Unknown of Commands.sat_tdecl
@@ -86,7 +86,8 @@ let print_status status steps =
       Printer.print_fmt
         (Options.Output.get_fmt_regular ())
         "unsat-core:@,%a@."
-        (Ex.print_unsat_core ~tab:true)
+        Fmt.(
+          iter E.Labeled.Set.iter (box (any "  " ++ E.Labeled.print)) |> vbox)
         dep;
     check_status_consistency status
   | Inconsistent d ->
@@ -116,7 +117,7 @@ module type S = sig
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat of Ex.t ]
+    | `Unsat of E.Labeled.Set.t ]
 
   type env = private
     { used_context : used_context;
@@ -151,10 +152,9 @@ end
 
 let unsat_core_used_context expl =
   Some
-    (List.fold_left
-       (fun s r -> Util.SS.add r.Explanation.name s)
-       Util.SS.empty
-       (Explanation.get_unsat_core expl))
+    (Expr.Labeled.Set.fold
+       (fun r s -> Util.SS.add r.E.Labeled.name s)
+       expl Util.SS.empty)
 
 let init_with_replay_used acc f =
   assert (Sys.file_exists f);
@@ -206,7 +206,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat of Ex.t ]
+    | `Unsat of E.Labeled.Set.t ]
 
   type env =
     { used_context : used_context;
@@ -228,13 +228,15 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     let f = Options.get_used_context_file () in
     let cout = open_out (sprintf "%s.%s.used" f g_name) in
     let cfmt = Format.formatter_of_out_channel cout in
-    Ex.print_unsat_core cfmt dep;
+    Fmt.vbox
+      (Fmt.iter ~sep:Fmt.sp Expr.Labeled.Set.iter (Fmt.box Expr.Labeled.print))
+      cfmt dep;
     close_out cout
 
   let mk_root_dep name f loc =
     if Options.get_unsat_core ()
-    then Ex.singleton (Ex.RootDep { name; f; loc })
-    else Ex.empty
+    then E.Labeled.Set.singleton { name; f; loc }
+    else E.Labeled.Set.empty
 
   let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
     ignore loc;
@@ -264,7 +266,9 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     let is_hyp = try Char.equal '@' name.[0] with _ -> false in
     if is_hyp || not (unused_context name env.used_context)
     then
-      let expl = if is_hyp then Ex.empty else mk_root_dep name f loc in
+      let expl =
+        if is_hyp then E.Labeled.Set.empty else mk_root_dep name f loc
+      in
       match env.res with
       | `Sat | `Unknown ->
         SAT.assume env.sat_env
