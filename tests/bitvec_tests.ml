@@ -128,7 +128,7 @@ let intervals sz =
       let* i2 = intervals (n - 1) in
       return @@ Intervals.Int.union_set i1 i2
   in
-  small_nat >>= intervals >|= Intervals.Int.of_set_nonempty
+  nat_small >>= intervals >|= Intervals.Int.of_set_nonempty
 
 (* Generator for a bitlist *)
 let bitlist sz =

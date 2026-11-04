@@ -28,7 +28,7 @@ depends: [
   "stdlib-shims"
   "camlzip" {>= "1.07"}
   "odoc" {with-doc}
-  "qcheck" {with-test & = "0.25"}
+  "qcheck" {with-test & = "0.91"}
 ]
 conflicts: [
   "result" {< "1.5"}

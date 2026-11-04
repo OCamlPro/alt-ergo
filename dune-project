@@ -97,7 +97,7 @@ See more details on http://alt-ergo.ocamlpro.com/"
   stdlib-shims
   (camlzip (>= 1.07))
   (odoc :with-doc)
-  (qcheck (and :with-test (= 0.25)))
+  (qcheck (and :with-test (= 0.91)))
  )
  (conflicts
   (result (< 1.5))
