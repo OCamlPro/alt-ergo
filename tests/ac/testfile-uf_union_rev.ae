@@ -1,0 +1,16 @@
+logic ac f : int, int -> int
+logic x1, x2, x3, x4, c : int
+logic u : int -> int
+
+(* [x2 = x1] is solved as substitution [x1 |-> x2], which when applied
+   transforms AC rule [f(x1, x3) -> x1] into [f(x2, x3) -> x2]. In turn, this
+   is collapsed with [f(x2, x3) -> x4] to produce [x2 = x4], solved as
+   substitution [x2 |-> x4].
+
+   We must process [x1 |-> x2] before processing [x2 |-> x4] (in the same order
+   that they have been produced), otherwise the uses of [x1] get moved to [x2]
+   after [x2] is no longer canonical and they are effectively lost: congruence
+   closure fails to prove [u(x1) = u(x4)]. *)
+goal g :
+  f(x2, x3) = x4 -> u(x1) = c -> f(x1, x3) = x1 -> x2 = x1 ->
+  c = u(x4)

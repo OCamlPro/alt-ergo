@@ -665,7 +665,7 @@ module Env = struct
            else MapX.add rp MapL.empty env.neqs)
       }
     in
-    init_new_ac_leaves env mkr, ctx
+    init_new_ac_leaves env rp, ctx
 
   let head_cp eqs env pac ({ Sig.h; _ } as ac) v dep =
     try
@@ -884,7 +884,7 @@ let union env r1 r2 dep =
   Queue.push (r1, r2, dep) equations;
   let env, res = ac_x equations env [] in
   Debug.check_invariants "union" env;
-  env, res
+  env, List.rev res
 
 let union env r1 r2 dep =
   Timers.with_timer Timers.M_UF Timers.F_union @@ fun () -> union env r1 r2 dep
