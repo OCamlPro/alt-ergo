@@ -5,6 +5,9 @@
  - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
    that enables the support for the SMT-LIB FPA Theory, and that can be used
    with the cmdline option `--enable-theory smt.float` (#1358)
+ - Add the opam package `alt-ergo-smt-float-plugin`, which installs an
+   axiomatization of the SMT-LIB FPA Theory derived from Why3 and distributed
+   under its license (#1371)
 
  - Added support for the `:reproducible-resource-limit` and
    `--reproducible-resource-limit` options, following the SMT-LIB standard
