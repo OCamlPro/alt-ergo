@@ -1603,12 +1603,31 @@ let make file acc stmt =
     (* Axiom definitions *)
     | { id = DStd.Id.{ name = Simple name; _ }; contents = `Hyp t; attrs; _ } ->
       let name =
+        (* The custom [:lemma] attribute overrides Dolmen's default identifier,
+           which is inferred as [hyp_N] in smt-lib format. *)
         match DStd.Tag.get t.term_tags lemma_name_attr with
         | Some n -> n
-        | None -> (
-          match DStd.Tag.get t.term_tags DE.Tags.named with
-          | Some n -> n
-          | None -> name)
+        | None -> name
+      in
+      let name =
+        (* Upon seeing a term [(! t :named n)], Dolmen translates this to a
+           definition [(define-fun n () Bool f)], processed as a `Defs`
+           statement, and we only see [(assert n)].
+
+           Dolmen leaves a [named] tag on the _constant_, not on the term (and
+           the content of the tag is an empty string, so we need the constant to
+           figure out the name anyways). *)
+        match t.term_descr with
+        | DE.Cst
+            { id_ty = _;
+              index = _;
+              path = Local { name } | Absolute { name; path = [] };
+              builtin = B.Base;
+              tags
+            }
+          when Option.is_some (DStd.Tag.get tags DE.Tags.named) ->
+          name
+        | _ -> name
       in
       (* Dolmen adds information about theory extensions and case splits in the
          [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
