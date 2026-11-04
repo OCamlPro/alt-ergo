@@ -119,6 +119,9 @@ type t =
     new_uf : Uf.t;
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
+    floats : (E.t * E.t * E.t * E.t) ME.t;
+    (* The terms [float(prec, exp, mode, x)], with their arguments ([i] instead
+       of [x] if [x] is [real_of_int(i)]). *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
   }
@@ -706,6 +709,7 @@ let empty uf =
       int_sim = Sim.Solve.solve (Sim.Core.empty ~is_int:true ~check_invs:false);
       th_axioms = ME.empty;
       linear_dep = ME.empty;
+      floats = ME.empty;
       syntactic_matching = []
     },
     Uf.domains uf )
@@ -1499,6 +1503,86 @@ let equalities_from_intervals env eqs =
   let env, eqs = equalities_from_polynomes env eqs in
   equalities_from_monomes env eqs
 
+let interval_of env r =
+  match P.is_const (poly_of r) with
+  | Some c -> I.point c (X.type_info r) Ex.empty
+  | None ->
+    let i, _, _ = generic_find r env in
+    i
+
+(* The values of the parameters of [float(prec, exp, mode, x)], with their
+   explanation, once they are known to be literals. *)
+let float_params env prec exp mode =
+  let int_param t =
+    let r, ex = Uf.find env.new_uf t in
+    match P.is_const (poly_of r) with
+    | Some q when Q.is_int q ->
+      Option.map (fun n -> n, ex) (Z.to_machine_int (Q.to_z q))
+    | _ -> None
+  in
+  let rm, ex_m = Uf.find env.new_uf mode in
+  match int_param prec, int_param exp, X.to_model_term rm with
+  | Some (prec, ex_p), Some (exp, ex_e), Some m ->
+    let mode = E.rounding_mode_view m in
+    Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
+  | _ -> None
+
+(* Narrows the interval of the argument [x] of each [float] term to the preimage
+   of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
+   Once [x] is a constant, the term is set to its value and removed, as there is
+   nothing left to propagate. *)
+let update_floats env =
+  ME.fold
+    (fun t (prec, exp, mode, x) env ->
+      let rx, ex_x = Uf.find env.new_uf x in
+      let p = poly_of rx in
+      match P.is_const p with
+      | Some c -> (
+        match float_params env prec exp mode with
+        | None -> env
+        | Some (prec, exp, mode, ex_p) ->
+          let rt, ex_t = Uf.find env.new_uf t in
+          let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
+          let v = I.point (Fpa_rounding.round prec exp mode c) Ty.Treal ex in
+          let env = { env with floats = ME.remove t env.floats } in
+          if is_alien rt
+          then
+            let it, use_t =
+              try MX.n_find rt env.monomes
+              with Not_found -> I.undefined Ty.Treal, SX.empty
+            in
+            MX.n_add rt (I.intersect it v, use_t) it env
+          else env)
+      | None -> (
+        match float_params env prec exp mode with
+        | None -> env
+        | Some (prec, exp, mode, ex_p) ->
+          let rt, ex_t = Uf.find env.new_uf t in
+          let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
+          let pre =
+            I.add_explanation (interval_of env rt) ex
+            |> I.float_preimage ~prec ~exp mode
+            |> I.coerce (X.type_info rx)
+          in
+          if is_alien rx
+          then
+            let ix, use_x =
+              try MX.n_find rx env.monomes
+              with Not_found -> I.undefined (X.type_info rx), SX.empty
+            in
+            MX.n_add rx (I.intersect ix pre, use_x) ix env
+          else
+            (* p = (np + c) * d *)
+            let np, c, d = P.normal_form_pos p in
+            let pre = I.affine_scale ~const:(Q.minus c) ~coef:(Q.inv d) pre in
+            let ip =
+              try MP.n_find np env.polynomes
+              with Not_found -> I.undefined (X.type_info rx)
+            in
+            let i = I.intersect ip pre in
+            update_monomes_from_poly np i (MP.n_add np i ip env)))
+    env.floats env
+
 let count_splits env la =
   let nb =
     List.fold_left
@@ -1558,6 +1642,7 @@ let rec loop_update_intervals are_eq env cpt =
   let cpt = cpt + 1 in
   let env = { env with improved_p = SP.empty; improved_x = SX.empty } in
   let env = update_non_lin_monomes_intervals are_eq env in
+  let env = update_floats env in
   let env = Sim_Wrap.solve env 1 in
   let env = update_polynomes_intervals env in
   let env = Sim_Wrap.solve env 1 in
@@ -1778,6 +1863,17 @@ let add =
     Debug.env env;
     try
       let env = { env with new_uf } in
+      let env =
+        match E.term_view t with
+        | { f = Sy.Op Sy.Float; xs = [prec; exp; mode; x]; _ } ->
+          let x =
+            match E.term_view x with
+            | { f = Op Real_of_int; xs = [x]; _ } -> x
+            | _ -> x
+          in
+          { env with floats = ME.add t (prec, exp, mode, x) env.floats }
+        | _ -> env
+      in
       let p = poly_of r in
       Debug.add p;
       if is_num r

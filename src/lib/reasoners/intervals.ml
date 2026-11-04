@@ -568,7 +568,88 @@ end)
 
 type 'a union = 'a Core.union
 
-module Real = AlgebraicField (Core) (QAlgebraicType)
+module Real = struct
+  include AlgebraicField (Core) (QAlgebraicType)
+
+  (* The smallest [x] such that [float(prec, exp, mode, x) >= b]. *)
+  let float_preimage_lb ~prec ~exp (mode : Fpa_rounding.rounding_mode)
+      (b : QAlgebraicType.t) =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      (* The smallest float allowed by [b], and the float just below it. *)
+      let lowest_float, prev_float =
+        let f = Fpa_rounding.round prec exp RoundTowardPositive v in
+        match k with
+        | Gt when Q.equal f v -> Fpa_rounding.succ prec exp f, f
+        | Lt | Eq | Gt -> f, Fpa_rounding.pred prec exp f
+      in
+      (* Rounding is increasing, so any [x <= prev_float] rounds to at most
+         [prev_float], and any [x >= lowest_float] to at least [lowest_float].
+         The mode decides where the [x] in between go. *)
+      match mode with
+      | RoundTowardNegative -> Finite (Eq, lowest_float)
+      | RoundTowardPositive -> Finite (Gt, prev_float)
+      | RoundTowardZero ->
+        if Q.sign lowest_float > 0
+        then Finite (Eq, lowest_float)
+        else Finite (Gt, prev_float)
+      | RoundNearestTiesToEven | RoundNearestTiesToAway ->
+        (* [x] rounds to the nearer of [prev_float] and [lowest_float], so
+           [float(prec, exp, mode, x) >= b] for the [x] above their midpoint.
+           The midpoint itself is included only if it rounds to
+           [lowest_float]. *)
+        let mid = Q.div (Q.add prev_float lowest_float) (Q.of_int 2) in
+        let k : QAlgebraicType.kind =
+          if Q.equal (Fpa_rounding.round prec exp mode mid) lowest_float
+          then Eq
+          else Gt
+        in
+        Finite (k, mid))
+
+  (* The largest [x] such that [float(prec, exp, mode, x) <= b]. *)
+  let float_preimage_ub ~prec ~exp (mode : Fpa_rounding.rounding_mode)
+      (b : QAlgebraicType.t) =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite (k, v) -> (
+      (* The largest float allowed by [b], and the float just above it. *)
+      let highest_float, next_float =
+        let f = Fpa_rounding.round prec exp RoundTowardNegative v in
+        match k with
+        | Lt when Q.equal f v -> Fpa_rounding.pred prec exp f, f
+        | Lt | Eq | Gt -> f, Fpa_rounding.succ prec exp f
+      in
+      (* Rounding is increasing, so any [x >= next_float] rounds to at least
+         [next_float], and any [x <= highest_float] to at most [highest_float].
+         The mode decides where the [x] in between go. *)
+      match mode with
+      | RoundTowardPositive -> Finite (Eq, highest_float)
+      | RoundTowardNegative -> Finite (Lt, next_float)
+      | RoundTowardZero ->
+        if Q.sign highest_float < 0
+        then Finite (Eq, highest_float)
+        else Finite (Lt, next_float)
+      | RoundNearestTiesToEven | RoundNearestTiesToAway ->
+        (* [x] rounds to the nearer of [highest_float] and [next_float], so
+           [float(prec, exp, mode, x) <= b] for the [x] below their midpoint.
+           The midpoint itself is included only if it rounds to
+           [highest_float]. *)
+        let mid = Q.div (Q.add highest_float next_float) (Q.of_int 2) in
+        let k : QAlgebraicType.kind =
+          if Q.equal (Fpa_rounding.round prec exp mode mid) highest_float
+          then Eq
+          else Lt
+        in
+        Finite (k, mid))
+
+  let float_preimage ~prec ~exp mode u =
+    of_set_checked
+    @@ approx_map_inc_to_set
+         (float_preimage_lb ~prec ~exp mode)
+         (float_preimage_ub ~prec ~exp mode)
+         u
+end
 
 module Int = struct
   include EuclideanRing (Core) (ZEuclideanType)
@@ -815,6 +896,10 @@ module Legacy = struct
   let root n = function
     | Real u -> of_real @@ check @@ Real.root n u
     | Int _ -> invalid_arg "root: cannot take integral root"
+
+  let float_preimage ~prec ~exp mode = function
+    | Real u -> of_real @@ check @@ Real.float_preimage ~prec ~exp mode u
+    | Int _ -> invalid_arg "float_preimage"
 
   let add = map2 "add" Real.add Int.add
 
