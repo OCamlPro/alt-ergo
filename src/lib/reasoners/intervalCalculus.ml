@@ -1660,9 +1660,10 @@ let float_params env prec exp mode =
   in
   let rm, ex_m = Uf.find env.new_uf mode in
   match int_param prec, int_param exp, X.to_model_term rm with
-  | Some (prec, ex_p), Some (exp, ex_e), Some m ->
-    let mode = E.rounding_mode_view m in
-    Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
+  | Some (prec, ex_p), Some (exp, ex_e), Some m -> (
+    match E.rounding_mode_view m with
+    | Some mode -> Some (prec, exp, mode, Ex.union ex_p (Ex.union ex_e ex_m))
+    | None -> None)
   | _ -> None
 
 (* Narrows the interval of the argument [x] of each [float] term to the preimage
