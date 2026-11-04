@@ -1615,7 +1615,7 @@ let make file acc stmt =
            statement, and we only see [(assert n)].
 
            Dolmen leaves a [named] tag on the _constant_, not on the term (and
-           the content of the tag is an empty string, so we need to constant to
+           the content of the tag is an empty string, so we need the constant to
            figure out the name anyways). *)
         match t.term_descr with
         | DE.Cst
