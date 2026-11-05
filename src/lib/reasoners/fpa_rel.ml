@@ -23,7 +23,6 @@ module Ex = Explanation
 module Q = Numbers.Q
 module Z = Numbers.Z
 module MX = Shostak.MXH
-module SX = Shostak.SXH
 module Names = E.FP.Names
 
 let src = Logs.Src.create ~doc:"Fpa_rel" __MODULE__
@@ -50,293 +49,6 @@ type precision_literals =
     abs_err_rne_denom : Z.t;
     abs_err_denom : Z.t
   }
-
-let is_fpa_ty = function Ty.Tfloat _ -> true | _ -> false
-
-module Domain = struct
-  (* Status of a predicate for a given FP value *)
-  type status =
-    | Unknown
-    | True of Ex.t
-    | False of Ex.t
-
-  exception Inconsistent of Ex.t
-
-  (* Domain representing the status of each predicate for a given FP value *)
-  type t =
-    { is_nan : status;
-      is_zero : status;
-      is_infinite : status;
-      is_positive : status;
-      is_negative : status;
-      is_normal : status;
-      is_subnormal : status
-    }
-
-  let unknown =
-    { is_nan = Unknown;
-      is_zero = Unknown;
-      is_infinite = Unknown;
-      is_positive = Unknown;
-      is_negative = Unknown;
-      is_normal = Unknown;
-      is_subnormal = Unknown
-    }
-
-  let pp_status ppf = function
-    | Unknown -> Fmt.pf ppf "?"
-    | True _ -> Fmt.pf ppf "T"
-    | False _ -> Fmt.pf ppf "F"
-
-  let pp ppf d =
-    Fmt.pf ppf "{nan=%a zero=%a inf=%a pos=%a neg=%a normal=%a subnormal=%a}"
-      pp_status d.is_nan pp_status d.is_zero pp_status d.is_infinite pp_status
-      d.is_positive pp_status d.is_negative pp_status d.is_normal pp_status
-      d.is_subnormal
-
-  let status_equal ts1 ts2 =
-    match ts1, ts2 with
-    | Unknown, Unknown | True _, True _ | False _, False _ -> true
-    | _ -> false
-
-  let equal d1 d2 =
-    status_equal d1.is_nan d2.is_nan
-    && status_equal d1.is_zero d2.is_zero
-    && status_equal d1.is_infinite d2.is_infinite
-    && status_equal d1.is_positive d2.is_positive
-    && status_equal d1.is_negative d2.is_negative
-    && status_equal d1.is_normal d2.is_normal
-    && status_equal d1.is_subnormal d2.is_subnormal
-
-  let merge_status st1 st2 =
-    match st1, st2 with
-    | Unknown, st | st, Unknown -> st
-    | True ex1, True ex2 -> True (Ex.union ex1 ex2)
-    | False ex1, False ex2 -> False (Ex.union ex1 ex2)
-    | True ex1, False ex2 | False ex2, True ex1 ->
-      if Options.get_debug_fpa () > 0
-      then
-        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"merge_status"
-          "conflict: %a and %a" pp_status (True ex1) pp_status (False ex2);
-      raise (Inconsistent (Ex.union ex1 ex2))
-
-  type pred =
-    | Nan
-    | Zero
-    | Infinite
-    | Positive
-    | Negative
-    | Normal
-    | Subnormal
-
-  let pp_pred ppf = function
-    | Nan -> Fmt.string ppf "nan"
-    | Zero -> Fmt.string ppf "zero"
-    | Infinite -> Fmt.string ppf "infinite"
-    | Positive -> Fmt.string ppf "positive"
-    | Negative -> Fmt.string ppf "negative"
-    | Normal -> Fmt.string ppf "normal"
-    | Subnormal -> Fmt.string ppf "subnormal"
-
-  let get_pred_status p d =
-    match p with
-    | Nan -> d.is_nan
-    | Zero -> d.is_zero
-    | Infinite -> d.is_infinite
-    | Positive -> d.is_positive
-    | Negative -> d.is_negative
-    | Normal -> d.is_normal
-    | Subnormal -> d.is_subnormal
-
-  let upd_pred_status p st d =
-    let st = merge_status (get_pred_status p d) st in
-    match p with
-    | Nan -> { d with is_nan = st }
-    | Zero -> { d with is_zero = st }
-    | Infinite -> { d with is_infinite = st }
-    | Positive -> { d with is_positive = st }
-    | Negative -> { d with is_negative = st }
-    | Normal -> { d with is_normal = st }
-    | Subnormal -> { d with is_subnormal = st }
-
-  (* When [p] is true, the predicates in [exclusive_of p] must be false. *)
-  let exclusive_of = function
-    | Nan -> [Zero; Infinite; Positive; Negative; Normal; Subnormal]
-    | Zero -> [Nan; Infinite; Normal; Subnormal]
-    | Infinite -> [Nan; Zero; Normal; Subnormal]
-    | Positive -> [Nan; Negative]
-    | Negative -> [Nan; Positive]
-    | Normal -> [Nan; Zero; Infinite; Subnormal]
-    | Subnormal -> [Nan; Zero; Infinite; Normal]
-
-  let pred_of_name name =
-    if String.equal name Names.is_nan
-    then Some Nan
-    else if String.equal name Names.is_zero
-    then Some Zero
-    else if String.equal name Names.is_infinite
-    then Some Infinite
-    else if String.equal name Names.is_positive
-    then Some Positive
-    else if String.equal name Names.is_negative
-    then Some Negative
-    else if String.equal name Names.is_normal
-    then Some Normal
-    else if String.equal name Names.is_subnormal
-    then Some Subnormal
-    else None
-
-  let rec apply p ~ex ~is_true d =
-    if Options.get_debug_fpa () > 0
-    then
-      Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"apply"
-        "apply %a = %b to %a" pp_pred p is_true pp d;
-    let st = if is_true then True ex else False ex in
-    let d = upd_pred_status p st d in
-    let d =
-      (* if [p] became true, then the predicates in [exclusive_of p] are must be
-         false *)
-      match st with
-      | True _ ->
-        (* Because `ex` is the same as the `ex_st` in [True ex_st] *)
-        let neg_st = False ex in
-        List.fold_left
-          (fun d p -> upd_pred_status p neg_st d)
-          d (exclusive_of p)
-      | False _ -> d
-      | Unknown -> assert false
-    in
-    match d.is_nan, d.is_positive, d.is_negative with
-    | Unknown, False ex_p, False ex_n ->
-      (* not positive & not negative -> NaN *)
-      apply Nan ~ex:(Ex.union ex_p ex_n) ~is_true:true d
-    | False ex_nan, Unknown, False ex_n ->
-      (* not NaN & not negative -> positive *)
-      apply Positive ~ex:(Ex.union ex_nan ex_n) ~is_true:true d
-    | False ex_nan, False ex_p, Unknown ->
-      (* not NaN & not positive -> negative *)
-      apply Negative ~ex:(Ex.union ex_nan ex_p) ~is_true:true d
-    | _ -> (
-      (* A float is NaN, infinite, zero, normal or subnormal: if all the classes
-         except one are false, that one is true. *)
-      let classes = [Nan; Infinite; Zero; Normal; Subnormal] in
-      let unknown, ex =
-        List.fold_left
-          (fun (unknown, ex) p ->
-            match get_pred_status p d with
-            | Unknown -> p :: unknown, ex
-            | False ex' -> unknown, Ex.union ex ex'
-            | True _ -> p :: p :: unknown, ex)
-          ([], Ex.empty) classes
-      in
-      match unknown with [p] -> apply p ~ex ~is_true:true d | _ -> d)
-
-  let merge ~ex d1 d2 =
-    let apply_if_known p st d =
-      match st with
-      | Unknown -> d
-      | True ex2 -> apply p ~ex:(Ex.union ex ex2) ~is_true:true d
-      | False ex2 -> apply p ~ex:(Ex.union ex ex2) ~is_true:false d
-    in
-    apply_if_known Nan d2.is_nan d1
-    |> apply_if_known Zero d2.is_zero
-    |> apply_if_known Infinite d2.is_infinite
-    |> apply_if_known Positive d2.is_positive
-    |> apply_if_known Negative d2.is_negative
-    |> apply_if_known Normal d2.is_normal
-    |> apply_if_known Subnormal d2.is_subnormal
-
-  let set_pred p is_neg ex d = apply p ~ex ~is_true:(not is_neg) d
-
-  (* Deduce literal FP value equality from predicates *)
-  let deduce_fpval_eq d =
-    match d.is_nan with
-    | True ex -> Some (Fp_value.NaN, ex)
-    | _ -> (
-      match d.is_zero, d.is_infinite, d.is_positive, d.is_negative with
-      | True ex_z, _, True ex_p, _ ->
-        (* is_zero & is_positive -> = plus_zero *)
-        Some (Fp_value.Plus_zero, Ex.union ex_z ex_p)
-      | True ex_z, _, _, True ex_n ->
-        (* is_zero & is_negative -> = minus_zero *)
-        Some (Fp_value.Minus_zero, Ex.union ex_z ex_n)
-      | _, True ex_inf, True ex_p, _ ->
-        (* is_infinite & is_positive -> = plus_infinity *)
-        Some (Fp_value.Plus_infinity, Ex.union ex_inf ex_p)
-      | _, True ex_inf, _, True ex_n ->
-        (* is_infinite & is_negative -> = minus_infinity *)
-        Some (Fp_value.Minus_infinity, Ex.union ex_inf ex_n)
-      | _ -> None)
-end
-
-module Domains = struct
-  type t =
-    { domains : Domain.t MX.t;
-      changed : SX.t
-    }
-
-  type _ Uf.id += Id : t Uf.id
-
-  exception Inconsistent = Domain.Inconsistent
-
-  let empty = { domains = MX.empty; changed = SX.empty }
-
-  let filter_ty = is_fpa_ty
-
-  let pp ppf t =
-    Fmt.(
-      iter_bindings ~sep:semi MX.iter
-        (box @@ pair ~sep:(any " ->@ ") X.print Domain.pp)
-      |> braces)
-      ppf t.domains
-
-  let get r t =
-    match MX.find_opt r t.domains with Some d -> d | None -> Domain.unknown
-
-  let add_changed r d nd t =
-    if Domain.equal d nd
-    then t
-    else (
-      if Options.get_debug_fpa () > 0
-      then
-        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"add_changed"
-          "domain of %a: %a -> %a" X.print r Domain.pp d Domain.pp nd;
-      { domains = MX.add r nd t.domains; changed = SX.add r t.changed })
-
-  let new_pred r pred is_neg ex t =
-    let d = get r t in
-    let nd = Domain.set_pred pred is_neg ex d in
-    add_changed r d nd t
-
-  let init r t =
-    if MX.mem r t.domains then t else { t with changed = SX.add r t.changed }
-
-  let subst ~ex r nr t =
-    match MX.find_opt r t.domains with
-    | None ->
-      if Options.get_debug_fpa () > 0
-      then
-        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"subst"
-          "%a (no domain) -> %a" X.print r X.print nr;
-      t
-    | Some d ->
-      let nd = get nr t in
-      (* The statuses of [r] need [ex] to hold on [nr]. *)
-      let mergedd = Domain.merge ~ex nd d in
-      if Options.get_debug_fpa () > 0
-      then
-        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"subst"
-          "%a -> %a: %a merged with %a = %a" X.print r X.print nr Domain.pp d
-          Domain.pp nd Domain.pp mergedd;
-      let t =
-        { domains = MX.remove r t.domains; changed = SX.remove r t.changed }
-      in
-      add_changed nr nd mergedd t
-
-  let flush_changed_domains f acc t =
-    let acc = SX.fold (fun r acc -> f acc r (get r t)) t.changed acc in
-    acc, { t with changed = SX.empty }
-end
 
 module AEFloat_arg_watch = struct
   type args =
@@ -448,7 +160,6 @@ let empty uf =
       defs = E.Set.empty
     },
     Uf.domains uf
-    |> Uf.GlobalDomains.add (module Domains) Domains.empty
     |> Uf.GlobalDomains.add (module AEFloat_arg_watch) AEFloat_arg_watch.empty )
 
 let pow2 n = Z.shift_left Z.one n
@@ -567,52 +278,6 @@ let normal_literal_facts eb sb term v =
   [ mk_fact Names.is_normal (Fp_value.is_normal eb v);
     mk_fact Names.is_subnormal (Fp_value.is_subnormal eb v) ]
 
-let process_pred uf ex a domains =
-  match E.lit_view a with
-  | E.Pred (t, is_neg) -> (
-    let { E.f; xs; _ } = E.term_view t in
-    match xs with
-    | [_; _; x] when is_fpa_ty (E.type_info x) -> (
-      match f with
-      | Sy.Name { hs; _ } -> (
-        let name = Hstring.view hs in
-        match Domain.pred_of_name name with
-        | Some pred ->
-          let r, ex_r = Uf.find uf x in
-          let ex = Ex.union ex ex_r in
-          if Options.get_debug_fpa () > 0
-          then
-            Printer.print_dbg ~module_name:"Fpa_rel"
-              ~function_name:"process_pred" "%s(%a) = %b (repr %a)" name E.print
-              x (not is_neg) X.print r;
-          Domains.new_pred r pred is_neg ex domains
-        | None -> domains)
-      | _ -> domains)
-    | _ -> domains)
-  | _ -> domains
-
-let mk_eq_fpval_fact rr fp_val ex =
-  let eb, sb =
-    match X.type_info rr with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
-  in
-  let fp_r, _ = X.make (E.float fp_val eb sb) in
-  let eq = Shostak.L.(view @@ mk_eq rr fp_r) in
-  Literal.LSem eq, ex, Th_util.Other
-
-let flush_domain_facts domains =
-  Domains.flush_changed_domains
-    (fun acc rr d ->
-      match Domain.deduce_fpval_eq d with
-      | None -> acc
-      | Some (fp_val, ex) ->
-        if Options.get_debug_fpa () > 0
-        then
-          Printer.print_dbg ~module_name:"Fpa_rel"
-            ~function_name:"flush_domain_facts" "deduced: %a = %a" X.print rr
-            Fp_value.pp fp_val;
-        mk_eq_fpval_fact rr fp_val ex :: acc)
-    [] domains
-
 let register_aefloat_arg_watch uf term ds =
   match E.term_view term with
   | { E.f = Sy.Op FloatEbSb; xs = [eb; sb; mode; _x]; _ } ->
@@ -661,6 +326,44 @@ let normal_definition term (normal, eb, sb, x) =
   in
   E.mk_iff term body
 
+let mk_clause = function
+  | [] -> assert false
+  | l :: ls -> List.fold_left (fun acc l -> E.mk_or acc l false) l ls
+
+let class_clauses x =
+  let eb, sb =
+    match E.type_info x with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
+  in
+  let is_nan = E.FP.is_nan ~eb ~sb x in
+  let is_infinite = E.FP.is_infinite ~eb ~sb x in
+  let is_zero = E.FP.is_zero ~eb ~sb x in
+  let is_normal = E.FP.is_normal ~eb ~sb x in
+  let is_subnormal = E.FP.is_subnormal ~eb ~sb x in
+  let is_positive = E.FP.is_positive ~eb ~sb x in
+  let is_negative = E.FP.is_negative ~eb ~sb x in
+  let is v = E.mk_eq ~iff:false x (E.float v eb sb) in
+  let rec at_most_one = function
+    | [] -> []
+    | a :: l -> List.map (fun b -> [E.neg a; E.neg b]) l @ at_most_one l
+  in
+  let classes = [is_nan; is_infinite; is_zero; is_normal; is_subnormal] in
+  List.map mk_clause
+    ((classes :: at_most_one classes)
+    @ [ [is_nan; is_positive; is_negative];
+        [E.neg is_positive; E.neg is_negative];
+        [E.neg is_nan; E.neg is_positive];
+        [E.neg is_nan; E.neg is_negative];
+        [E.neg is_nan; is Fp_value.NaN];
+        [E.neg is_zero; E.neg is_positive; is Fp_value.Plus_zero];
+        [E.neg is_zero; E.neg is_negative; is Fp_value.Minus_zero];
+        [E.neg is_infinite; E.neg is_positive; is Fp_value.Plus_infinity];
+        [E.neg is_infinite; E.neg is_negative; is Fp_value.Minus_infinity] ])
+
+let definitions term =
+  match normal_pred term with
+  | Some p -> "fpa_normal_definition", [normal_definition term p]
+  | None -> "fpa_class_clauses", class_clauses term
+
 let add env uf _r term =
   if not (Options.get_smt_lib_fpa ())
   then env, Uf.domains uf, []
@@ -690,7 +393,7 @@ let add env uf _r term =
               @ normal_literal_facts eb sb term v
               @ env.pending_literals
           }
-        | _ -> env
+        | _ -> { env with defs = E.Set.add term env.defs }
       in
       env, Uf.domains uf, []
     | Ty.Treal ->
@@ -717,7 +420,7 @@ let mk_aefloat_eq_fact term (eb, sb, mode, ex) =
     repl, mk_eq_fact ~ex term repl
   | _ -> assert false
 
-let assume env uf la =
+let assume env uf _la =
   if not (Options.get_smt_lib_fpa ())
   then env, Uf.domains uf, { Sig_rel.assume = []; remove = [] }
   else
@@ -739,20 +442,6 @@ let assume env uf la =
         new_terms = E.Set.union new_terms env.new_terms
       }
     in
-    let domains = Uf.GlobalDomains.find (module Domains) ds in
-    let domains =
-      try
-        List.fold_left
-          (fun domains (_, root, ex, _) ->
-            match root with
-            | None -> domains
-            | Some a -> process_pred uf ex a domains)
-          domains la
-      with Domain.Inconsistent ex ->
-        raise_notrace (Ex.Inconsistent (ex, Uf.cl_extract uf))
-    in
-    let pred_facts, domains = flush_domain_facts domains in
-    let ds = Uf.GlobalDomains.add (module Domains) domains ds in
     let aefloat_arg_watch =
       Uf.GlobalDomains.find (module AEFloat_arg_watch) ds
     in
@@ -775,9 +464,8 @@ let assume env uf la =
     in
     ( env,
       ds,
-      { Sig_rel.assume = prec_facts @ eval_facts @ pred_facts @ aefloat_facts;
-        remove = []
-      } )
+      { Sig_rel.assume = prec_facts @ eval_facts @ aefloat_facts; remove = [] }
+    )
 
 let query _ _ _ = Th_util.Unknown
 
@@ -787,8 +475,8 @@ let optimizing_objective _env _uf _o = None
 
 let new_terms env = env.new_terms
 
-(* Instantiates the definitions of the applications of [is_normal] and
-   [is_subnormal]. *)
+(* Sends the lemmas of [defs] to the SAT solver: the definitions of [is_normal]
+   and [is_subnormal], and the class clauses of the floats. *)
 let instantiate ~do_syntactic_matching:_ _ env _uf selector =
   if not (Options.get_smt_lib_fpa ())
   then env, []
@@ -796,26 +484,29 @@ let instantiate ~do_syntactic_matching:_ _ env _uf selector =
     let insts =
       E.Set.fold
         (fun term acc ->
-          let ff = normal_definition term (Option.get (normal_pred term)) in
-          if selector ff ff
-          then
-            let gf =
-              { E.ff;
-                origin_name = "fpa_normal_definition";
-                trigger_depth = 0;
-                gdist = -1;
-                hdist = -1;
-                nb_reductions = 0;
-                age = 0;
-                mf = true;
-                gf = false;
-                lem = None;
-                from_terms = [term];
-                theory_elim = false
-              }
-            in
-            ([], gf, Ex.empty) :: acc
-          else acc)
+          let origin_name, ffs = definitions term in
+          List.fold_left
+            (fun acc ff ->
+              if selector ff ff
+              then
+                let gf =
+                  { E.ff;
+                    origin_name;
+                    trigger_depth = 0;
+                    gdist = -1;
+                    hdist = -1;
+                    nb_reductions = 0;
+                    age = 0;
+                    mf = true;
+                    gf = false;
+                    lem = None;
+                    from_terms = [term];
+                    theory_elim = false
+                  }
+                in
+                ([], gf, Ex.empty) :: acc
+              else acc)
+            acc ffs)
         env.defs []
     in
     env, insts
