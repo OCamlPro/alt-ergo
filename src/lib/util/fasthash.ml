@@ -25,6 +25,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* Algorithm and constants from https://github.com/ztanml/fast-hash/ *)
+
 type t = Int64.t
 
 let[@inline] init seed =
@@ -60,16 +62,13 @@ let[@inline] combine_list hash xs h =
   done;
   !h
 
-let finalize =
-  if Sys.word_size < 64
-  then
-    fun[@inline] h ->
-      (* Retain information from both lower and higher part of the hash on
-         32-bit platforms. *)
-      let h = mix h in
-      let h = Int64.sub h (Int64.shift_right_logical h 32) in
-      Int64.to_int h
-  else
-    fun[@inline] h ->
-      let h = mix h in
-      Int64.to_int h
+let[@inline] finalize h =
+  let h = mix h in
+  let h =
+    (* Retain information from both lower and higher part of the hash on 32-bit
+       platforms. *)
+    if Sys.word_size < 64
+    then Int64.sub h (Int64.shift_right_logical h 32)
+    else h
+  in
+  Int64.to_int h
