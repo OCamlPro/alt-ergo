@@ -82,28 +82,34 @@ let is_alien x =
   | Some (a, _, c) -> Q.equal a Q.one && Q.equal c Q.zero
   | _ -> false
 
-(* Domain associating the semantic values of powers [a ** n] with those of their
-   base [a] and the literal [n], to propagate intervals between them. Both are
-   kept as class representatives. *)
-module Pows = struct
-  type pow =
-    { base : X.r;
-      n : int;
-      ex : Ex.t  (** Justifies that the power is [base ** n]. *)
-    }
+(* The integer [n], if [q] is an integer [n >= 2]. *)
+let exponent q =
+  if Q.is_int q
+  then
+    match Z.to_machine_int (Q.to_z q) with
+    | Some n when n >= 2 -> Some n
+    | _ -> None
+  else None
 
-  type t = pow list MX0.t
+(* Domain associating the semantic values of powers [a ** b] with those of their
+   base [a] and of their exponent [b], to propagate intervals between [a ** b]
+   and [a] once [b] is a known integer. All are kept as class
+   representatives. *)
+module Pows = struct
+  (* Maps [a ** b] to [a] to [b], with an explanation of [a ** b] being the
+     power of [a] by [b]. *)
+  type t = (X.r * Ex.t) MX0.t MX0.t
 
   type _ Uf.id += Id : t Uf.id
 
   let pp ppf t =
-    let pp_pow ppf (pow, l) =
-      Fmt.(
-        list ~sep:comma (fun ppf { base; n; _ } ->
-            Fmt.pf ppf "%a = %a ** %d" X.print pow X.print base n))
-        ppf l
+    let pp_pow pow ppf (base, (exp, _)) =
+      Fmt.pf ppf "%a = %a ** %a" X.print pow X.print base X.print exp
     in
-    Fmt.(iter_bindings ~sep:semi MX0.iter pp_pow) ppf t
+    let pp_bases ppf (pow, m) =
+      Fmt.(iter_bindings ~sep:comma MX0.iter (pp_pow pow)) ppf m
+    in
+    Fmt.(iter_bindings ~sep:semi MX0.iter pp_bases) ppf t
 
   let empty = MX0.empty
 
@@ -113,38 +119,38 @@ module Pows = struct
 
   exception Inconsistent of Ex.t
 
-  let add_pow pow p t =
-    let l = try MX0.find pow t with Not_found -> [] in
-    if List.exists (fun { base; n; _ } -> X.equal base p.base && n = p.n) l
-    then t
-    else MX0.add pow (p :: l) t
+  (* Keeps the existing exponent if [pow] already has the base [base]. *)
+  let add_pow pow base exp t =
+    MX0.update pow
+      (fun m ->
+        let m = Option.value ~default:MX0.empty m in
+        Some (MX0.update base (function None -> Some exp | e -> e) m))
+      t
 
   let subst ~ex rr nrr t =
+    let subst_rr r = if X.equal r rr then nrr, ex else r, Ex.empty in
     MX0.fold
-      (fun pow l acc ->
-        let pow, ex_pow = if X.equal pow rr then nrr, ex else pow, Ex.empty in
-        List.fold_left
-          (fun acc p ->
-            let p =
-              if X.equal p.base rr
-              then { p with base = nrr; ex = Ex.union ex p.ex }
-              else p
+      (fun pow m acc ->
+        let pow, ex_pow = subst_rr pow in
+        MX0.fold
+          (fun base (exp, ex_e) acc ->
+            let base, ex_base = subst_rr base in
+            let exp, ex_exp = subst_rr exp in
+            let ex =
+              Ex.union ex_e (Ex.union ex_pow (Ex.union ex_base ex_exp))
             in
-            add_pow pow { p with ex = Ex.union ex_pow p.ex } acc)
-          acc l)
+            add_pow pow base (exp, ex) acc)
+          m acc)
       t MX0.empty
 
-  (* Registers [t], if it is [a ** n] with [n] an integer literal [>= 2]. *)
+  (* Registers [t], if it is a power [a ** b]. *)
   let add uf t pows =
     match E.term_view t with
-    | { f = Sy.Op Sy.Pow; xs = [a; b]; _ } -> begin
-      match Arith.literal_exponent b with
-      | Some n ->
-        let pow, ex_pow = Uf.find uf t in
-        let base, ex_base = Uf.find uf a in
-        add_pow pow { base; n; ex = Ex.union ex_pow ex_base } pows
-      | None -> pows
-    end
+    | { f = Sy.Op Sy.Pow; xs = [a; b]; _ } ->
+      let pow, ex_pow = Uf.find uf t in
+      let base, ex_base = Uf.find uf a in
+      let exp, ex_exp = Uf.find uf b in
+      add_pow pow base (exp, Ex.union ex_pow (Ex.union ex_base ex_exp)) pows
     | _ -> pows
 end
 
@@ -698,12 +704,16 @@ let calc_pow a b ty uf =
         else if Q.equal c_y Q.zero
         then alien_of (P.create [] Q.one ty)
         else
-          match P.is_const pa with
-          | Some c_x ->
+          match P.is_const pa, exponent c_y with
+          | Some c_x, _ ->
             (* x ** y *)
             let res = Arith.calc_power c_x c_y ty in
             alien_of (P.create [] res ty)
-          | None -> raise Exit
+          | None, Some n when not (Options.get_no_nla ()) ->
+            (* x ** n is the product x^n, not distributed if x is a sum. *)
+            X.color
+              { h = Sy.Op Sy.Mult; l = [ra, n]; t = ty; distribute = false }
+          | None, _ -> raise Exit
       in
       Some (res, Ex.union expl_a expl_b)
     | None -> None
@@ -783,15 +793,15 @@ let empty uf =
 (*let up_improved env p oldi newi = if I.is_strict_smaller newi oldi then { env
   with improved = SP.add p env.improved } else env*)
 
-(** [true] if the bounds of [i ** n] are small enough to be computed. *)
-let can_power n i =
-  let small = function
-    | Intervals_intf.Open b | Closed b -> not (Arith.power_too_large b n)
-    | Unbounded -> true
+(** [true] if a bound of [i ** n] is too large to be computed. *)
+let power_too_large n i =
+  let too_large = function
+    | Intervals_intf.Open b | Closed b -> Arith.power_too_large b n
+    | Unbounded -> false
   in
   I.fold
-    (fun acc { Intervals_intf.lb; ub } -> acc && small lb && small ub)
-    true i
+    (fun acc { Intervals_intf.lb; ub } -> acc || too_large lb || too_large ub)
+    false i
 
 (** computes an interval for vars = x_1^n_1 * ..... * x_i^n_i (1) if some var is
     not in monomes, then return undefined (2) check that all vars are in monomes
@@ -802,7 +812,7 @@ let mult_bornes_vars vars env ty =
       List.rev_map
         (fun (y, n) ->
           let i, _, _ = generic_find y env in
-          if not (can_power n i) then raise Not_found;
+          if power_too_large n i then raise Not_found;
           i, n)
         vars
     in
@@ -1073,25 +1083,25 @@ let tighten_pows env =
   let pows = Uf.GlobalDomains.find (module Pows) (Uf.domains env.new_uf) in
   let is_const r = Option.is_some (P.is_const (poly_of r)) in
   MX0.fold
-    (fun pow l env ->
-      List.fold_left
-        (fun env { Pows.base; n; ex } ->
-          if is_const pow || is_const base
-          then env
-          else
+    (fun pow m env ->
+      MX0.fold
+        (fun base (exp, ex) env ->
+          match Option.bind (P.is_const (poly_of exp)) exponent with
+          | Some n when not (is_const pow || is_const base) -> (
             let ty = X.type_info pow in
-            let ib = interval_of base env in
+            let ib = I.add_explanation (interval_of base env) ex in
             let env =
-              if can_power n ib
-              then tighten_value pow (I.add_explanation (I.power n ib) ex) env
-              else env
+              if power_too_large n ib
+              then env
+              else tighten_value pow (I.power n ib) env
             in
             try
-              let ip = interval_of pow env in
+              let ip = I.add_explanation (interval_of pow env) ex in
               let jb = I.coerce ty (I.root n (I.coerce Ty.Treal ip)) in
-              tighten_value base (I.add_explanation jb ex) env
+              tighten_value base jb env
             with Q.Not_a_float -> env)
-        env l)
+          | _ -> env)
+        m env)
     pows env
 
 let find_one_eq x u =

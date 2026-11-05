@@ -244,6 +244,8 @@ struct
       | _ -> P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
     with Exit -> P.add (P.create [coef, X.term_embed t] Q.zero ty) p_acc
 
+  module Ac = Ac.Make (X)
+
   (* The product of [l], with its constant and monomial factors multiplied out,
      but not distributed over its factors that are sums. *)
   let undistributed_product ty l =
@@ -264,15 +266,7 @@ struct
           | _ -> c, (r, n) :: acc)
         (Q.one, []) l
     in
-    let l =
-      List.fold_left
-        (fun acc (r, n) ->
-          match List.partition (fun (r', _) -> X.equal r r') acc with
-          | [(_, m)], acc -> (r, m + n) :: acc
-          | _ -> (r, n) :: acc)
-        [] l
-    in
-    match l with
+    match Ac.compact l with
     | [] -> P.create [] c ty
     | [(x, 1)] -> P.create [c, x] Q.zero ty
     | l ->
@@ -390,7 +384,8 @@ struct
       let px, ctx = mke Q.one (empty_polynome ty) x ctx in
       match P.is_const px, literal_exponent y with
       | None, Some n -> (
-        (* [x ** n] is the product [x^n], not distributed if [x] is a sum. *)
+        (* [x ** n] is the product [x^n], not distributed if [x] is a sum. Other
+           exponents are rewritten once known, see [IntervalCalculus]. *)
         try
           ( P.add p
               (P.mult_const coef (undistributed_product ty [is_mine px, n])),
