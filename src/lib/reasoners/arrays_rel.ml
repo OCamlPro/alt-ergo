@@ -46,7 +46,9 @@ end)
    - known values: [a[i] = v], from [(select a i)] and [a = (store _ i v)]
 
    - edges: [a --i-- b], from [b = (store a i _)] or [a = (store b i _)]. Which
-   means: [forall j. j <> i -> a[j] = b[j]] *)
+   means: [forall j. j <> i -> a[j] = b[j]]
+
+   - constant arrays: [a = (const c)], whose values are all equal to [c] *)
 
 let src = Logs.Src.create ~doc:"Arrays_rel" __MODULE__
 
@@ -89,6 +91,9 @@ module Domain = struct
     { values : (X.r * Ex.t) X.Map.t X.Map.t;
       (* [a -> k -> (v, ex)]: [a[k] = v] with the explanation [ex]. [v] is a
          representative. *)
+      consts : (X.r * Ex.t) X.Map.t;
+      (* [a -> (c, ex)]: [a] is the constant array [(const c)] with the
+         explanation [ex]. *)
       edges : (X.r * Ex.t) X.Map.t X.Map.t;
       (* [a -> b -> (i, ex)]: the edge [a --i-- b] with the explanation [ex].
          The edges are stored in both directions, with at most one edge between
@@ -130,6 +135,7 @@ module Domain = struct
 
   let empty =
     { values = X.Map.empty;
+      consts = X.Map.empty;
       edges = X.Map.empty;
       index_locs = X.Map.empty;
       value_locs = X.Map.empty;
@@ -174,19 +180,40 @@ module Domain = struct
     if X.Map.mem r t.terms then t else { t with terms = X.Map.add r tm t.terms }
 
   (* Add the value [a[k] = v]. If [a] already has a value at [k], deduce the
-     equality of the two values instead. Returns [true] if the known value is
+     equality of the two values instead. If [a] is a constant array, deduce the
+     equality of [v] and its constant. Returns [true] if the known value is
      new. *)
   let add_value a k ((v, ex) as rd) t =
     let m = values_of a t in
     match X.Map.find k m with
     | v', ex' -> { t with eqs = (v, v', Ex.union ex ex') :: t.eqs }, false
     | exception Not_found ->
+      let eqs =
+        match X.Map.find_opt a t.consts with
+        | Some (c, ex_c) -> (v, c, Ex.union ex ex_c) :: t.eqs
+        | None -> t.eqs
+      in
       ( { t with
           values = X.Map.add a (X.Map.add k rd m) t.values;
           index_locs = add_loc k a t.index_locs;
-          value_locs = add_cell v (a, k) t.value_locs
+          value_locs = add_cell v (a, k) t.value_locs;
+          eqs
         },
         true )
+
+  (* Add the constant array [a = (const c)]: the values of [a] are equal to [c].
+     If [a] is already a constant array, deduce the equality of the two
+     constants instead. *)
+  let add_const a ((c, ex) as cst) t =
+    match X.Map.find_opt a t.consts with
+    | Some (c', ex') -> { t with eqs = (c, c', Ex.union ex ex') :: t.eqs }
+    | None ->
+      let eqs =
+        X.Map.fold
+          (fun _ (v, ex_v) eqs -> (v, c, Ex.union ex ex_v) :: eqs)
+          (values_of a t) t.eqs
+      in
+      { t with consts = X.Map.add a cst t.consts; eqs }
 
   (* Remove the value of [a] at [k], which is [v]. *)
   let remove_value a k v t =
@@ -279,11 +306,19 @@ module Domain = struct
         split_todo = LX.Set.union lits t.split_todo
       }
 
-  (* The array [rr] is replaced by [nrr]: its values and edges are moved to
-     [nrr]. *)
+  (* The array [rr] is replaced by [nrr]: its constant, values and edges are
+     moved to [nrr]. *)
   let subst_array ~ex rr nrr t =
     let rvalues = values_of rr t and redges = edges_of rr t in
     let nvalues = values_of nrr t and nedges = edges_of nrr t in
+    let t =
+      match X.Map.find_opt rr t.consts with
+      | None -> t
+      | Some (c, ex_c) ->
+        add_const nrr
+          (c, Ex.union ex ex_c)
+          { t with consts = X.Map.remove rr t.consts }
+    in
     let t =
       X.Map.fold
         (fun k (v, ex_v) t ->
@@ -510,14 +545,20 @@ let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
     env, dom, value :: todo
   else env, dom, todo
 
+(* The value of [a] at [i], or its constant. *)
+let value_at (dom : Domain.t) a i =
+  match X.Map.find_opt i (Domain.values_of a dom) with
+  | None -> X.Map.find_opt a dom.consts
+  | w -> w
+
 (* For the edge [a --i-- b], with [k = i], and the values [a[k] = a_k] and [b[k]
-   = b_k]: [a = b] if [a_k = b_k], since [a] and [b] agree on all the other
-   indices, and [a <> b] if [a_k <> b_k]. *)
+   = b_k], or the constant of [b]: [a = b] if [a_k = b_k], since [a] and [b]
+   agree on all the other indices, and [a <> b] if [a_k <> b_k]. *)
 let check_edge uf (env, (dom : Domain.t), todo) { a; k; v = a_k; ex } b eex =
   let k, ex_k = Uf.find_r uf k in
-  match X.Map.find k (Domain.values_of b dom) with
-  | exception Not_found -> env, dom, todo
-  | b_k, ex_b -> (
+  match value_at dom b k with
+  | None -> env, dom, todo
+  | Some (b_k, ex_b) -> (
     let a_k, ex_a' = Uf.find_r uf a_k in
     let b_k, ex_b' = Uf.find_r uf b_k in
     let ex = List.fold_left Ex.union ex [ex_k; ex_b; ex_a'; ex_b'; eex] in
@@ -830,9 +871,12 @@ let term_eqs uf env dom =
 let assume env uf la =
   let dom = get_domain uf in
   let env, domains, l =
-    if X.Map.is_empty dom.values && LX.Map.is_empty env.splits
+    if
+      X.Map.is_empty dom.values && LX.Map.is_empty env.splits
+      && Compat.List.is_empty dom.eqs
     then
-      (* No select or store terms: nothing to propagate. *)
+      (* No select or store terms: nothing to propagate. The equalities can come
+         from two constant arrays that are merged. *)
       env, Uf.domains uf, []
     else
       let env, dom = process_dirty uf env dom in
@@ -879,12 +923,16 @@ let cross_edge uf ((_, (dom : Domain.t), _) as acc) a i b =
       (Domain.values_of a dom) acc
   | _ -> acc
 
-(* Register the value and the edge of the select and store terms, and their
-   terms (see [Domain.terms]). *)
+(* Register the value and the edge of the select and store terms, the constant
+   arrays, and their terms (see [Domain.terms]). *)
 let add env uf r t =
   let register env dom =
     let { E.f; xs; _ } = E.term_view t in
     match f, xs with
+    | Symbols.Op Const_array, [c] ->
+      let ra, ex_a = Uf.find_r uf r in
+      let rc, ex_c = Uf.find uf c in
+      env, Domain.add_const ra (rc, Ex.union ex_a ex_c) dom
     | Symbols.Op Select, [a; i] ->
       let v, ex_v = Uf.find_r uf r in
       let ra, ex_a = Uf.find uf a in
@@ -911,7 +959,7 @@ let add env uf r t =
     | _ -> env, dom
   in
   match E.term_view t with
-  | { f = Op (Select | Store); _ } ->
+  | { f = Op (Select | Store | Const_array); _ } ->
     let env, dom = register env (get_domain uf) in
     let env, dom = split_edges uf env dom in
     let eqs, dom = flush_eqs uf dom in
