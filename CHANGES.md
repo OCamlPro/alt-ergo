@@ -23,12 +23,6 @@
    We encourage users of the global step limit (`--steps-bound`) to switch to
    the reproducible resource limit instead.
 
-## v2.6.3
-
- - Bump minimal cmdliner version to 2.0 (#1340)
-
-## v2.6.2
-
 ### Supported features
 
  - Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
@@ -41,6 +35,27 @@
 ### User Interface
 
  - Interactive prompt when using interactive mode (#1310)
+
+## v2.6.4
+
+ - Fix more crashes and incorrect output in `--profiling` (#1354, #1355, #1356)
+
+## v2.6.3
+
+ - Add support for ae.pow_int and ae.pow_real (#1342)
+ - Bump minimal cmdliner version to 2.0 (#1340)
+ - Add an upper bound (< 0.11) for Dolmen (#1345)
+
+## v2.6.2
+
+ - Expose some internal APIs for Owi (#1259)
+ - Provide forward-compatibility with future changes in Alt-Ergo 2.7
+
+## v2.6.1
+
+ - Consistent output of steps limit error (#1245)
+ - Prevent potential long-running loop without steps increase (#1316)
+ - Report correct number of steps when limit is exceeded (#1317)
 
 ## v2.6.0
 
