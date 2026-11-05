@@ -1,0 +1,7 @@
+(* The exponent [n] is only known to be [2] after assuming [n = 2], so the power
+   is rewritten into the product [(2 * x)^2] by [IntervalCalculus.calc_pow]
+   rather than when the term is created.
+   This product must be normalized into [4 * x^2] to be equal to [4 * x * x]. *)
+logic x, n : real
+
+goal pow_late_exponent: n = 2. -> (2. * x) **. n = 4. * x * x

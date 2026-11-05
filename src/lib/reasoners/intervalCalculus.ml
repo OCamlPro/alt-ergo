@@ -82,6 +82,78 @@ let is_alien x =
   | Some (a, _, c) -> Q.equal a Q.one && Q.equal c Q.zero
   | _ -> false
 
+(* The integer [n], if [q] is an integer [n >= 2]. *)
+let exponent q =
+  if Q.is_int q
+  then
+    match Z.to_machine_int (Q.to_z q) with
+    | Some n when n >= 2 -> Some n
+    | _ -> None
+  else None
+
+(* Domain associating the semantic values of powers [a ** b] with those of their
+   base [a] and of their exponent [b], to propagate intervals between [a ** b]
+   and [a] once [b] is a known integer. All are kept as class
+   representatives. *)
+module Pows = struct
+  (* Maps [a ** b] to [a] to [b], with an explanation of [a ** b] being the
+     power of [a] by [b]. *)
+  type t = (X.r * Ex.t) MX0.t MX0.t
+
+  type _ Uf.id += Id : t Uf.id
+
+  let pp ppf t =
+    let pp_pow pow ppf (base, (exp, _)) =
+      Fmt.pf ppf "%a = %a ** %a" X.print pow X.print base X.print exp
+    in
+    let pp_bases ppf (pow, m) =
+      Fmt.(iter_bindings ~sep:comma MX0.iter (pp_pow pow)) ppf m
+    in
+    Fmt.(iter_bindings ~sep:semi MX0.iter pp_bases) ppf t
+
+  let empty = MX0.empty
+
+  let filter_ty = function Ty.Tint | Ty.Treal -> true | _ -> false
+
+  let init _ t = t
+
+  exception Inconsistent of Ex.t
+
+  (* Keeps the existing exponent if [pow] already has the base [base]. *)
+  let add_pow pow base exp t =
+    MX0.update pow
+      (fun m ->
+        let m = Option.value ~default:MX0.empty m in
+        Some (MX0.update base (function None -> Some exp | e -> e) m))
+      t
+
+  let subst ~ex rr nrr t =
+    let subst_rr r = if X.equal r rr then nrr, ex else r, Ex.empty in
+    MX0.fold
+      (fun pow m acc ->
+        let pow, ex_pow = subst_rr pow in
+        MX0.fold
+          (fun base (exp, ex_e) acc ->
+            let base, ex_base = subst_rr base in
+            let exp, ex_exp = subst_rr exp in
+            let ex =
+              Ex.union ex_e (Ex.union ex_pow (Ex.union ex_base ex_exp))
+            in
+            add_pow pow base (exp, ex) acc)
+          m acc)
+      t MX0.empty
+
+  (* Registers [t], if it is a power [a ** b]. *)
+  let add uf t pows =
+    match E.term_view t with
+    | { f = Sy.Op Sy.Pow; xs = [a; b]; _ } ->
+      let pow, ex_pow = Uf.find uf t in
+      let base, ex_base = Uf.find uf a in
+      let exp, ex_exp = Uf.find uf b in
+      add_pow pow base (exp, Ex.union ex_pow (Ex.union ex_base ex_exp)) pows
+    | _ -> pows
+end
+
 module SimVar = struct
   type t = X.r
 
@@ -632,12 +704,16 @@ let calc_pow a b ty uf =
         else if Q.equal c_y Q.zero
         then alien_of (P.create [] Q.one ty)
         else
-          match P.is_const pa with
-          | Some c_x ->
+          match P.is_const pa, exponent c_y with
+          | Some c_x, _ ->
             (* x ** y *)
             let res = Arith.calc_power c_x c_y ty in
             alien_of (P.create [] res ty)
-          | None -> raise Exit
+          | None, Some n when not (Options.get_no_nla ()) ->
+            (* x ** n is the product x^n, not distributed if x is a sum. *)
+            X.color
+              { h = Sy.Op Sy.Mult; l = [ra, n]; t = ty; distribute = false }
+          | None, _ -> raise Exit
       in
       Some (res, Ex.union expl_a expl_b)
     | None -> None
@@ -712,10 +788,20 @@ let empty uf =
       floats = ME.empty;
       syntactic_matching = []
     },
-    Uf.domains uf )
+    Uf.GlobalDomains.add (module Pows) Pows.empty (Uf.domains uf) )
 
 (*let up_improved env p oldi newi = if I.is_strict_smaller newi oldi then { env
   with improved = SP.add p env.improved } else env*)
+
+(** [true] if a bound of [i ** n] is too large to be computed. *)
+let power_too_large n i =
+  let too_large = function
+    | Intervals_intf.Open b | Closed b -> Arith.power_too_large b n
+    | Unbounded -> false
+  in
+  I.fold
+    (fun acc { Intervals_intf.lb; ub } -> acc || too_large lb || too_large ub)
+    false i
 
 (** computes an interval for vars = x_1^n_1 * ..... * x_i^n_i (1) if some var is
     not in monomes, then return undefined (2) check that all vars are in monomes
@@ -726,6 +812,7 @@ let mult_bornes_vars vars env ty =
       List.rev_map
         (fun (y, n) ->
           let i, _, _ = generic_find y env in
+          if power_too_large n i then raise Not_found;
           i, n)
         vars
     in
@@ -766,6 +853,14 @@ let cannot_be_equal_to_zero env p ip =
     | _ -> I.doesnt_contain_0 ip
   with Util.Unsolvable ->
     Entailed { ex = Explanation.empty; classes = env.classes }
+
+(* Returns the representative of the argument [a] of the term [x], or [a] itself
+   if the representative of [a] contains [x] (to avoid loops). *)
+let arg_repr env x a =
+  let ((ra, _) as ra_ex) = Uf.find env.new_uf a in
+  if List.exists (X.equal x) (X.leaves ra)
+  then fst (X.make a), Explanation.empty
+  else ra_ex
 
 let rec init_monomes_of_poly are_eq env p use_p expl =
   List.fold_left
@@ -814,18 +909,8 @@ and update_monome are_eq expl use_x env x =
         let use_x = SX.singleton x in
         begin match E.term_view t with
         | { E.f = Sy.Op Sy.Div; xs = [a; b]; _ } ->
-          let ra, ea =
-            let ((ra, _) as e) = Uf.find env.new_uf a in
-            if List.filter (X.equal x) (X.leaves ra) == []
-            then e
-            else fst (X.make a), Explanation.empty (*otherwise, we loop*)
-          in
-          let rb, eb =
-            let ((rb, _) as e) = Uf.find env.new_uf b in
-            if List.filter (X.equal x) (X.leaves rb) == []
-            then e
-            else fst (X.make b), Explanation.empty (*otherwise, we loop*)
-          in
+          let ra, ea = arg_repr env x a in
+          let rb, eb = arg_repr env x b in
           let expl = Explanation.union expl (Explanation.union ea eb) in
           let pa = poly_of ra in
           let pb = poly_of rb in
@@ -965,6 +1050,59 @@ let update_non_lin_monomes_intervals are_eq env =
     (fun x (_, use_x) env ->
       tighten_non_lin are_eq x use_x env Explanation.empty)
     env.monomes env
+
+(* Intersects the interval of [r], a monome or a polynomial, with [j]. *)
+let tighten_value r j env =
+  let ty = X.type_info r in
+  if is_alien r
+  then
+    let old, use =
+      try MX.n_find r env.monomes with Not_found -> I.undefined ty, SX.empty
+    in
+    MX.n_add r (I.intersect old j, use) old env
+  else
+    let p, c = P.separate_constant (poly_of r) in
+    let p, _, d = P.normal_form_pos p in
+    (* r = p * d + c *)
+    let j = I.affine_scale ~coef:(Q.inv d) ~const:(Q.div (Q.minus c) d) j in
+    let old =
+      try MP.n_find p env.polynomes with Not_found -> I.undefined ty
+    in
+    MP.n_add p (I.intersect old j) old env
+
+(* The interval of [r], a monome or a polynomial. *)
+let interval_of r env =
+  let i, _, is_mon = generic_find r env in
+  if is_mon
+  then i
+  else
+    I.intersect i (intervals_from_monomes ~monomes_inited:false env (poly_of r))
+
+(* Propagates intervals between the powers [a ** n] and their base [a]. *)
+let tighten_pows env =
+  let pows = Uf.GlobalDomains.find (module Pows) (Uf.domains env.new_uf) in
+  let is_const r = Option.is_some (P.is_const (poly_of r)) in
+  MX0.fold
+    (fun pow m env ->
+      MX0.fold
+        (fun base (exp, ex) env ->
+          match Option.bind (P.is_const (poly_of exp)) exponent with
+          | Some n when not (is_const pow || is_const base) -> (
+            let ty = X.type_info pow in
+            let ib = I.add_explanation (interval_of base env) ex in
+            let env =
+              if power_too_large n ib
+              then env
+              else tighten_value pow (I.power n ib) env
+            in
+            try
+              let ip = I.add_explanation (interval_of pow env) ex in
+              let jb = I.coerce ty (I.root n (I.coerce Ty.Treal ip)) in
+              tighten_value base jb env
+            with Q.Not_a_float -> env)
+          | _ -> env)
+        m env)
+    pows env
 
 let find_one_eq x u =
   match I.is_point u with
@@ -1643,6 +1781,7 @@ let rec loop_update_intervals are_eq env cpt =
   let env = { env with improved_p = SP.empty; improved_x = SX.empty } in
   let env = update_non_lin_monomes_intervals are_eq env in
   let env = update_floats env in
+  let env = tighten_pows env in
   let env = Sim_Wrap.solve env 1 in
   let env = update_polynomes_intervals env in
   let env = Sim_Wrap.solve env 1 in
@@ -1882,7 +2021,9 @@ let add =
           init_monomes_of_poly are_eq env p SX.empty Explanation.empty
         in
         let delayed, eqs = Rel_utils.Delayed.add env.delayed env.new_uf r t in
-        { env with delayed }, Uf.domains new_uf, eqs
+        let ds = Uf.domains new_uf in
+        let pows = Pows.add new_uf t (Uf.GlobalDomains.find (module Pows) ds) in
+        { env with delayed }, Uf.GlobalDomains.add (module Pows) pows ds, eqs
       else env, Uf.domains new_uf, []
     with I.NotConsistent expl ->
       Debug.inconsistent_interval expl;
@@ -1976,6 +2117,12 @@ let round_to_integers list =
       x, if Q.compare (Q.sub q1 f) (Q.sub c q1) > 0 then f else c)
     (List.rev list)
 
+(* Products and literal powers (which are rewritten into products). *)
+let is_product_or_power r =
+  match X.ac_extract r with
+  | Some { Sig.h = Sy.Op Sy.Mult; _ } -> true
+  | _ -> false
+
 (* cannot replace directly with env.int_sim because of encoding *)
 let model_from_simplex sim is_int env uf =
   match Sim.Result.get None sim with
@@ -1998,9 +2145,14 @@ let model_from_simplex sim is_int env uf =
     List.fold_left
       (fun acc (v, q) ->
         assert ((not is_int) || Q.is_int q);
-        if SX.mem v env.known_eqs || not (Uf.is_normalized uf v)
+        if
+          SX.mem v env.known_eqs
+          || (not (Uf.is_normalized uf v))
+          || is_product_or_power v
         then
           (* may happen because of incremental simplex on rationals *)
+          (* For products and powers, don't choose their value first, start with
+            their operands *)
           acc
         else
           let t = fct q in

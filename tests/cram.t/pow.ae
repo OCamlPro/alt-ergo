@@ -1,0 +1,5 @@
+logic x : int
+logic y : real
+
+check_sat int_pow: 2 <= x ** 2 <= 30
+check_sat real_pow: 2. <= y **. 2. <= 3.
