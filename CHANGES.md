@@ -7,8 +7,6 @@
 
 ### SMT-LIB support
 
- - Remove the legacy frontend and AB-Why3 plugin
-
  - Added support for the `:reproducible-resource-limit` and
    `--reproducible-resource-limit` options, following the SMT-LIB standard
    (#1353)
@@ -27,17 +25,126 @@
  - Support the `int.pow2` function, which takes an integer `n` and computes
    `ae.pow_int 2 n` (#1365)
 
- - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
-   that enables the support for the SMT-LIB FPA Theory, and that can be used
-   with the cmdline option `--enable-theory smt.float` (#1358)
-
- - Add the opam package `alt-ergo-smt-float-plugin`, which installs an
-   axiomatization of the SMT-LIB FPA Theory derived from Why3 and distributed
-   under its license (#1371)
+ - Support parsing of SMT-LIB FloatingPoint Theory literals and add the theory `smt.float`
+   that enables the support for the SMT-LIB FloatingPoint Theory, and that can be used
+   with the command-line option `--enable-theory smt.float`. Improved reasoning
+   for SMT-LIB FloatingPoint theory is available in the optional
+   `alt-ergo-smt-float-plugin` package, which installs an axiomatization of the
+   FloatingPoint theory derived from Why3 and distributed under LGPL (#1358,
+   #1418, #1419, #1371, #1379, #1422)
   
 ### User Interface
 
  - Interactive prompt when using interactive mode (#1310)
+
+ - Removed deprecated options `-d sum`, `-d typing`, `-d warnings`,
+   `--use-underscore`, `--use-fpa`, `--disable-adts` and `--no-ac` (#1265)
+
+ - SMT-LIB compliant printing for negative real literals (#1272)
+
+ - Add flag `-b` to record backtraces (#1276)
+
+ - Use Dolmen locations in errors (#1284, #1372, #1373)
+
+ - Properly escape quotes when printing SMT-LIB error message (#1289)
+
+ - Removed options `-interpretation first` and `-interpretation last`, as they
+   were broken and have no known users(#1299)
+
+ - Report the number of steps that trigger a step limit in `get-unknown-reason`
+   (#1317)
+
+ - Disable "axiom replaced with" warning (#1328)
+
+ - Improve error message printing (#1335)
+
+ - Create a proper `alt-ergo-js` package (#1346)
+
+ - Do not install the bytecode version of alt-ergo (#1347)
+
+ - Warn when inadequate user-provided triggers are dropped (#1375)
+
+ - Correctly parse `:named` attribute in SMT-LIB inputs (#1424)
+
+### Reasoning
+
+ - Improved reasoning for `distinct` literals (#1380, #1411, #1410, #1412)
+
+ - Improve performance of congruence closure (#1414)
+
+ - Improved reasoning for `pow` and multiplication (#1379)
+
+### Model generation
+
+ - Complete models for `log2`, `floor`, `ceil`, `min_int`, `max_int`,
+   `min_real` and `max_real` (#1234)
+
+ - Produce valid SMT-LIB models without internal names (#1329, fixing issues
+   #1213 and #1270)
+
+ - Provide concrete values for unconstrained symbols of type int, real, bitv
+   and bool (#1357)
+
+### Documentation
+
+ - Add example for the `ae.float` primitive (#1239)
+
+ - Documentation of `arrays_rel.ml` (#1268)
+
+ - Update the installation documentation (#1307)
+
+### Miscellaneous bug fixes
+
+ - No longer load preludes twice when `--enable-theories` is provided (#1235)
+
+ - Prevent fatal error when the step limit is reached (#1245)
+
+ - Prevent potential infinite loop without step increase (#1316)
+
+ - Fix crashes on `float32d` / `float64d` with symbolic rounding parameters (#1376)
+
+### Internal/library changes
+
+ - Remove the legacy frontend and AB-Why3 plugin (#1249, #1251, #1254, #1253,
+   #1258, #1258)
+
+ - Remove unused code (#1247, #1264, #1262, #1275)
+
+ - Use an exception in `Solving_loop.process_source` (#1256)
+
+ - Tidy up `is_enum_constr` test in ADT theory (#1255)
+
+ - Expose some more functions in `ModelMap` (#1259)
+
+ - Use Dolmen type variables (#1267)
+
+ - Remove global state (#1286)
+
+ - Track assertion level in SatML solver (#1297)
+
+ - Remove the `Record` theory, as it is subsumed by the `Adt` theory (#1095)
+
+ - Remove labels on symbols and literals (#1266)
+
+ - Add tests for corner cases of `add_predicate` (#1305)
+
+ - Create a custom ADT for `Th_util.answer` (#1304)
+
+ - Move guard creation from `Satml_frontend` to `Satml` (#1313)
+
+ - Remove ppx (#1361)
+
+ - Separate configuration for trigger inference and matching (#1359)
+
+ - Rely on Zarith to build integer literals (#1368)
+
+ - Flatten integer literals into `-n` rather than `(- 0 n)` (#1369)
+
+ - Rename `toplevel` to `prenex` (#1382)
+
+ - Extract type signature for modules (#1385, #1386, #1387, #1388)
+
+ - Simplifications to the "flat formula" parsing (#1396, #1391, #1398)
 
 ## v2.6.4
 
