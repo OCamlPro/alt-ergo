@@ -211,7 +211,7 @@ let rec relevant_terms env t =
       (fun acc x -> merge_revelant_terms acc (cached_relevant_terms env x))
       (G.empty, TBS.empty) xs
   in
-  match Sy.is_get f, Sy.is_set f, xs with
+  match Sy.is_select f, Sy.is_store f, xs with
   | true, false, [a; i] -> G.add { g = t; gt = a; gi = i } gets, tbset
   | false, true, [a; i; v] ->
     gets, TBS.add a { s = t; st = a; si = i; sv = v } tbset
@@ -292,7 +292,7 @@ let get_of_set (module Uf : UF) uf gtype (env, acc) =
       else
         let env = { env with seen = Tmap.update get set env.seen } in
         let { E.f; xs; _ } = E.term_view set in
-        match Sy.is_set f, xs with
+        match Sy.is_store f, xs with
         | true, [stab; si; sv] ->
           let xi, _ = X.make gi in
           let xj, _ = X.make si in

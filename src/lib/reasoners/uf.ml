@@ -1194,8 +1194,8 @@ let compute_concrete_model_of_val cache =
       in
       let ret_rep, mrepr = model_repr_of_term t env mrepr in
       match f, arg_vals, ty with
-      | Sy.Op Sy.Set, _, _ -> acc
-      | Sy.Op Sy.Get, [a; i], _ -> begin
+      | Sy.Op Sy.Store, _, _ -> acc
+      | Sy.Op Sy.Select, [a; i], _ -> begin
         let a, mrepr = model_repr_of_term a env mrepr in
         let i, mrepr = model_repr_of_term i env mrepr in
         let E.{ f = fa; _ } = E.term_view a in

@@ -46,8 +46,8 @@ type operator =
   | Constr of DE.term_cst
   | Destruct of DE.term_cst
   (* Arrays *)
-  | Get
-  | Set
+  | Select
+  | Store
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
@@ -235,13 +235,13 @@ let compare_operators op1 op2 =
     | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
     | ( _,
         ( Plus | Minus | Mult | Div | Modulo | Real_is_int | Concat | Extract _
-        | Sign_extend _ | Repeat _ | Get | Set | Float | Sqrt_real | Abs_int
-        | Abs_real | Real_of_int | Int_floor | Int_ceil | Sqrt_real_default
-        | Sqrt_real_excess | Min_real | Min_int | Max_real | Max_int
-        | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor | BVxor
-        | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr | Int2BV _
-        | BV2Nat | Not_theory_constant | Is_theory_constant | Linear_dependency
-        | Constr _ | Destruct _ | Tite ) ) ->
+        | Sign_extend _ | Repeat _ | Select | Store | Float | Sqrt_real
+        | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
+        | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int | Max_real
+        | Max_int | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor
+        | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
+        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
+        | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -397,8 +397,8 @@ module AEPrinter = struct
     | BVshl -> Fmt.pf ppf "bvshl"
     | BVlshr -> Fmt.pf ppf "bvlshr"
     (* ArraysEx theory *)
-    | Get -> Fmt.pf ppf "get"
-    | Set -> Fmt.pf ppf "set"
+    | Select -> Fmt.pf ppf "get"
+    | Store -> Fmt.pf ppf "set"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
@@ -489,8 +489,8 @@ module SmtPrinter = struct
     | BVshl -> Fmt.pf ppf "bvshl"
     | BVlshr -> Fmt.pf ppf "bvlshr"
     (* ArraysEx theory *)
-    | Get -> Fmt.pf ppf "select"
-    | Set -> Fmt.pf ppf "store"
+    | Select -> Fmt.pf ppf "select"
+    | Store -> Fmt.pf ppf "store"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
@@ -531,9 +531,9 @@ let fresh_skolem_name base = name ~ns:Skolem (fresh_skolem_string base)
 
 let fresh_skolem_var base = Var.of_string (fresh_skolem_string base)
 
-let is_get f = equal f (Op Get)
+let is_select f = equal f (Op Select)
 
-let is_set f = equal f (Op Set)
+let is_store f = equal f (Op Store)
 
 module Set : Set.S with type elt = t = Set.Make (struct
   type nonrec t = t

@@ -354,8 +354,8 @@ module AEPrinter = struct
         (fun ppf x ->
           if Options.get_verbose () then Fmt.pf ppf " [sko = %a]" pp x.let_sko)
         x Var.print x.let_v pp x.let_e pp_silent x.in_e
-    | Sy.(Op Get), [e1; e2] -> Fmt.pf ppf "%a[%a]" pp e1 pp e2
-    | Sy.(Op Set), [e1; e2; e3] -> Fmt.pf ppf "%a[%a<-%a]" pp e1 pp e2 pp e3
+    | Sy.(Op Select), [e1; e2] -> Fmt.pf ppf "%a[%a]" pp e1 pp e2
+    | Sy.(Op Store), [e1; e2; e3] -> Fmt.pf ppf "%a[%a<-%a]" pp e1 pp e2 pp e3
     | Sy.(Op Concat), [e1; e2] -> Fmt.pf ppf "%a@@%a" pp e1 pp e2
     | Sy.(Op (Extract (i, j))), [e] -> Fmt.pf ppf "%a^{%d, %d}" pp e i j
     | ( Sy.(
@@ -1061,7 +1061,7 @@ let mk_ite cond th el =
 
 let rec is_model_term e =
   match e.f, e.xs with
-  | (Op (Constr _) | Op Set), xs -> List.for_all is_model_term xs
+  | (Op (Constr _) | Op Store), xs -> List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
@@ -1901,10 +1901,10 @@ module Triggers = struct
     | { f = True | False | Int _ | Real _ | Bitv _ | Var _ | Float _; _ } -> 0
     | { f; _ } when is_infix f || is_prefix f ->
       0 (* arithmetic triggers are not suitable *)
-    | { f = Op (Get | Set); xs = [t1; t2]; _ } ->
+    | { f = Op (Select | Store); xs = [t1; t2]; _ } ->
       max (score_term t1) (score_term t2)
     | { f = Op (Destruct _ | Extract _); xs = [t]; _ } -> 1 + score_term t
-    | { f = Op Set; xs = [t1; t2; t3]; _ } ->
+    | { f = Op Store; xs = [t1; t2; t3]; _ } ->
       max (score_term t1) (max (score_term t2) (score_term t3))
     | { f = Op _ | Name _; xs = tl; _ } ->
       1 + List.fold_left (fun acc t -> max (score_term t) acc) 0 tl
@@ -1952,14 +1952,14 @@ module Triggers = struct
         if c <> 0 then c else Util.cmp_lists tl1 tl2 cmp_trig_term
     | { f = Name _; _ }, _ -> -1
     | _, { f = Name _; _ } -> 1
-    | { f = Op Get; xs = l1; _ }, { f = Op Get; xs = l2; _ } ->
+    | { f = Op Select; xs = l1; _ }, { f = Op Select; xs = l2; _ } ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Get; _ }, _ -> -1
-    | _, { f = Op Get; _ } -> 1
-    | { f = Op Set; xs = l1; _ }, { f = Op Set; xs = l2; _ } ->
+    | { f = Op Select; _ }, _ -> -1
+    | _, { f = Op Select; _ } -> 1
+    | { f = Op Store; xs = l1; _ }, { f = Op Store; xs = l2; _ } ->
       Util.cmp_lists l1 l2 cmp_trig_term
-    | { f = Op Set; _ }, _ -> -1
-    | _, { f = Op Set; _ } -> 1
+    | { f = Op Store; _ }, _ -> -1
+    | _, { f = Op Store; _ } -> 1
     | ( { f = Op (Extract (i1, j1)); xs = [t1]; _ },
         { f = Op (Extract (i2, j2)); xs = [t2]; _ } ) ->
       let r = Util.cmp_lists [i1; j1] [i2; j2] Int.compare in
@@ -2670,7 +2670,7 @@ module Purification = struct
         end
       (* When e is an access to a functional array in which the stored values
          are booleans *)
-      | Sy.Op Get -> begin
+      | Sy.Op Select -> begin
         match e.xs with
         | [fa; i] ->
           let fa', lets =
@@ -3159,7 +3159,7 @@ module ArraysEx = struct
       | Tfarray (_, rty) -> rty
       | _ -> invalid_arg "Expr.ArraysEx.select"
     in
-    mk_term Sy.(Op Get) [a; i] rty
+    mk_term Sy.(Op Select) [a; i] rty
 
-  let store a i v = mk_term Sy.(Op Set) [a; i; v] (type_info a)
+  let store a i v = mk_term Sy.(Op Store) [a; i; v] (type_info a)
 end
