@@ -1104,9 +1104,16 @@ let model_repr_of_term t env mrepr =
          uninterpreted names. *)
       match X.to_model_term rep with
       | Some v -> v, ME.add t v mrepr
-      | None ->
-        (* [X.to_model_term] cannot fail on constant semantic values. *)
-        assert false)
+      | None -> (
+        (* The representative can be an uninterpreted name whose class contains
+           a model term (e.g. a constant array): [X.assign_value] does not
+           assign a value to such classes. *)
+        let cl = try MapX.find rep env.classes with Not_found -> SE.empty in
+        match SE.find_first_opt E.is_model_term cl with
+        | Some v -> v, ME.add t v mrepr
+        | None ->
+          (* [X.to_model_term] cannot fail on constant semantic values. *)
+          assert false))
 
 (* A map of expressions to terms, ordered by depth first, and then by
    [Expr.compare] for expressions with same depth. This structure will be used
@@ -1194,7 +1201,7 @@ let compute_concrete_model_of_val cache =
       in
       let ret_rep, mrepr = model_repr_of_term t env mrepr in
       match f, arg_vals, ty with
-      | Sy.Op Sy.Store, _, _ -> acc
+      | Sy.Op (Sy.Store | Sy.Const_array), _, _ -> acc
       | Sy.Op Sy.Select, [a; i], _ -> begin
         let a, mrepr = model_repr_of_term a env mrepr in
         let i, mrepr = model_repr_of_term i env mrepr in

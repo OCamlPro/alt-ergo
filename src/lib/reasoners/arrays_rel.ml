@@ -47,7 +47,9 @@ end)
 
    - known values: [a[i] = v], from [(select a i)] and [a = (store _ i v)]
 
-   - edges: [a --i-- b], from [b = (store a i _)] or [a = (store b i _)] *)
+   - edges: [a --i-- b], from [b = (store a i _)] or [a = (store b i _)]
+
+   - constant arrays: [a = (const c)], whose values are all equal to [c] *)
 
 let src = Logs.Src.create ~doc:"Arrays_rel" __MODULE__
 
@@ -89,6 +91,9 @@ module Domain = struct
     { values : (X.r * Ex.t) XMap.t XMap.t;
       (* [a -> k -> (v, ex)]: [a[k] = v] with the explanation [ex]. [v] is a
          representative. *)
+      consts : (X.r * Ex.t) XMap.t;
+      (* [a -> (c, ex)]: [a] is the constant array [(const c)] with the
+         explanation [ex]. *)
       edges : (X.r * Ex.t) XMap.t XMap.t;
       (* [a -> b -> (i, ex)]: the edge [a --i-- b] with the explanation [ex].
          The edges are stored in both directions, with at most one edge between
@@ -123,6 +128,7 @@ module Domain = struct
 
   let empty =
     { values = XMap.empty;
+      consts = XMap.empty;
       edges = XMap.empty;
       index_locs = XMap.empty;
       value_locs = XMap.empty;
@@ -158,19 +164,40 @@ module Domain = struct
     Option.value ~default:XMap.empty (XMap.find_opt a t.values)
 
   (* Add the value [a[k] = v]. If [a] already has a value at [k], deduce the
-     equality of the two values instead. Returns [true] if the known value is
+     equality of the two values instead. If [a] is a constant array, deduce the
+     equality of [v] and its constant. Returns [true] if the known value is
      new. *)
   let add_value a k ((v, ex) as rd) t =
     let m = values_of a t in
     match XMap.find k m with
     | v', ex' -> { t with eqs = (v, v', Ex.union ex ex') :: t.eqs }, false
     | exception Not_found ->
+      let eqs =
+        match XMap.find_opt a t.consts with
+        | Some (c, ex_c) -> (v, c, Ex.union ex ex_c) :: t.eqs
+        | None -> t.eqs
+      in
       ( { t with
           values = XMap.add a (XMap.add k rd m) t.values;
           index_locs = add_loc k a t.index_locs;
-          value_locs = add_cell v (a, k) t.value_locs
+          value_locs = add_cell v (a, k) t.value_locs;
+          eqs
         },
         true )
+
+  (* Add the constant array [a = (const c)]: the values of [a] are equal to [c].
+     If [a] is already a constant array, deduce the equality of the two
+     constants instead. *)
+  let add_const a ((c, ex) as cst) t =
+    match XMap.find_opt a t.consts with
+    | Some (c', ex') -> { t with eqs = (c, c', Ex.union ex ex') :: t.eqs }
+    | None ->
+      let eqs =
+        XMap.fold
+          (fun _ (v, ex_v) eqs -> (v, c, Ex.union ex ex_v) :: eqs)
+          (values_of a t) t.eqs
+      in
+      { t with consts = XMap.add a cst t.consts; eqs }
 
   (* Remove the value of [a] at [k], which is [v]. *)
   let remove_value a k v t =
@@ -263,9 +290,17 @@ module Domain = struct
         split_todo = LX.Set.union lits t.split_todo
       }
 
-  (* The array [rr] is replaced by [nrr]: its values and edges are moved to
-     [nrr]. *)
+  (* The array [rr] is replaced by [nrr]: its constant, values and edges are
+     moved to [nrr]. *)
   let subst_array ~ex rr nrr t =
+    let t =
+      match XMap.find_opt rr t.consts with
+      | None -> t
+      | Some (c, ex_c) ->
+        add_const nrr
+          (c, Ex.union ex ex_c)
+          { t with consts = XMap.remove rr t.consts }
+    in
     let t =
       match XMap.find rr t.values with
       | exception Not_found -> t
@@ -483,9 +518,14 @@ let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
    v]. *)
 let check_edge uf (env, (dom : Domain.t), todo) { a; k = i; v; ex } b eex =
   let i, ex_i = Uf.find_r uf i in
-  match XMap.find i (Domain.values_of b dom) with
-  | exception Not_found -> env, dom, todo
-  | w, ex_w -> (
+  let value_at_i =
+    match XMap.find_opt i (Domain.values_of b dom) with
+    | None -> XMap.find_opt b dom.consts
+    | w -> w
+  in
+  match value_at_i with
+  | None -> env, dom, todo
+  | Some (w, ex_w) -> (
     let v, ex_v = Uf.find_r uf v in
     let w, ex_w' = Uf.find_r uf w in
     let ex = List.fold_left Ex.union ex [ex_i; ex_w; ex_v; ex_w'; eex] in
@@ -756,9 +796,12 @@ let term_eqs uf env =
 let assume env uf la =
   let dom = get_domain uf in
   let env, domains, l =
-    if XMap.is_empty dom.values && LX.Map.is_empty env.splits
+    if
+      XMap.is_empty dom.values && LX.Map.is_empty env.splits
+      && Compat.List.is_empty dom.eqs
     then
-      (* No select or store terms: nothing to propagate. *)
+      (* No select or store terms: nothing to propagate. The equalities can come
+         from two constant arrays that are merged. *)
       env, Uf.domains uf, []
     else
       let env, dom = process_dirty uf env dom in
@@ -796,11 +839,16 @@ let optimizing_objective _env _uf _o = None
 
 let query _ _ _ = Th_util.Unknown
 
-(* Register the value and the edge of the select and store terms. *)
+(* Register the value and the edge of the select and store terms, and the
+   constant arrays. *)
 let add env uf r t =
   let register env dom =
     let { E.f; xs; _ } = E.term_view t in
     match f, xs with
+    | Symbols.Op Const_array, [c] ->
+      let ra, ex_a = Uf.find_r uf r in
+      let rc, ex_c = Uf.find uf c in
+      env, Domain.add_const ra (rc, Ex.union ex_a ex_c) dom
     | Symbols.Op Select, [a; i] ->
       let v, ex_v = Uf.find_r uf r in
       let ra, ex_a = Uf.find uf a in
@@ -825,7 +873,7 @@ let add env uf r t =
     | _ -> env, dom
   in
   match E.term_view t with
-  | { f = Op (Select | Store); _ } ->
+  | { f = Op (Select | Store | Const_array); _ } ->
     let env, dom = process_dirty uf env (get_domain uf) in
     let env, dom = register env dom in
     let env, dom = split_edges uf env dom in
