@@ -197,7 +197,7 @@ let get_literals env eb sb =
   | Some c -> c
   | None ->
     let _, min_exp = compute_emax_min_exp eb sb in
-    let max_real_q = Fp_value.max_finite_q eb sb in
+    let max_real_q = Fp_value.max_finite_q ~eb ~sb in
     let c =
       { max_real_q;
         max_int_z = Q.to_z (Q.floor max_real_q);
@@ -275,8 +275,8 @@ let normal_literal_facts eb sb term v =
         Ty.Tbool,
       if b then E.vrai else E.faux )
   in
-  [ mk_fact Names.is_normal (Fp_value.is_normal eb v);
-    mk_fact Names.is_subnormal (Fp_value.is_subnormal eb v) ]
+  [ mk_fact Names.is_normal (Fp_value.is_normal ~eb v);
+    mk_fact Names.is_subnormal (Fp_value.is_subnormal ~eb v) ]
 
 let register_aefloat_arg_watch uf term ds =
   match E.term_view term with
@@ -305,7 +305,7 @@ let normal_pred term =
 (* [is_normal x <-> is_finite x /\ (to_real x <= -c \/ c <= to_real x)] and
    [is_subnormal x <-> is_finite x /\ not is_zero x /\ -c < to_real x < c]. *)
 let normal_definition term (normal, eb, sb, x) =
-  let c = Fp_value.min_normal_q eb in
+  let c = Fp_value.min_normal_q ~eb in
   let r = E.FP.to_real ~eb ~sb x in
   let is_finite = E.FP.is_finite ~eb ~sb x in
   let minus_c = E.Reals.of_Q (Q.minus c) in

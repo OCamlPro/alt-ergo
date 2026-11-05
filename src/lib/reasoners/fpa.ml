@@ -100,7 +100,7 @@ struct
 
   let print ppf = function
     | Alien r -> X.print ppf r
-    | Literal (eb, sb, v) -> Fp_value.pp_smtlib eb sb ppf v
+    | Literal (eb, sb, v) -> Fp_value.pp_smtlib ~eb ~sb ppf v
 
   let leaves = function Alien r -> X.leaves r | Literal _ -> []
 

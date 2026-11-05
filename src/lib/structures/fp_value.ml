@@ -44,8 +44,10 @@ let equal v1 v2 =
   | Minus_zero, Minus_zero
   | NaN, NaN ->
     true
-  | Finite q1, Finite q2 when Q.equal q1 q2 -> true
-  | _, _ -> false
+  | Finite q1, Finite q2 -> Q.equal q1 q2
+  | ( (Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN | Finite _),
+      _ ) ->
+    false
 
 (* This works because we know that [q] is always dyadic since its created from
    an SMT-LIB float literal. *)
@@ -71,7 +73,7 @@ let fp_bias eb = (1 lsl (eb - 1)) - 1
 let fp_min_exp eb sb = fp_bias eb + sb - 2
 
 (* rational value -> (neg, biased_exp, significand) *)
-let q_to_bvs eb sb q =
+let q_to_bvs ~eb ~sb q =
   let bias = fp_bias eb in
   let min_exp = fp_min_exp eb sb in
   let neg = Q.sign q < 0 in
@@ -96,14 +98,14 @@ let q_to_bvs eb sb q =
   in
   neg, biased_exp, significand
 
-let pp_smtlib eb sb ppf = function
+let pp_smtlib ~eb ~sb ppf = function
   | Plus_infinity -> Fmt.pf ppf "(_ +oo %d %d)" eb sb
   | Minus_infinity -> Fmt.pf ppf "(_ -oo %d %d)" eb sb
   | Plus_zero -> Fmt.pf ppf "(_ +zero %d %d)" eb sb
   | Minus_zero -> Fmt.pf ppf "(_ -zero %d %d)" eb sb
   | NaN -> Fmt.pf ppf "(_ NaN %d %d)" eb sb
   | Finite q ->
-    let neg, biased_exp, significand = q_to_bvs eb sb q in
+    let neg, biased_exp, significand = q_to_bvs ~eb ~sb q in
     (* all-ones exponent is reserved for infinities and NaN *)
     assert (biased_exp < (1 lsl eb) - 1);
     let bfmt n = Fmt.str "%%0%db" n in
@@ -154,19 +156,19 @@ let mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb =
   else Finite (bvs_to_q ~neg ~biased_exp ~mantissa eb sb)
 
 (* Largest finite value of the format (eb, sb): 2^emax - 2^(emax - sb). *)
-let max_finite_q eb sb =
+let max_finite_q ~eb ~sb =
   let pow2_q = Fpa_rounding.mult_x_by_2_pow_n Q.one in
   let emax = fp_bias eb + 1 in
   Q.sub (pow2_q emax) (pow2_q (emax - sb))
 
 (* Smallest positive normal value: 2^(1 - bias). *)
-let min_normal_q eb = Fpa_rounding.mult_x_by_2_pow_n Q.one (1 - fp_bias eb)
+let min_normal_q ~eb = Fpa_rounding.mult_x_by_2_pow_n Q.one (1 - fp_bias eb)
 
 (* [Finite q] is never zero. *)
-let is_normal eb = function
-  | Finite q -> Q.compare (Q.abs q) (min_normal_q eb) >= 0
-  | _ -> false
+let is_normal ~eb = function
+  | Finite q -> Q.compare (Q.abs q) (min_normal_q ~eb) >= 0
+  | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN -> false
 
-let is_subnormal eb = function
-  | Finite q -> Q.compare (Q.abs q) (min_normal_q eb) < 0
-  | _ -> false
+let is_subnormal ~eb = function
+  | Finite q -> Q.compare (Q.abs q) (min_normal_q ~eb) < 0
+  | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN -> false

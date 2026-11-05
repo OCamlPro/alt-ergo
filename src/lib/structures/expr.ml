@@ -246,7 +246,7 @@ module SmtPrinter = struct
       let eb, sb =
         match ty with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
       in
-      Fp_value.pp_smtlib eb sb ppf v
+      Fp_value.pp_smtlib ~eb ~sb ppf v
     | Sy.True, [] -> Fmt.pf ppf "true"
     | Sy.False, [] -> Fmt.pf ppf "false"
     | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
