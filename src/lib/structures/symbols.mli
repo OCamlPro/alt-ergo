@@ -50,6 +50,7 @@ type operator =
   (* Arrays *)
   | Select
   | Store
+  | Const_array
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)

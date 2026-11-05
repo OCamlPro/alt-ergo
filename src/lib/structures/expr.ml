@@ -242,6 +242,8 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])" Var.print x.let_v pp x.let_e
         pp_boxed x.in_e
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
+    | Sy.Op Const_array, [v] ->
+      Fmt.pf ppf "@[<2>((as const %a)@ %a@])" Ty.pp_smtlib ty pp v
     | Sy.Op Minus, [e1; { f = Sy.Real q; _ }] when is_zero e1.f ->
       pp_rational ppf (Q.neg q)
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
@@ -1104,7 +1106,8 @@ let mk_ite cond th el =
 
 let rec is_model_term e =
   match e.f, e.xs with
-  | (Op (Constr _) | Op Store), xs -> List.for_all is_model_term xs
+  | (Op (Constr _) | Op Store | Op Const_array), xs ->
+    List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
@@ -3418,4 +3421,6 @@ module ArraysEx = struct
     mk_term Sy.(Op Select) [a; i] rty
 
   let store a i v = mk_term Sy.(Op Store) [a; i; v] (type_info a)
+
+  let const ty v = mk_term Sy.(Op Const_array) [v] ty
 end
