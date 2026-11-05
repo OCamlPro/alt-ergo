@@ -49,13 +49,16 @@ let[@inline] combine hash x h = combine_int (hash x) h
 let[@inline] combine_list hash xs h =
   (* This is written with a [while] loop in order to make it easier for the
      compiler to unbox the [Int64]s involved. *)
-  let h = ref h and xs = ref xs in
+  let h = ref h and xs = ref xs and len = ref 0 in
   while
     match !xs with
-    | [] -> false
+    | [] ->
+      h := combine_int !len !h;
+      false
     | x :: xs' ->
       h := combine_int (hash x) !h;
       xs := xs';
+      incr len;
       true
   do
     ()
