@@ -33,7 +33,7 @@ type 'a abstract =
         c_ty : Ty.t;
         c_args : (Dolmen.Std.Expr.term_cst * 'a) list
       }
-  | Select of
+  | Destruct of
       { d_name : Dolmen.Std.Expr.term_cst;
         d_ty : Ty.t;
         d_arg : 'a
