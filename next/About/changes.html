@@ -61,23 +61,30 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">About</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="license.html">Licenses</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Changes</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#v2-6-3">v2.6.3</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#v2-6-2">v2.6.2</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unreleased">unreleased</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#supported-features">Supported features</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#smt-lib-support">SMT-LIB support</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#user-interface">User Interface</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#reasoning">Reasoning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model-generation">Model generation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#documentation">Documentation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#miscellaneous-bug-fixes">Miscellaneous bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#internal-library-changes">Internal/library changes</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-4">v2.6.4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-3">v2.6.3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-2">v2.6.2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#v2-6-1">v2.6.1</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-6-0">v2.6.0</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#command-line-interface">Command-line interface</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#id1">SMT-LIB support</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model-generation">Model generation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Model generation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#theory-reasoning">Theory reasoning</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#internal-library-changes">Internal/library changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Internal/library changes</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#build-and-integration">Build and integration</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#testing">Testing</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#documentation">Documentation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Documentation</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-4">v2.5.4</a><ul>
@@ -89,22 +96,22 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-2">v2.5.2</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id2">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id5">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-1">v2.5.1</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id3">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-5-0">v2.5.0</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#new-features">New features</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id4">Build</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id5">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8">Bug fixes</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#v2-4-3-2023-04-14">v2.4.3 (2023-04-14)</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id6">Build</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id7">Bug fixes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id9">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id10">Bug fixes</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#regression-fixes">Regression fixes</a></li>
 </ul>
 </li>
@@ -176,17 +183,16 @@ the <a class="reference external" href="https://github.com/OCamlPro/Alt-Ergo">of
 GitHub</a>.</p>
 <section id="unreleased">
 <h2>unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading"></a></h2>
+<section id="supported-features">
+<h3>Supported features<a class="headerlink" href="#supported-features" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
+Tableaux solver (#1309)</p></li>
+</ul>
+</section>
+<section id="smt-lib-support">
+<h3>SMT-LIB support<a class="headerlink" href="#smt-lib-support" title="Permalink to this heading"></a></h3>
 <ul>
-<li><p>Support the <code class="docutils literal notranslate"><span class="pre">ae.sqrt_real</span></code> function in the SMT-LIB format (<code class="docutils literal notranslate"><span class="pre">sqrt_real</span></code> in
-the native format), which computes the square root of a real (#1431)</p></li>
-<li><p>Support the <code class="docutils literal notranslate"><span class="pre">int.pow2</span></code> function, which takes an integer <code class="docutils literal notranslate"><span class="pre">n</span></code> and computes
-<code class="docutils literal notranslate"><span class="pre">ae.pow_int</span> <span class="pre">2</span> <span class="pre">n</span></code> (#1365)</p></li>
-<li><p>Support parsing of SMT-LIB FPA Theory literals and add the theory <code class="docutils literal notranslate"><span class="pre">smt.float</span></code>
-that enables the support for the SMT-LIB FPA Theory, and that can be used
-with the cmdline option <code class="docutils literal notranslate"><span class="pre">--enable-theory</span> <span class="pre">smt.float</span></code> (#1358)</p></li>
-<li><p>Add the opam package <code class="docutils literal notranslate"><span class="pre">alt-ergo-smt-float-plugin</span></code>, which installs an
-axiomatization of the SMT-LIB FPA Theory derived from Why3 and distributed
-under its license (#1371)</p></li>
 <li><p>Added support for the <code class="docutils literal notranslate"><span class="pre">:reproducible-resource-limit</span></code> and
 <code class="docutils literal notranslate"><span class="pre">--reproducible-resource-limit</span></code> options, following the SMT-LIB standard
 (#1353)</p>
@@ -197,35 +203,132 @@ the <strong>global</strong> step limit (defined with <code class="docutils liter
 <p>We encourage users of the global step limit (<code class="docutils literal notranslate"><span class="pre">--steps-bound</span></code>) to switch to
 the reproducible resource limit instead.</p>
 </li>
-</ul>
-</section>
-<section id="v2-6-3">
-<h2>v2.6.3<a class="headerlink" href="#v2-6-3" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p>Bump minimal cmdliner version to 2.0 (#1340)</p></li>
-</ul>
-</section>
-<section id="v2-6-2">
-<h2>v2.6.2<a class="headerlink" href="#v2-6-2" title="Permalink to this heading"></a></h2>
-<section id="supported-features">
-<h3>Supported features<a class="headerlink" href="#supported-features" title="Permalink to this heading"></a></h3>
-<ul class="simple">
-<li><p>Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
-Tableaux solver (#1309)</p></li>
-</ul>
-</section>
-<section id="smt-lib-support">
-<h3>SMT-LIB support<a class="headerlink" href="#smt-lib-support" title="Permalink to this heading"></a></h3>
-<ul class="simple">
-<li><p>Remove the legacy frontend and AB-Why3 plugin</p></li>
+<li><p>Support the <code class="docutils literal notranslate"><span class="pre">ae.sqrt_real</span></code> function in the SMT-LIB format (<code class="docutils literal notranslate"><span class="pre">sqrt_real</span></code> in
+the native format), which computes the square root of a real (#1431)</p></li>
+<li><p>Support the <code class="docutils literal notranslate"><span class="pre">int.pow2</span></code> function, which takes an integer <code class="docutils literal notranslate"><span class="pre">n</span></code> and computes
+<code class="docutils literal notranslate"><span class="pre">ae.pow_int</span> <span class="pre">2</span> <span class="pre">n</span></code> (#1365)</p></li>
+<li><p>Support parsing of SMT-LIB FloatingPoint Theory literals and add the theory <code class="docutils literal notranslate"><span class="pre">smt.float</span></code>
+that enables the support for the SMT-LIB FloatingPoint Theory, and that can be used
+with the command-line option <code class="docutils literal notranslate"><span class="pre">--enable-theory</span> <span class="pre">smt.float</span></code>. Improved reasoning
+for SMT-LIB FloatingPoint theory is available in the optional
+<code class="docutils literal notranslate"><span class="pre">alt-ergo-smt-float-plugin</span></code> package, which installs an axiomatization of the
+FloatingPoint theory derived from Why3 and distributed under LGPL (#1358,
+#1418, #1419, #1371, #1379, #1422)</p></li>
 </ul>
 </section>
 <section id="user-interface">
 <h3>User Interface<a class="headerlink" href="#user-interface" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Interactive prompt when using interactive mode (#1310)</p></li>
+<li><p>Removed deprecated options <code class="docutils literal notranslate"><span class="pre">-d</span> <span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">-d</span> <span class="pre">typing</span></code>, <code class="docutils literal notranslate"><span class="pre">-d</span> <span class="pre">warnings</span></code>,
+<code class="docutils literal notranslate"><span class="pre">--use-underscore</span></code>, <code class="docutils literal notranslate"><span class="pre">--use-fpa</span></code>, <code class="docutils literal notranslate"><span class="pre">--disable-adts</span></code> and <code class="docutils literal notranslate"><span class="pre">--no-ac</span></code> (#1265)</p></li>
+<li><p>SMT-LIB compliant printing for negative real literals (#1272)</p></li>
+<li><p>Add flag <code class="docutils literal notranslate"><span class="pre">-b</span></code> to record backtraces (#1276)</p></li>
+<li><p>Use Dolmen locations in errors (#1284, #1372, #1373)</p></li>
+<li><p>Properly escape quotes when printing SMT-LIB error message (#1289)</p></li>
+<li><p>Removed options <code class="docutils literal notranslate"><span class="pre">-interpretation</span> <span class="pre">first</span></code> and <code class="docutils literal notranslate"><span class="pre">-interpretation</span> <span class="pre">last</span></code>, as they
+were broken and have no known users(#1299)</p></li>
+<li><p>Report the number of steps that trigger a step limit in <code class="docutils literal notranslate"><span class="pre">get-unknown-reason</span></code>
+(#1317)</p></li>
+<li><p>Disable “axiom replaced with” warning (#1328)</p></li>
+<li><p>Improve error message printing (#1335)</p></li>
+<li><p>Create a proper <code class="docutils literal notranslate"><span class="pre">alt-ergo-js</span></code> package (#1346)</p></li>
+<li><p>Do not install the bytecode version of alt-ergo (#1347)</p></li>
+<li><p>Warn when inadequate user-provided triggers are dropped (#1375)</p></li>
+<li><p>Correctly parse <code class="docutils literal notranslate"><span class="pre">:named</span></code> attribute in SMT-LIB inputs (#1424)</p></li>
 </ul>
 </section>
+<section id="reasoning">
+<h3>Reasoning<a class="headerlink" href="#reasoning" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Improved reasoning for <code class="docutils literal notranslate"><span class="pre">distinct</span></code> literals (#1380, #1411, #1410, #1412)</p></li>
+<li><p>Improve performance of congruence closure (#1414)</p></li>
+<li><p>Improved reasoning for <code class="docutils literal notranslate"><span class="pre">pow</span></code> and multiplication (#1379)</p></li>
+</ul>
+</section>
+<section id="model-generation">
+<h3>Model generation<a class="headerlink" href="#model-generation" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Complete models for <code class="docutils literal notranslate"><span class="pre">log2</span></code>, <code class="docutils literal notranslate"><span class="pre">floor</span></code>, <code class="docutils literal notranslate"><span class="pre">ceil</span></code>, <code class="docutils literal notranslate"><span class="pre">min_int</span></code>, <code class="docutils literal notranslate"><span class="pre">max_int</span></code>,
+<code class="docutils literal notranslate"><span class="pre">min_real</span></code> and <code class="docutils literal notranslate"><span class="pre">max_real</span></code> (#1234)</p></li>
+<li><p>Produce valid SMT-LIB models without internal names (#1329, fixing issues
+#1213 and #1270)</p></li>
+<li><p>Provide concrete values for unconstrained symbols of type int, real, bitv
+and bool (#1357)</p></li>
+</ul>
+</section>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Add example for the <code class="docutils literal notranslate"><span class="pre">ae.float</span></code> primitive (#1239)</p></li>
+<li><p>Documentation of <code class="docutils literal notranslate"><span class="pre">arrays_rel.ml</span></code> (#1268)</p></li>
+<li><p>Update the installation documentation (#1307)</p></li>
+</ul>
+</section>
+<section id="miscellaneous-bug-fixes">
+<h3>Miscellaneous bug fixes<a class="headerlink" href="#miscellaneous-bug-fixes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>No longer load preludes twice when <code class="docutils literal notranslate"><span class="pre">--enable-theories</span></code> is provided (#1235)</p></li>
+<li><p>Prevent fatal error when the step limit is reached (#1245)</p></li>
+<li><p>Prevent potential infinite loop without step increase (#1316)</p></li>
+<li><p>Fix crashes on <code class="docutils literal notranslate"><span class="pre">float32d</span></code> / <code class="docutils literal notranslate"><span class="pre">float64d</span></code> with symbolic rounding parameters (#1376)</p></li>
+</ul>
+</section>
+<section id="internal-library-changes">
+<h3>Internal/library changes<a class="headerlink" href="#internal-library-changes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Remove the legacy frontend and AB-Why3 plugin (#1249, #1251, #1254, #1253,
+#1258, #1258)</p></li>
+<li><p>Remove unused code (#1247, #1264, #1262, #1275)</p></li>
+<li><p>Use an exception in <code class="docutils literal notranslate"><span class="pre">Solving_loop.process_source</span></code> (#1256)</p></li>
+<li><p>Tidy up <code class="docutils literal notranslate"><span class="pre">is_enum_constr</span></code> test in ADT theory (#1255)</p></li>
+<li><p>Expose some more functions in <code class="docutils literal notranslate"><span class="pre">ModelMap</span></code> (#1259)</p></li>
+<li><p>Use Dolmen type variables (#1267)</p></li>
+<li><p>Remove global state (#1286)</p></li>
+<li><p>Track assertion level in SatML solver (#1297)</p></li>
+<li><p>Remove the <code class="docutils literal notranslate"><span class="pre">Record</span></code> theory, as it is subsumed by the <code class="docutils literal notranslate"><span class="pre">Adt</span></code> theory (#1095)</p></li>
+<li><p>Remove labels on symbols and literals (#1266)</p></li>
+<li><p>Add tests for corner cases of <code class="docutils literal notranslate"><span class="pre">add_predicate</span></code> (#1305)</p></li>
+<li><p>Create a custom ADT for <code class="docutils literal notranslate"><span class="pre">Th_util.answer</span></code> (#1304)</p></li>
+<li><p>Move guard creation from <code class="docutils literal notranslate"><span class="pre">Satml_frontend</span></code> to <code class="docutils literal notranslate"><span class="pre">Satml</span></code> (#1313)</p></li>
+<li><p>Remove ppx (#1361)</p></li>
+<li><p>Separate configuration for trigger inference and matching (#1359)</p></li>
+<li><p>Rely on Zarith to build integer literals (#1368)</p></li>
+<li><p>Flatten integer literals into <code class="docutils literal notranslate"><span class="pre">-n</span></code> rather than <code class="docutils literal notranslate"><span class="pre">(-</span> <span class="pre">0</span> <span class="pre">n)</span></code> (#1369)</p></li>
+<li><p>Rename <code class="docutils literal notranslate"><span class="pre">toplevel</span></code> to <code class="docutils literal notranslate"><span class="pre">prenex</span></code> (#1382)</p></li>
+<li><p>Extract type signature for modules (#1385, #1386, #1387, #1388)</p></li>
+<li><p>Simplifications to the “flat formula” parsing (#1396, #1391, #1398)</p></li>
+</ul>
+</section>
+</section>
+<section id="v2-6-4">
+<h2>v2.6.4<a class="headerlink" href="#v2-6-4" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Fix more crashes and incorrect output in <code class="docutils literal notranslate"><span class="pre">--profiling</span></code> (#1354, #1355, #1356)</p></li>
+</ul>
+</section>
+<section id="v2-6-3">
+<h2>v2.6.3<a class="headerlink" href="#v2-6-3" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Add support for ae.pow_int and ae.pow_real (#1342)</p></li>
+<li><p>Bump minimal cmdliner version to 2.0 (#1340)</p></li>
+<li><p>Add an upper bound (&lt; 0.11) for Dolmen (#1345)</p></li>
+</ul>
+</section>
+<section id="v2-6-2">
+<h2>v2.6.2<a class="headerlink" href="#v2-6-2" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Expose some internal APIs for Owi (#1259)</p></li>
+<li><p>Provide forward-compatibility with future changes in Alt-Ergo 2.7</p></li>
+</ul>
+</section>
+<section id="v2-6-1">
+<h2>v2.6.1<a class="headerlink" href="#v2-6-1" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Consistent output of steps limit error (#1245)</p></li>
+<li><p>Prevent potential long-running loop without steps increase (#1316)</p></li>
+<li><p>Report correct number of steps when limit is exceeded (#1317)</p></li>
+</ul>
 </section>
 <section id="v2-6-0">
 <h2>v2.6.0<a class="headerlink" href="#v2-6-0" title="Permalink to this heading"></a></h2>
@@ -259,8 +362,8 @@ compliant (#805)</p></li>
 <li><p>Add support for naming lemmas in SMT-LIB syntax (#1141, #1143)</p></li>
 </ul>
 </section>
-<section id="model-generation">
-<h3>Model generation<a class="headerlink" href="#model-generation" title="Permalink to this heading"></a></h3>
+<section id="id2">
+<h3>Model generation<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Use post-solve SAT environment in model generation, fixing issues where
 incorrect models were generated (#789)</p></li>
@@ -305,8 +408,8 @@ ADT theory (#1078, #1086, #1087, #1091, #1094, #1138)</p></li>
 <li><p>Do not build unnormalized values in <code class="docutils literal notranslate"><span class="pre">zero_extend</span></code> (#1226)</p></li>
 </ul>
 </section>
-<section id="internal-library-changes">
-<h3>Internal/library changes<a class="headerlink" href="#internal-library-changes" title="Permalink to this heading"></a></h3>
+<section id="id3">
+<h3>Internal/library changes<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Rewrite the Vec module (#607)</p></li>
 <li><p>Move printer definitions closer to type definitions (#808)</p></li>
@@ -365,8 +468,8 @@ registered through the dune-site plugin mechanism in the
 <li><p>Restore automatic creation of .expected files (#941)</p></li>
 </ul>
 </section>
-<section id="documentation">
-<h3>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading"></a></h3>
+<section id="id4">
+<h3>Documentation<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Add a new example for model generation (#826)</p></li>
 <li><p>Add a Pygments lexer for the Alt-Ergo native language (#862)</p></li>
@@ -404,8 +507,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-5-2">
 <h2>v2.5.2<a class="headerlink" href="#v2-5-2" title="Permalink to this heading"></a></h2>
-<section id="id2">
-<h3>Bug fixes<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<section id="id5">
+<h3>Bug fixes<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Hot fix for a soundness bug related with the <code class="docutils literal notranslate"><span class="pre">distinct</span></code> statement (#890)</p></li>
 <li><p>Treat missing values in models as abstract (#860)</p></li>
@@ -414,8 +517,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-5-1">
 <h2>v2.5.1<a class="headerlink" href="#v2-5-1" title="Permalink to this heading"></a></h2>
-<section id="id3">
-<h3>Bug fixes<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<section id="id6">
+<h3>Bug fixes<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>fix a critical soundness bug with bvnot primitive (#819)</p></li>
 </ul>
@@ -436,16 +539,16 @@ extensions (#1122)</p></li>
 <li><p>improve the ite preprocessing (simplification of some ites) (PR #731)</p></li>
 </ul>
 </section>
-<section id="id4">
-<h3>Build<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<section id="id7">
+<h3>Build<a class="headerlink" href="#id7" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>update to the new version of ocplib-simplex (0.5)</p></li>
 <li><p>remove the support of the deprecated library num. Alt-Ergo only uses Zarith (PR #600)</p></li>
 <li><p>remove the deprecated graphical interface (PR #601)</p></li>
 </ul>
 </section>
-<section id="id5">
-<h3>Bug fixes<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
+<section id="id8">
+<h3>Bug fixes<a class="headerlink" href="#id8" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>issue 475 – Catch the exception I_dont_known in instantiation pass of SatML (PR #478)</p></li>
 <li><p>fix a memory leak in the vector module (PR #606)</p></li>
@@ -454,8 +557,8 @@ extensions (#1122)</p></li>
 </section>
 <section id="v2-4-3-2023-04-14">
 <h2>v2.4.3 (2023-04-14)<a class="headerlink" href="#v2-4-3-2023-04-14" title="Permalink to this heading"></a></h2>
-<section id="id6">
-<h3>Build<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h3>
+<section id="id9">
+<h3>Build<a class="headerlink" href="#id9" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Restrict the requirement version of Ocplib-simplex (PR #573)</p></li>
 <li><p>Dune 3.0 or above required, see https://github.com/ocaml/dune/issues/5563 (PR #575)</p></li>
@@ -465,8 +568,8 @@ extensions (#1122)</p></li>
 <li><p>Using js_of_ocaml with a version between 4.0.1 and 5.0.1 required (PR #575)</p></li>
 </ul>
 </section>
-<section id="id7">
-<h3>Bug fixes<a class="headerlink" href="#id7" title="Permalink to this heading"></a></h3>
+<section id="id10">
+<h3>Bug fixes<a class="headerlink" href="#id10" title="Permalink to this heading"></a></h3>
 <ul class="simple">
 <li><p>Fix soundness issues in the arithmetic reasoner #476, #477, #479 (PR #573)</p></li>
 </ul>
