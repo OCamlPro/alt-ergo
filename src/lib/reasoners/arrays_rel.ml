@@ -383,9 +383,16 @@ module Conseqs = Set.Make (struct
     | Equal _, Value _ -> 1
 end)
 
+(* The case splits are chosen by creation order, the most recent first (see
+   [case_split]). [order] is the list of the pending case splits, the most
+   recent first: a new case split is pushed on it ([add_split]), a decided one
+   is removed from it ([remove_split]) and [case_split] takes its head. A case
+   split that is added again keeps its position. *)
 type t =
   { splits : Conseqs.t LX.Map.t;
     (* Map of the case splits [k = i] to their consequences if [k <> i]. *)
+    order : LX.t list;
+    (* The case splits of [splits], the most recent first. *)
     new_terms : E.Set.t;
     (* Terms produced by the theory that are sent to the instantiation
        engine. *)
@@ -396,7 +403,7 @@ type t =
   }
 
 let empty uf =
-  ( { splits = LX.Map.empty; new_terms = E.Set.empty; term_eqs = [] },
+  ( { splits = LX.Map.empty; order = []; new_terms = E.Set.empty; term_eqs = [] },
     (* The domain is only registered when the first select or store term is
        added: without arrays, the union-find does not update it. *)
     Uf.domains uf )
@@ -437,13 +444,19 @@ let add_split env (dom : Domain.t) k i conseq =
     { env with splits = LX.Map.add lit (Conseqs.add conseq ps) env.splits }, dom
   | exception Not_found ->
     let add = update_split_locs (LX.Set.add lit) in
-    ( { env with splits = LX.Map.add lit (Conseqs.singleton conseq) env.splits },
+    ( { env with
+        splits = LX.Map.add lit (Conseqs.singleton conseq) env.splits;
+        order = lit :: env.order
+      },
       { dom with split_locs = add k (add i dom.split_locs) } )
 
 (* Remove the case split [k = i], which is decided. *)
 let remove_split uf env (dom : Domain.t) lit k i =
   let remove r = update_split_locs (LX.Set.remove lit) (fst (Uf.find_r uf r)) in
-  ( { env with splits = LX.Map.remove lit env.splits },
+  ( { env with
+      splits = LX.Map.remove lit env.splits;
+      order = List.filter (fun l -> not (LX.equal l lit)) env.order
+    },
     { dom with split_locs = remove k (remove i dom.split_locs) } )
 
 (* The term of the class of [r] (see [Domain.terms]), with the explanation of
@@ -816,15 +829,15 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
-(* Split on a case split [k = i] and try [k <> i] first: this branch propagates
-   the values. *)
+(* Split on the most recent case split [k = i] and try [k <> i] first: this
+   branch propagates the values. *)
 let case_split env _uf ~for_model:_ =
-  match LX.Map.min_binding_opt env.splits with
-  | Some (lit, _) ->
+  match env.order with
+  | lit :: _ ->
     let lit = LX.neg lit in
     Log.debug (fun k -> k "case split@ %a" LX.print lit);
     [LX.view lit, true, Th_util.CS (Th_util.Th_arrays, two)]
-  | None -> []
+  | [] -> []
 
 let optimizing_objective _env _uf _o = None
 
