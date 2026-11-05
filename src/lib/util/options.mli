@@ -470,7 +470,7 @@ val get_debug_gc : unit -> bool
 (** Prints some debug info about the GC's activity. *)
 
 val get_debug_congr : unit -> bool
-(** Get the debugging flag of use. *)
+(** Get the debugging flag of congr. *)
 
 val get_debug_uf : unit -> bool
 (** Get the debugging flag of uf. *)

@@ -197,10 +197,11 @@ module Main : S = struct
               Fmt.(braces @@ list ~sep:comma @@ pair (A.print_view X.print) nop)
               ctx)
 
-    let add_to_use t =
+    let add_to_congr t =
       if Options.get_debug_cc ()
       then
-        print_dbg ~module_name:"Ccx" ~function_name:"add_to_use" "%a" E.print t
+        print_dbg ~module_name:"Ccx" ~function_name:"add_to_congr" "%a" E.print
+          t
 
     (* unused -- let lrepr fmt = List.iter (fprintf fmt) "%a " X.print)
 
@@ -238,8 +239,8 @@ module Main : S = struct
   let equal_only_by_congruence env (facts : r Sig_rel.facts) t1 t2 =
     if E.equal t1 t2
     then
-      Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@@]" Fmt.text
-        "*BUG*: term was returned as congruence candidate with itself by Use:"
+      Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@]" Fmt.text
+        "*BUG*: term was returned as congruence candidate with itself by Congr:"
         E.print t1;
     let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
     let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
@@ -248,7 +249,7 @@ module Main : S = struct
       Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@ and@;<1 2>@[%a@]@]"
         Fmt.text
         "*BUG*: terms with distinct symbols or types returned for congruence \
-         by Use:"
+         by Congr:"
         E.print t1 E.print t2;
     try
       let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
@@ -258,7 +259,7 @@ module Main : S = struct
     with Exit ->
       Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@ and@;<1 2>@[%a@]@]"
         Fmt.text
-        "*BUG*: terms should be equal by congruence according to Use, but Uf \
+        "*BUG*: terms should be equal by congruence according to Congr, but Uf \
          could not explain why:"
         E.print t1 E.print t2
 
@@ -432,7 +433,7 @@ module Main : S = struct
     then env
     else begin
       Options.tool_req 3 "TR-CCX-AddTerm";
-      Debug.add_to_use t;
+      Debug.add_to_congr t;
       (* we add t's arguments in env *)
       let { E.xs; _ } = E.term_view t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
