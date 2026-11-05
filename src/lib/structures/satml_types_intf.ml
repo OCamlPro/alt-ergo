@@ -167,14 +167,6 @@ module type FLAT_FORMULA = sig
 
   val view : t -> view
 
-  val mk_lit : hcons_env -> Expr.t -> Atom.var list -> t * Atom.var list
-
-  val mk_and : hcons_env -> t list -> t
-
-  val mk_or : hcons_env -> t list -> t
-
-  val mk_not : t -> t
-
   val empty_hcons_env : unit -> hcons_env
 
   val nb_made_vars : hcons_env -> int
