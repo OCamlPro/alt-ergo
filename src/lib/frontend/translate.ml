@@ -1264,11 +1264,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
                 | Minus_zero _ | NaN _ ),
                 _ )
-            | RM RoundNearestTiesToEven, _
-            | RM RoundNearestTiesToAway, _
-            | RM RoundTowardPositive, _
-            | RM RoundTowardNegative, _
-            | RM RoundTowardZero, _
+            | RM _, _
             (* wrong arity *)
             | ( ( Ieee_format_to_fp _ | To_fp _ | Of_sbv _ | Of_ubv _ | To_ubv _
                 | To_sbv _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
@@ -1286,11 +1282,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               _ )
           (* rounding modes are now matched as literals since we use the SMT-LIB
              FP theory ones provided by dolmen *)
-          | RM RoundNearestTiesToEven, _
-          | RM RoundNearestTiesToAway, _
-          | RM RoundTowardPositive, _
-          | RM RoundTowardNegative, _
-          | RM RoundTowardZero, _ ->
+          | RM _, _ ->
             invalid_app_term ()
           (* not supported without [Options.get_smt_lib_fpa ()] *)
           | ( ( Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
