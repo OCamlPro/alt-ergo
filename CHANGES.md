@@ -1,15 +1,13 @@
 ## unreleased
 
- - Support the `ae.sqrt_real` function in the SMT-LIB format (`sqrt_real` in
-   the native format), which computes the square root of a real (#1431)
- - Support the `int.pow2` function, which takes an integer `n` and computes
-   `ae.pow_int 2 n` (#1365)
- - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
-   that enables the support for the SMT-LIB FPA Theory, and that can be used
-   with the cmdline option `--enable-theory smt.float` (#1358)
- - Add the opam package `alt-ergo-smt-float-plugin`, which installs an
-   axiomatization of the SMT-LIB FPA Theory derived from Why3 and distributed
-   under its license (#1371)
+### Supported features
+
+ - Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
+   Tableaux solver (#1309)
+
+### SMT-LIB support
+
+ - Remove the legacy frontend and AB-Why3 plugin
 
  - Added support for the `:reproducible-resource-limit` and
    `--reproducible-resource-limit` options, following the SMT-LIB standard
@@ -23,15 +21,20 @@
    We encourage users of the global step limit (`--steps-bound`) to switch to
    the reproducible resource limit instead.
 
-### Supported features
+ - Support the `ae.sqrt_real` function in the SMT-LIB format (`sqrt_real` in
+   the native format), which computes the square root of a real (#1431)
 
- - Remove the legacy Tableaux-CDCL solver, which is strictly worse than the
-   Tableaux solver (#1309)
+ - Support the `int.pow2` function, which takes an integer `n` and computes
+   `ae.pow_int 2 n` (#1365)
 
-### SMT-LIB support
+ - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
+   that enables the support for the SMT-LIB FPA Theory, and that can be used
+   with the cmdline option `--enable-theory smt.float` (#1358)
 
-  - Remove the legacy frontend and AB-Why3 plugin
-
+ - Add the opam package `alt-ergo-smt-float-plugin`, which installs an
+   axiomatization of the SMT-LIB FPA Theory derived from Why3 and distributed
+   under its license (#1371)
+  
 ### User Interface
 
  - Interactive prompt when using interactive mode (#1310)
