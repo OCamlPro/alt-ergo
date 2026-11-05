@@ -153,13 +153,6 @@ module type FLAT_FORMULA = sig
 
   type hcons_env
 
-  type proxy_defn
-  (** A proxy definition, encoding an equivalence [p <=> l_1 /\ ... /\ l_n] or
-      [p <=> l_1 \/ ... \/ l_n] where [p] is a proxy and [l_1], ..., [l_n] are
-      literals.
-
-      See [get_proxy_of] and [expand_proxy_defn]. *)
-
   val equal : t -> t -> bool
 
   val compare : t -> t -> int
@@ -212,19 +205,15 @@ module type FLAT_FORMULA = sig
     hcons_env ->
     t ->
     Atom.var list ->
-    Atom.atom * proxy_defn list * Atom.var list
+    Atom.atom list list ->
+    Atom.atom * Atom.var list * Atom.atom list list
+  (** [cnf_abstr hcons f vars clauses] returns a triple [atom, vars', clauses']
+      where [atom] is logically equivalent to [f], [vars'] is [vrs] plus any
+      variables created while processing [f], and [clauses'] is [clauses] plus
+      any auxiliary clauses created while processing [f].
 
-  val expand_proxy_defn :
-    Atom.atom list list -> proxy_defn -> Atom.atom list list
-  (** Expand a proxy definition into clausal normal form.
-
-      The definition [p <=> l_1 \/ ... \/ l_n] is expanded into:
-
-      [(~p \/ l_1 \/ ... \/ l_n) /\ (p \/ ~l_1) /\ ... /\ (p \/ ~l_n)]
-
-      and the definition [p <=> l_1 /\ ... /\ l_n] is expanded into:
-
-      [(p \/ ~l_1 \/ ... \/ ~l_n) /\ (~p \/ l_1) /\ ... /\ (~p \/ l_n)] *)
+      Clauses are added to represent proxy definitions for each of the switch
+      between an [AND] and an [OR] formula. *)
 
   val reinit_cpt : unit -> unit
   (** Resets to 0 the counter *)
