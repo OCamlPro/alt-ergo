@@ -336,9 +336,8 @@ let class_clauses x =
   in
   let is_nan = E.FP.is_nan ~eb ~sb x in
   let is_infinite = E.FP.is_infinite ~eb ~sb x in
+  let is_finite = E.FP.is_finite ~eb ~sb x in
   let is_zero = E.FP.is_zero ~eb ~sb x in
-  let is_normal = E.FP.is_normal ~eb ~sb x in
-  let is_subnormal = E.FP.is_subnormal ~eb ~sb x in
   let is_positive = E.FP.is_positive ~eb ~sb x in
   let is_negative = E.FP.is_negative ~eb ~sb x in
   let is v = E.mk_eq ~iff:false x (E.float v eb sb) in
@@ -346,10 +345,14 @@ let class_clauses x =
     | [] -> []
     | a :: l -> List.map (fun b -> [E.neg a; E.neg b]) l @ at_most_one l
   in
-  let classes = [is_nan; is_infinite; is_zero; is_normal; is_subnormal] in
+  (* [is_normal] and [is_subnormal] are left out for now, they would bring the
+     [normal_definition] of every float, and thus its [to_real], into
+     arithmetic. *)
+  let classes = [is_nan; is_infinite; is_finite] in
   List.map mk_clause
     ((classes :: at_most_one classes)
-    @ [ [is_nan; is_positive; is_negative];
+    @ [ [E.neg is_zero; is_finite];
+        [is_nan; is_positive; is_negative];
         [E.neg is_positive; E.neg is_negative];
         [E.neg is_nan; E.neg is_positive];
         [E.neg is_nan; E.neg is_negative];
