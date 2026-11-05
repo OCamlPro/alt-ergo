@@ -321,7 +321,8 @@ module Domains = struct
       t
     | Some d ->
       let nd = get nr t in
-      let mergedd = Domain.merge ~ex d nd in
+      (* The statuses of [r] need [ex] to hold on [nr]. *)
+      let mergedd = Domain.merge ~ex nd d in
       if Options.get_debug_fpa () > 0
       then
         Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"subst"
@@ -428,15 +429,19 @@ module AEFloat_arg_watch = struct
 end
 
 type t =
-  { pending_types : IntPairSet.t;
+  { seen_types : IntPairSet.t;
+        (* formats whose precision facts are sent or pending in this env *)
+    pending_types : IntPairSet.t;
     pending_literals : (E.t * E.t) list;
     literals_cache : (int * int, precision_literals) Hashtbl.t;
+        (* memoizes [get_literals], shared across backtracking *)
     new_terms : E.Set.t;
     defs : E.Set.t
   }
 
 let empty uf =
-  ( { pending_types = IntPairSet.empty;
+  ( { seen_types = IntPairSet.empty;
+      pending_types = IntPairSet.empty;
       pending_literals = [];
       literals_cache = Hashtbl.create 16;
       new_terms = E.Set.empty;
@@ -664,13 +669,13 @@ let add env uf _r term =
     match ty with
     | Ty.Tfloat (eb, sb) ->
       let env =
-        if
-          not
-            (IntPairSet.mem (eb, sb) env.pending_types
-            || Hashtbl.mem env.literals_cache (eb, sb))
-        then
-          { env with pending_types = IntPairSet.add (eb, sb) env.pending_types }
-        else env
+        if IntPairSet.mem (eb, sb) env.seen_types
+        then env
+        else
+          { env with
+            seen_types = IntPairSet.add (eb, sb) env.seen_types;
+            pending_types = IntPairSet.add (eb, sb) env.pending_types
+          }
       in
       let env =
         match f with
