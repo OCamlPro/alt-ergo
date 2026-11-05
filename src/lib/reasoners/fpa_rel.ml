@@ -480,8 +480,10 @@ let new_terms env = env.new_terms
 
 (* Sends the lemmas of [defs] to the SAT solver: the definitions of [is_normal]
    and [is_subnormal], and the class clauses of the floats. *)
-let instantiate ~do_syntactic_matching:_ _ env _uf selector =
-  if not (Options.get_smt_lib_fpa ())
+let instantiate ~do_syntactic_matching _ env _uf selector =
+  (* only send the lemmas once per round, in the syntactic pass, rather than
+     again in each of the semantic passes. *)
+  if (not (Options.get_smt_lib_fpa ())) || not do_syntactic_matching
   then env, []
   else
     let insts =
