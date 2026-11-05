@@ -1,5 +1,7 @@
 ## unreleased
 
+ - Support the `ae.sqrt_real` function in the SMT-LIB format (`sqrt_real` in
+   the native format), which computes the square root of a real (#1431)
  - Support the `int.pow2` function, which takes an integer `n` and computes
    `ae.pow_int 2 n` (#1365)
  - Support parsing of SMT-LIB FPA Theory literals and add the theory `smt.float`
