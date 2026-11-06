@@ -146,6 +146,9 @@
 
  - Simplifications to the "flat formula" parsing (#1396, #1391, #1398)
 
+ - Replace the `use` module with `congr`, and the `-d use` flag with `-d congr`
+   (#1249)
+
 ## v2.6.4
 
  - Fix more crashes and incorrect output in `--profiling` (#1354, #1355, #1356)
