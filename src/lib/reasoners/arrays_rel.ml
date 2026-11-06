@@ -70,8 +70,15 @@ module Domain = struct
          [add_edge]). *)
       split_locs : LX.Set.t X.Map.t;
       (* Map of indices to the case splits on this index. *)
+      terms : E.t X.Map.t;
+      (* A term of the class of each array, index and value of the domain. *)
       dirty : X.Set.t;
       (* Arrays whose values have to be propagated again through their edges. *)
+      merged : (X.r * X.Set.t * X.Set.t) list;
+      (* [(a, idxs, nbrs)]: the array [a] has been merged with an array whose
+         values were at the indices [idxs] and whose neighbours were [nbrs].
+         Only the values of each side have to be propagated through the edges of
+         the other side (see [process_dirty]). *)
       split_todo : LX.Set.t;
       (* Case splits whose indices have been merged with others. *)
       eqs : (X.r * X.r * Ex.t) list
@@ -87,7 +94,9 @@ module Domain = struct
       edge_locs = X.Map.empty;
       edge_splits = [];
       split_locs = X.Map.empty;
+      terms = X.Map.empty;
       dirty = X.Set.empty;
+      merged = [];
       split_todo = LX.Set.empty;
       eqs = []
     }
@@ -115,6 +124,10 @@ module Domain = struct
 
   let edges_of a t =
     Option.value ~default:X.Map.empty (X.Map.find_opt a t.edges)
+
+  (* Record [tm] as the term of the class of [r], unless it already has one. *)
+  let add_term r tm t =
+    if X.Map.mem r t.terms then t else { t with terms = X.Map.add r tm t.terms }
 
   (* Add the value [a[k] = v]. If [a] already has a value at [k], deduce the
      equality of the two values instead. Returns [true] if the known value is
@@ -216,10 +229,12 @@ module Domain = struct
   (* The array [rr] is replaced by [nrr]: its values and edges are moved to
      [nrr]. *)
   let subst_array ~ex rr nrr t =
+    let rvalues = values_of rr t and redges = edges_of rr t in
+    let nvalues = values_of nrr t and nedges = edges_of nrr t in
     let t =
       X.Map.fold
         (fun k (v, ex_v) t -> fst (add_value nrr k (v, Ex.union ex ex_v) t))
-        (values_of rr t)
+        rvalues
         { t with values = X.Map.remove rr t.values }
     in
     let t =
@@ -228,17 +243,29 @@ module Domain = struct
           let bm = X.Map.remove rr (X.Map.find b t.edges) in
           let t = { t with edges = X.Map.add b bm t.edges } in
           add_edge nrr i b (Ex.union ex e) t)
-        (edges_of rr t)
+        redges
         { t with edges = X.Map.remove rr t.edges }
     in
-    if X.Map.mem nrr t.values && X.Map.mem nrr t.edges
-    then { t with dirty = X.Set.add nrr t.dirty }
+    (* Something has to be propagated only if one side has values and the other
+       side has edges. *)
+    if
+      ((not (X.Map.is_empty rvalues)) && not (X.Map.is_empty nedges))
+      || ((not (X.Map.is_empty nvalues)) && not (X.Map.is_empty redges))
+    then
+      let keys m = X.Map.fold (fun k _ s -> X.Set.add k s) m X.Set.empty in
+      { t with merged = (nrr, keys rvalues, keys redges) :: t.merged }
     else t
+
+  (* The term of [rr] becomes a term of [nrr]. *)
+  let subst_term rr nrr t =
+    match X.Map.find_opt rr t.terms with
+    | None -> t
+    | Some tm -> add_term nrr tm { t with terms = X.Map.remove rr t.terms }
 
   let subst ~ex rr nrr t =
     (* A value can be used both as an index and as an array if we have arrays
        indexed by arrays. *)
-    subst_array ~ex rr nrr (subst_index ~ex rr nrr t)
+    subst_term rr nrr (subst_array ~ex rr nrr (subst_index ~ex rr nrr t))
 end
 
 let get_domain uf = Uf.GlobalDomains.find (module Domain) (Uf.domains uf)
@@ -320,23 +347,17 @@ let remove_split uf env (dom : Domain.t) lit k i =
   ( { env with splits = LX.Map.remove lit env.splits },
     { dom with split_locs = remove k (remove i dom.split_locs) } )
 
-(* A term of the class of [r], with the explanation of its membership. *)
-let term_of uf r =
+(* The term of the class of [r] (see [Domain.terms]), with the explanation of
+   its membership. *)
+let term_of uf (dom : Domain.t) r =
   let r, ex_r = Uf.find_r uf r in
-  (* The term extracted from [r] may not be known by the union-find, in that
-     case we take a term of the class of [r]. *)
-  let t =
-    match X.term_extract r with
-    | Some t, _ when Uf.mem uf t -> Some t
-    | _ -> E.Set.min_elt_opt (Uf.rclass_of uf r)
-  in
-  match t with
+  match X.Map.find_opt r dom.terms with
   | Some t -> Some (t, Ex.union ex_r (snd (Uf.find uf t)))
   | None -> None
 
 (* Give the term [(select b k)] to the instantiation engine. *)
-let add_new_term uf env b k =
-  match term_of uf b, term_of uf k with
+let add_new_term uf env dom b k =
+  match term_of uf dom b, term_of uf dom k with
   | Some (b, _), Some (k, _) ->
     { env with new_terms = E.Set.add (E.ArraysEx.select b k) env.new_terms }
   | _ -> env
@@ -357,7 +378,7 @@ let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
     let env =
       if not from_select
       then
-        let env = add_new_term uf env b k in
+        let env = add_new_term uf env dom b k in
         { env with term_eqs = value :: env.term_eqs }
       else env
     in
@@ -377,7 +398,7 @@ let cross uf ((env, dom, todo) as acc) { k; v; ex; _ } b i eex =
       let env, dom = add_split env dom k i (Value { a = b; k; v; ex }) in
       (* As the value may only be propagated during the case-split search of the
          theory, its term is given to the instantiation engine now. *)
-      add_new_term uf env b k, dom, todo
+      add_new_term uf env dom b k, dom, todo
 
 (* Propagate the values of [todo] through the edges of their arrays. *)
 let rec propagate uf (env, (dom : Domain.t), todo) =
@@ -389,18 +410,38 @@ let rec propagate uf (env, (dom : Domain.t), todo) =
          (fun b (i, eex) acc -> cross uf acc value b i eex)
          (Domain.edges_of a dom) (env, dom, todo))
 
-(* Propagate again the values of the arrays whose values or edges changed. *)
+(* Propagate again the values of the arrays whose values or edges changed, and
+   the values of the merged arrays through the edges of the other side. *)
 let process_dirty uf env (dom : Domain.t) =
+  let norm s = X.Set.map (fun r -> fst (Uf.find_r uf r)) s in
+  let values a =
+    let a, _ = Uf.find_r uf a in
+    a, Domain.values_of a dom
+  in
   let todo =
     X.Set.fold
       (fun a todo ->
-        let a, _ = Uf.find_r uf a in
-        X.Map.fold
-          (fun k (v, ex) todo -> { a; k; v; ex } :: todo)
-          (Domain.values_of a dom) todo)
+        let a, m = values a in
+        X.Map.fold (fun k (v, ex) todo -> { a; k; v; ex } :: todo) m todo)
       dom.dirty []
   in
-  propagate uf (env, { dom with dirty = X.Set.empty }, todo)
+  let acc = env, { dom with dirty = X.Set.empty; merged = [] }, todo in
+  propagate uf
+    (List.fold_left
+       (fun acc (a, idxs, nbrs) ->
+         let a, m = values a in
+         let idxs = norm idxs and nbrs = norm nbrs in
+         X.Map.fold
+           (fun b (i, eex) acc ->
+             let other = X.Set.mem b nbrs in
+             X.Map.fold
+               (fun k (v, ex) acc ->
+                 if Bool.equal (X.Set.mem k idxs) other
+                 then acc
+                 else cross uf acc { a; k; v; ex } b i eex)
+               m acc)
+           (Domain.edges_of a dom) acc)
+       acc dom.merged)
 
 (* Decide the case splits [lits] whose indices are now equal or distinct. *)
 let resolve_splits uf env dom lits =
@@ -536,15 +577,14 @@ let has_select uf b k v =
     (Uf.rclass_of uf (fst (Uf.find_r uf v)))
 
 (* The equalities [(select b k) = v] between terms for the pending values,
-   unless the class of [v] already has such a term. The terms are chosen in the
-   current classes of [b], [k] and [v]. *)
-let term_eqs uf env =
+   unless the class of [v] already has such a term. *)
+let term_eqs uf env dom =
   List.fold_left
     (fun l { a = b; k; v; ex } ->
       if has_select uf b k v
       then l
       else
-        match term_of uf b, term_of uf k, term_of uf v with
+        match term_of uf dom b, term_of uf dom k, term_of uf dom v with
         | Some (b, ex_b), Some (k, ex_k), Some (v, ex_v) ->
           let ex = List.fold_left Ex.union ex [ex_b; ex_k; ex_v] in
           let eq = E.mk_eq ~iff:false (E.ArraysEx.select b k) v in
@@ -570,7 +610,7 @@ let assume env uf la =
       let l =
         List.rev_map (fun (eq, ex) -> Literal.LSem eq, ex, Th_util.Other) eqs
       in
-      let l = List.rev_append (term_eqs uf env) l in
+      let l = List.rev_append (term_eqs uf env dom) l in
       { env with term_eqs = [] }, set_domain uf dom, l
   in
   let env, l = List.fold_left extensionality (env, l) la in
@@ -601,7 +641,8 @@ let cross_edge uf ((_, (dom : Domain.t), _) as acc) a i b =
       (Domain.values_of a dom) acc
   | _ -> acc
 
-(* Register the value and the edge of the select and store terms. *)
+(* Register the value and the edge of the select and store terms, and their
+   terms (see [Domain.terms]). *)
 let add env uf r t =
   let register env dom =
     let { E.f; xs; _ } = E.term_view t in
@@ -610,6 +651,7 @@ let add env uf r t =
       let v, ex_v = Uf.find_r uf r in
       let ra, ex_a = Uf.find uf a in
       let ri, ex_i = Uf.find uf i in
+      let dom = Domain.(add_term v t (add_term ra a (add_term ri i dom))) in
       let ex = Ex.union ex_v (Ex.union ex_a ex_i) in
       propagate uf (add_value ~from_select:true uf (env, dom, []) ra ri v ex)
     | Symbols.Op Store, [a; i; v] ->
@@ -617,6 +659,10 @@ let add env uf r t =
       let ra, ex_a = Uf.find uf a in
       let ri, ex_i = Uf.find uf i in
       let rv, ex_v = Uf.find uf v in
+      let dom =
+        Domain.(
+          add_term s t (add_term ra a (add_term ri i (add_term rv v dom))))
+      in
       let dom =
         Domain.add_edge ra ri s (Ex.union ex_a (Ex.union ex_i ex_s)) dom
       in
