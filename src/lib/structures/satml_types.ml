@@ -67,7 +67,7 @@ module Atom : ATOM = struct
 
   and reason = clause option
 
-  and premise = clause list
+  and premise = E.Labeled.Set.t
 
   let dummy_lit = E.vrai
 
@@ -83,7 +83,7 @@ module Atom : ATOM = struct
       reason = None;
       weight = -1.;
       seen = false;
-      vpremise = []
+      vpremise = E.Labeled.Set.empty
     }
 
   and dummy_atom =
@@ -103,7 +103,7 @@ module Atom : ATOM = struct
       activity = -1.;
       removed = false;
       learnt = false;
-      cpremise = [];
+      cpremise = E.Labeled.Set.empty;
       form = vraie_form
     }
 
@@ -126,7 +126,7 @@ module Atom : ATOM = struct
       else ""
 
     let premise fmt v =
-      List.iter (fun { name; _ } -> Format.fprintf fmt "%s," name) v
+      E.Labeled.Set.iter (fun { name; _ } -> Format.fprintf fmt "%s," name) v
 
     let atom fmt a =
       Format.fprintf fmt "%s%d%s [index=%d | lit:%a] vpremise={{%a}}" (sign a)
@@ -174,7 +174,7 @@ module Atom : ATOM = struct
         reason = None;
         weight = 0.;
         seen = false;
-        vpremise = []
+        vpremise = E.Labeled.Set.empty
       }
     and pa =
       { var;
@@ -487,21 +487,26 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   let complements f1 f2 = f1.tag == f2.neg.tag
 
-  let mk_lit hcons a acc =
-    let at, acc = Atom.add_expr_atom hcons.atoms a acc in
+  let mk_lit hcons a dep new_vars =
+    let at, new_vars = Atom.add_expr_atom hcons.atoms a new_vars in
     let at =
       if Options.get_disable_flat_formulas_simplification ()
       then at
       else if at.Atom.var.Atom.level = 0
       then
         if at.Atom.is_true
-        then Atom.vrai_atom
+        then
+          (* no need to update dep: this only weakens the formula *)
+          Atom.vrai_atom
         else begin
-          if at.Atom.neg.Atom.is_true then Atom.faux_atom else at
+          assert at.Atom.neg.Atom.is_true;
+          if Options.get_produce_unsat_cores ()
+          then dep := E.Labeled.Set.union !dep at.Atom.var.vpremise;
+          Atom.faux_atom
         end
       else at
     in
-    make hcons (UNIT at) (UNIT at.Atom.neg), acc
+    make hcons (UNIT at) (UNIT at.Atom.neg), new_vars
 
   (* with this code, all envs created with empty_hcons_env () will be
      initialized with the good reference to "vrai" *)
@@ -516,7 +521,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         skolems = E.Tbl.create 0
       }
     in
-    let vrai = mk_lit empty_hcons E.vrai [] |> fst in
+    let vrai = make empty_hcons (UNIT Atom.vrai_atom) (UNIT Atom.faux_atom) in
     assert (E.Tbl.length empty_hcons.abstr_of_axs = 0);
     assert (E.Tbl.length empty_hcons.axs_of_abstr = 0);
     assert (E.Tbl.length empty_hcons.skolems = 0);
@@ -573,7 +578,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   let mk_and =
     let exception Contradiction in
-    fun hcons l ->
+    fun hcons dep l ->
       try
         let so, nso =
           List.fold_left
@@ -588,11 +593,14 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
                 if a.Atom.neg.Atom.is_true
                 then (
                   aaz a;
+                  if Options.get_produce_unsat_cores ()
+                  then dep := E.Labeled.Set.union !dep a.Atom.var.vpremise;
                   raise Contradiction);
                 (* XXX*)
                 if a.Atom.is_true
                 then (
                   aaz a;
+                  (* no need to update dep: this only weakens the formula *)
                   acc)
                 else so, e :: nso
               end
@@ -712,7 +720,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
 
   let rec mk_or =
     let exception Tautology in
-    fun hcons l ->
+    fun hcons dep l ->
       try
         let so, nso =
           List.fold_left
@@ -727,11 +735,14 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
                 if a.Atom.is_true
                 then (
                   aaz a;
+                  (* no need to update dep: this only weakens the formula *)
                   raise Tautology);
                 (* XXX *)
                 if a.Atom.neg.Atom.is_true
                 then (
                   aaz a;
+                  if Options.get_produce_unsat_cores ()
+                  then dep := E.Labeled.Set.union !dep a.Atom.var.vpremise;
                   acc)
                 else so, e :: nso
               end
@@ -761,15 +772,17 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
           | None -> begin
             match l with
             | [({ view = UNIT _; _ } as fa); { view = AND ands; _ }] -> begin
-              try mk_or hcons [fa; mk_and hcons (remove_elt (mk_not fa) ands)]
+              try
+                mk_or hcons dep
+                  [fa; mk_and hcons dep (remove_elt (mk_not fa) ands)]
               with Not_included ->
                 make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
             end
             | _ -> make hcons (OR l) (AND (List.rev (List.rev_map mk_not l)))
           end
           | Some (com, ands) ->
-            let ands = List.rev_map (mk_and hcons) ands in
-            mk_and hcons (mk_or hcons ands :: com))
+            let ands = List.rev_map (mk_and hcons dep) ands in
+            mk_and hcons dep (mk_or hcons dep ands :: com))
       with Tautology -> vrai
 
   (* translation from E.t *)
@@ -803,8 +816,8 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       end
       else
         let lit = E.fresh_name Ty.Tbool in
-        let xlit, new_v = mk_lit hcons lit !new_vars in
-        let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit new_v in
+        let at_lit, new_v = Atom.add_expr_atom hcons.atoms lit !new_vars in
+        let xlit = make hcons (UNIT at_lit) (UNIT at_lit.Atom.neg) in
         if Options.(get_debug_sat () && get_verbose ())
         then
           Printer.print_dbg ~module_name:"Satml_types"
@@ -827,7 +840,7 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
      SAT solver split on the equalities. The clause is added to the formula
      containing [a], as CDCL-Tableaux only decides atoms of formulas. It is not
      needed when [a] is asserted as a fact. *)
-  let distinct_clause hcons ~fact a new_vars =
+  let distinct_clause hcons ~fact a dep new_vars =
     match E.lit_view a with
     | Distinct (_ :: _ :: _ :: _) when fact -> None, new_vars
     | (Distinct (_ :: _ :: _ :: _ as l) | Eql l) as v ->
@@ -842,11 +855,11 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       let cl, new_vars =
         List.fold_left
           (fun (cl, new_vars) e ->
-            let ff, new_vars = mk_lit hcons e new_vars in
+            let ff, new_vars = mk_lit hcons e dep new_vars in
             ff :: cl, new_vars)
           ([], new_vars) (d :: eqs [] l)
       in
-      Some (mk_or hcons cl), new_vars
+      Some (mk_or hcons dep cl), new_vars
     | _ -> None, new_vars
 
   let simplify hcons f new_vars new_abstr_vars =
@@ -854,11 +867,12 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
     let clauses = ref [] in
     let new_vars = ref new_vars in
     let new_abstr_vars = ref new_abstr_vars in
+    let dep = ref E.Labeled.Set.empty in
     let rec simp topl ~parent_disj f =
       match E.form_view f with
       | E.Literal a ->
-        let ff, l = mk_lit hcons a !new_vars in
-        let cl, l = distinct_clause hcons ~fact:topl a l in
+        let ff, l = mk_lit hcons a dep !new_vars in
+        let cl, l = distinct_clause hcons ~fact:topl a dep l in
         Option.iter (fun cl -> clauses := cl :: !clauses) cl;
         new_vars := l;
         ff
@@ -868,19 +882,19 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
         let x1 = simp topl ~parent_disj:false f1 in
         let x2 = simp topl ~parent_disj:false f2 in
         begin match x1.view, x2.view with
-        | AND l1, AND l2 -> mk_and hcons (List.rev_append l1 l2)
-        | AND l1, _ -> mk_and hcons (x2 :: l1)
-        | _, AND l2 -> mk_and hcons (x1 :: l2)
-        | _ -> mk_and hcons [x1; x2]
+        | AND l1, AND l2 -> mk_and hcons dep (List.rev_append l1 l2)
+        | AND l1, _ -> mk_and hcons dep (x2 :: l1)
+        | _, AND l2 -> mk_and hcons dep (x1 :: l2)
+        | _ -> mk_and hcons dep [x1; x2]
         end
       | E.Clause (f1, f2, _) ->
         let x1 = simp false ~parent_disj:true f1 in
         let x2 = simp false ~parent_disj:true f2 in
         begin match x1.view, x2.view with
-        | OR l1, OR l2 -> mk_or hcons (List.rev_append l1 l2)
-        | OR l1, _ -> mk_or hcons (x2 :: l1)
-        | _, OR l2 -> mk_or hcons (x1 :: l2)
-        | _ -> mk_or hcons [x1; x2]
+        | OR l1, OR l2 -> mk_or hcons dep (List.rev_append l1 l2)
+        | OR l1, _ -> mk_or hcons dep (x2 :: l1)
+        | _, OR l2 -> mk_or hcons dep (x1 :: l2)
+        | _ -> mk_or hcons dep [x1; x2]
         end
       | E.Iff (f1, f2) ->
         simp topl ~parent_disj @@ E.elim_iff f1 f2 ~with_conj:(not parent_disj)
@@ -892,9 +906,9 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
     in
     let res = simp true ~parent_disj:false f in
     let res =
-      match !clauses with [] -> res | cls -> mk_and hcons (res :: cls)
+      match !clauses with [] -> res | cls -> mk_and hcons dep (res :: cls)
     in
-    res, !lem, !new_vars, !new_abstr_vars
+    res, !dep, !lem, !new_vars, !new_abstr_vars
 
   (* CNF_ABSTR a la Tseitin *)
 

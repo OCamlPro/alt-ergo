@@ -48,14 +48,15 @@ module type SAT_ML = sig
     nbv:int ->
     (* nb made vars *)
     Satml_types.Atom.var list ->
-    Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list * Satml_types.Atom.atom list list
+    (Satml_types.Atom.atom list * Satml_types.Atom.premise) list ->
+    (Satml_types.Atom.atom list * Satml_types.Atom.premise) list ->
+    (Satml_types.Atom.atom list * Satml_types.Atom.premise) list
+    * (Satml_types.Atom.atom list * Satml_types.Atom.premise) list
 
   val assume :
     t ->
-    Satml_types.Atom.atom list list ->
-    Satml_types.Atom.atom list list ->
+    (Satml_types.Atom.atom list * Expr.Labeled.Set.t) list ->
+    (Satml_types.Atom.atom list * Expr.Labeled.Set.t) list ->
     Expr.t ->
     cnumber:int ->
     Flat_Formula.Set.t ->

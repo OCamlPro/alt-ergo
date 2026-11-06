@@ -290,7 +290,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let make_explanation _ = Expr.Labeled.Set.empty
+  let make_explanation lc = Option.value ~default:Expr.Labeled.Set.empty lc
   (* if get_debug_sat () then fprintf fmt "make_explanation of %d clauses@."
      (List.length lc); List.fold_left (fun ex ({ST.form = f} as c) -> if
      get_debug_sat () then fprintf fmt "unsat_core: %a@." Atom.pr_clause c;
@@ -348,13 +348,14 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let literals_of_ex ex =
     Ex.fold_atoms
-      (fun e acc ->
+      (fun e (lits, core) ->
         match e with
-        | Ex.Literal a -> a :: acc
-        | Ex.Dep _ | Ex.RootDep _ -> acc
+        | Ex.Literal a -> a :: lits, core
+        | Ex.Dep _ -> lits, core
         (* for debug/profiling/proofs, ignore them *)
+        | Ex.RootDep dep -> lits, E.Labeled.Set.add dep core
         | Ex.Bj _ | Ex.Fresh _ -> assert false)
-      ex []
+      ex ([], E.Labeled.Set.empty)
 
   let mround menv tenv env acc =
     let tbox = SAT.current_tbox env.satml in
@@ -374,21 +375,20 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun acc (gf, dep) ->
         match literals_of_ex dep with
-        | [] ->
+        | [], core ->
           (* Toplevel assertions from [axiom_def] have no literals *)
-          gf :: acc
-        | [{ Atom.lit; _ }] -> (
+          (gf, core) :: acc
+        | [{ Atom.lit; _ }], core -> (
           (* Instantiations from [internal_axiom_def] are justified by a single
              syntaxic literal (from [axs_of_abstr]) *)
           match Shostak.Literal.view lit with
           | LTerm lit ->
-            { gf with E.ff = E.mk_or gf.E.ff (E.neg lit) false } :: acc
+            ({ gf with E.ff = E.mk_or gf.E.ff (E.neg lit) false }, core) :: acc
           | LSem _ -> assert false)
         | _ -> assert false)
       acc l
 
   let pred_def env f name dep _loc =
-    (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let guard = env.guards.current_guard in
     env.inst
@@ -416,14 +416,15 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let f = FF.expand_skolem env.ff_hcons_env a in
             if (not (Options.get_cdcl_tableaux ())) && ME.mem f env.gamma
             then acc
-            else mk_gf f :: acc
+            else (* Skolems definitions are already guarded. *)
+              (mk_gf f, E.Labeled.Set.empty) :: acc
           else acc
         with Not_found -> acc)
       acc sa
 
-  let inst_env_from_atoms env acc sa inst_quantif =
+  let inst_env_from_atoms env sa inst_quantif =
     List.fold_left
-      (fun (inst, acc) a ->
+      (fun inst a ->
         let gf = mk_gf E.vrai in
         if Options.(get_debug_sat () && get_verbose ())
         then
@@ -433,11 +434,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
         (* ax <-> a, if ax exists in axs_of_abstr *)
         try
           let ax, at = FF.expand_lemma env.ff_hcons_env a in
-          if inst_quantif a
-          then internal_axiom_def ax a at inst, acc
-          else inst, acc
-        with Not_found -> inst, acc)
-      (env.inst, acc) sa
+          if inst_quantif a then internal_axiom_def ax a at inst else inst
+        with Not_found -> inst)
+      env.inst sa
 
   (* unused -- let take_max aux l = let ((lvl, _, ind) ,_) as acc =
      List.fold_left (fun ((mz,_) as acc) f -> match aux f with | None -> acc |
@@ -585,12 +584,12 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     List.fold_left
       (fun acc a ->
         match Inst.ground_pred_defn a env.inst with
-        | Some (guard, res, _dep) ->
+        | Some (guard, res, dep) ->
           (* To be correct in incremental mode, we'll generate the formula
              "guard -> (a -> res)" *)
           let tmp = E.mk_imp a res in
           let tmp = E.mk_imp guard tmp in
-          mk_gf tmp :: acc
+          (mk_gf tmp, Ex.to_unsat_core dep) :: acc
         | None -> acc)
       acc sa
     [@ocaml.ppwarning
@@ -598,7 +597,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
        TRUE by mk_lit (and simplify)"]
 
   let new_instances use_cs tenv env sa inst_quantif acc =
-    let inst, acc = inst_env_from_atoms env acc sa inst_quantif in
+    let inst = inst_env_from_atoms env sa inst_quantif in
     let inst = terms_from_dec_proc { env with inst } in
     mround use_cs tenv { env with inst } acc
 
@@ -606,13 +605,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     { seen_f : SE.t;
       activate : FF.Set.t;
       new_vars : Atom.var list;
-      unit : Atom.atom list list;
+      unit : (Atom.atom list * Atom.premise) list;
       nunit : Atom.atom list list;
       new_abstr_vars : Atom.atom list;
       updated : bool
     }
 
-  let pre_assume env acc gf =
+  let pre_assume env acc (gf, dep) =
     let { E.ff = f; _ } = gf in
     if Options.(get_debug_sat () && get_verbose ())
     then
@@ -642,11 +641,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           env.gamma <- ME.add f (env.nb_mrounds, None) env.gamma;
           env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
           (* This assert is not true assert (dec_lvl = 0); *)
-          axiom_def env gf Ex.empty;
+          axiom_def env gf (Ex.from_assumptions dep);
           { acc with updated = true }
         | E.Unit _ | E.Clause _ | E.Literal _ | E.Skolem _ | E.Let _ | E.Iff _
         | E.Xor _ ->
-          let ff, axs, new_vars, new_abstr_vars =
+          let ff, ff_dep, axs, new_vars, new_abstr_vars =
             FF.simplify env.ff_hcons_env f acc.new_vars acc.new_abstr_vars
           in
           let acc = { acc with new_vars; new_abstr_vars } in
@@ -656,8 +655,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           in
           env.gamma <- ME.add f (env.nb_mrounds, Some ff) env.gamma;
           env.conj <- FF.Map.add ff (env.nb_mrounds, SE.add f old_sf) env.conj;
-          (* [axs] are the top-level lemmas *)
-          E.Set.iter (fun f -> axiom_def env (mk_gf f) Ex.empty) axs;
+          (* [axs] are the top-level lemmas -- no need to include [ff_dep]
+             because the lemmas don't depend on the simplifications *)
+          E.Set.iter
+            (fun f -> axiom_def env (mk_gf f) (Ex.from_assumptions dep))
+            axs;
           Debug.simplified_form f ff;
           if FF.equal ff FF.vrai
           then acc
@@ -677,7 +679,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
               { acc with
                 new_vars;
                 nunit;
-                unit = [ff_abstr] :: acc.unit;
+                unit = ([ff_abstr], E.Labeled.Set.union dep ff_dep) :: acc.unit;
                 activate = FF.Set.add ff acc.activate;
                 updated = true
               }
@@ -707,6 +709,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           [@ocaml.ppwarning "TODO: should fix for unsat cores generation"])
         in
         let nbv = FF.nb_made_vars env.ff_hcons_env in
+        let nunit =
+          List.map (fun clause -> clause, E.Labeled.Set.empty) nunit
+        in
         let unit, nunit = SAT.new_vars env.satml ~nbv new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
         SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl
@@ -999,7 +1004,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
           "The objective function %a has an optimum. We should continue to \
            explore other branches to try to find a better optimum than %a."
           Expr.print e Expr.print tv;
-      let l = [mk_gf neg] in
+      let l = [mk_gf neg, E.Labeled.Set.empty] in
       (* TODO: Can we add the clause without 'cancel_until 0' ? *)
       SAT.cancel_until env.satml 0;
       if Options.get_debug_optimize ()
@@ -1101,20 +1106,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     let aux mx f = Stdlib.max mx (E.depth f) in
     ME.fold (fun f _ mx -> aux mx f) env.gamma 0
 
-  let checks_implemented_features () =
-    let fails msg =
-      let msg =
-        Format.sprintf
-          "%S is not implemented in CDCL solver ! Please use the old \
-           Tableaux-like SAT solver instead."
-          msg
-      in
-      Errors.run_error (Errors.Unsupported_feature msg)
-    in
-    let open Options in
-    if get_save_used_context () then fails "save_used_context";
-    if get_unsat_core () then fails "unsat_core"
-
   let declare env id = env.declare_top <- id :: env.declare_top
 
   let push env to_push =
@@ -1158,7 +1149,6 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   let unsat env gf =
     assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
-    checks_implemented_features ();
     let gf = add_guard env gf in
     Debug.unsat gf;
     (*fprintf fmt "FF.unsat@.";*)
@@ -1166,17 +1156,19 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env.inst
       <- Inst.add_terms env.inst (E.max_ground_terms_rec_of_form gf.E.ff) gf;
     try
-      let _updated = assume_aux ~dec_lvl:0 env [gf] in
+      let _updated = assume_aux ~dec_lvl:0 env [gf, E.Labeled.Set.empty] in
       let max_t = max_term_depth_in_sat env in
       env.inst <- Inst.register_max_term_depth env.inst max_t;
       unsat_rec_prem env ~first_call:true;
       assert false
-    with IUnsat (_env, dep) -> dep
+    with
+    | IUnsat (_env, dep) -> dep
+    | Util.Timeout -> i_dont_know env (Timeout Assume)
+    | Util.Step_limit_reached n -> i_dont_know env (Step_limit n)
 
-  let assume env gf _dep =
-    (* dep currently not used. No unsat-cores in satML yet *)
+  let assume env gf dep =
     assert (SAT.decision_level env.satml <= SAT.assertion_level env.satml);
-    try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf]) with
+    try ignore (assume_aux ~dec_lvl:0 env [add_guard env gf, dep]) with
     | IUnsat (_env, dep) -> raise (Unsat dep)
     | Util.Timeout ->
       (* don't attempt to compute a model if timeout before calling unsat
