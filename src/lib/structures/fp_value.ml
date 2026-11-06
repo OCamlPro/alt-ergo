@@ -172,3 +172,40 @@ let is_normal ~eb = function
 let is_subnormal ~eb = function
   | Finite q -> Q.compare (Q.abs q) (min_normal_q ~eb) < 0
   | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN -> false
+
+let of_q ?(neg_zero = false) ~eb ~sb mode q =
+  if Q.sign q = 0
+  then if neg_zero then Minus_zero else Plus_zero
+  else
+    let neg = Q.sign q < 0 in
+    let res, _, _ =
+      Fpa_rounding.float_of_rational sb (fp_min_exp eb sb) mode q
+    in
+    if Q.sign res = 0
+    then if neg then Minus_zero else Plus_zero
+    else
+      let max_q = max_finite_q ~eb ~sb in
+      if Q.compare (Q.abs res) max_q <= 0
+      then Finite res
+      else
+        (* Overflow: the result is either an infinity or the largest finite
+           value of the right sign, depending on the rounding mode. *)
+        let inf = if neg then Minus_infinity else Plus_infinity in
+        let max_fin = Finite (if neg then Q.minus max_q else max_q) in
+        let module RM = Dolmen.Std.Builtin.Float in
+        match (mode : Fpa_rounding.rounding_mode) with
+        | RM.RoundNearestTiesToEven | RM.RoundNearestTiesToAway -> inf
+        | RM.RoundTowardPositive -> if neg then max_fin else inf
+        | RM.RoundTowardNegative -> if neg then inf else max_fin
+        | RM.RoundTowardZero -> max_fin
+
+let to_integer mode = function
+  | Plus_zero | Minus_zero -> Some Numbers.Z.zero
+  | Finite q ->
+    Option.map (fun m -> Q.to_z (Fpa_rounding.round_to_integer m q)) mode
+  | NaN | Plus_infinity | Minus_infinity -> None
+
+let convert ~eb ~sb mode = function
+  | Finite q -> Option.map (fun m -> of_q ~eb ~sb m q) mode
+  | (NaN | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero) as v ->
+    Some v

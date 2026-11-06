@@ -158,6 +158,71 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unknown
 
+Conversions of literals: to_fp_unsigned, fp.to_sbv and FP -> FP overflow.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= ((_ to_fp_unsigned 8 24) RNE #x05) ((_ to_fp 8 24) #x40a00000))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= ((_ fp.to_sbv 8) RTZ ((_ to_fp 8 24) #xc0b00000)) #xfb)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= ((_ to_fp 5 11) RNE ((_ to_fp 8 24) #x47800000)) (_ +oo 5 11))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+fp applied to symbolic bit-vectors, evaluated once they are known.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (not (= (fp s e m) ((_ to_fp 8 24) #x3f800000))))
+  > (assert (= s #b0))
+  > (assert (= e #b01111111))
+  > (assert (= m #b00000000000000000000000))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 32))
+  > (assert (= b #x7f800000))
+  > (assert (not (fp.isInfinite ((_ to_fp 8 24) b))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+to_fp of a real, evaluated once its argument is known, then converted.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (= x ((_ to_fp 8 24) RNE 1.5)))
+  > (assert (not (= ((_ to_fp 11 53) RNE x) ((_ to_fp 11 53) RNE 1.5))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
 An overflow of to_fp from a real gives the largest finite float with RTZ (and
 RTN/RTP towards zero), infinity otherwise.
 
