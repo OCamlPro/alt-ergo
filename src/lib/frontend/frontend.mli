@@ -47,14 +47,13 @@ module type S = sig
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat ]
+    | `Unsat of Explanation.t ]
 
   type env = private
     { used_context : used_context;
-      consistent_dep_stack : (res * Explanation.t) Stack.t;
+      consistent_dep_stack : res Stack.t;
       sat_env : sat_env;
-      mutable res : res;
-      mutable expl : Explanation.t
+      mutable res : res
     }
 
   val init_env : ?selector_inst:(Expr.t -> bool) -> used_context -> env
