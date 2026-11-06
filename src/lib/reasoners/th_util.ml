@@ -67,6 +67,7 @@ type optimized_split =
 type 'literal acts =
   { acts_add_decision_lit : 'literal -> unit;
     acts_add_split : 'literal -> unit;
+    acts_set_splits : 'literal list -> unit;
     acts_add_objective :
       Objective.Function.t -> Objective.Value.t -> 'literal -> unit
   }

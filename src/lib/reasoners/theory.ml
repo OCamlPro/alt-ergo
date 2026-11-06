@@ -587,22 +587,35 @@ module Main_Default : S = struct
       add_objective obj opt_split.value
         Shostak.(Literal.make @@ LSem (L.make lview))
 
+  (* The term literal [t1 = t2] of a case split [r1 = r2], if both sides have a
+     term. *)
+  let split_term_literal (lview : _ Xliteral.view) =
+    let term r =
+      match Shostak.Combine.term_extract r with
+      | Some t, _ -> Some t
+      | None, _ -> None
+    in
+    match lview with
+    | Xliteral.Eq (r1, r2) | Xliteral.Distinct (false, [r1; r2]) -> (
+      match term r1, term r2 with
+      | Some t1, Some t2 -> (
+        match E.mk_eq ~iff:false t1 t2 with
+        | eq when E.equal eq E.vrai || E.equal eq E.faux -> None
+        | eq -> Some (Shostak.Literal.make (LTerm eq)))
+      | _ -> None)
+    | _ -> None
+
+  (* The case splits of the array theory. They are decided by the SAT solver. *)
   let sat_splits t =
-    if Options.get_enable_sat_cs ()
-    then
-      let splits, gamma = CC_X.case_split t.gamma ~for_model:false in
-      let splits =
-        List.filter
-          (fun (_, is_cs, origin) ->
-            is_cs
-            &&
-            match origin with
-            | Th_util.CS (Th_arrays, _) -> true
-            | _ -> false)
-          splits
-      in
-      splits, { t with gamma }
-    else [], t
+    let splits, gamma = CC_X.case_split t.gamma ~for_model:false in
+    let splits =
+      List.filter
+        (fun (_, is_cs, origin) ->
+          is_cs
+          && match origin with Th_util.CS (Th_arrays, _) -> true | _ -> false)
+        splits
+    in
+    splits, { t with gamma }
 
   let do_optimize ~acts t =
     let objectives = t.objectives in
@@ -612,14 +625,26 @@ module Main_Default : S = struct
       optimize_obj ~for_model:false add_objective obj t
     | None -> ()
 
+  (* The splits on terms are given to the SAT solver, which chooses the order of
+     the decisions. The first split on semantic values is decided next. *)
   let do_sat_splits acts t =
     let splits, t = sat_splits t in
-    match splits with
-    | [] -> do_case_split_aux t ~for_model:false
-    | (lview, _, _) :: _ ->
+    let terms, sems =
+      List.partition_map
+        (fun ((lview, _, _) as s) ->
+          match split_term_literal lview with
+          | Some lit -> Left lit
+          | None -> Right s)
+        splits
+    in
+    acts.Th_util.acts_set_splits terms;
+    match sems, terms with
+    | [], [] -> do_case_split_aux t ~for_model:false
+    | (lview, _, _) :: _, _ ->
       let lit = Shostak.(Literal.make @@ LSem (L.make lview)) in
       acts.Th_util.acts_add_split lit;
       t, SE.empty
+    | [], _ -> t, SE.empty
 
   let do_case_split ?acts t origin =
     if Options.get_case_split_policy () == origin

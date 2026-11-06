@@ -244,6 +244,15 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       lazy_cnf_queue : (FF.t list MFF.t * FF.t) Matoms.t Vec.t;
           (** Checkpoint of the [lazy_cnf] field at each decision level. Only
               used with the CDCL-Tableaux solver. *)
+      mutable stale_splits : bool;
+          (** [true] after a backtrack: [th_splits] may contain splits that are
+              no longer pending, and miss splits that are pending again, until
+              the theory is asked for its splits (see [search]). *)
+      th_splits : unit VH.t;
+          (** Variables of the case splits that the theory currently wants the
+              SAT solver to decide (see [acts_set_splits]). They do not appear
+              in the formulas, but they are relevant, their assignments are sent
+              to the theory, and they must be decided before answering [Sat]. *)
       irrelevants : unit VH.t;
           (** Variables that have been removed from the set of possible
               decisions due to no longer being relevant to the original formula
@@ -369,6 +378,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       lazy_cnf_queue =
         Vec.make 100
           ~dummy:(Matoms.singleton Atom.faux_atom (MFF.empty, FF.faux));
+      stale_splits = false;
+      th_splits = VH.create 17;
       irrelevants = VH.create 17;
       relevants = SFF.empty;
       relevants_queue = Vec.make 100 ~dummy:(SFF.singleton FF.faux);
@@ -509,7 +520,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
      Only used when [Options.get_cdcl_tableaux_inst ()] is enabled. *)
   let is_relevant env (v : Atom.var) =
-    is_semantic v.pa
+    is_semantic v.pa || VH.mem env.th_splits v
     || Matoms.mem v.pa env.lazy_cnf
     || Matoms.mem v.na env.lazy_cnf
 
@@ -520,6 +531,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg "[satml] cancel until %d (current is %d)@." lvl
         (decision_level env);
     cancel_ff_lvls_until env lvl;
+    if decision_level env > lvl then env.stale_splits <- true;
     let repush = ref [] in
     if decision_level env > lvl
     then begin
@@ -734,6 +746,24 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       env.next_split <- Some atom)
     else assert (atom.is_true || atom.neg.is_true)
 
+  (* The variables of [lits] become the case splits decided by the SAT solver.
+     They are decision variables, registered like the variables of the
+     formulas. *)
+  let acts_set_splits env lits =
+    env.stale_splits <- false;
+    VH.clear env.th_splits;
+    List.iter
+      (fun lit ->
+        let atom, new_v = Atom.add_atom (atom_hcons_env env) lit [] in
+        assert (not (is_semantic atom));
+        List.iter (fun (v : Atom.var) -> Vec.push env.vars v) new_v;
+        VH.replace env.th_splits atom.var ();
+        if atom.var.level < 0
+        then (
+          VH.remove env.irrelevants atom.var;
+          insert_var_order env atom.var))
+      lits
+
   let acts_add_objective env fn value lit =
     (* Note: we must store the objective even if the atom is already true,
        because we must send back the objective to the theory afterwards.
@@ -746,6 +776,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
   let[@inline] theory_slice env : _ Th_util.acts =
     { acts_add_decision_lit = acts_add_decision_lit env;
       acts_add_split = acts_add_split env;
+      acts_set_splits = acts_set_splits env;
       acts_add_objective = acts_add_objective env
     }
 
@@ -941,6 +972,12 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let tatoms_queue =
       if Options.get_cdcl_tableaux_th ()
       then begin
+        (* The case splits are not in the formulas: they are not added to
+           [th_tableaux] by the relevancy propagation. *)
+        Queue.iter
+          (fun (a : Atom.atom) ->
+            if VH.mem env.th_splits a.var then Queue.push a env.th_tableaux)
+          env.tatoms_queue;
         env.th_tableaux
       end
       else env.tatoms_queue
@@ -967,7 +1004,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         in
         assert (Shostak.Literal.is_ground ta.lit);
         let th_imp =
-          if ta.timp = -1
+          if VH.mem env.th_splits ta.var
+          then false
+          else if ta.timp = -1
           then
             match Shostak.Literal.view @@ Atom.literal a with
             | LSem _ -> false
@@ -1627,6 +1666,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     && Option.is_none env.next_optimized_split
     && Compat.List.is_empty env.next_decisions
     && Option.is_none env.next_split
+    && (not
+          (VH.fold
+             (fun (v : Atom.var) () b -> b || v.level < 0)
+             env.th_splits false))
     && (nb_assigns env = nb_vars env
        || (Options.get_cdcl_tableaux_inst () && Matoms.is_empty env.lazy_cnf))
 
@@ -1635,22 +1678,38 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     env.starts <- env.starts + 1;
     while true do
       propagate_and_stabilize env all_propagations conflictC;
-      if is_sat env then raise Sat;
+      (* After a backtrack, the theory is asked for its pending splits before
+         answering [Sat] or deciding. A conflict is analyzed and the loop goes
+         on with the propagation of the learned clause. *)
       if
-        Options.get_enable_restarts ()
-        && n_of_conflicts >= 0
-        && !conflictC >= n_of_conflicts
-      then begin
-        (* env.progress_estimate <- progress_estimate env; *)
-        cancel_until env 0;
-        raise Restart
-      end;
-      if decision_level env = 0 then simplify env;
-      if
-        n_of_learnts >= 0
-        && Vec.size env.learnts - nb_assigns env >= n_of_learnts
-      then reduce_db ();
-      pick_branch_lit env
+        env.stale_splits
+        &&
+        (env.stale_splits <- false;
+         match do_case_split env Util.AfterTheoryAssume with
+         | C_none -> false
+         | C_theory _ as c ->
+           conflict_analyze_and_fix env c;
+           true
+         | C_bool _ -> assert false)
+      then ()
+      else begin
+        if is_sat env then raise Sat;
+        if
+          Options.get_enable_restarts ()
+          && n_of_conflicts >= 0
+          && !conflictC >= n_of_conflicts
+        then begin
+          (* env.progress_estimate <- progress_estimate env; *)
+          cancel_until env 0;
+          raise Restart
+        end;
+        if decision_level env = 0 then simplify env;
+        if
+          n_of_learnts >= 0
+          && Vec.size env.learnts - nb_assigns env >= n_of_learnts
+        then reduce_db ();
+        pick_branch_lit env
+      end
     done
 
   (* unused -- let check_clause c = let b = ref false in let atoms = c.atoms in
