@@ -157,6 +157,14 @@ val are_equal : t -> Expr.t -> Expr.t -> added_terms:bool -> Th_util.answer
 
 val are_distinct : t -> Expr.t -> Expr.t -> Th_util.answer
 
+val are_equal_r : t -> r -> r -> Th_util.answer
+(** [are_equal_r uf r1 r2] is the same as {!are_equal} but works on semantic
+    values instead of terms. *)
+
+val are_distinct_r : t -> r -> r -> Th_util.answer
+(** [are_distinct_r uf r1 r2] is the same as {!are_distinct} but works on
+    semantic values instead of terms. *)
+
 val already_distinct : t -> r list -> bool
 
 val class_of : t -> Expr.t -> Expr.Set.t
