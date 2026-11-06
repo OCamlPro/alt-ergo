@@ -788,6 +788,10 @@ module FP : sig
     val abs_err_denom : string
   end
 
+  val is_prelude_symbol : Symbols.t -> bool
+  (** [is_prelude_symbol sy] is [true] if [sy] is a symbol of the SMT-LIB FPA
+      prelude ([ae.fp.*]) or the rounding function [ae.float]. *)
+
   (** {1 SMT-LIB FPA theory} *)
 
   (** {2 Construction from bit-vectors} *)
