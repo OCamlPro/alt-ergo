@@ -401,7 +401,7 @@ module AEPrinter = struct
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "get"
     | Store -> Fmt.pf ppf "set"
-    | Const_array -> Fmt.pf ppf "const"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
@@ -495,7 +495,7 @@ module SmtPrinter = struct
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "select"
     | Store -> Fmt.pf ppf "store"
-    | Const_array -> Fmt.pf ppf "const"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
