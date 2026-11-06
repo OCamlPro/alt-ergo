@@ -48,6 +48,7 @@ type operator =
   (* Arrays *)
   | Select
   | Store
+  | Const_array
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
@@ -236,12 +237,12 @@ let compare_operators op1 op2 =
     | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
     | ( _,
         ( Plus | Minus | Mult | Div | Modulo | Real_is_int | Concat | Extract _
-        | Sign_extend _ | Repeat _ | Select | Store | Float | FloatEbSb
-        | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-        | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int | Max_real
-        | Max_int | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor
-        | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
-        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
+        | Sign_extend _ | Repeat _ | Select | Store | Const_array | Float
+        | FloatEbSb | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor
+        | Int_ceil | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int
+        | Max_real | Max_int | Integer_log2 | Pow | Integer_round | BVnot
+        | BVand | BVor | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl
+        | BVlshr | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
         | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
       assert false)
 
@@ -400,6 +401,7 @@ module AEPrinter = struct
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "get"
     | Store -> Fmt.pf ppf "set"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
@@ -493,6 +495,7 @@ module SmtPrinter = struct
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "select"
     | Store -> Fmt.pf ppf "store"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
