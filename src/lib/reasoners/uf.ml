@@ -961,6 +961,21 @@ let are_distinct env t1 t2 =
     Th_util.Unknown
   with Ex.Inconsistent (ex, classes) -> Th_util.Entailed { ex; classes }
 
+let are_equal_r env r1 r2 =
+  let r1, ex_r1 = Env.find_or_normal_form env r1 in
+  let r2, ex_r2 = Env.find_or_normal_form env r2 in
+  if X.equal r1 r2
+  then Th_util.Entailed { ex = Ex.union ex_r1 ex_r2; classes = cl_extract env }
+  else Th_util.Unknown
+
+let are_distinct_r env r1 r2 =
+  let r1, ex_r1 = Env.find_or_normal_form env r1 in
+  let r2, ex_r2 = Env.find_or_normal_form env r2 in
+  try
+    ignore (union env r1 r2 (Ex.union ex_r1 ex_r2));
+    Th_util.Unknown
+  with Ex.Inconsistent (ex, classes) -> Th_util.Entailed { ex; classes }
+
 let already_distinct env lr =
   let d = LX.mk_distinct false lr in
   try
