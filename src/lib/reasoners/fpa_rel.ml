@@ -54,8 +54,7 @@ module AEFloat_arg_watch = struct
   type args =
     { eb : int;
       sb : int;
-      mode : X.r;
-      ex : Ex.t
+      mode : E.t
     }
 
   type t =
@@ -63,9 +62,8 @@ module AEFloat_arg_watch = struct
       (* ae.float application -> its (eb, sb, mode) arguments *)
       watched_args : E.Set.t MX.t;
       (* mode value -> ae.float applications that use it as an argument *)
-      ready : (int * int * E.t * Ex.t) E.Map.t
-          (* Mapping of ae.float applications to their literal (eb, sb, mode)
-             arguments that are now known *)
+      ready : args E.Map.t
+          (* ae.float applications whose mode is now known to be a literal *)
     }
 
   type _ Uf.id += Id : t Uf.id
@@ -79,7 +77,7 @@ module AEFloat_arg_watch = struct
     Fmt.pf ppf "{float_watch: %d pending, %d ready}" (E.Map.cardinal t.apps)
       (E.Map.cardinal t.ready)
 
-  let filter_ty _ = true
+  let filter_ty ty = Ty.equal ty Fpa_rounding.fpa_rounding_mode
 
   let init _ t = t
 
@@ -89,29 +87,20 @@ module AEFloat_arg_watch = struct
     in
     MX.add r (E.Set.add term s) watched_args
 
-  let int_lit_view r = E.int_view (Option.get (X.to_model_term r))
-
-  let mode_lit_view r = Option.get (X.to_model_term r)
-
-  (* [ready_value] is only called when [mode] is known to be a literal. *)
-  let ready_value eb sb mode ex = eb, sb, mode_lit_view mode, ex
-
-  let register term r_eb r_sb r_mode ~ex t =
+  let register term args r_mode t =
     if E.Map.mem term t.apps || E.Map.mem term t.ready
     then t
+    else if X.is_constant r_mode
+    then { t with ready = E.Map.add term args t.ready }
     else
-      let eb = int_lit_view r_eb in
-      let sb = int_lit_view r_sb in
-      if X.is_constant r_mode
-      then
-        { t with ready = E.Map.add term (ready_value eb sb r_mode ex) t.ready }
-      else
-        { t with
-          apps = E.Map.add term { eb; sb; mode = r_mode; ex } t.apps;
-          watched_args = add_by_arg r_mode term t.watched_args
-        }
+      { t with
+        apps = E.Map.add term args t.apps;
+        watched_args = add_by_arg r_mode term t.watched_args
+      }
 
-  let subst ~ex rr nrr t =
+  (* The mode's value and explanation are retrieved with [Uf.find] when the
+     application is processed. *)
+  let subst ~ex:_ rr nrr t =
     match MX.find_opt rr t.watched_args with
     | None -> t
     | Some terms ->
@@ -121,23 +110,17 @@ module AEFloat_arg_watch = struct
         (fun term t ->
           match E.Map.find_opt term t.apps with
           | None -> t
-          | Some { eb; sb; mode; ex = ex0 } ->
-            assert (X.equal mode rr);
-            let ex = Ex.union ex0 ex in
+          | Some args ->
             if nrr_lit
             then
               { apps = E.Map.remove term t.apps;
                 watched_args = t.watched_args;
-                ready = E.Map.add term (ready_value eb sb nrr ex) t.ready
+                ready = E.Map.add term args t.ready
               }
-            else
-              { t with
-                apps = E.Map.add term { eb; sb; mode = nrr; ex } t.apps;
-                watched_args = add_by_arg nrr term t.watched_args
-              })
+            else { t with watched_args = add_by_arg nrr term t.watched_args })
         terms t
 
-  let flush_ready t = E.Map.bindings t.ready, { t with ready = E.Map.empty }
+  let flush_ready t = t.ready, { t with ready = E.Map.empty }
 end
 
 type t =
@@ -164,16 +147,18 @@ let empty uf =
 
 let pow2 n = Z.shift_left Z.one n
 
-let mk_eq_fact ?(ex = Ex.empty) lhs rhs =
+let mk_eq_fact ~ex lhs rhs =
   Literal.LTerm (E.mk_eq ~iff:false lhs rhs), ex, Th_util.Other
 
 let int_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Tint in
-  E.Set.add lhs terms, mk_eq_fact lhs (E.Ints.of_Z literal) :: facts
+  ( E.Set.add lhs terms,
+    mk_eq_fact ~ex:Ex.empty lhs (E.Ints.of_Z literal) :: facts )
 
 let real_literal_fact eb_t sb_t name literal (terms, facts) =
   let lhs = E.mk_term (Sy.name name) [eb_t; sb_t] Ty.Treal in
-  E.Set.add lhs terms, mk_eq_fact lhs (E.Reals.of_Q literal) :: facts
+  ( E.Set.add lhs terms,
+    mk_eq_fact ~ex:Ex.empty lhs (E.Reals.of_Q literal) :: facts )
 
 let real_literal_fact_z eb_t sb_t name literal =
   real_literal_fact eb_t sb_t name (Q.from_z literal)
@@ -184,7 +169,7 @@ let zero_literal_fact eb sb (terms, facts) =
     E.mk_term (Sy.name Names.zeroF) [E.Ints.of_int eb; E.Ints.of_int sb] ty
   in
   ( E.Set.add lhs terms,
-    mk_eq_fact lhs (E.float Fp_value.Plus_zero eb sb) :: facts )
+    mk_eq_fact ~ex:Ex.empty lhs (E.float Fp_value.Plus_zero eb sb) :: facts )
 
 let compute_emax_min_exp eb sb =
   let bias = (1 lsl (eb - 1)) - 1 in
@@ -225,11 +210,10 @@ let type_literal_facts env eb sb =
   |> real_literal_fact_z eb_t sb_t E.FP.Names.abs_err_denom c.abs_err_denom
   |> zero_literal_fact eb sb
 
-let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
-    ~is_positive ~is_negative =
+let mk_fp_literal_facts eb_t sb_t term ?(is_nan = false) ?(is_zero = false)
+    ?(is_infinite = false) ?(is_positive = false) ?(is_negative = false) () =
   let mk_fact name b =
-    ( E.mk_term (Sy.name name) [eb_t; sb_t; term] Ty.Tbool,
-      if b then E.vrai else E.faux )
+    E.mk_term (Sy.name name) [eb_t; sb_t; term] Ty.Tbool, E.Core.bool b
   in
   [ mk_fact Names.is_nan is_nan;
     mk_fact Names.is_finite (not (is_nan || is_infinite));
@@ -241,31 +225,19 @@ let mk_fp_literal_facts eb_t sb_t term ~is_nan ~is_zero ~is_infinite
 let fp_literal_facts eb sb term v =
   let eb_t = E.Ints.of_int eb in
   let sb_t = E.Ints.of_int sb in
+  let mk = mk_fp_literal_facts eb_t sb_t term in
   match v with
-  | Fp_value.NaN ->
-    mk_fp_literal_facts eb_t sb_t term ~is_nan:true ~is_zero:false
-      ~is_infinite:false ~is_positive:false ~is_negative:false
-  | Plus_infinity ->
-    mk_fp_literal_facts eb_t sb_t term ~is_nan:false ~is_zero:false
-      ~is_infinite:true ~is_positive:true ~is_negative:false
-  | Minus_infinity ->
-    mk_fp_literal_facts eb_t sb_t term ~is_nan:false ~is_zero:false
-      ~is_infinite:true ~is_positive:false ~is_negative:true
-  | Plus_zero ->
-    mk_fp_literal_facts eb_t sb_t term ~is_nan:false ~is_zero:true
-      ~is_infinite:false ~is_positive:true ~is_negative:false
-  | Minus_zero ->
-    mk_fp_literal_facts eb_t sb_t term ~is_nan:false ~is_zero:true
-      ~is_infinite:false ~is_positive:false ~is_negative:true
+  | Fp_value.NaN -> mk ~is_nan:true ()
+  | Plus_infinity -> mk ~is_infinite:true ~is_positive:true ()
+  | Minus_infinity -> mk ~is_infinite:true ~is_negative:true ()
+  | Plus_zero -> mk ~is_zero:true ~is_positive:true ()
+  | Minus_zero -> mk ~is_zero:true ~is_negative:true ()
   | Finite q ->
     let to_real_term =
       E.mk_term (Sy.name Names.to_real) [eb_t; sb_t; term] Ty.Treal
     in
     (to_real_term, E.Reals.of_Q q)
-    :: mk_fp_literal_facts eb_t sb_t term ~is_nan:false ~is_zero:false
-         ~is_infinite:false
-         ~is_positive:(Q.sign q > 0)
-         ~is_negative:(Q.sign q < 0)
+    :: mk ~is_positive:(Q.sign q > 0) ~is_negative:(Q.sign q < 0) ()
 
 (* [is_normal] and [is_subnormal] of a literal. *)
 let normal_literal_facts eb sb term v =
@@ -273,31 +245,39 @@ let normal_literal_facts eb sb term v =
     ( E.mk_term (Sy.name name)
         [E.Ints.of_int eb; E.Ints.of_int sb; term]
         Ty.Tbool,
-      if b then E.vrai else E.faux )
+      E.Core.bool b )
   in
   [ mk_fact Names.is_normal (Fp_value.is_normal ~eb v);
     mk_fact Names.is_subnormal (Fp_value.is_subnormal ~eb v) ]
 
 let register_aefloat_arg_watch uf term ds =
   match E.term_view term with
-  | { E.f = Sy.Op FloatEbSb; xs = [eb; sb; mode; _x]; _ } ->
-    let eb, _ = Uf.find uf eb in
-    let sb, _ = Uf.find uf sb in
-    let mode, ex = Uf.find uf mode in
-    let fw = Uf.GlobalDomains.find (module AEFloat_arg_watch) ds in
-    let fw = AEFloat_arg_watch.register term eb sb mode ~ex fw in
-    Uf.GlobalDomains.add (module AEFloat_arg_watch) fw ds
+  | { E.f = Sy.Op FloatEbSb; xs = [eb; sb; mode; _x]; _ } -> (
+    (* [ae.float] is only built by the prelude, whose precisions are literals.
+       Applications built by hand with other precisions are left
+       uninterpreted. *)
+    match E.int_view eb, E.int_view sb with
+    | eb, sb ->
+      let r_mode, _ = Uf.find uf mode in
+      let args = { AEFloat_arg_watch.eb; sb; mode } in
+      let fw = Uf.GlobalDomains.find (module AEFloat_arg_watch) ds in
+      let fw = AEFloat_arg_watch.register term args r_mode fw in
+      Uf.GlobalDomains.add (module AEFloat_arg_watch) fw ds
+    | exception Failure _ -> ds)
   | _ -> ds
 
 let normal_pred term =
   match E.term_view term with
-  | { E.f = Sy.Name { hs; _ }; xs = [_; _; x]; ty = Ty.Tbool; _ } -> (
+  | { E.f = Sy.Name { hs; _ }; xs = [eb_t; sb_t; x]; ty = Ty.Tbool; _ } -> (
     let name = Hstring.view hs in
     match E.term_view x with
     | { E.f = Sy.Float _; _ } -> None
     | { E.ty = Ty.Tfloat (eb, sb); _ }
       when String.equal name Names.is_normal
            || String.equal name Names.is_subnormal ->
+      (* TODO: make sure that users cannot create these terms by hand (or that
+         they are well-typed) *)
+      assert (E.equal eb_t (E.Ints.of_int eb) && E.equal sb_t (E.Ints.of_int sb));
       Some (String.equal name Names.is_normal, eb, sb, x)
     | _ -> None)
   | _ -> None
@@ -411,9 +391,12 @@ let add env uf _r term =
       in
       env, Uf.domains uf, []
 
-let mk_aefloat_eq_fact term (eb, sb, mode, ex) =
+let mk_aefloat_eq_fact uf term { AEFloat_arg_watch.eb; sb; mode } =
   match E.term_view term with
   | { E.xs = [_; _; _; x]; _ } ->
+    let r_mode, ex = Uf.find uf mode in
+    (* [mode] is in [ready], so its representative is a literal. *)
+    let mode = Option.get (X.to_model_term r_mode) in
     let _, min_exp = compute_emax_min_exp eb sb in
     let repl =
       E.mk_term (Sy.Op Float)
@@ -436,7 +419,9 @@ let assume env uf _la =
         env.pending_types (E.Set.empty, [])
     in
     let eval_facts =
-      List.map (fun (lhs, rhs) -> mk_eq_fact lhs rhs) env.pending_literals
+      List.map
+        (fun (lhs, rhs) -> mk_eq_fact ~ex:Ex.empty lhs rhs)
+        env.pending_literals
     in
     let env =
       { env with
@@ -452,7 +437,10 @@ let assume env uf _la =
       AEFloat_arg_watch.flush_ready aefloat_arg_watch
     in
     let aefloat_terms, aefloat_facts =
-      List.split (List.map (fun (term, p) -> mk_aefloat_eq_fact term p) ready)
+      List.split
+        (E.Map.fold
+           (fun term p acc -> mk_aefloat_eq_fact uf term p :: acc)
+           ready [])
     in
     let env =
       { env with
