@@ -25,28 +25,58 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module SA : Set.S with type elt = Expr.t * Explanation.t
+val src : Logs.src
 
 type t
 
 type r = Shostak.Combine.r
 
-val src : Logs.src
+val print : t Fmt.t
 
 val empty : t
 
-val find : r -> t -> Expr.Set.t * SA.t
+type parents
+(** Collect the parent terms and literals of a term, represented by its
+    [Uf.make]. *)
 
-val add : r -> Expr.Set.t * SA.t -> t -> t
+val no_parents : parents
 
-val mem : r -> t -> bool
+val congr_close_up : t -> r -> parents -> parents
+(** [congr_close_up t r up] adds the parents of [r], if any, to [up]. *)
 
-val print : t -> unit
+val up_close_up :
+  t -> Uf.t -> parents -> t * Expr.t Expr.Map.t * Explanation.t Expr.Map.t
+(** [up_close_up t uf up] returns [t', up_eqs, up_lits] where:
 
-val up_add : t -> Expr.t -> r -> r list -> t
+    - [t'] is [t] after normalizing the terms in [up] with respect to [uf];
 
-val congr_add : t -> r list -> Expr.Set.t
+    - [up_eqs] contains bindings [e -> e'] if [e] and [e'] were tracked with the
+      same head symbol and type and have now become congruent. [e] is no longer
+      tracked.
 
-val up_close_up : t -> r -> r -> t
+    - [up_lits] contains all the literals added through [add_literal], along
+      with their explanation, that appear in [up]. *)
 
-val congr_close_up : t -> r -> r list -> Expr.Set.t * SA.t
+val add_term : t -> Uf.t -> Expr.t -> Expr.t Expr.Map.t -> t * Expr.t Expr.Map.t
+(** [add_term t uf e eqs] returns [t', new_eqs] where:
+
+    - If there is already a term [e'], added to [t] earlier, that is congruent
+      to [e] according to [uf], then [t'] is [t] and [new_eqs] is
+      [Expr.Map.add e e' eqs].
+
+    - Otherwise, [new_eqs] is [eqs] and [t'] tracks congruence changes to [e]
+      when its arguments change representative ([e] will appear in the
+      [congr_close_up] of any of its arguments). *)
+
+val add_literal : t -> Uf.t -> Expr.t -> Explanation.t -> t
+(** [add_literal t uf a ex] tracks the change of representatives for the
+    arguments of literal [a] ([a] will appear in the [congr_close_up] of any of
+    its arguments).
+
+    {b Precondition}: [a] must be a literal. *)
+
+val remove_literal : t -> Uf.t -> Expr.t -> t
+(** [remove_literal t uf a] stops tracking change of representatives for the
+    arguments of literal [a].
+
+    {b Precondition}: [a] must be a literal. *)

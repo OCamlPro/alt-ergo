@@ -104,13 +104,12 @@ module type S = sig
 end
 
 module Main : S = struct
-  module SetA = Use.SA
   module Rel = Relation
   module Q = Queue
   module LR = Uf.LX
 
   type t =
-    { use : Use.t;
+    { congr : Congr.t;
       uf : Uf.t;
       relation : Rel.t
     }
@@ -121,7 +120,7 @@ module Main : S = struct
     let uf = Uf.empty in
     let relation, domains = Rel.empty uf in
     let uf = Uf.set_domains uf domains in
-    { use = Use.empty; uf; relation }
+    { congr = Congr.empty; uf; relation }
 
   let empty_facts () =
     Sig_rel.
@@ -198,10 +197,11 @@ module Main : S = struct
               Fmt.(braces @@ list ~sep:comma @@ pair (A.print_view X.print) nop)
               ctx)
 
-    let add_to_use t =
+    let add_to_congr t =
       if Options.get_debug_cc ()
       then
-        print_dbg ~module_name:"Ccx" ~function_name:"add_to_use" "%a" E.print t
+        print_dbg ~module_name:"Ccx" ~function_name:"add_to_congr" "%a" E.print
+          t
 
     (* unused -- let lrepr fmt = List.iter (fprintf fmt) "%a " X.print)
 
@@ -225,29 +225,8 @@ module Main : S = struct
       then
         print_dbg ~module_name:"Ccx" ~function_name:"congruent"
           "new fact by congruence : %a ex[%a]" E.print a Ex.print ex
-
-    let cc_result p v touched =
-      let print fmt (x, y, _) =
-        Format.fprintf fmt "  > %a ~~ becomes ~> %a" X.print x X.print y
-      in
-      if Options.get_debug_cc ()
-      then
-        print_dbg ~module_name:"Ccx" ~function_name:"cc_result"
-          "the binding %a -> %a touched:@,%a" X.print p X.print v
-          (pp_list_no_space print) touched
   end
   (*BISECT-IGNORE-END*)
-
-  let one, _ = X.make (Expr.mk_term (Sy.name ~ns:Internal "@bottom") [] Ty.Tint)
-
-  let concat_leaves uf l =
-    let concat_rec acc t =
-      match X.leaves (fst (Uf.find uf t)), acc with
-      | [], _ -> one :: acc
-      | res, [] -> res
-      | res, _ -> List.rev_append res acc
-    in
-    match List.fold_left concat_rec [] l with [] -> [one] | res -> res
 
   let explain_equality env ex t1 t2 =
     if E.equal t1 t2
@@ -258,24 +237,31 @@ module Main : S = struct
       | Unknown -> raise Exit
 
   let equal_only_by_congruence env (facts : r Sig_rel.facts) t1 t2 =
-    if not (E.equal t1 t2)
+    if E.equal t1 t2
     then
-      let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
-      let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
-      if Symbols.equal f1 f2 && Ty.equal ty1 ty2
-      then
-        try
-          let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
-          let a = E.mk_eq ~iff:false t1 t2 in
-          Debug.congruent a ex;
-          Q.push (Literal.LTerm a, ex, Th_util.Other) facts.equas
-        with Exit -> ()
-
-  let congruents env (facts : r Sig_rel.facts) t1 s =
-    match E.term_view t1 with
-    | { E.xs = []; _ } -> ()
-    | { E.f; _ } when X.fully_interpreted f -> ()
-    | _ -> SE.iter (equal_only_by_congruence env facts t1) s
+      Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@]" Fmt.text
+        "*BUG*: term was returned as congruence candidate with itself by Congr:"
+        E.print t1;
+    let { E.f = f1; xs = xs1; ty = ty1; _ } = E.term_view t1 in
+    let { E.f = f2; xs = xs2; ty = ty2; _ } = E.term_view t2 in
+    if not (Sy.equal f1 f2 && Ty.equal ty1 ty2)
+    then
+      Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@ and@;<1 2>@[%a@]@]"
+        Fmt.text
+        "*BUG*: terms with distinct symbols or types returned for congruence \
+         by Congr:"
+        E.print t1 E.print t2;
+    try
+      let ex = List.fold_left2 (explain_equality env) Ex.empty xs1 xs2 in
+      let a = E.mk_eq ~iff:false t1 t2 in
+      Debug.congruent a ex;
+      Q.push (Literal.LTerm a, ex, Th_util.Other) facts.equas
+    with Exit ->
+      Util.internal_error "@[<v>@[%a@]@;<1 2>@[%a@]@ and@;<1 2>@[%a@]@]"
+        Fmt.text
+        "*BUG*: terms should be equal by congruence according to Congr, but Uf \
+         could not explain why:"
+        E.print t1 E.print t2
 
   let fold_find_with_explanation find ex l =
     List.fold_left
@@ -356,18 +342,12 @@ module Main : S = struct
           (Uf.class_of env.uf bol)
       | _ -> ())
 
-  let clean_use =
+  let clean_congr =
     List.fold_left (fun env a ->
         match E.lit_view a with
-        | E.Distinct lt | E.Builtin (_, _, lt) ->
-          let lvs = concat_leaves env.uf lt in
-          List.fold_left
-            (fun env rx ->
-              let st, sa = Use.find rx env.use in
-              (* SetA does not use ex, so Ex.empty is OK for removing *)
-              let sa = SetA.remove (a, Ex.empty) sa in
-              { env with use = Use.add rx (st, sa) env.use })
-            env lvs
+        | E.Distinct _ | E.Builtin (_, _, _) ->
+          let congr = Congr.remove_literal env.congr env.uf a in
+          { env with congr }
         | _ -> assert false)
 
   let contra_congruence env facts r =
@@ -381,46 +361,24 @@ module Main : S = struct
     Options.exec_thread_yield ();
     Debug.cc r1 r2;
     let uf, res = Uf.union env.uf r1 r2 ex in
-    List.fold_left
-      (fun env (p, touched, v) ->
-        Options.exec_thread_yield ();
-        Debug.cc_result p v touched;
-        assert (X.is_a_leaf p);
-        (* we look for use(p) *)
-        let p_t, p_a = Use.find p env.use in
-        (* we compute terms and atoms to consider for congruence *)
-        let repr_touched =
-          List.map
-            (fun (x, y, _) ->
-              facts.touched <- Util.MI.add (X.hash x) x facts.touched;
-              y)
-            touched
-        in
-        let st_others, sa_others = Use.congr_close_up env.use p repr_touched in
-        (* we update use *)
-        let nuse = Use.up_close_up env.use p v in
-        let nuse =
-          List.fold_left
-            (fun nuse (_, rr, _) ->
-              match X.leaves rr with
-              | _ :: _ -> nuse
-              | [] -> Use.up_close_up nuse p one)
-            nuse touched
-        in
-        Use.print nuse;
-        (* we check the congruence of the terms. *)
-        let env = { env with use = nuse } in
-        SE.iter (fun t -> congruents env facts t st_others) p_t;
-        (*CC of preds ?*)
-        SetA.iter
-          (fun (a, ex) -> add_fact facts (LTerm a, ex, Th_util.Other))
-          p_a;
-        (*touched preds ?*)
-        SetA.iter
-          (fun (a, ex) -> add_fact facts (LTerm a, ex, Th_util.Other))
-          sa_others;
-        env)
-      { env with uf } res
+    let up =
+      List.fold_left
+        (fun up x ->
+          Options.exec_thread_yield ();
+          facts.touched <- Util.MI.add (X.hash x) x facts.touched;
+          Congr.congr_close_up env.congr x up)
+        Congr.no_parents
+        (List.sort_uniq X.hash_cmp res)
+    in
+    let congr, up_eqs, up_lits = Congr.up_close_up env.congr uf up in
+    let env = { env with uf; congr } in
+    if Options.get_debug_congr ()
+    then
+      Printer.print_dbg ~module_name:"Congr" ~function_name:"print"
+        "@[<v 2>congruence :@ %a@]" Congr.print env.congr;
+    E.Map.iter (fun e1 e2 -> equal_only_by_congruence env facts e1 e2) up_eqs;
+    E.Map.iter (fun a ex -> add_fact facts (LTerm a, ex, Th_util.Other)) up_lits;
+    env
 
   module HLR = Hashtbl.Make (struct
     type t = LR.t * E.t option
@@ -464,7 +422,7 @@ module Main : S = struct
     let relation, domains, result = Rel.assume env.relation env.uf sa in
     let env = { env with uf = Uf.set_domains env.uf domains } in
     let env = { env with relation } in
-    let env = clean_use env result.remove in
+    let env = clean_congr env result.remove in
     env, result.assume
 
   let rec add_term env facts t ex =
@@ -474,33 +432,29 @@ module Main : S = struct
     then env
     else begin
       Options.tool_req 3 "TR-CCX-AddTerm";
-      Debug.add_to_use t;
+      Debug.add_to_congr t;
       (* we add t's arguments in env *)
-      let { E.f; E.xs; _ } = E.term_view t in
+      let { E.xs; _ } = E.term_view t in
       let env = List.fold_left (fun env t -> add_term env facts t ex) env xs in
-      (* we update uf and use *)
+      (* we update uf and congr *)
       let nuf, ctx = Uf.add env.uf t in
       Debug.make_cst t ctx;
       List.iter (fun a -> add_fact facts (LTerm a, ex, Th_util.Other)) ctx;
       (*or Ex.empty ?*)
       let rt, _ = Uf.find nuf t in
-      let lvs = concat_leaves nuf xs in
-      let nuse = Use.up_add env.use t rt lvs in
       (* If finitetest is used we add the term to the relation *)
       let rel, doms, eqs = Rel.add env.relation nuf rt t in
       let nuf = Uf.set_domains nuf doms in
       Debug.rel_add_cst t eqs;
       (* We add terms made from relations as fact *)
       List.iter (fun (a, ex) -> add_fact facts (LSem a, ex, Th_util.Other)) eqs;
-      Use.print nuse;
-      let env = { uf = nuf; use = nuse; relation = rel } in
-      (* we compute terms to consider for congruence *)
-      (* we do this only for non-atomic terms with uninterpreted
-         head-symbol *)
-      if (not (Compat.List.is_empty xs)) && not (X.fully_interpreted f)
+      let ncongr, eqs = Congr.add_term env.congr nuf t E.Map.empty in
+      if Options.get_debug_congr ()
       then
-        (* we check the congruence of each term *)
-        SE.iter (equal_only_by_congruence env facts t) (Use.congr_add nuse lvs);
+        Printer.print_dbg ~module_name:"Congr" ~function_name:"print"
+          "@[<v 2>congruence :@ %a@]" Congr.print ncongr;
+      let env = { uf = nuf; congr = ncongr; relation = rel } in
+      E.Map.iter (fun e1 e2 -> equal_only_by_congruence env facts e1 e2) eqs;
       env
     end
 
@@ -513,13 +467,8 @@ module Main : S = struct
     | E.Eql lt -> List.fold_left (fun env t -> add_term env facts t ex) env lt
     | E.Distinct lt | E.Builtin (_, _, lt) ->
       let env = List.fold_left (fun env t -> add_term env facts t ex) env lt in
-      let lvs = concat_leaves env.uf lt in
-      (* A verifier *)
-      List.fold_left (* add Distinct and Builtin to Use *)
-        (fun env rx ->
-          let st, sa = Use.find rx env.use in
-          { env with use = Use.add rx (st, SetA.add (a, ex) sa) env.use })
-        env lvs
+      let congr = Congr.add_literal env.congr env.uf a ex in
+      { env with congr }
 
   let semantic_view env (a, ex, orig) facts =
     match (a : r Sig_rel.literal) with

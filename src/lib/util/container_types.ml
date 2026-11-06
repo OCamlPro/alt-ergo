@@ -47,7 +47,7 @@ module Make_set (T : Thing) = struct
   include Set.Make [@inlined hint] (T)
 
   let print ppf set =
-    Fmt.pf ppf "@[<1>{@[%a@]}@]" (Fmt.iter ~sep:Fmt.comma iter T.print) set
+    Fmt.pf ppf "@[<1>{@[<hv>%a@]}@]" (Fmt.iter ~sep:Fmt.comma iter T.print) set
 
   exception More_than_one_element
 
@@ -77,7 +77,7 @@ module Make_map (T : Thing) (Set : Set_plus_stdlib with type elt = T.t) = struct
   module Set = Set
 
   let print print_datum ppf map =
-    Fmt.pf ppf "@[<1>{@[%a@]}@]"
+    Fmt.pf ppf "@[<1>{@[<hv>%a@]}@]"
       (Fmt.iter_bindings ~sep:Fmt.comma iter
          (Fmt.pair ~sep:(Fmt.any " ->@ ") T.print print_datum
          |> Fmt.box ~indent:1))

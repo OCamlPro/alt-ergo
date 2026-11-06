@@ -81,7 +81,7 @@ type options =
     debug_types : bool option;
     debug_uf : bool option;
     debug_unsat_core : bool option;
-    debug_use : bool option;
+    debug_congr : bool option;
     rule : int option;
     case_split_policy : case_split_policy option;
     enable_adts_cs : bool option;

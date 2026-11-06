@@ -172,7 +172,7 @@ module Debug = struct
     | Types
     | Uf
     | Unsat_core
-    | Use
+    | Congr
     | Commands
     | Optimize
 
@@ -200,7 +200,7 @@ module Debug = struct
     | Types -> 20
     | Uf -> 21
     | Unsat_core -> 22
-    | Use -> 23
+    | Congr -> 23
     | Commands -> 24
     | Optimize -> 25
 
@@ -230,7 +230,7 @@ module Debug = struct
       Types;
       Uf;
       Unsat_core;
-      Use;
+      Congr;
       Commands;
       Optimize ]
 
@@ -258,7 +258,7 @@ module Debug = struct
     | Types -> "types"
     | Uf -> "uf"
     | Unsat_core -> "unsat-core"
-    | Use -> "use"
+    | Congr -> "congr"
     | Commands -> "commands"
     | Optimize -> "optimize"
 
@@ -334,9 +334,9 @@ module Debug = struct
       | Unsat_core ->
         Options.set_debug_unsat_core true;
         set_level S.unsat_core
-      | Use ->
-        Options.set_debug_use true;
-        set_level Use.src
+      | Congr ->
+        Options.set_debug_congr true;
+        set_level Congr.src
       | Commands ->
         Options.set_debug_commands true;
         set_level Commands.src
