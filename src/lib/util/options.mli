@@ -210,6 +210,9 @@ val set_input_format : input_format option -> unit
 val set_produce_models : bool -> unit
 (** Set [produce_models] accessible with {!val:get_produce_models} *)
 
+val set_produce_unsat_cores : bool -> unit
+(** Set [produce_unsat_cores] accessible with {!val:get_produce_unsat_cores} *)
+
 val set_strict_mode : bool -> unit
 (** Set [strict_mode] accessible with {!val:get_strict_mode}. *)
 
@@ -695,6 +698,10 @@ val get_timelimit_per_goal : unit -> bool
 
 (** [true] if model generation is enabled. *)
 val get_produce_models : unit -> bool
+(** Default to [false] *)
+
+(** [true] if unsat core generation is enabled. *)
+val get_produce_unsat_cores : unit -> bool
 (** Default to [false] *)
 
 val get_strict_mode : unit -> bool

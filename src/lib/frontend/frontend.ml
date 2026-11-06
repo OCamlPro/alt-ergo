@@ -134,7 +134,7 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * E.t * bool) process
+  val assume : (string * E.t * bool * string option) process
 
   val pred_def : (string * E.t) process
 
@@ -231,11 +231,15 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     Fmt.vbox
       (Fmt.iter ~sep:Fmt.sp Expr.Labeled.Set.iter (Fmt.box Expr.Labeled.print))
       cfmt dep;
+    Format.pp_print_flush cfmt ();
     close_out cout
 
-  let mk_root_dep name f loc =
-    if Options.get_unsat_core ()
-    then E.Labeled.Set.singleton { name; f; loc }
+  let mk_root_dep label f loc =
+    if Options.get_produce_unsat_cores ()
+    then
+      match label with
+      | Some name -> E.Labeled.Set.singleton { name; f; loc }
+      | None -> E.Labeled.Set.empty
     else E.Labeled.Set.empty
 
   let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
@@ -261,13 +265,16 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     SAT.pop env.sat_env n;
     env.res <- res
 
-  let internal_assume ?(loc = Loc.dummy) ((name, f, mf) : string * E.t * bool)
-      (env : env) =
+  let internal_assume ?(loc = Loc.dummy)
+      ((name, f, mf, label) : string * E.t * bool * string option) (env : env) =
     let is_hyp = try Char.equal '@' name.[0] with _ -> false in
-    if is_hyp || not (unused_context name env.used_context)
+    if
+      match label with
+      | None -> true
+      | Some label -> is_hyp || not (unused_context label env.used_context)
     then
       let expl =
-        if is_hyp then E.Labeled.Set.empty else mk_root_dep name f loc
+        if is_hyp then E.Labeled.Set.empty else mk_root_dep label f loc
       in
       match env.res with
       | `Sat | `Unknown ->
@@ -291,7 +298,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let internal_pred_def ?(loc = Loc.dummy) (name, f) env =
     if not (unused_context name env.used_context)
     then
-      let expl = mk_root_dep name f loc in
+      let expl = mk_root_dep (Some name) f loc in
       SAT.pred_def env.sat_env f name expl loc
 
   let internal_query ?(loc = Loc.dummy) (n, f, sort) env =
@@ -324,7 +331,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     then
       match env.res with
       | `Sat | `Unknown ->
-        let expl = mk_root_dep ax_name ax_form loc in
+        let expl = mk_root_dep (Some ax_name) ax_form loc in
         SAT.assume_th_elt env.sat_env th_elt expl
       | `Unsat _ -> ()
 
@@ -372,8 +379,8 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Decl id -> check_if_over (internal_decl ~loc:d.st_loc id) env
       | Push n -> check_if_over (internal_push ~loc:d.st_loc n) env
       | Pop n -> check_if_over (internal_pop ~loc:d.st_loc n) env
-      | Assume (n, f, mf) ->
-        check_if_over (internal_assume ~loc:d.st_loc (n, f, mf)) env
+      | Assume { name = n; expr = f; mf; label } ->
+        check_if_over (internal_assume ~loc:d.st_loc (n, f, mf, label)) env
       | PredDef (f, name) ->
         check_if_over (internal_pred_def ~loc:d.st_loc (name, f)) env
       | Query (n, f, sort) -> begin

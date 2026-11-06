@@ -69,7 +69,7 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * Expr.t * bool) process
+  val assume : (string * Expr.t * bool * string option) process
 
   val pred_def : (string * Expr.t) process
 

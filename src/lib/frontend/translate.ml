@@ -1634,7 +1634,7 @@ let rec is_pure_term t =
   | Sy.Op Tite -> false
   | _ -> List.for_all is_pure_term xs
 
-let make file acc stmt =
+let make ?lang file acc stmt =
   let rec aux acc (stmt : _ Typer_Pipe.stmt) =
     let loc = Dolmen.Std.Loc.loc file stmt.loc in
     let st_loc = Loc.from_dolmen_loc loc in
@@ -1701,6 +1701,7 @@ let make file acc stmt =
       assert false
     (* Axiom definitions *)
     | { id = DStd.Id.{ name = Simple name; _ }; contents = `Hyp t; attrs; _ } ->
+      let is_hyp = String.length name > 0 && Char.equal '@' name.[0] in
       let name =
         (* The custom [:lemma] attribute overrides Dolmen's default identifier,
            which is inferred as [hyp_N] in smt-lib format. *)
@@ -1708,7 +1709,7 @@ let make file acc stmt =
         | Some n -> n
         | None -> name
       in
-      let name =
+      let name_from_tags =
         (* Upon seeing a term [(! t :named n)], Dolmen translates this to a
            definition [(define-fun n () Bool f)], processed as a `Defs`
            statement, and we only see [(assert n)].
@@ -1725,9 +1726,18 @@ let make file acc stmt =
               tags
             }
           when Option.is_some (DStd.Tag.get tags DE.Tags.named) ->
-          name
-        | _ -> name
+          Some name
+        | _ -> None
       in
+      let label =
+        if is_hyp
+        then Some name
+        else
+          match lang with
+          | Some (D_loop.Dl.Logic.Smtlib2 _) -> name_from_tags
+          | _ -> Some name
+      in
+      let name = Option.value ~default:name name_from_tags in
       (* Dolmen adds information about theory extensions and case splits in the
          [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
          where the information we care about is encoded as a [Colon]-list of
@@ -1802,7 +1812,8 @@ let make file acc stmt =
             C.ThAssume th_elt
           in
           E.Dtheory, th_assume
-        | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
+        | None ->
+          E.Daxiom, fun name e -> C.Assume { name; expr = e; mf = true; label }
       in
       let e = make_form name t st_loc ~decl_kind in
       let st_decl = assume name e in
@@ -1895,7 +1906,17 @@ let make file acc stmt =
                  in
                  if Options.get_verbose ()
                  then Format.eprintf "defining term of %a@." DE.Term.print body;
-                 Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+                 Some
+                   C.
+                     { st_decl =
+                         C.Assume
+                           { name = name_base;
+                             expr = e;
+                             mf = true;
+                             label = None
+                           };
+                       st_loc
+                     }
                end
              | `Type_alias _ -> None
              | `Instanceof _ ->
