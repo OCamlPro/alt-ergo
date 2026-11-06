@@ -848,7 +848,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
         let unop unop =
           match args with
           | [x] -> unop (aux_mk_expr x)
-          | _ -> Util.internal_error "not a binary operator"
+          | _ -> Util.internal_error "not an unary operator"
         in
         let binop binop =
           match args with

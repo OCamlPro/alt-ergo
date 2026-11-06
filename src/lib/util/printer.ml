@@ -438,7 +438,7 @@ module Native_format = struct
   let print_not pp = Fmt.(box (any "not" ++ sp ++ parens pp))
 
   let print_call pp_f f pp_arg =
-    Fmt.(box (const pp_f f ++ cut ++ list ~sep:comma pp_arg))
+    Fmt.(box (const pp_f f ++ parens (cut ++ list ~sep:comma pp_arg)))
 
   let print_infix pp_op op pp_arg =
     Fmt.(parens (list ~sep:(const pp_op op) pp_arg))

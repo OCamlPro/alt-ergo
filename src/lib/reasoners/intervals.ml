@@ -695,8 +695,9 @@ module Int = struct
     if ofs < 0 || len <= 0 then invalid_arg "signed_extract";
     trace1 (Fmt.str "signed_extract ~ofs:%d ~len:%d" ofs len) u
     @@
-    let min_val = Z.signed_extract (Z.shift_left Z.one (len - 1)) 0 len in
-    let max_val = Z.extract Z.minus_one 0 (len - 1) in
+    let min_val_unsigned = Z.shift_left Z.one (len - 1) in
+    let min_val = Z.signed_extract min_val_unsigned 0 len in
+    let max_val = Z.pred min_val_unsigned in
     let full = Interval.of_bounds (Closed min_val) (Closed max_val) in
     of_set_nonempty
     @@ map_to_set
