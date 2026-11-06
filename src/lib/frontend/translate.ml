@@ -1197,10 +1197,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           (* SMT-LIB FPA theory operations *)
           | _ when Options.get_smt_lib_fpa () -> begin
             match builtin, args with
-            | Fp { e = eb; s = sb }, [sign_t; exp_t; sig_t] ->
-              E.FP.fp (mk sign_t) (mk exp_t) (mk sig_t) eb sb
-            | Ieee_format_to_fp { e = eb; s = sb }, [bv_t] ->
-              E.FP.ieee_format_to_fp (mk bv_t) eb sb
+            | Fp { e = eb; s = sb }, [sign; biased_exp; mantissa] ->
+              E.FP.fp ~eb ~sb (mk sign) (mk biased_exp) (mk mantissa)
+            | Ieee_format_to_fp { e = eb; s = sb }, [bv] ->
+              E.FP.ieee_format_to_fp ~eb ~sb (mk bv)
             (* arithmetic with rounding mode *)
             | Add { e = eb; s = sb }, [mode; x; y] ->
               E.FP.add ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
@@ -1249,16 +1249,18 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               E.FP.is_positive ~eb ~sb (mk x)
             (* real conversion *)
             | To_real { e = eb; s = sb }, [x] -> E.FP.to_real ~eb ~sb (mk x)
-            (* TODO: FP <-> FP and BV <-> FP conversion, treated as
-               uninterpreted in the meantime. *)
-            | ( ( To_fp { e1 = _; s1 = _; e2 = _; s2 = _ }
-                | Of_sbv { m = _; e = _; s = _ }
-                | Of_ubv { m = _; e = _; s = _ }
-                | To_ubv { m = _; e = _; s = _ }
-                | To_sbv { m = _; e = _; s = _ } ),
-                [_; _] ) ->
-              E.mk_uninterpreted_term (get_basename tcst.path)
-                (List.map mk args) (dty_to_ty term_ty)
+            (* FP <-> FP conversion *)
+            | To_fp { e1 = eb1; s1 = sb1; e2 = eb2; s2 = sb2 }, [mode; x] ->
+              E.FP.to_fp ~eb1 ~sb1 ~eb2 ~sb2 ~mode:(mk mode) (mk x)
+            (* BV <-> FP conversions *)
+            | Of_sbv { m = _; e = eb; s = sb }, [mode; bv] ->
+              E.FP.of_sbv ~eb ~sb ~mode:(mk mode) (mk bv)
+            | Of_ubv { m = _; e = eb; s = sb }, [mode; bv] ->
+              E.FP.of_ubv ~eb ~sb ~mode:(mk mode) (mk bv)
+            | To_ubv { m = n; e = eb; s = sb }, [mode; x] ->
+              E.FP.to_ubv ~n ~eb ~sb ~mode:(mk mode) (mk x)
+            | To_sbv { m = n; e = eb; s = sb }, [mode; x] ->
+              E.FP.to_sbv ~n ~eb ~sb ~mode:(mk mode) (mk x)
             (* can't be applied *)
             | (RoundingMode | T _ | Fp _), _
             | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
