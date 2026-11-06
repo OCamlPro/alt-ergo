@@ -393,3 +393,437 @@ Float16 and Float32
   unsat
   
   unknown
+
+Classification of fp from its exponent and sign.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (= e #b11111111))
+  > (assert (fp.isZero (fp s e m)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (= s #b1))
+  > (assert (= e #b00000001))
+  > (assert (fp.isPositive (fp s e m)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Bits of fp deduced from its value.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (= (fp s e m) (_ +oo 8 24)))
+  > (assert (not (= e #b11111111)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (fp.isNaN (fp s e m)))
+  > (assert (= m #b00000000000000000000000))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+The real value of fp is linear in its significand, which is not enumerated.
+
+  $ alt-ergo -t 2 -o smtlib2 --sat-solver Tableaux --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const m (_ BitVec 23))
+  > (assert (fp.gt (fp s #x7f m) ((_ to_fp 8 24) RNE 1.5)))
+  > (assert (bvult m #b00100000000000000000000))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Injectivity of fp on non-NaN values.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s1 (_ BitVec 1))
+  > (declare-const e1 (_ BitVec 8))
+  > (declare-const m1 (_ BitVec 23))
+  > (declare-const s2 (_ BitVec 1))
+  > (declare-const e2 (_ BitVec 8))
+  > (declare-const m2 (_ BitVec 23))
+  > (assert (= (fp s1 e1 m1) (fp s2 e2 m2)))
+  > (assert (= e1 #b00000001))
+  > (assert (not (= m1 m2)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+BV -> FP conversions of symbolic bit-vectors.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 8))
+  > (assert (not (= ((_ to_fp_unsigned 8 24) RNE b) ((_ to_fp 8 24) #x40a00000))))
+  > (assert (= b #x05))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 8))
+  > (assert (not (= ((_ to_fp 8 24) RNE b) ((_ to_fp 8 24) #xc0a00000))))
+  > (assert (= b #xfb))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+FP -> BV conversions of symbolic floats.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (not (= ((_ fp.to_ubv 8) RNE x) #x05)))
+  > (assert (= x ((_ to_fp 8 24) #x40a00000)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (not (= ((_ fp.to_sbv 8) RTZ x) #xfb)))
+  > (assert (= x ((_ to_fp 8 24) #xc0a00000)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+The result of fp.to_ubv is unspecified on NaN: this must not be unsat.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isNaN x))
+  > (assert (= ((_ fp.to_ubv 8) RNE x) #x05))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+FP -> FP conversion of symbolic floats.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isNaN x))
+  > (assert (not (fp.isNaN ((_ to_fp 11 53) RNE x))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isInfinite x))
+  > (assert (fp.isNegative x))
+  > (assert (not (= ((_ to_fp 11 53) RNE x) (_ -oo 11 53))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Functional consistency of fp.to_ubv, including where it is unspecified.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const y Float32)
+  > (assert (fp.isNaN x))
+  > (assert (= ((_ fp.to_ubv 8) RNE x) #x05))
+  > (assert (= ((_ fp.to_ubv 8) RNE y) #x06))
+  > (assert (= x y))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Symbolic FP -> FP conversions: NaN and the sign are preserved both ways.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.isNaN ((_ to_fp 5 11) m x)))
+  > (assert (not (fp.isNaN x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.isNegative x))
+  > (assert (fp.isPositive ((_ to_fp 5 11) m x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+A conversion to a wider format is exact: no overflow, and the same real value.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.isInfinite ((_ to_fp 11 53) m x)))
+  > (assert (not (fp.isInfinite x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.isNormal x))
+  > (assert (not (= (fp.to_real ((_ to_fp 11 53) m x)) (fp.to_real x))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+A narrowing conversion is bounded by the rounding of the real value.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.lt ((_ to_fp 8 24) RNE 1.0) x))
+  > (assert (fp.lt x ((_ to_fp 8 24) RNE 2.0)))
+  > (assert (fp.lt ((_ to_fp 5 11) RNE x) ((_ to_fp 5 11) RNE 0.5)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+A conversion to the same format is the identity.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (not (= x ((_ to_fp 8 24) m x))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+A narrowing conversion can underflow or overflow: these must not be unsat.
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (fp.isZero ((_ to_fp 5 11) m x)))
+  > (assert (not (fp.isZero x)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const m RoundingMode)
+  > (assert (not (fp.isInfinite x)))
+  > (assert (fp.isInfinite ((_ to_fp 5 11) m x)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (declare-const r Real)
+  > (assert (= r (- 3.5)))
+  > (assert (= x ((_ to_fp 8 24) RNE r)))
+  > (assert (not (= ((_ fp.to_sbv 8) RNE x) #xfc)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Exact conversion of bit-vectors that fit in the format: the result is finite,
+its real value is the integer, and it is positive if unsigned.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 8))
+  > (assert (< 300.0 (fp.to_real ((_ to_fp_unsigned 8 24) RTZ b))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 8))
+  > (assert (< (fp.to_real ((_ to_fp 8 24) RTZ b)) (- 128.0)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 8))
+  > (assert (fp.isInfinite ((_ to_fp_unsigned 8 24) RTP b)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Not exact in Float32, so this must not be unsat.
+
+  $ alt-ergo -t 2 --timelimit-per-goal -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 32))
+  > (assert (= (fp.to_real ((_ to_fp_unsigned 8 24) RNE b)) 16777216.0))
+  > (assert (not (= b #x01000000)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+FP -> BV conversion of an exact BV -> FP conversion: the bit-vector, extended.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 16))
+  > (assert (not (= b ((_ fp.to_ubv 16) RTZ ((_ to_fp_unsigned 11 53) RTZ b)))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 24))
+  > (assert (not (= ((_ sign_extend 8) b)
+  >   ((_ fp.to_sbv 32) RNE ((_ to_fp 11 53) RTZ b)))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Also when the exact conversion is only known through an equality.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 16))
+  > (declare-const x Float64)
+  > (assert (not (= ((_ zero_extend 16) b) ((_ fp.to_ubv 32) RNE x))))
+  > (assert (= x ((_ to_fp_unsigned 11 53) RTZ b)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Not every value fits in 8 bits (unspecified result), so this must not be unsat.
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 16))
+  > (assert (= ((_ fp.to_ubv 8) RTZ ((_ to_fp_unsigned 11 53) RTZ b))
+  >   ((_ extract 7 0) b)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+A narrowing conversion that rounds toward zero overflows to the largest finite
+value, not to an infinity, so these must not be unsat.
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float64)
+  > (declare-const y Float32)
+  > (assert (= x (fp #b0 #b11111111110 #x0000000000000)))
+  > (assert (= y ((_ to_fp 8 24) RTZ x)))
+  > (assert (= y (fp #b0 #b11111110 #b11111111111111111111111)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float64)
+  > (assert (fp.isNegative x))
+  > (assert (not (fp.isInfinite x)))
+  > (assert (fp.lt x (fp #b1 #b11110000000 #x0000000000000)))
+  > (assert (not (fp.isInfinite ((_ to_fp 8 24) RTP x))))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s (_ BitVec 1))
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (assert (not (fp.isNaN (fp s e m))))
+  > (assert (= s #b1))
+  > (assert (fp.isPositive (fp s e m)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const s1 (_ BitVec 1))
+  > (declare-const e1 (_ BitVec 8))
+  > (declare-const m1 (_ BitVec 23))
+  > (declare-const s2 (_ BitVec 1))
+  > (declare-const e2 (_ BitVec 8))
+  > (declare-const m2 (_ BitVec 23))
+  > (assert (= (fp s1 e1 m1) (fp s2 e2 m2)))
+  > (assert (not (fp.isNaN (fp s1 e1 m1))))
+  > (assert (not (= s1 s2)))
+  > (check-sat)
+  > EOF
+  
+  unsat
