@@ -2830,6 +2830,8 @@ let rounding_mode_view t =
 (** Constructors from the smtlib core theory.
     https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
 module Core = struct
+  let bool b = if b then vrai else faux
+
   let not = neg
 
   let eq = mk_eq ~iff:false
