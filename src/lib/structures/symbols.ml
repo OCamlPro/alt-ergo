@@ -74,6 +74,10 @@ type operator =
   (* FP *)
   | Float
   | FloatEbSb
+  | Float_of_bits
+  | Float_to_fp
+  | Float_to_ubv of int
+  | Float_to_sbv of int
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default
@@ -238,7 +242,10 @@ let compare_operators op1 op2 =
       let r = Int.compare i1 i2 in
       if r = 0 then Int.compare j1 j2 else r
     | Sign_extend n1, Sign_extend n2 | Repeat n1, Repeat n2 -> Int.compare n1 n2
-    | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
+    | Int2BV n1, Int2BV n2
+    | Float_to_ubv n1, Float_to_ubv n2
+    | Float_to_sbv n1, Float_to_sbv n2 ->
+      Int.compare n1 n2
     | ( _,
         ( Plus | Minus | Mult | Div | Modulo | Real_is_int | Concat | Extract _
         | Sign_extend _ | Repeat _ | Select | Store | Float | FloatEbSb
@@ -248,7 +255,7 @@ let compare_operators op1 op2 =
         | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
         | Int2BV _ | Sbv_to_int | Ubv_to_int | Not_theory_constant
         | Is_theory_constant | Linear_dependency | Constr _ | Destruct _ | Tite
-          ) ) ->
+        | Float_of_bits | Float_to_fp | Float_to_ubv _ | Float_to_sbv _ ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -415,6 +422,10 @@ module AEPrinter = struct
     (* Float theory *)
     | Float -> Fmt.pf ppf "float"
     | FloatEbSb -> Fmt.pf ppf "ae.float"
+    | Float_of_bits -> Fmt.pf ppf "ae.fp.of_bits"
+    | Float_to_fp -> Fmt.pf ppf "ae.fp.to_fp"
+    | Float_to_ubv n -> Fmt.pf ppf "ae.fp.to_ubv[%d]" n
+    | Float_to_sbv n -> Fmt.pf ppf "ae.fp.to_sbv[%d]" n
     | Not_theory_constant -> Fmt.pf ppf "not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "linear_dependency"
@@ -519,6 +530,10 @@ module SmtPrinter = struct
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"
     | FloatEbSb -> Fmt.pf ppf "ae.float"
+    | Float_of_bits -> Fmt.pf ppf "fp"
+    | Float_to_fp -> Fmt.pf ppf "to_fp"
+    | Float_to_ubv n -> Fmt.pf ppf "(_ fp.to_ubv %d)" n
+    | Float_to_sbv n -> Fmt.pf ppf "(_ fp.to_sbv %d)" n
     (* Not in the SMT-LIB standard *)
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"

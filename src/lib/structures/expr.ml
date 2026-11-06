@@ -3284,6 +3284,11 @@ module FP = struct
     (* real conversion *)
     let to_real = "ae.fp.to_real"
 
+    (* integer conversions *)
+    let of_int = "ae.fp.of_int"
+
+    let to_int = "ae.fp.to_int"
+
     (* precision-dependent literals *)
     let pow2sb = "ae.fp.pow2sb"
 
@@ -3310,17 +3315,30 @@ module FP = struct
       invalid_arg
         "fp applications are currently only supported for bitvector literals"
 
-  let fp sign_t exp_t sig_t eb sb =
-    if is_bv_literal sign_t && is_bv_literal exp_t && is_bv_literal sig_t
+  let float_view t = match t.f, t.xs with Sy.Float v, [] -> Some v | _ -> None
+
+  let fp_op eb sb sy args ret_ty =
+    let eb = Ints.of_int eb in
+    let sb = Ints.of_int sb in
+    mk_term sy (eb :: sb :: args) ret_ty
+
+  let fp_prelude_op eb sb name args ret_ty =
+    fp_op eb sb (Sy.name name) args ret_ty
+
+  let fp ~eb ~sb sign biased_exp mantissa =
+    if is_bv_literal sign && is_bv_literal biased_exp && is_bv_literal mantissa
     then
-      let neg = Z.equal (bv_literal_to_z sign_t) Z.one in
-      let biased_exp = z_to_int (bv_literal_to_z exp_t) in
-      let mantissa = bv_literal_to_z sig_t in
+      let neg = Z.equal (bv_literal_to_z sign) Z.one in
+      let biased_exp = z_to_int (bv_literal_to_z biased_exp) in
+      let mantissa = bv_literal_to_z mantissa in
       float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb) eb sb
     else
-      mk_uninterpreted_term "to_fp" [sign_t; exp_t; sig_t] (Ty.Tfloat (eb, sb))
+      (* Reasoned about by [Fpa_rel]. *)
+      fp_op eb sb (Sy.Op Float_of_bits)
+        [sign; biased_exp; mantissa]
+        (Ty.Tfloat (eb, sb))
 
-  let ieee_format_to_fp bv_t eb sb =
+  let ieee_format_to_fp ~eb ~sb bv_t =
     if is_bv_literal bv_t
     then
       let bv_z = bv_literal_to_z bv_t in
@@ -3328,12 +3346,12 @@ module FP = struct
       let biased_exp = z_to_int (Z.extract bv_z (sb - 1) eb) in
       let neg = Z.testbit bv_z (eb + sb - 1) in
       float (Fp_value.mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb) eb sb
-    else mk_uninterpreted_term "ieee_format_to_fp" [bv_t] (Ty.Tfloat (eb, sb))
-
-  let fp_prelude_op eb sb name args ret_ty =
-    let eb = Ints.of_int eb in
-    let sb = Ints.of_int sb in
-    mk_term (Sy.name name) (eb :: sb :: args) ret_ty
+    else
+      let n = eb + sb in
+      fp ~eb ~sb
+        (BV.extract (n - 1) (n - 1) bv_t)
+        (BV.extract (n - 2) (sb - 1) bv_t)
+        (BV.extract (sb - 2) 0 bv_t)
 
   (* arithmetic with rounding mode *)
   let add ~eb ~sb ~mode x y =
@@ -3358,7 +3376,9 @@ module FP = struct
     fp_prelude_op eb sb Names.round_to_integral [mode; x] (Ty.Tfloat (eb, sb))
 
   let of_real ~eb ~sb ~mode x =
-    fp_prelude_op eb sb Names.of_real [mode; x] (Ty.Tfloat (eb, sb))
+    match rounding_mode_view mode, x.f, x.xs with
+    | Some m, Sy.Real q, [] -> float (Fp_value.of_q ~eb ~sb m q) eb sb
+    | _ -> fp_prelude_op eb sb Names.of_real [mode; x] (Ty.Tfloat (eb, sb))
 
   (* arithmetic without rounding mode *)
   let abs ~eb ~sb x = fp_prelude_op eb sb Names.abs [x] (Ty.Tfloat (eb, sb))
@@ -3402,6 +3422,59 @@ module FP = struct
 
   (* real conversion *)
   let to_real ~eb ~sb x = fp_prelude_op eb sb Names.to_real [x] Ty.Treal
+
+  (* integer conversions *)
+  let of_int ~eb ~sb ~mode i =
+    match rounding_mode_view mode, i.f, i.xs with
+    | Some m, Sy.Int z, [] ->
+      float (Fp_value.of_q ~eb ~sb m (Q.of_bigint z)) eb sb
+    | _ -> fp_prelude_op eb sb Names.of_int [mode; i] (Ty.Tfloat (eb, sb))
+
+  (* FP -> FP conversion *)
+  let to_fp ~eb1 ~sb1 ~eb2 ~sb2 ~mode x =
+    match
+      Option.bind (float_view x)
+        (Fp_value.convert ~eb:eb2 ~sb:sb2 (rounding_mode_view mode))
+    with
+    | Some v -> float v eb2 sb2
+    | None ->
+      if eb1 = eb2 && sb1 = sb2
+      then x
+      else
+        (* Reasoned about by [Fpa_rel]. *)
+        fp_op eb2 sb2 (Sy.Op Float_to_fp) [mode; x] (Ty.Tfloat (eb2, sb2))
+
+  (* BV -> FP conversions *)
+  let of_ubv ~eb ~sb ~mode bv =
+    if is_bv_literal bv
+    then of_int ~eb ~sb ~mode (Ints.of_Z (bv_literal_to_z bv))
+    else of_int ~eb ~sb ~mode (BV.ubv_to_int bv)
+
+  (* Two's complement value of [bv]: [bv2nat(bv) - 2^n * msb(bv)]. *)
+  let sbv_value bv =
+    let n = BV.size bv in
+    let msb = BV.ubv_to_int (BV.extract (n - 1) (n - 1) bv) in
+    Ints.(BV.ubv_to_int bv - (msb * ~$$(Z.shift_left Z.one n)))
+
+  let of_sbv ~eb ~sb ~mode bv = of_int ~eb ~sb ~mode (sbv_value bv)
+
+  let of_bv_int_view i =
+    match i.f, i.xs with
+    | Sy.Op Ubv_to_int, [bv] -> Some (bv, false)
+    | Sy.Op Minus, [{ f = Sy.Op Ubv_to_int; xs = [bv]; _ }; _]
+      when equal i (sbv_value bv) ->
+      Some (bv, true)
+    | _ -> None
+
+  let to_int ~eb ~sb ~mode x =
+    fp_prelude_op eb sb Names.to_int [mode; x] Ty.Tint
+
+  (* FP -> BV conversions, reasoned about by [Fpa_rel]. *)
+  let to_ubv ~n ~eb ~sb ~mode x =
+    fp_op eb sb (Sy.Op (Float_to_ubv n)) [mode; x] (Ty.Tbitv n)
+
+  let to_sbv ~n ~eb ~sb ~mode x =
+    fp_op eb sb (Sy.Op (Float_to_sbv n)) [mode; x] (Ty.Tbitv n)
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality
