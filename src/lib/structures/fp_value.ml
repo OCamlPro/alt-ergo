@@ -159,6 +159,14 @@ let mk_fp_literal ~neg ~biased_exp ~mantissa ~eb ~sb =
     if neg then Minus_zero else Plus_zero
   else Finite (bvs_to_q ~neg ~biased_exp ~mantissa eb sb)
 
+let to_bits ~eb ~sb = function
+  | NaN -> None
+  | Plus_infinity -> Some (false, (1 lsl eb) - 1, Z.zero)
+  | Minus_infinity -> Some (true, (1 lsl eb) - 1, Z.zero)
+  | Plus_zero -> Some (false, 0, Z.zero)
+  | Minus_zero -> Some (true, 0, Z.zero)
+  | Finite q -> Some (q_to_bvs ~eb ~sb q)
+
 (* Largest finite value of the format (eb, sb): 2^emax - 2^(emax - sb). *)
 let max_finite_q ~eb ~sb =
   let pow2_q = Fpa_rounding.mult_x_by_2_pow_n Q.one in
