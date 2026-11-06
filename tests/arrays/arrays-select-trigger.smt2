@@ -1,0 +1,12 @@
+; The only select of the quantified formula is in its trigger.
+(set-logic ALL)
+(declare-const a (Array Int Int))
+(declare-const i Int)
+(declare-const j Int)
+(declare-fun f (Int) Int)
+(declare-fun g (Int) Int)
+(assert (forall ((x Int)) (! (= (g x) 0) :pattern ((f (select a x))))))
+(assert (distinct i j))
+(assert (= (f (select (store a i 1) j)) 5))
+(assert (distinct (g j) 0))
+(check-sat)

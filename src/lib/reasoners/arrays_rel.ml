@@ -25,483 +25,660 @@
 (*                                                                        *)
 (**************************************************************************)
 
-module Sy = Symbols
-module E = Expr
 module A = Xliteral
-module L = List
 module X = Shostak.Combine
 module Ex = Explanation
-module LR = Uf.LX
+module E = Expr
+module LX = Uf.LX
 
-(* In this module, we follow the below conventions in the comments: - A get term
-   refers to a term of the form `(select a i)` for an array `a` and an index
-   `i`. - A set term refers to a term of the form `(store a i v)` for an array
-   `a` and an index `i`. - A relevant index is any term that appears as an index
-   in get or set terms. - A get or set term is known if it has been encountered
-   in [assume]. *)
+(* The theory of arrays with extensionality, using global domains on the
+   representatives of the union-find:
+
+   - known values: [a[i] = v], from [(select a i)] and [a = (store _ i v)]
+
+   - edges: [a --i-- b], from [b = (store a i _)] or [a = (store b i _)]. Which
+   means: [forall j. j <> i -> a[j] = b[j]] *)
 
 let src = Logs.Src.create ~doc:"Arrays_rel" __MODULE__
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-module Tmap = struct
-  include E.Map
-
-  let update t a mp =
-    try add t (E.Set.add a (find t mp)) mp
-    with Not_found -> add t (E.Set.singleton a) mp
-
-  let splited t a mp = try E.Set.mem a (find t mp) with Not_found -> false
-end
-
-module LRset = LR.Set
-
-module Conseq = Set.Make (struct
-  type t = E.t * Ex.t
-
-  let compare (lt1, _) (lt2, _) = E.compare lt1 lt2
-end)
-
-module LRmap = struct
-  include LR.Map
-
-  let find k mp = try find k mp with Not_found -> Conseq.empty
-
-  let add k v ex mp = add k (Conseq.add (v, ex) (find k mp)) mp
-end
-
-(* Set of get terms. *)
-type gtype =
-  { g : Expr.t;
-    gt : Expr.t;
-    gi : Expr.t
-  }
-
-module G = Set.Make (struct
-  type t = gtype
-
-  let compare t1 t2 = E.compare t1.g t2.g
-end)
-
-(* Set of set terms. *)
-type stype =
-  { s : E.t;
-    st : E.t;
-    si : E.t;
-    sv : E.t
-  }
-
-module S = Set.Make (struct
-  type t = stype
-
-  let compare t1 t2 = E.compare t1.s t2.s
-end)
-
-module TBS = struct
-  include Map.Make (E)
-
-  let find k mp = try find k mp with Not_found -> S.empty
-
-  let add k v mp = add k (S.add v (find k mp)) mp
-end
-
 let timer = Timers.M_Arrays
 
-module H = Ephemeron.K1.Make (Expr)
+let add_loc k a locs =
+  X.Map.update k
+    (function
+      | None -> Some (X.Set.singleton a) | Some s -> Some (X.Set.add a s))
+    locs
+
+module Domain = struct
+  type t =
+    { values : (X.r * Ex.t) X.Map.t X.Map.t;
+      (* [a -> k -> (v, ex)]: [a[k] = v] with the explanation [ex]. *)
+      edges : (X.r * Ex.t) X.Map.t X.Map.t;
+      (* [a -> b -> (i, ex)]: the edge [a --i-- b] with the explanation [ex].
+         The edges are stored in both directions, with at most one edge between
+         two arrays (see [add_edge]). *)
+      value_locs : X.Set.t X.Map.t;
+      (* Map of indices to the arrays that have a value at this index. *)
+      edge_locs : X.Set.t X.Map.t;
+      (* Map of indices to the arrays that have an edge labelled by this
+         index. *)
+      edge_splits : (X.r * X.r * X.r * X.r * Ex.t) list;
+      (* [(a, b, i, j, ex)]: the edge [a --j-- b] that was not added because of
+         the edge [a --i-- b], to decide with a case split on [i = j] (see
+         [add_edge]). *)
+      split_locs : LX.Set.t X.Map.t;
+      (* Map of indices to the case splits on this index. *)
+      terms : E.t X.Map.t;
+      (* A term of the class of each array, index and value of the domain. *)
+      dirty : X.Set.t;
+      (* Arrays whose values have to be propagated again through their edges. *)
+      merged : (X.r * X.Set.t * X.Set.t) list;
+      (* [(a, idxs, nbrs)]: the array [a] has been merged with an array whose
+         values were at the indices [idxs] and whose neighbours were [nbrs].
+         Only the values of each side have to be propagated through the edges of
+         the other side (see [process_dirty]). *)
+      split_todo : LX.Set.t;
+      (* Case splits whose indices have been merged with others. *)
+      eqs : (X.r * X.r * Ex.t) list
+          (* Deduced equalities that have not been propagated yet. *)
+    }
+
+  type _ Uf.id += Id : t Uf.id
+
+  let empty =
+    { values = X.Map.empty;
+      edges = X.Map.empty;
+      value_locs = X.Map.empty;
+      edge_locs = X.Map.empty;
+      edge_splits = [];
+      split_locs = X.Map.empty;
+      terms = X.Map.empty;
+      dirty = X.Set.empty;
+      merged = [];
+      split_todo = LX.Set.empty;
+      eqs = []
+    }
+
+  let pp ppf t =
+    let pp_value ppf (k, (v, _)) = Fmt.pf ppf "[%a] = %a" X.print k X.print v in
+    let pp_values ppf (a, m) =
+      Fmt.pf ppf "%a%a" X.print a
+        Fmt.(iter_bindings ~sep:sp X.Map.iter pp_value)
+        m
+    in
+    Fmt.pf ppf "@[<v>Arrays values:@,  %a@]"
+      Fmt.(iter_bindings ~sep:cut X.Map.iter pp_values)
+      t.values
+
+  (* Indices and values can be of any type. *)
+  let filter_ty _ = true
+
+  let init _ t = t
+
+  exception Inconsistent of Ex.t
+
+  let values_of a t =
+    Option.value ~default:X.Map.empty (X.Map.find_opt a t.values)
+
+  let edges_of a t =
+    Option.value ~default:X.Map.empty (X.Map.find_opt a t.edges)
+
+  (* Record [tm] as the term of the class of [r], unless it already has one. *)
+  let add_term r tm t =
+    if X.Map.mem r t.terms then t else { t with terms = X.Map.add r tm t.terms }
+
+  (* Add the value [a[k] = v]. If [a] already has a value at [k], deduce the
+     equality of the two values instead. Returns [true] if the known value is
+     new. *)
+  let add_value a k ((v, ex) as rd) t =
+    let m = values_of a t in
+    match X.Map.find k m with
+    | v', ex' -> { t with eqs = (v, v', Ex.union ex ex') :: t.eqs }, false
+    | exception Not_found ->
+      ( { t with
+          values = X.Map.add a (X.Map.add k rd m) t.values;
+          value_locs = add_loc k a t.value_locs
+        },
+        true )
+
+  (* Add the edge [a --i-- b] in both directions. There is at most one edge
+     between two arrays: if there is already an edge [a --j-- b], the new edge
+     is not added but kept in [edge_splits], since [a] and [b] are equal if [i
+     <> j]. *)
+  let add_edge a i b ex t =
+    if X.equal a b
+    then t
+    else
+      match X.Map.find_opt b (edges_of a t) with
+      | Some (j, _) when X.equal i j -> t
+      | Some (j, ex_j) ->
+        { t with edge_splits = (a, b, j, i, Ex.union ex ex_j) :: t.edge_splits }
+      | None ->
+        let add_dir a b edges =
+          let am = Option.value ~default:X.Map.empty (X.Map.find_opt a edges) in
+          X.Map.add a (X.Map.add b (i, ex) am) edges
+        in
+        { t with
+          edges = add_dir a b (add_dir b a t.edges);
+          edge_locs = add_loc i a (add_loc i b t.edge_locs)
+        }
+
+  (* The index [rr] is replaced by [nrr]: the values at [rr], the edges labelled
+     by [rr] and the case splits on [rr] are moved to [nrr]. *)
+  let subst_index ~ex rr nrr t =
+    let t =
+      match X.Map.find rr t.value_locs with
+      | exception Not_found -> t
+      | arrs ->
+        let t = { t with value_locs = X.Map.remove rr t.value_locs } in
+        X.Set.fold
+          (fun a t ->
+            let m = values_of a t in
+            match X.Map.find rr m with
+            | exception Not_found -> t
+            | v, ex_v ->
+              let t =
+                { t with
+                  values = X.Map.add a (X.Map.remove rr m) t.values;
+                  dirty = X.Set.add a t.dirty
+                }
+              in
+              fst (add_value a nrr (v, Ex.union ex ex_v) t))
+          arrs t
+    in
+    let t =
+      match X.Map.find rr t.edge_locs with
+      | exception Not_found -> t
+      | arrs ->
+        let edges =
+          X.Set.fold
+            (fun a edges ->
+              match X.Map.find a edges with
+              | exception Not_found -> edges
+              | am ->
+                let am =
+                  X.Map.map
+                    (fun ((i, e) as edge) ->
+                      if X.equal i rr then nrr, Ex.union ex e else edge)
+                    am
+                in
+                X.Map.add a am edges)
+            arrs t.edges
+        in
+        { t with
+          edges;
+          edge_locs =
+            X.Set.fold (add_loc nrr) arrs (X.Map.remove rr t.edge_locs);
+          dirty = X.Set.union arrs t.dirty
+        }
+    in
+    match X.Map.find rr t.split_locs with
+    | exception Not_found -> t
+    | lits ->
+      let split_locs = X.Map.remove rr t.split_locs in
+      let s =
+        Option.value ~default:LX.Set.empty (X.Map.find_opt nrr split_locs)
+      in
+      { t with
+        split_locs = X.Map.add nrr (LX.Set.union lits s) split_locs;
+        split_todo = LX.Set.union lits t.split_todo
+      }
+
+  (* The array [rr] is replaced by [nrr]: its values and edges are moved to
+     [nrr]. *)
+  let subst_array ~ex rr nrr t =
+    let rvalues = values_of rr t and redges = edges_of rr t in
+    let nvalues = values_of nrr t and nedges = edges_of nrr t in
+    let t =
+      X.Map.fold
+        (fun k (v, ex_v) t -> fst (add_value nrr k (v, Ex.union ex ex_v) t))
+        rvalues
+        { t with values = X.Map.remove rr t.values }
+    in
+    let t =
+      X.Map.fold
+        (fun b (i, e) t ->
+          let bm = X.Map.remove rr (X.Map.find b t.edges) in
+          let t = { t with edges = X.Map.add b bm t.edges } in
+          add_edge nrr i b (Ex.union ex e) t)
+        redges
+        { t with edges = X.Map.remove rr t.edges }
+    in
+    (* Something has to be propagated only if one side has values and the other
+       side has edges. *)
+    if
+      ((not (X.Map.is_empty rvalues)) && not (X.Map.is_empty nedges))
+      || ((not (X.Map.is_empty nvalues)) && not (X.Map.is_empty redges))
+    then
+      let keys m = X.Map.fold (fun k _ s -> X.Set.add k s) m X.Set.empty in
+      { t with merged = (nrr, keys rvalues, keys redges) :: t.merged }
+    else t
+
+  (* The term of [rr] becomes a term of [nrr]. *)
+  let subst_term rr nrr t =
+    match X.Map.find_opt rr t.terms with
+    | None -> t
+    | Some tm -> add_term nrr tm { t with terms = X.Map.remove rr t.terms }
+
+  let subst ~ex rr nrr t =
+    (* A value can be used both as an index and as an array if we have arrays
+       indexed by arrays. *)
+    subst_term rr nrr (subst_array ~ex rr nrr (subst_index ~ex rr nrr t))
+end
+
+let get_domain uf = Uf.GlobalDomains.find (module Domain) (Uf.domains uf)
+
+let set_domain uf dom = Uf.GlobalDomains.add (module Domain) dom (Uf.domains uf)
+
+(* The value [a[k] = v] with its explanation. *)
+type value =
+  { a : X.r;
+    k : X.r;
+    v : X.r;
+    ex : Ex.t
+  }
+
+(* The consequences of a case split [k = i] if [k <> i]. *)
+type conseq =
+  | Value of value  (** The value [b[k] = v], propagated through an edge. *)
+  | Equal of X.r * X.r * Ex.t
+      (** The arrays [a = b], for two edges [a --k-- b] and [a --i-- b]. *)
+
+module Conseqs = Set.Make (struct
+  type t = conseq
+
+  let compare c1 c2 =
+    match c1, c2 with
+    | Value v1, Value v2 ->
+      let c = X.hash_cmp v1.a v2.a in
+      if c <> 0
+      then c
+      else
+        let c = X.hash_cmp v1.k v2.k in
+        if c <> 0 then c else X.hash_cmp v1.v v2.v
+    | Equal (a1, b1, _), Equal (a2, b2, _) ->
+      let c = X.hash_cmp a1 a2 in
+      if c <> 0 then c else X.hash_cmp b1 b2
+    | Value _, Equal _ -> -1
+    | Equal _, Value _ -> 1
+end)
 
 type t =
-  { gets : G.t; (* Set of all the known get terms. *)
-    tbset : S.t TBS.t; (* Set of all the known set terms, indexed by array. *)
-    split : LRset.t;
-    (* Set of equalities or disequalities on relevant indices. These are the
-       hypotheses of consequences in the field [conseq].
-
-       We split on these literals in [case_split].
-
-       If we see one of these literals in [assume], we remove it of this set and
-       directly propagate its associated consequences. *)
-    conseq : Conseq.t LRmap.t;
-    (* Map of consequences. More precisely, it is a map of literals [l] to
-       explained formulas [(f, ex)] such that [l => f] is an instantiation of
-       one of the axioms of the array theory. The formula [l => f] is true in
-       all contexts where the explanation [ex] holds.
-
-       The literals [l] are in the set [split] if there have not already be seen
-       by [assume] or splitted in [case_split]. *)
-    seen : E.Set.t Tmap.t;
-    (* Cache used to prevent from generating several times the same
-       instantiation in [get_of_set]. *)
+  { splits : Conseqs.t LX.Map.t;
+    (* Map of the case splits [k = i] to their consequences if [k <> i]. *)
     new_terms : E.Set.t;
-    (* Set of get and set terms produced by the theory. These terms are supposed
-       to be sent to the instantiation engine. *)
-    cached_relevant_terms : (G.t * S.t TBS.t) H.t
-        (* Weak cache used to accelerate the exploration of new terms in order
-           to find new get or set terms. *)
+    (* Terms produced by the theory that are sent to the instantiation
+       engine. *)
+    term_eqs : value list
+        (* Values [b[k] = v] deduced by the theory whose equality [(select b k)
+           = v] between terms has to be added to the congruence closure (for the
+           instantiation engine/matching). *)
   }
 
 let empty uf =
-  ( { gets = G.empty;
-      tbset = TBS.empty;
-      split = LRset.empty;
-      conseq = LRmap.empty;
-      seen = Tmap.empty;
-      new_terms = E.Set.empty;
-      (* size_splits = Numbers.Q.one; *)
-      cached_relevant_terms = H.create 1024
-    },
+  ( { splits = LX.Map.empty; new_terms = E.Set.empty; term_eqs = [] },
+    (* The domain is only registered when the first select or store term is
+       added: without arrays, the union-find does not update it. *)
     Uf.domains uf )
 
-(*BISECT-IGNORE-BEGIN*)
-module Debug = struct
-  let assume la =
-    let pp_lit ppf (a, _, _, _) = LR.print ppf (LR.make a) in
-    if not @@ Compat.List.is_empty la
-    then Log.debug (fun k -> k "assume@ %a" Fmt.(list ~sep:comma pp_lit) la)
+let same_class uf r1 r2 =
+  match Uf.are_equal_r uf r1 r2 with Entailed _ -> true | Unknown -> false
 
-  let pp_select ppf t = E.print ppf t.g
+let update_split_locs f r locs =
+  X.Map.update r
+    (fun s -> Option.value ~default:LX.Set.empty s |> f |> Option.some)
+    locs
 
-  let pp_store ppf t = E.print ppf t.s
-
-  let env env =
-    if Options.get_verbose ()
-    then begin
-      Log.debug (fun k ->
-          k "selects:@ %a"
-            Fmt.(box @@ braces @@ iter ~sep:comma G.iter pp_select)
-            env.gets);
-      Log.debug (fun k ->
-          k "stores:@ %a"
-            Fmt.(
-              box @@ braces
-              @@ iter_bindings ~sep:comma TBS.iter
-              @@ pair ~sep:(any "->@,") E.print
-              @@ box @@ braces
-              @@ iter ~sep:comma S.iter pp_store)
-            env.tbset);
-      Log.debug (fun k ->
-          k "splits:@ %a"
-            Fmt.(box @@ braces @@ iter ~sep:comma LRset.iter LR.print)
-            env.split)
-    end
-end
-(*BISECT-IGNORE-END*)
-
-let merge_revelant_terms (gets, tbset) (g, t) =
-  let gets = G.union gets g in
-  let tbset =
-    TBS.merge
-      (fun _ s1 s2 ->
-        match s1, s2 with
-        | Some s1, Some s2 -> Some (S.union s1 s2)
-        | Some s, None | None, Some s -> Some s
-        | None, None -> None)
-      tbset t
-  in
-  gets, tbset
-
-(* Collects all the select or store subterms of the term [t] for the
-   instantiation engine. Use a weak cache to avoid a bottleneck in presence of
-   very large terms in the problem.
-
-   See issue https://github.com/OCamlPro/alt-ergo/issues/1123 *)
-let rec relevant_terms env t =
-  let { E.f; xs; _ } = E.term_view t in
-  let gets, tbset =
-    List.fold_left
-      (fun acc x -> merge_revelant_terms acc (cached_relevant_terms env x))
-      (G.empty, TBS.empty) xs
-  in
-  match Sy.is_select f, Sy.is_store f, xs with
-  | true, false, [a; i] -> G.add { g = t; gt = a; gi = i } gets, tbset
-  | false, true, [a; i; v] ->
-    gets, TBS.add a { s = t; st = a; si = i; sv = v } tbset
-  | false, false, _ -> gets, tbset
-  | _ -> assert false
-
-and cached_relevant_terms env t =
-  match H.find env.cached_relevant_terms t with
-  | r -> r
+let add_split env (dom : Domain.t) k i conseq =
+  let lit = LX.mk_eq k i in
+  match LX.Map.find lit env.splits with
+  | ps ->
+    { env with splits = LX.Map.add lit (Conseqs.add conseq ps) env.splits }, dom
   | exception Not_found ->
-    let r = relevant_terms env t in
-    H.add env.cached_relevant_terms t r;
-    r
+    let add = update_split_locs (LX.Set.add lit) in
+    ( { env with splits = LX.Map.add lit (Conseqs.singleton conseq) env.splits },
+      { dom with split_locs = add k (add i dom.split_locs) } )
 
-(* Search for all the set and get terms within the subterms of literals in the
-   list [la]. *)
-let new_terms env la =
-  let fct acc r =
-    List.fold_left
-      (fun acc x ->
-        match X.term_extract x with
-        | Some t, _ -> merge_revelant_terms acc @@ cached_relevant_terms env t
-        | None, _ -> acc)
-      acc (X.leaves r)
+(* Remove the case split [k = i], which is decided. *)
+let remove_split uf env (dom : Domain.t) lit k i =
+  let remove r = update_split_locs (LX.Set.remove lit) (fst (Uf.find_r uf r)) in
+  ( { env with splits = LX.Map.remove lit env.splits },
+    { dom with split_locs = remove k (remove i dom.split_locs) } )
+
+(* The term of the class of [r] (see [Domain.terms]), with the explanation of
+   its membership. *)
+let term_of uf (dom : Domain.t) r =
+  let r, ex_r = Uf.find_r uf r in
+  match X.Map.find_opt r dom.terms with
+  | Some t -> Some (t, Ex.union ex_r (snd (Uf.find uf t)))
+  | None -> None
+
+(* Give the term [(select b k)] to the instantiation engine. *)
+let add_new_term uf env dom b k =
+  match term_of uf dom b, term_of uf dom k with
+  | Some (b, _), Some (k, _) ->
+    { env with new_terms = E.Set.add (E.ArraysEx.select b k) env.new_terms }
+  | _ -> env
+
+(* Add the value [b[k] = v] and push it on [todo] if it is new. [from_select] is
+   [true] if the value comes from the term [(select b k)] itself, which the
+   instantiation engine and the congruence closure already know. Otherwise the
+   term is given to the instantiation engine and the equality [(select b k) = v]
+   between terms is added later (see [term_eqs]). *)
+let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
+  let b, ex_b = Uf.find_r uf b in
+  let k, ex_k = Uf.find_r uf k in
+  let ex = Ex.union ex (Ex.union ex_b ex_k) in
+  let dom, is_new = Domain.add_value b k (v, ex) dom in
+  if is_new
+  then
+    let value = { a = b; k; v; ex } in
+    let env =
+      if not from_select
+      then
+        let env = add_new_term uf env dom b k in
+        { env with term_eqs = value :: env.term_eqs }
+      else env
+    in
+    env, dom, value :: todo
+  else env, dom, todo
+
+(* Propagate the value [a[k] = v] through the edge [a --i-- b]: add [b[k] = v]
+   if [k <> i], otherwise create a case split on [k = i]. *)
+let cross uf ((env, dom, todo) as acc) { k; v; ex; _ } b i eex =
+  if same_class uf k i
+  then acc
+  else
+    let ex = Ex.union ex eex in
+    match Uf.are_distinct_r uf k i with
+    | Entailed { ex = ex_d; _ } -> add_value uf acc b k v (Ex.union ex ex_d)
+    | Unknown ->
+      let env, dom = add_split env dom k i (Value { a = b; k; v; ex }) in
+      (* As the value may only be propagated during the case-split search of the
+         theory, its term is given to the instantiation engine now. *)
+      add_new_term uf env dom b k, dom, todo
+
+(* Propagate the values of [todo] through the edges of their arrays. *)
+let rec propagate uf (env, (dom : Domain.t), todo) =
+  match todo with
+  | [] -> env, dom
+  | ({ a; _ } as value) :: todo ->
+    propagate uf
+      (X.Map.fold
+         (fun b (i, eex) acc -> cross uf acc value b i eex)
+         (Domain.edges_of a dom) (env, dom, todo))
+
+(* Propagate again the values of the arrays whose values or edges changed, and
+   the values of the merged arrays through the edges of the other side. *)
+let process_dirty uf env (dom : Domain.t) =
+  let norm s = X.Set.map (fun r -> fst (Uf.find_r uf r)) s in
+  let values a =
+    let a, _ = Uf.find_r uf a in
+    a, Domain.values_of a dom
   in
-  let gets, tbset =
-    L.fold_left
-      (fun acc (a, _, _, _) ->
-        match a with
-        | A.Eq (r1, r2) -> fct (fct acc r1) r2
-        | A.Builtin (_, _, l) | A.Distinct (_, l) -> L.fold_left fct acc l
-        | A.Pred (r1, _) -> fct acc r1)
-      (env.gets, env.tbset) la
+  let todo =
+    X.Set.fold
+      (fun a todo ->
+        let a, m = values a in
+        X.Map.fold (fun k (v, ex) todo -> { a; k; v; ex } :: todo) m todo)
+      dom.dirty []
   in
-  { env with gets; tbset }
+  let acc = env, { dom with dirty = X.Set.empty; merged = [] }, todo in
+  propagate uf
+    (List.fold_left
+       (fun acc (a, idxs, nbrs) ->
+         let a, m = values a in
+         let idxs = norm idxs and nbrs = norm nbrs in
+         X.Map.fold
+           (fun b (i, eex) acc ->
+             let other = X.Set.mem b nbrs in
+             X.Map.fold
+               (fun k (v, ex) acc ->
+                 if Bool.equal (X.Set.mem k idxs) other
+                 then acc
+                 else cross uf acc { a; k; v; ex } b i eex)
+               m acc)
+           (Domain.edges_of a dom) acc)
+       acc dom.merged)
 
-module type UF = module type of Uf
+(* Decide the case splits [lits] whose indices are now equal or distinct. *)
+let resolve_splits uf env dom lits =
+  propagate uf
+    (LX.Set.fold
+       (fun lit ((env, dom, todo) as acc) ->
+         match LX.Map.find lit env.splits, LX.view lit with
+         | exception Not_found -> acc
+         | ps, A.Eq (k, i) -> (
+           if same_class uf k i
+           then
+             let env, dom = remove_split uf env dom lit k i in
+             env, dom, todo
+           else
+             match Uf.are_distinct_r uf k i with
+             | Th_util.Entailed { ex; _ } ->
+               let env, dom = remove_split uf env dom lit k i in
+               Conseqs.fold
+                 (fun c ((env, (dom : Domain.t), todo) as acc) ->
+                   match c with
+                   | Value { a = b; k; v; ex = ex_p } ->
+                     add_value uf acc b k v (Ex.union ex ex_p)
+                   | Equal (a, b, ex_e) ->
+                     ( env,
+                       { dom with eqs = (a, b, Ex.union ex ex_e) :: dom.eqs },
+                       todo ))
+                 ps (env, dom, todo)
+             | Th_util.Unknown ->
+               (* Normalize splits *)
+               let k', ex_k = Uf.find_r uf k in
+               let i', ex_i = Uf.find_r uf i in
+               if X.equal k k' && X.equal i i'
+               then acc
+               else
+                 let ex = Ex.union ex_k ex_i in
+                 let env, dom = remove_split uf env dom lit k i in
+                 let env, dom =
+                   Conseqs.fold
+                     (fun c (env, dom) ->
+                       let c =
+                         match c with
+                         | Value p -> Value { p with ex = Ex.union ex p.ex }
+                         | Equal (a, b, ex_e) -> Equal (a, b, Ex.union ex ex_e)
+                       in
+                       add_split env dom k' i' c)
+                     ps (env, dom)
+                 in
+                 env, dom, todo)
+         | _ -> acc)
+       lits (env, dom, []))
 
-(* Add the consequences `p => p_ded` and `n => n_ded`. If the literal [p]
-   (respectively [q]) is already true, we do not add the consequence. *)
-let update_env (module Uf : UF) uf dep env acc gi si p p_ded n n_ded =
-  match Uf.are_equal uf ~added_terms:true gi si, Uf.are_distinct uf gi si with
-  | Entailed { ex = idep; _ }, Unknown ->
-    let conseq = LRmap.add n n_ded dep env.conseq in
-    { env with conseq }, Conseq.add (p_ded, Ex.union dep idep) acc
-  | Unknown, Entailed { ex = idep; _ } ->
-    let conseq = LRmap.add p p_ded dep env.conseq in
-    { env with conseq }, Conseq.add (n_ded, Ex.union dep idep) acc
-  | Unknown, Unknown ->
-    let sp = LRset.add p env.split in
-    let conseq = LRmap.add p p_ded dep env.conseq in
-    let conseq = LRmap.add n n_ded dep conseq in
-    { env with split = sp; conseq }, acc
-  | Entailed _, Entailed _ ->
-    (* This case cannot occur because we cannot have `gi = si` and `gi <> si` at
-       the same time. *)
-    assert false
+(* The case splits that may be decided by the literals of [la]. *)
+let decided_splits uf (dom : Domain.t) la =
+  let locs acc r =
+    match X.Map.find (fst (Uf.find_r uf r)) dom.split_locs with
+    | s -> LX.Set.union s acc
+    | exception Not_found -> acc
+  in
+  List.fold_left
+    (fun acc (a, _, _, _) ->
+      match a with
+      | A.Eq _ -> LX.Set.add (LX.make a) acc
+      | A.Distinct (false, l) -> List.fold_left locs acc l
+      | _ -> acc)
+    dom.split_todo la
 
-(* Produce a formula to propagate a get term over a set term.
-
-   More precisely, assume that [gtype] represents the get term `(select a i)`.
-   For all set terms `(store b j v)` in the equivalence class of `a`, we create
-   the formulas:
-
-   i <> j -> (select a i) = (select b i)
-
-   and
-
-   i = j -> (select a i) = v.
-
-   Moreover, the get term `(select b i)` is sent to the instantiation engine. *)
-let get_of_set (module Uf : UF) uf gtype (env, acc) =
-  let { g = get; gt = gtab; gi } = gtype in
-  E.Set.fold
-    (fun set (env, acc) ->
-      if Tmap.splited get set env.seen
-      then env, acc
+(* For the edge [a --i-- b] and the edge [a --j-- b] that was not added (see
+   [Domain.add_edge]): [a = b] if [i <> j], since [a] and [b] agree on all the
+   indices, otherwise a case split on [i = j] is created. If [i = j], the edge
+   [a --i-- b] is the only one. *)
+let split_edges uf env (dom : Domain.t) =
+  List.fold_left
+    (fun (env, (dom : Domain.t)) (a, b, i, j, ex) ->
+      if same_class uf a b || same_class uf i j
+      then env, dom
       else
-        let env = { env with seen = Tmap.update get set env.seen } in
-        let { E.f; xs; _ } = E.term_view set in
-        match Sy.is_store f, xs with
-        | true, [stab; si; sv] ->
-          let xi, _ = X.make gi in
-          let xj, _ = X.make si in
-          let get_stab = E.ArraysEx.select stab gi in
-          let p = LR.mk_eq xi xj in
-          let p_ded = E.mk_eq ~iff:false get sv in
-          let n = LR.mk_distinct false [xi; xj] in
-          let n_ded = E.mk_eq ~iff:false get get_stab in
-          let dep =
-            match Uf.are_equal uf ~added_terms:true gtab set with
-            | Entailed { ex; _ } -> ex
-            | Unknown -> assert false
-          in
-          let env = { env with new_terms = E.Set.add get_stab env.new_terms } in
-          update_env (module Uf) uf dep env acc gi si p p_ded n n_ded
-        | _ -> env, acc)
-    (Uf.class_of uf gtab) (env, acc)
+        match Uf.are_distinct_r uf i j with
+        | Entailed { ex = ex_d; _ } ->
+          env, { dom with eqs = (a, b, Ex.union ex ex_d) :: dom.eqs }
+        | Unknown -> add_split env dom i j (Equal (a, b, ex)))
+    (env, { dom with edge_splits = [] })
+    dom.edge_splits
 
-(* Assume that [stype] represents the set term `(store b j v)`. For all known
-   set terms of the form `(store a i w)` such that `a` and `b` are equal, we
-   create the formula:
-
-   (select (store a i w) i) = w
-
-   Moreover, the term `(select (store a i w) i)` is sent to instantiation
-   engine. *)
-let get_from_set (module Uf : UF) uf stype (env, acc) =
-  let sets =
-    E.Set.fold
-      (fun t acc -> S.union acc (TBS.find t env.tbset))
-      (Uf.class_of uf stype.st) (S.singleton stype)
+(* The deduced equalities that are not known yet. *)
+let flush_eqs uf (dom : Domain.t) =
+  let eqs =
+    List.filter_map
+      (fun (v, w, ex) ->
+        if same_class uf v w then None else Some (LX.mkv_eq v w, ex))
+      (List.rev dom.eqs)
   in
-  S.fold
-    (fun { s = set; si; sv; _ } (env, acc) ->
-      let get = E.ArraysEx.select set si in
-      if Tmap.splited get set env.seen
-      then env, acc
-      else
-        let env =
-          { env with
-            seen = Tmap.update get set env.seen;
-            new_terms = E.Set.add get env.new_terms
-          }
-        in
-        let p_ded = E.mk_eq ~iff:false get sv in
-        env, Conseq.add (p_ded, Ex.empty) acc)
-    sets (env, acc)
+  eqs, { dom with eqs = [] }
 
-(* Assume that [gtype] represents the get term `(select a i)`. For all known set
-   terms of the form `(store b j v)` such that `b` and `a` are equal, we create
-   the formulas:
-
-   i <> j -> (select (store b j v) i) = (select b i).
-
-   and
-
-   i = j -> (select (store b j v) i) = v
-
-   Moreover the terms `(select (store b j v))` and `(select b j)` are sent to
-   the instantiation engine. *)
-let get_and_set (module Uf : UF) uf gtype (env, acc) =
-  let { g = get; gt = gtab; gi } = gtype in
-  let suff_sets =
-    E.Set.fold
-      (fun t acc -> S.union acc (TBS.find t env.tbset))
-      (Uf.class_of uf gtab) S.empty
-  in
-  S.fold
-    (fun { s = set; st = stab; si; sv; _ } (env, acc) ->
-      if Tmap.splited get set env.seen
-      then env, acc
-      else begin
-        let env = { env with seen = Tmap.update get set env.seen } in
-        let xi, _ = X.make gi in
-        let xj, _ = X.make si in
-        let get_stab = E.ArraysEx.select stab gi in
-        let gt_of_st = E.ArraysEx.select set gi in
-        let p = LR.mk_eq xi xj in
-        let p_ded = E.mk_eq ~iff:false gt_of_st sv in
-        let n = LR.mk_distinct false [xi; xj] in
-        let n_ded = E.mk_eq ~iff:false gt_of_st get_stab in
-        let dep =
-          match Uf.are_equal uf ~added_terms:true gtab stab with
-          | Entailed { ex; _ } -> ex
-          | Unknown -> assert false
-        in
-        let env =
-          { env with
-            new_terms = E.Set.add get_stab (E.Set.add gt_of_st env.new_terms)
-          }
-        in
-        update_env (module Uf) uf dep env acc gi si p p_ded n n_ded
-      end)
-    suff_sets (env, acc)
-
-(* Generate new consequences of the axioms. *)
-let new_splits uf_mod uf env =
-  let acc =
-    G.fold
-      (fun gt_info acc ->
-        let acc = get_of_set uf_mod uf gt_info acc in
-        get_and_set uf_mod uf gt_info acc)
-      env.gets (env, Conseq.empty)
-  in
-  TBS.fold
-    (fun _ tbs acc ->
-      S.fold (fun stype acc -> get_from_set uf_mod uf stype acc) tbs acc)
-    env.tbset acc
-
-(* For each disequality `r <> s` where `r` and `s` are two arrays, we produce
-   the formula: exists i:ty. (select r i) <> (select s i), where `ty` denotes
-   the type of indices of `r` and `s`. *)
-let extensionality_pair ((env, acc) as accu) dep r s =
+(* For each disequality [r <> s] where [r] and [s] are two arrays, we produce
+   the formula: exists i:ty. (select r i) <> (select s i), where [ty] denotes
+   the type of indices of [r] and [s]. *)
+let extensionality_pair (env, acc) dep r s =
   match X.type_info r, X.term_extract r, X.term_extract s with
   | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _) ->
     let i = E.fresh_name ty in
     let g1 = E.ArraysEx.select t1 i in
     let g2 = E.ArraysEx.select t2 i in
     let d = E.mk_distinct ~iff:false [g1; g2] in
-    let acc = Conseq.add (d, dep) acc in
     let env =
       { env with new_terms = E.Set.add g2 (E.Set.add g1 env.new_terms) }
     in
-    env, acc
-  | _ -> accu
+    env, (Literal.LTerm d, dep, Th_util.Other) :: acc
+  | _ -> env, acc
 
-let extensionality accu la =
+let extensionality acc (a, _, dep, _) =
+  match a with
+  | A.Distinct (false, (_ :: _ :: _ as l)) ->
+    let rec aux acc = function
+      | [] | [_] -> acc
+      | r :: rl ->
+        aux
+          (List.fold_left (fun acc s -> extensionality_pair acc dep r s) acc rl)
+          rl
+    in
+    aux acc l
+  | _ -> acc
+
+(* Whether the class of [v] has a term [(select b' k')] with [b'] in the class
+   of [b] and [k'] in the class of [k]. *)
+let has_select uf b k v =
+  E.Set.exists
+    (fun t ->
+      match E.term_view t with
+      | { f = Op Select; xs = [b'; k']; _ } ->
+        same_class uf b (fst (Uf.find uf b'))
+        && same_class uf k (fst (Uf.find uf k'))
+      | _ -> false)
+    (Uf.rclass_of uf (fst (Uf.find_r uf v)))
+
+(* The equalities [(select b k) = v] between terms for the pending values,
+   unless the class of [v] already has such a term. *)
+let term_eqs uf env dom =
   List.fold_left
-    (fun accu (a, _, dep, _) ->
-      match a with
-      | A.Distinct (false, (_ :: _ :: _ as l)) ->
-        let rec aux accu = function
-          | [] | [_] -> accu
-          | r :: rl ->
-            let accu =
-              List.fold_left
-                (fun accu s -> extensionality_pair accu dep r s)
-                accu rl
-            in
-            aux accu rl
-        in
-        aux accu l
-      | _ -> accu)
-    accu la
+    (fun l { a = b; k; v; ex } ->
+      if has_select uf b k v
+      then l
+      else
+        match term_of uf dom b, term_of uf dom k, term_of uf dom v with
+        | Some (b, ex_b), Some (k, ex_k), Some (v, ex_v) ->
+          let ex = List.fold_left Ex.union ex [ex_b; ex_k; ex_v] in
+          let eq = E.mk_eq ~iff:false (E.ArraysEx.select b k) v in
+          (Literal.LTerm eq, ex, Th_util.Other) :: l
+        | _ -> l)
+    [] env.term_eqs
 
-(* Remove all the splits of [env.split] that are subsumed by literals [la]. If a
-   split is subsumed by a literal with the explanation [ex], this explanation is
-   added to all the consequences of this split. *)
-let implied_consequences env eqs la =
-  let spl, eqs =
-    L.fold_left
-      (fun (spl, eqs) (a, _, dep, _) ->
-        let a = LR.make a in
-        let spl = LRset.remove (LR.neg a) (LRset.remove a spl) in
-        let eqs =
-          Conseq.fold
-            (fun (fact, ex) acc -> Conseq.add (fact, Ex.union ex dep) acc)
-            (LRmap.find a env.conseq) eqs
-        in
-        spl, eqs)
-      (env.split, eqs) la
+let assume env uf la =
+  let dom = get_domain uf in
+  let env, domains, l =
+    if X.Map.is_empty dom.values && LX.Map.is_empty env.splits
+    then
+      (* No select or store terms: nothing to propagate. *)
+      env, Uf.domains uf, []
+    else
+      let env, dom = process_dirty uf env dom in
+      let lits = decided_splits uf dom la in
+      let env, dom =
+        resolve_splits uf env { dom with split_todo = LX.Set.empty } lits
+      in
+      let env, dom = split_edges uf env dom in
+      let eqs, dom = flush_eqs uf dom in
+      let l =
+        List.rev_map (fun (eq, ex) -> Literal.LSem eq, ex, Th_util.Other) eqs
+      in
+      let l = List.rev_append (term_eqs uf env dom) l in
+      { env with term_eqs = [] }, set_domain uf dom, l
   in
-  { env with split = spl }, eqs
-
-(* deduction de nouvelles dis/egalites *)
-let new_equalities env eqs la =
-  let la =
-    L.filter
-      (fun (a, _, _, _) -> match a with A.Builtin _ -> false | _ -> true)
-      la
-  in
-  let env, eqs = extensionality (env, eqs) la in
-  implied_consequences env eqs la
+  let env, l = List.fold_left extensionality (env, l) la in
+  env, domains, { Sig_rel.assume = l; remove = [] }
 
 let two = Numbers.Q.from_int 2
 
-(* Choose an equality or disequality between relevant indices to split on it. *)
+(* Split on a case split [k = i] and try [k <> i] first: this branch propagates
+   the values. *)
 let case_split env _uf ~for_model:_ =
-  try
-    let a = LR.neg (LRset.choose env.split) in
-    Log.debug (fun k -> k "case split@ %a" LR.print a);
-    [LR.view a, true, Th_util.CS (Th_util.Th_arrays, two)]
-  with Not_found ->
-    Log.debug (fun k -> k "no case split");
-    []
+  match LX.Map.min_binding_opt env.splits with
+  | Some (lit, _) ->
+    let lit = LX.neg lit in
+    Log.debug (fun k -> k "case split@ %a" LX.print lit);
+    [LX.view lit, true, Th_util.CS (Th_util.Th_arrays, two)]
+  | None -> []
 
 let optimizing_objective _env _uf _o = None
 
-let assume env uf la =
-  (* Instantiations of the array axioms. *)
-  Debug.assume la;
-  let env = new_terms env la in
-  let env, atoms = new_splits (module Uf : UF) uf env in
-  let env, atoms = new_equalities env atoms la in
-  Debug.env env;
-  Log.debug (fun k ->
-      k "%d implied equalities:@ %a" (Conseq.cardinal atoms)
-        Fmt.(iter ~sep:sp Conseq.iter @@ pair ~sep:(any ":") E.print Ex.print)
-        atoms);
-  let l =
-    Conseq.fold
-      (fun (a, ex) l -> (Literal.LTerm a, ex, Th_util.Other) :: l)
-      atoms []
-  in
-  env, Uf.domains uf, { Sig_rel.assume = l; remove = [] }
-
 let query _ _ _ = Th_util.Unknown
 
-let add env uf _ _ = env, Uf.domains uf, []
+(* Propagate the values of [a] through the edge [a --i-- b]. *)
+let cross_edge uf ((_, (dom : Domain.t), _) as acc) a i b =
+  match X.Map.find_opt b (Domain.edges_of a dom) with
+  | Some (j, eex) when X.equal i j ->
+    X.Map.fold
+      (fun k (v, ex) acc -> cross uf acc { a; k; v; ex } b i eex)
+      (Domain.values_of a dom) acc
+  | _ -> acc
+
+(* Register the value and the edge of the select and store terms, and their
+   terms (see [Domain.terms]). *)
+let add env uf r t =
+  let register env dom =
+    let { E.f; xs; _ } = E.term_view t in
+    match f, xs with
+    | Symbols.Op Select, [a; i] ->
+      let v, ex_v = Uf.find_r uf r in
+      let ra, ex_a = Uf.find uf a in
+      let ri, ex_i = Uf.find uf i in
+      let dom = Domain.(add_term v t (add_term ra a (add_term ri i dom))) in
+      let ex = Ex.union ex_v (Ex.union ex_a ex_i) in
+      propagate uf (add_value ~from_select:true uf (env, dom, []) ra ri v ex)
+    | Symbols.Op Store, [a; i; v] ->
+      let s, ex_s = Uf.find_r uf r in
+      let ra, ex_a = Uf.find uf a in
+      let ri, ex_i = Uf.find uf i in
+      let rv, ex_v = Uf.find uf v in
+      let dom =
+        Domain.(
+          add_term s t (add_term ra a (add_term ri i (add_term rv v dom))))
+      in
+      let dom =
+        Domain.add_edge ra ri s (Ex.union ex_a (Ex.union ex_i ex_s)) dom
+      in
+      (* The values of both arrays are propagated through the new edge. *)
+      let acc = cross_edge uf (cross_edge uf (env, dom, []) ra ri s) s ri ra in
+      propagate uf
+        (add_value uf acc s ri rv (Ex.union ex_s (Ex.union ex_i ex_v)))
+    | _ -> env, dom
+  in
+  match E.term_view t with
+  | { f = Op (Select | Store); _ } ->
+    let env, dom = register env (get_domain uf) in
+    let env, dom = split_edges uf env dom in
+    let eqs, dom = flush_eqs uf dom in
+    env, set_domain uf dom, eqs
+  | _ -> env, Uf.domains uf, []
 
 let new_terms env = env.new_terms
 
