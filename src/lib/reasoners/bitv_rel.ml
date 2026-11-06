@@ -113,7 +113,7 @@ module BV2Nat = struct
 
      In order to minimize the number of polynomial variables, we compute the
      integer version of an extraction of [x] from bit [i] to [j] (inclusive) as
-     [0 <= bv2nat(x) asr i - bv2nat(x) asr j * 2^(j-i+1) < 2^(j-i+1)].
+     [0 <= bv2nat(x) asr i - bv2nat(x) asr (j+1) * 2^(j-i+1) < 2^(j-i+1)].
 
      Note: We currently have no way of defining the bv2nat and int2bv of an
      arbitrary semantic value structurally, so we resort to dynamically creating
@@ -126,12 +126,6 @@ module BV2Nat = struct
     }
 
   module Extraction = struct
-    type t = extraction
-
-    let compare e1 e2 =
-      let c = Int.compare e1.ofs e2.ofs in
-      if c <> 0 then c else Int.compare e1.len e2.len
-
     let shift_right ~size:sz ofs = { ofs; len = sz - ofs }
 
     let as_shift_right ~size:sz { ofs; len } =
@@ -140,12 +134,6 @@ module BV2Nat = struct
     let of_ae i j =
       assert (0 <= i && i <= j);
       { ofs = i; len = j - i + 1 }
-
-    module Map = Map.Make (struct
-      type nonrec t = t
-
-      let compare = compare
-    end)
   end
 
   (* Helpers for readability *)
@@ -218,7 +206,7 @@ module BV2Nat = struct
 
               This is used for integer substitutions because of our encoding of
               extractions in [bv2nat]: we encode [bv2nat(bv<i, j>)] in terms of
-              [bv2nat(bv) asr i] and [bv2nat(bv) asr j] which we create
+              [bv2nat(bv) asr i] and [bv2nat(bv) asr (j + 1)] which we create
               dynamically.
 
               This is done to reduce the number of variables introduced to
@@ -277,11 +265,11 @@ module BV2Nat = struct
   let find_or_init_bv bv t =
     try find_asr bv 0 t, t
     with Not_found ->
-      (* [k] represents [b2nat(bv)] *)
+      (* [k] represents [bv2nat(bv)] *)
       let k = T.Ints.of_repr @@ X.term_embed @@ E.fresh_name Tint in
       (k, Ex.empty), add_asr ~ex:Ex.empty bv 0 k t
 
-  (* Add the definining equation for [bv2nat(bv) asr ofs]:
+  (* Add the defining equation for [bv2nat(bv) asr ofs]:
 
      0 <= bv2nat(bv) - bv2nat(bv) asr ofs * 2^ofs < 2^ofs *)
   let init_asr ~ex bv ofs p t =
@@ -363,9 +351,9 @@ module BV2Nat = struct
 
   let find_p p t = P.Map.find p t.nat2bv
 
-  (* Add the mapping [bv2nat(bv<ext>) -> p]. If there is already a polynomial
-     associated with [bv<ext>] or a bit-vector associated with [p], the
-     appropriate equalities are added to [eqs] beforehand.
+  (* Add the mapping [bv2nat(bv) asr ofs -> p]. If there is already a polynomial
+     associated with [bv2nat(bv) asr ofs] or a bit-vector associated with [p],
+     the appropriate equalities are added to [eqs] beforehand.
 
      Note that we still insert the new mapping in this situation so that we can
      reuse this function for substitutions. *)
