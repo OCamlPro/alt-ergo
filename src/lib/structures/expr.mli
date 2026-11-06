@@ -179,10 +179,9 @@ val int_view : t -> int
 
     @raise Failure if the expression is not a constant integer. *)
 
-val rounding_mode_view : t -> Fpa_rounding.rounding_mode
-(** Extracts the rounding mode value of the expression, if there is one.
-
-    @raise Failure if the expression is not a constant rounding mode.*)
+val rounding_mode_view : t -> Fpa_rounding.rounding_mode option
+(** Extracts the rounding mode value of the expression, if there is one. Return
+    [None] if the expression is not a constant rounding mode. *)
 
 (** pretty printing *)
 

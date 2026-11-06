@@ -246,7 +246,7 @@ module SmtPrinter = struct
       let eb, sb =
         match ty with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
       in
-      Fp_value.pp_smtlib eb sb ppf v
+      Fp_value.pp_smtlib ~eb ~sb ppf v
     | Sy.True, [] -> Fmt.pf ppf "true"
     | Sy.False, [] -> Fmt.pf ppf "false"
     | Sy.Name { ns = Abstract; hs = n; _ }, [] ->
@@ -2794,34 +2794,24 @@ let reinit_cache () =
   Labels.clear labels;
   HC.reinit_cache ()
 
-type const =
-  | Int of int
-  | RoundingMode of Fpa_rounding.rounding_mode
-
 let z_to_int z =
   match Z.to_int z with
   | n -> n
   | exception Z.Overflow ->
     Fmt.failwith "error when trying to convert %a to an int" Z.pp_print z
 
-let const_view t =
-  match term_view t with
-  | { f = Int n; _ } -> Int (z_to_int n)
-  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
-    ->
-    let c = Fmt.str "%a" DE.Term.Const.print c in
-    RoundingMode (Fpa_rounding.rounding_mode_of_smt c)
-  | _ -> Fmt.failwith "unsupported constant: %a" print t
-
 let int_view t =
-  match const_view t with
-  | Int n -> n
+  match term_view t with
+  | { f = Int n; _ } -> z_to_int n
   | _ -> Fmt.failwith "The given term %a is not an integer" print t
 
 let rounding_mode_view t =
-  match const_view t with
-  | RoundingMode m -> m
-  | _ -> Fmt.failwith "The given term %a is not a rounding mode" print t
+  match term_view t with
+  | { f = Op (Constr c); ty; _ } when Ty.equal ty Fpa_rounding.fpa_rounding_mode
+    ->
+    let c = Fmt.str "%a" DE.Term.Const.print c in
+    Some (Fpa_rounding.rounding_mode_of_smt c)
+  | _ -> None
 
 (****************************************************************************)
 (*                     Helpers to build typed terms                         *)
