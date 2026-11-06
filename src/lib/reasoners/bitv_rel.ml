@@ -1241,12 +1241,26 @@ end = struct
   let overflow_binop_backward ~ex sz d op dx dy =
     let module I = Intervals.Int in
     let open Interval_domains.Ephemeral.Canon in
-    let norm i = I.extract i ~ofs:0 ~len:sz in
+    let unsigned i = I.extract i ~ofs:0 ~len:sz in
+    let signed i = I.signed_extract i ~ofs:0 ~len:sz in
+    let update_signed ~ex entry domain =
+      let current = signed !!entry in
+      let domain =
+        Interval_domain.intersect current
+          (Interval_domain.add_explanation ~ex domain)
+      in
+      if not (Interval_domain.equal domain current)
+      then Entry.set_domain entry (unsigned domain)
+    in
     match op with
-    | Ouadd | Osadd ->
-      (* d = dx + dy (mod 2^n) *)
-      update ~ex dx @@ norm @@ I.sub d !!dy;
-      update ~ex dy @@ norm @@ I.sub d !!dx
+    | Ouadd ->
+      (* d = dx + dy *)
+      update ~ex dx @@ I.sub d !!dy;
+      update ~ex dy @@ I.sub d !!dx
+    | Osadd ->
+      (* d = (signed)dx + (signed)dy *)
+      update_signed ~ex dx @@ I.sub d (signed !!dy);
+      update_signed ~ex dy @@ I.sub d (signed !!dx)
     | Oumul | Osmul ->
       (* Backward propagation for multiplication not supported yet. *)
       ()
