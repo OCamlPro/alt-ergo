@@ -217,3 +217,18 @@ let convert ~eb ~sb mode = function
   | Finite q -> Option.map (fun m -> of_q ~eb ~sb m q) mode
   | (NaN | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero) as v ->
     Some v
+
+(* [x - y * n], where [n] is the integer nearest to [x / y] (ties to even). It
+   is exact, and a zero result has the sign of [x]. *)
+let rem ~eb ~sb x y =
+  match x, y with
+  | (NaN | Plus_infinity | Minus_infinity), _ -> NaN
+  | _, (NaN | Plus_zero | Minus_zero) -> NaN
+  | (Finite _ | Plus_zero | Minus_zero), (Plus_infinity | Minus_infinity)
+  | (Plus_zero | Minus_zero), Finite _ ->
+    x
+  | Finite qx, Finite qy ->
+    let rne = Dolmen.Std.Builtin.Float.RoundNearestTiesToEven in
+    let n = Fpa_rounding.round_to_integer rne (Q.div qx qy) in
+    let neg_zero = Q.sign qx < 0 in
+    of_q ~neg_zero ~eb ~sb rne Q.(sub qx (mult qy n))

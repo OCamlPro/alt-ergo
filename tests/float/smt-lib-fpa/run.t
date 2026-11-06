@@ -827,3 +827,91 @@ Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
   > EOF
   
   unsat
+
+fp.rem: the quotient is rounded to the nearest integer, ties to even, and a
+zero result has the sign of x.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (and
+  >   (= (fp.rem ((_ to_fp 8 24) #x40a00000) ((_ to_fp 8 24) #x40000000))
+  >     ((_ to_fp 8 24) #x3f800000))
+  >   (= (fp.rem ((_ to_fp 8 24) #x40e00000) ((_ to_fp 8 24) #x40000000))
+  >     ((_ to_fp 8 24) #xbf800000))
+  >   (= (fp.rem ((_ to_fp 8 24) #xc0800000) ((_ to_fp 8 24) #x40000000))
+  >     (_ -zero 8 24))
+  >   (= (fp.rem ((_ to_fp 8 24) #x3fc00000) (_ +oo 8 24))
+  >     ((_ to_fp 8 24) #x3fc00000))
+  >   (fp.isNaN (fp.rem (_ -oo 8 24) ((_ to_fp 8 24) #x3f800000)))
+  >   (fp.isNaN (fp.rem ((_ to_fp 8 24) #x3f800000) (_ -zero 8 24))))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 4 6))
+  > (declare-const y (_ FloatingPoint 4 6))
+  > (assert (= x (fp #b1 #b0001 #b00010)))
+  > (assert (= y (fp #b1 #b0101 #b00000)))
+  > (assert (not (= (fp.rem x y) x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Special cases of fp.rem deduced from the classes of its arguments.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (or (fp.isInfinite x) (fp.isZero y)))
+  > (assert (not (fp.isNaN (fp.rem x y))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+fp.rem facts: |rem x y| <= |y| / 2.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (not (fp.isNaN x)))
+  > (assert (not (fp.isInfinite x)))
+  > (assert (not (fp.isNaN y)))
+  > (assert (not (fp.isInfinite y)))
+  > (assert (not (fp.isZero y)))
+  > (assert (fp.gt (fp.abs (fp.rem x y)) (fp.abs y)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (not (fp.isNaN x)))
+  > (assert (not (fp.isInfinite x)))
+  > (assert (fp.eq y ((_ to_fp 8 24) RNE 4.0)))
+  > (assert (fp.gt (fp.rem x y) ((_ to_fp 8 24) RNE 2.5)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Satisfiable, so this must not be unsat.
+
+  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (fp.eq (fp.rem x y) ((_ to_fp 8 24) RNE 1.0)))
+  > (check-sat)
+  > EOF
+  
+  unknown
