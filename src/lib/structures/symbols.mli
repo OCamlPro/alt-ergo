@@ -76,6 +76,16 @@ type operator =
       (** Same as [Float], but where the first two arguments are [(eb, sb)]
           rather than [(prec, exp_min)], used for the SMT-LIB FPA theory
           axiomatization. *)
+  | Float_of_bits
+      (** [(fp s e m)] of the SMT-LIB FPA theory, applied to
+          [(eb, sb, s, e, m)]. *)
+  | Float_to_fp
+      (** [((_ to_fp eb sb) mode x)] of the SMT-LIB FPA theory where [x] is a
+          float, applied to [(eb, sb, mode, x)]. *)
+  | Float_to_ubv of int
+      (** [((_ fp.to_ubv n) mode x)], applied to [(eb, sb, mode, x)]. *)
+  | Float_to_sbv of int
+      (** [((_ fp.to_sbv n) mode x)], applied to [(eb, sb, mode, x)]. *)
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default
