@@ -381,9 +381,10 @@ let smt_fpa_builtins =
     | Id { ns = Term; name = Simple "int.pow2" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env int_pow2_cst
-    (* Constant arrays: [((as const (Array I E)) v)]. Dolmen only accepts them
-       in models, we also accept them in scripts. *)
-    | Id { ns = Term; name = Simple "const" } ->
+    (* Constant arrays: [((as ae.const (Array I E)) v)]. Dolmen only accepts
+       [((as const (Array I E)) v)] in models, we accept them in scripts under
+       the [ae.const] name. *)
+    | Id { ns = Term; name = Simple "ae.const" } ->
       Dl.Typer.T.builtin_term (fun ast args ->
           let index_ty =
             Dl.Typer.T.wildcard env (Added_type_argument (ast, 0)) Any_in_scope
