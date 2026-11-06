@@ -218,8 +218,180 @@ let convert ~eb ~sb mode = function
   | (NaN | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero) as v ->
     Some v
 
-(* [x - y * n], where [n] is the integer nearest to [x / y] (ties to even). It
-   is exact, and a zero result has the sign of [x]. *)
+(* Evaluation of the SMT-LIB operators, following IEEE 754. *)
+
+let is_negative = function
+  | Minus_infinity | Minus_zero -> true
+  | Finite q -> Q.sign q < 0
+  | Plus_infinity | Plus_zero | NaN -> false
+
+let zero neg = if neg then Minus_zero else Plus_zero
+
+let inf neg = if neg then Minus_infinity else Plus_infinity
+
+let to_q = function
+  | Finite q -> Some q
+  | Plus_zero | Minus_zero -> Some Q.zero
+  | Plus_infinity | Minus_infinity | NaN -> None
+
+let neg = function
+  | Plus_infinity -> Minus_infinity
+  | Minus_infinity -> Plus_infinity
+  | Plus_zero -> Minus_zero
+  | Minus_zero -> Plus_zero
+  | NaN -> NaN
+  | Finite q -> Finite (Q.minus q)
+
+let abs v = if is_negative v then neg v else v
+
+let is_inf = function
+  | Plus_infinity | Minus_infinity -> true
+  | Plus_zero | Minus_zero | NaN | Finite _ -> false
+
+let is_zero = function
+  | Plus_zero | Minus_zero -> true
+  | Plus_infinity | Minus_infinity | NaN | Finite _ -> false
+
+(* [round(q)], with [q = a + b] exact and [neg1], [neg2] the signs of [a] and
+   [b]. If [q = 0]: [-0] if [a, b < 0], or if their signs differ under RTN. [+0]
+   otherwise. *)
+let round_sum ~eb ~sb mode q ~neg1 ~neg2 =
+  if Q.sign q = 0
+  then
+    let module RM = Dolmen.Std.Builtin.Float in
+    let rtn =
+      match (mode : Fpa_rounding.rounding_mode) with
+      | RM.RoundTowardNegative -> true
+      | RoundNearestTiesToEven | RoundNearestTiesToAway | RoundTowardPositive
+      | RoundTowardZero ->
+        false
+    in
+    zero (if Bool.equal neg1 neg2 then neg1 else rtn)
+  else of_q ~eb ~sb mode q
+
+(* [round(x + y)]. NaN on NaN or [+oo + -oo]. *)
+let add ~eb ~sb mode x y =
+  match x, y with
+  | NaN, _
+  | _, NaN
+  | Plus_infinity, Minus_infinity
+  | Minus_infinity, Plus_infinity ->
+    NaN
+  | ((Plus_infinity | Minus_infinity) as v), _
+  | _, ((Plus_infinity | Minus_infinity) as v) ->
+    v
+  | (Plus_zero | Minus_zero | Finite _), (Plus_zero | Minus_zero | Finite _) ->
+    let qx = Option.get (to_q x) in
+    let qy = Option.get (to_q y) in
+    round_sum ~eb ~sb mode (Q.add qx qy) ~neg1:(is_negative x)
+      ~neg2:(is_negative y)
+
+(* [x - y = x + (-y)]. *)
+let sub ~eb ~sb mode x y = add ~eb ~sb mode x (neg y)
+
+(* [round(x * y)], of sign [sign x xor sign y]. NaN on NaN or [0 * oo]. *)
+let mul ~eb ~sb mode x y =
+  let neg = not (Bool.equal (is_negative x) (is_negative y)) in
+  match x, y with
+  | NaN, _ | _, NaN -> NaN
+  | _ when (is_inf x && is_zero y) || (is_zero x && is_inf y) -> NaN
+  | _ when is_inf x || is_inf y -> inf neg
+  | _ when is_zero x || is_zero y -> zero neg
+  | _ -> of_q ~eb ~sb mode (Q.mult (Option.get (to_q x)) (Option.get (to_q y)))
+
+(* [round(x / y)], of sign [sign x xor sign y]. NaN on NaN, [0 / 0] or [oo /
+   oo], and [x / 0 = oo] and [x / oo = 0]. *)
+let div ~eb ~sb mode x y =
+  let neg = not (Bool.equal (is_negative x) (is_negative y)) in
+  match x, y with
+  | NaN, _ | _, NaN -> NaN
+  | _ when (is_inf x && is_inf y) || (is_zero x && is_zero y) -> NaN
+  | _ when is_inf x || is_zero y -> inf neg
+  | _ when is_zero x || is_inf y -> zero neg
+  | _ -> of_q ~eb ~sb mode (Q.div (Option.get (to_q x)) (Option.get (to_q y)))
+
+(* [round(x * y + z)], rounded once. NaN on NaN, [0 * oo], or [x * y = +-oo] and
+   [z = -+oo]. *)
+let fma ~eb ~sb mode x y z =
+  let neg_p = not (Bool.equal (is_negative x) (is_negative y)) in
+  match x, y, z with
+  | NaN, _, _ | _, NaN, _ | _, _, NaN -> NaN
+  | _ when (is_inf x && is_zero y) || (is_zero x && is_inf y) -> NaN
+  | _ when is_inf x || is_inf y ->
+    if is_inf z && not (Bool.equal neg_p (is_negative z))
+    then NaN
+    else inf neg_p
+  | _ when is_inf z -> z
+  | _ ->
+    let p = Q.mult (Option.get (to_q x)) (Option.get (to_q y)) in
+    round_sum ~eb ~sb mode
+      (Q.add p (Option.get (to_q z)))
+      ~neg1:neg_p ~neg2:(is_negative z)
+
+(* [round(sqrt x)]. NaN on [x < 0], [sqrt(-0) = -0]. With [k = min_exp + 2] and
+   [s = isqrt(q * 4^k)]: [sqrt q = s / 2^k] if exact, and otherwise rounds like
+   [(2s + 1) / 2^(k+1)], as both are strictly between [s / 2^k] and [(s + 1) /
+   2^k], with no rounding boundary (multiple of [2^-(min_exp + 1)]) in
+   between. *)
+let sqrt ~eb ~sb mode = function
+  | (NaN | Plus_zero | Minus_zero | Plus_infinity) as v -> v
+  | Minus_infinity -> NaN
+  | Finite q when Q.sign q < 0 -> NaN
+  | Finite q ->
+    let k = fp_min_exp eb sb + 2 in
+    let n = Q.to_z (Q.mult_2exp q (2 * k)) in
+    let s = Z.sqrt n in
+    let r =
+      if Z.equal (Z.mul s s) n
+      then Q.div_2exp (Q.from_z s) k
+      else Q.div_2exp (Q.from_z (Z.add (Z.shift_left s 1) Z.one)) (k + 1)
+    in
+    of_q ~eb ~sb mode r
+
+(* [round_int(x)], a zero result has the sign of [x]. The integer can overflow
+   in tiny formats, e.g. 3.5 in [(2, 3)]. *)
+let round_to_integral ~eb ~sb mode = function
+  | Finite q ->
+    let r = Fpa_rounding.round_to_integer mode q in
+    if Q.sign r = 0 then zero (Q.sign q < 0) else of_q ~eb ~sb mode r
+  | (Plus_infinity | Minus_infinity | Plus_zero | Minus_zero | NaN) as v -> v
+
+(* [x = y]: NaN equals nothing, [+0 = -0]. *)
+let eq x y =
+  match x, y with
+  | NaN, _ | _, NaN -> false
+  | _ -> (
+    match to_q x, to_q y with
+    | Some qx, Some qy -> Q.equal qx qy
+    | _ -> equal x y)
+
+(* [x < y], false on NaN. *)
+let lt x y =
+  match x, y with
+  | NaN, _ | _, NaN -> false
+  | Minus_infinity, Minus_infinity | Plus_infinity, Plus_infinity -> false
+  | Minus_infinity, _ | _, Plus_infinity -> true
+  | Plus_infinity, _ | _, Minus_infinity -> false
+  | _ -> Q.compare (Option.get (to_q x)) (Option.get (to_q y)) < 0
+
+(* [x <= y]. *)
+let le x y = lt x y || eq x y
+
+(* [min(x, y)] or [max(x, y)], NaN only if both are NaN. [None] on [+0] and
+   [-0]: either may be returned. *)
+let min_max ~is_min x y =
+  match x, y with
+  | NaN, v | v, NaN -> Some v
+  | _ when is_zero x && is_zero y && not (equal x y) -> None
+  | _ when Bool.equal (lt x y) is_min -> Some x
+  | _ -> Some y
+
+let min = min_max ~is_min:true
+
+let max = min_max ~is_min:false
+
+(* [x - y * n], [n = round_ne(x / y)], exact; a zero result has the sign of [x].
+   NaN on NaN, [x = +-oo] or [y = +-0]; [x] if [y = +-oo] or [x = +-0]. *)
 let rem ~eb ~sb x y =
   match x, y with
   | (NaN | Plus_infinity | Minus_infinity), _ -> NaN
