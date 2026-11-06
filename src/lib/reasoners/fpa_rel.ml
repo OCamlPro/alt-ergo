@@ -213,6 +213,78 @@ let eq_lit_fact ex r t =
 let eq_float_fact ex t v eb sb =
   lit_fact ex (E.mk_eq ~iff:false t (E.float v eb sb))
 
+let mk_clause = function
+  | [] -> assert false
+  | l :: ls -> List.fold_left (fun acc l -> E.mk_or acc l false) l ls
+
+let pred_fact ex mk ~eb ~sb t b =
+  let f = mk ~eb ~sb t in
+  lit_fact ex (if b then f else E.neg f)
+
+let z_to_int z = Option.get (Z.to_machine_int z)
+
+let all_ones n = Z.sub (Z.shift_left Z.one n) Z.one
+
+let real_of_int t = E.mk_term (Sy.Op Sy.Real_of_int) [t] Ty.Treal
+
+(* [to_real term] for a finite [term = fp neg biased_exp m], linear in [bv2nat
+   m]. *)
+let of_bits_to_real eb sb term ~neg ~biased_exp m =
+  let bias = (1 lsl (eb - 1)) - 1 in
+  let significand, k =
+    if biased_exp > 0
+    then
+      let hidden_bit = E.Ints.of_Z (Z.shift_left Z.one (sb - 1)) in
+      E.Ints.(hidden_bit + E.BV.bv2nat m), biased_exp - bias - (sb - 1)
+    else E.BV.bv2nat m, 1 - bias - (sb - 1)
+  in
+  let c = if k >= 0 then Q.mult_2exp Q.one k else Q.div_2exp Q.one (-k) in
+  let c = if neg then Q.minus c else c in
+  E.mk_eq ~iff:false
+    (E.FP.to_real ~eb ~sb term)
+    E.Reals.(of_Q c * real_of_int significand)
+
+let bv_width bv =
+  match E.type_info bv with Ty.Tbitv n -> n | _ -> assert false
+
+(* [Some (bv, signed, exact)] if [i] is the integer of the bit-vector [bv] and
+   its conversion to [(eb, sb)] cannot overflow. [exact] if it is not
+   rounded. *)
+let bv_int_conversion eb sb i =
+  match E.FP.of_bv_int_view i with
+  | Some (bv, signed) ->
+    let bits = if signed then bv_width bv - 1 else bv_width bv in
+    let bound = Q.from_z (Z.shift_left Z.one bits) in
+    if Q.compare bound (Fp_value.max_finite_q ~eb ~sb) <= 0
+    then Some (bv, signed, bits <= sb)
+    else None
+  | None -> None
+
+(* [term = of_int mode i], where [i] is the integer of a bit-vector and cannot
+   overflow: [term] is finite, positive if unsigned, and [to_real term] is [i],
+   rounded unless exact. *)
+let of_bv_int_facts term =
+  match E.term_view term with
+  | { E.xs = [eb_t; sb_t; mode; i]; ty = Ty.Tfloat (eb, sb); _ } -> (
+    match bv_int_conversion eb sb i with
+    | Some (_, signed, exact) ->
+      let pred mk b = if b then mk ~eb ~sb term else E.neg (mk ~eb ~sb term) in
+      let value =
+        if exact
+        then real_of_int i
+        else
+          E.mk_term (Sy.Op FloatEbSb) [eb_t; sb_t; mode; real_of_int i] Ty.Treal
+      in
+      let facts =
+        [ pred E.FP.is_finite true;
+          pred E.FP.is_nan false;
+          pred E.FP.is_infinite false;
+          E.mk_eq ~iff:false (E.FP.to_real ~eb ~sb term) value ]
+      in
+      if signed then facts else pred E.FP.is_positive true :: facts
+    | None -> [])
+  | _ -> []
+
 (* Evaluation of the conversions of [conv_kind] once their arguments are
    constants.
 
@@ -246,7 +318,8 @@ module Conv_watch = struct
     { apps : app E.Map.t;
       watched : E.Set.t MX.t;  (** representative -> applications using it *)
       dirty : E.Set.t;  (** applications to rerun *)
-      facts : X.r Sig_rel.fact list  (** pending facts *)
+      facts : X.r Sig_rel.fact list;  (** pending facts *)
+      lemmas : E.t list  (** pending lemmas *)
     }
 
   type _ Uf.id += Id : t Uf.id
@@ -254,7 +327,12 @@ module Conv_watch = struct
   exception Inconsistent of Ex.t
 
   let empty =
-    { apps = E.Map.empty; watched = MX.empty; dirty = E.Set.empty; facts = [] }
+    { apps = E.Map.empty;
+      watched = MX.empty;
+      dirty = E.Set.empty;
+      facts = [];
+      lemmas = []
+    }
 
   let pp ppf t =
     Fmt.pf ppf "{conv_watch: %d applications}" (E.Map.cardinal t.apps)
@@ -263,18 +341,163 @@ module Conv_watch = struct
 
   let init _ t = t
 
-  (* [term = fp s e m]. *)
-  let of_bits term ~sign ~exp ~mant =
-    let eb, sb = float_format term in
-    match get_bv_value sign, get_bv_value exp, get_bv_value mant with
+  let watchers r t =
+    match MX.find_opt r t.watched with Some s -> s | None -> E.Set.empty
+
+  (* Value, once the bits are known. *)
+  let of_bits_eval ~eb ~sb term s e m =
+    match s, e, m with
     | Some (zs, ex_s), Some (ze, ex_e), Some (zm, ex_m) ->
       let v =
-        Fp_value.mk_fp_literal ~neg:(Z.equal zs Z.one)
-          ~biased_exp:(Option.get (Z.to_machine_int ze))
+        Fp_value.mk_fp_literal ~neg:(Z.equal zs Z.one) ~biased_exp:(z_to_int ze)
           ~mantissa:zm ~eb ~sb
       in
       [eq_float_fact (Ex.union ex_s (Ex.union ex_e ex_m)) term v eb sb]
     | _ -> []
+
+  (* Classes, from the exponent and the significand. *)
+  let of_bits_classes ~eb ~sb term e m =
+    let pred ex mk b = pred_fact ex mk ~eb ~sb term b in
+    match e, m with
+    | Some (ze, ex_e), _ when Z.equal ze (all_ones eb) -> (
+      (* NaN or infinite. Infinite if [m = 0]. *)
+      [ pred ex_e E.FP.is_zero false;
+        pred ex_e E.FP.is_finite false;
+        pred ex_e E.FP.is_normal false;
+        pred ex_e E.FP.is_subnormal false ]
+      @
+      match m with
+      | Some (zm, ex_m) ->
+        let ex = Ex.union ex_e ex_m in
+        let zero_m = Z.equal zm Z.zero in
+        pred ex E.FP.is_nan (not zero_m)
+        :: (if zero_m then [pred ex E.FP.is_infinite true] else [])
+      | None -> [])
+    | Some (ze, ex_e), _ -> (
+      (* Finite. Normal if [e <> 0], otherwise zero if [m = 0] and subnormal if
+         not. *)
+      [ pred ex_e E.FP.is_nan false;
+        pred ex_e E.FP.is_infinite false;
+        pred ex_e E.FP.is_finite true ]
+      @
+      match m with
+      | _ when not (Z.equal ze Z.zero) ->
+        [pred ex_e E.FP.is_zero false; pred ex_e E.FP.is_normal true]
+      | Some (zm, ex_m) ->
+        let ex = Ex.union ex_e ex_m in
+        let zero_m = Z.equal zm Z.zero in
+        [ pred ex_e E.FP.is_normal false;
+          pred ex E.FP.is_zero zero_m;
+          pred ex E.FP.is_subnormal (not zero_m) ]
+      | None -> [pred ex_e E.FP.is_normal false])
+    | None, _ -> []
+
+  (* Explanation that [fp s e m] is not NaN, if the bits show it. *)
+  let of_bits_not_nan ~eb e m =
+    match e, m with
+    | Some (ze, ex_e), _ when not (Z.equal ze (all_ones eb)) -> Some ex_e
+    | Some (_, ex_e), Some (zm, ex_m) when Z.equal zm Z.zero ->
+      Some (Ex.union ex_e ex_m)
+    | _ -> None
+
+  (* Sign, if the bits show that it is not NaN. Otherwise, the clauses of
+     [of_bits_clauses] give it. *)
+  let of_bits_sign ~eb ~sb term s not_nan =
+    match s, not_nan with
+    | Some (zs, ex_s), Some ex_nn ->
+      let ex = Ex.union ex_s ex_nn in
+      let neg = Z.equal zs Z.one in
+      [ pred_fact ex E.FP.is_negative ~eb ~sb term neg;
+        pred_fact ex E.FP.is_positive ~eb ~sb term (not neg) ]
+    | _ -> []
+
+  (* Real value, if finite. *)
+  let of_bits_real ~eb ~sb term m_term s e =
+    match s, e with
+    | Some (zs, ex_s), Some (ze, ex_e) when not (Z.equal ze (all_ones eb)) ->
+      [ lit_fact (Ex.union ex_s ex_e)
+          (of_bits_to_real eb sb term ~neg:(Z.equal zs Z.one)
+             ~biased_exp:(z_to_int ze) m_term) ]
+    | _ -> []
+
+  (* Bits, once the value is known. NaN: [e] is all ones and [m <> 0]. *)
+  let of_bits_args ~eb ~sb rep_r ~sign:(rs, ex_s) ~exp:(re, ex_e)
+      ~mant:(rm, ex_m) =
+    let bv sz z = E.BV.of_Z ~size:sz z in
+    match get_fp_value rep_r with
+    | None -> []
+    | Some (v, ex_r) -> (
+      match Fp_value.to_bits ~eb ~sb v with
+      | Some (neg, biased_exp, mantissa) ->
+        [ eq_lit_fact (Ex.union ex_r ex_s) rs
+            (bv 1 (if neg then Z.one else Z.zero));
+          eq_lit_fact (Ex.union ex_r ex_e) re (bv eb (Z.from_int biased_exp));
+          eq_lit_fact (Ex.union ex_r ex_m) rm (bv (sb - 1) mantissa) ]
+      | None ->
+        let zero_m = fst (X.make (bv (sb - 1) Z.zero)) in
+        [ eq_lit_fact (Ex.union ex_r ex_e) re (bv eb (all_ones eb));
+          ( Literal.LSem
+              (Shostak.L.view (Shostak.L.mk_distinct false [rm; zero_m])),
+            Ex.union ex_r ex_m,
+            Th_util.Other ) ])
+
+  (* Injectivity on non-NaN values, for each other [fp] application [term'] in
+     the class of [term]: facts that the bits are equal if the bits of [term]
+     show that it is not NaN, and the lemma [term = term' -> is_nan term \/ same
+     bits] otherwise. *)
+  let of_bits_injectivity t term (r, ex_r) not_nan ~sign ~exp ~mant =
+    match E.term_view term with
+    | { E.xs = [_; _; s; e; m]; ty = Ty.Tfloat (eb, sb); _ } ->
+      E.Set.fold
+        (fun term' (facts, lemmas) ->
+          match E.Map.find_opt term' t.apps, E.term_view term' with
+          | ( Some { kind = Of_bits; r = r', ex_r'; args = Bits b' },
+              { E.xs = [_; _; s'; e'; m']; _ } )
+            when (not (E.equal term term')) && X.equal r r' -> (
+            match not_nan with
+            | Some ex_nn ->
+              let ex = Ex.union ex_nn (Ex.union ex_r ex_r') in
+              let same (r1, ex1) (r2, ex2) =
+                ( Literal.LSem (Shostak.L.view (Shostak.L.mk_eq r1 r2)),
+                  Ex.union ex (Ex.union ex1 ex2),
+                  Th_util.Other )
+              in
+              ( same sign b'.sign :: same exp b'.exp :: same mant b'.mant
+                :: facts,
+                lemmas )
+            | None when E.compare term term' < 0 ->
+              let ne = E.neg (E.mk_eq ~iff:false term term') in
+              let is_nan = E.FP.is_nan ~eb ~sb term in
+              ( facts,
+                List.map
+                  (fun (a, b) -> mk_clause [ne; is_nan; E.mk_eq ~iff:false a b])
+                  [s, s'; e, e'; m, m']
+                @ lemmas )
+            | None -> facts, lemmas)
+          | _ -> facts, lemmas)
+        (watchers r t) ([], [])
+    | _ -> assert false
+
+  (* [term = fp s e m]. *)
+  let of_bits t term rep_r ~sign ~exp ~mant =
+    match E.term_view term with
+    | { E.xs = [_; _; _; _; m_term]; ty = Ty.Tfloat (eb, sb); _ } ->
+      let s = get_bv_value sign in
+      let e = get_bv_value exp in
+      let m = get_bv_value mant in
+      let not_nan = of_bits_not_nan ~eb e m in
+      let inj_facts, inj_lemmas =
+        of_bits_injectivity t term rep_r not_nan ~sign ~exp ~mant
+      in
+      ( List.concat
+          [ of_bits_eval ~eb ~sb term s e m;
+            of_bits_classes ~eb ~sb term e m;
+            of_bits_sign ~eb ~sb term s not_nan;
+            of_bits_real ~eb ~sb term m_term s e;
+            of_bits_args ~eb ~sb rep_r ~sign ~exp ~mant;
+            inj_facts ],
+        inj_lemmas )
+    | _ -> assert false
 
   (* [term = of_int mode i]. *)
   let of_int term ~mode ~arg =
@@ -325,33 +548,64 @@ module Conv_watch = struct
 
   (* [term = to_ubv n mode x] ([signed = false]) or [term = to_sbv n mode x],
      where specified: [x] finite and in range once rounded. *)
-  let to_bv ~signed n (r, ex_r) ~mode ~arg =
+  let to_bv t term ~signed n (r, ex_r) ~mode ~arg:((r_x, ex_x) as arg) =
     let lo, hi = bv_range ~signed n in
-    let m, ex_m = known_mode mode in
-    match get_fp_value arg with
-    | Some (v, ex_x) -> (
-      match Fp_value.to_integer m v with
-      | Some z when Z.compare lo z <= 0 && Z.compare z hi < 0 ->
-        [ eq_lit_fact
-            (Ex.union ex_r (Ex.union ex_m ex_x))
-            r (E.BV.of_Z ~size:n z) ]
-      | _ -> [])
-    | None -> []
+    let eval =
+      let m, ex_m = known_mode mode in
+      match get_fp_value arg with
+      | Some (v, ex_x) -> (
+        match Fp_value.to_integer m v with
+        | Some z when Z.compare lo z <= 0 && Z.compare z hi < 0 ->
+          [ eq_lit_fact
+              (Ex.union ex_r (Ex.union ex_m ex_x))
+              r (E.BV.of_Z ~size:n z) ]
+        | _ -> [])
+      | None -> []
+    in
+    (* If [x] is an exact conversion [of_int(int(bv))] and [bv] fits in [n]
+       bits, [term] is [bv], extended. *)
+    let of_exact =
+      E.Set.fold
+        (fun term' acc ->
+          match E.Map.find_opt term' t.apps, E.term_view term' with
+          | ( Some { kind = Of_int; r = r_i, ex_i; _ },
+              { E.xs = [_; _; _; i]; ty = Ty.Tfloat (eb, sb); _ } )
+            when X.equal r_x r_i -> (
+            match bv_int_conversion eb sb i with
+            | Some (bv, signed', true) ->
+              let n' = bv_width bv in
+              let lo', hi' = bv_range ~signed:signed' n' in
+              if Z.compare lo lo' <= 0 && Z.compare hi' hi <= 0
+              then
+                let ext =
+                  if signed'
+                  then E.BV.sign_extend (n - n') bv
+                  else E.BV.zero_extend (n - n') bv
+                in
+                lit_fact (Ex.union ex_x ex_i) (E.mk_eq ~iff:false term ext)
+                :: acc
+              else acc
+            | Some (_, _, false) | None -> acc)
+          | _ -> acc)
+        (watchers r_x t) []
+    in
+    eval @ of_exact
 
   (* Runs the rules of [term] and queues their facts. *)
   let apply_conv_rules term app t =
-    let facts =
+    let facts, lemmas =
       match app.kind, app.args with
-      | Of_bits, Bits { sign; exp; mant } -> of_bits term ~sign ~exp ~mant
-      | Of_int, Rounded { mode; arg } -> of_int term ~mode ~arg
-      | Of_real, Rounded { mode; arg } -> of_real term ~mode ~arg
-      | To_int, Rounded { mode; arg } -> to_int app.r ~mode ~arg
-      | To_fp, Rounded { mode; arg } -> to_fp term ~mode ~arg
+      | Of_bits, Bits { sign; exp; mant } ->
+        of_bits t term app.r ~sign ~exp ~mant
+      | Of_int, Rounded { mode; arg } -> of_int term ~mode ~arg, []
+      | Of_real, Rounded { mode; arg } -> of_real term ~mode ~arg, []
+      | To_int, Rounded { mode; arg } -> to_int app.r ~mode ~arg, []
+      | To_fp, Rounded { mode; arg } -> to_fp term ~mode ~arg, []
       | To_bv (signed, n), Rounded { mode; arg } ->
-        to_bv ~signed n app.r ~mode ~arg
+        to_bv t term ~signed n app.r ~mode ~arg, []
       | _ -> assert false
     in
-    { t with facts = facts @ t.facts }
+    { t with facts = facts @ t.facts; lemmas = lemmas @ t.lemmas }
 
   let register uf term kind t =
     if E.Map.mem term t.apps
@@ -376,8 +630,16 @@ module Conv_watch = struct
             MX.add r (E.Set.add term terms) watched)
           t.watched (reps app)
       in
-      apply_conv_rules term app
-        { t with apps = E.Map.add term app t.apps; watched }
+      let t = { t with apps = E.Map.add term app t.apps; watched } in
+      (* Facts from the arguments alone. *)
+      let t =
+        match kind with
+        | Of_int ->
+          let facts = List.map (lit_fact Ex.empty) (of_bv_int_facts term) in
+          { t with facts = facts @ t.facts }
+        | Of_bits | Of_real | To_int | To_fp | To_bv _ -> t
+      in
+      apply_conv_rules term app t
 
   let subst ~ex rr nrr t =
     match MX.find_opt rr t.watched with
@@ -401,18 +663,16 @@ module Conv_watch = struct
           (fun term apps -> E.Map.update term (Option.map update_reps) apps)
           terms t.apps
       in
-      let on_nrr =
-        match MX.find_opt nrr t.watched with
-        | Some s -> E.Set.union terms s
-        | None -> terms
-      in
+      (* All the applications on [nrr] rerun, for the rules that relate two
+         applications. *)
+      let on_nrr = E.Set.union terms (watchers nrr t) in
       { t with
         apps;
         watched = MX.add nrr on_nrr (MX.remove rr t.watched);
-        dirty = E.Set.union terms t.dirty
+        dirty = E.Set.union on_nrr t.dirty
       }
 
-  (* Reruns the dirty applications and returns the pending facts. *)
+  (* Reruns the dirty applications and returns the pending facts and lemmas. *)
   let flush t =
     let t =
       E.Set.fold
@@ -423,7 +683,7 @@ module Conv_watch = struct
         t.dirty
         { t with dirty = E.Set.empty }
     in
-    t.facts, { t with facts = [] }
+    t.facts, t.lemmas, { t with facts = []; lemmas = [] }
 end
 
 (* Registers [term] in [Conv_watch] if it is a conversion. *)
@@ -445,7 +705,8 @@ type t =
     literals_cache : (int * int, precision_literals) Hashtbl.t;
         (* memoizes [get_literals], shared across backtracking *)
     new_terms : E.Set.t;
-    defs : E.Set.t
+    defs : E.Set.t;
+    lemmas : E.Set.t  (** lemmas of [Conv_watch] *)
   }
 
 let empty uf =
@@ -454,7 +715,8 @@ let empty uf =
       pending_literals = [];
       literals_cache = Hashtbl.create 16;
       new_terms = E.Set.empty;
-      defs = E.Set.empty
+      defs = E.Set.empty;
+      lemmas = E.Set.empty
     },
     Uf.domains uf
     |> Uf.GlobalDomains.add (module AEFloat_arg_watch) AEFloat_arg_watch.empty
@@ -621,10 +883,6 @@ let normal_definition term (normal, eb, sb, x) =
   in
   E.mk_iff term body
 
-let mk_clause = function
-  | [] -> assert false
-  | l :: ls -> List.fold_left (fun acc l -> E.mk_or acc l false) l ls
-
 let class_clauses x =
   let eb, sb =
     match E.type_info x with Ty.Tfloat (eb, sb) -> eb, sb | _ -> assert false
@@ -657,10 +915,104 @@ let class_clauses x =
         [E.neg is_infinite; E.neg is_positive; is Fp_value.Plus_infinity];
         [E.neg is_infinite; E.neg is_negative; is Fp_value.Minus_infinity] ])
 
+let mk_rounding m =
+  E.mk_constr
+    (Fpa_rounding.term_cst_of_rounding_mode m)
+    [] Fpa_rounding.fpa_rounding_mode
+
+(* [term = fp s e m]: if [term] is not NaN, its sign is [s]. *)
+let of_bits_clauses term =
+  match E.term_view term with
+  | { E.xs = [_; _; s; _; _]; ty = Ty.Tfloat (eb, sb); _ } ->
+    let is_nan = E.FP.is_nan ~eb ~sb term in
+    let sign_is z = E.mk_eq ~iff:false s (E.BV.of_Z ~size:1 z) in
+    [ mk_clause [is_nan; E.neg (sign_is Z.one); E.FP.is_negative ~eb ~sb term];
+      mk_clause [is_nan; E.neg (sign_is Z.zero); E.FP.is_positive ~eb ~sb term]
+    ]
+  | _ -> assert false
+
+(* [term = to_fp mode x], from [(eb1, sb1)] to [(eb2, sb2)]. *)
+let to_fp_clauses term =
+  match E.term_view term with
+  | { E.xs = [eb_t; sb_t; mode; x]; ty = Ty.Tfloat (eb2, sb2); _ } ->
+    let eb1, sb1 = float_format x in
+    (* Widening is exact. *)
+    let exact = eb1 <= eb2 && sb1 <= sb2 in
+    let px p = p ~eb:eb1 ~sb:sb1 x in
+    let pt p = p ~eb:eb2 ~sb:sb2 term in
+    let iff p = [[E.neg (px p); pt p]; [px p; E.neg (pt p)]] in
+    (* [p x -> p term], and the converse if exact. Narrowing can overflow or
+       underflow, so infinite and zero are only kept forward. *)
+    let forward p =
+      [E.neg (px p); pt p] :: (if exact then [[px p; E.neg (pt p)]] else [])
+    in
+    (* [x] and [term] finite: [to_real term] is [to_real x], rounded unless
+       exact. Narrowing must also not overflow: an overflow gives an infinity
+       only when rounding away from zero, and the largest finite value
+       otherwise. *)
+    let real =
+      let real_x = E.FP.to_real ~eb:eb1 ~sb:sb1 x in
+      let value =
+        if exact
+        then real_x
+        else E.mk_term (Sy.Op FloatEbSb) [eb_t; sb_t; mode; real_x] Ty.Treal
+      in
+      let finite =
+        [ px E.FP.is_nan;
+          px E.FP.is_infinite;
+          pt E.FP.is_infinite;
+          E.mk_eq ~iff:false (pt E.FP.to_real) value ]
+      in
+      let module RM = Dolmen.Std.Builtin.Float in
+      (* Conditions, other than the mode, for no overflow in mode [m]. *)
+      let no_overflow (m : Fpa_rounding.rounding_mode) =
+        match m with
+        | RM.RoundNearestTiesToEven | RoundNearestTiesToAway -> Some []
+        | RoundTowardPositive -> Some [E.neg (px E.FP.is_positive)]
+        | RoundTowardNegative -> Some [E.neg (px E.FP.is_negative)]
+        | RoundTowardZero -> None
+      in
+      if exact
+      then [finite]
+      else
+        match E.rounding_mode_view mode with
+        | Some m -> (
+          match no_overflow m with Some l -> [l @ finite] | None -> [])
+        | None ->
+          List.filter_map
+            (fun m ->
+              Option.map
+                (fun l ->
+                  (E.neg (E.mk_eq ~iff:false mode (mk_rounding m)) :: l)
+                  @ finite)
+                (no_overflow m))
+            RM.
+              [ RoundNearestTiesToEven;
+                RoundNearestTiesToAway;
+                RoundTowardPositive;
+                RoundTowardNegative ]
+    in
+    List.map mk_clause
+      (List.concat
+         [ (* NaN and the sign are kept. *)
+           iff E.FP.is_nan;
+           iff E.FP.is_positive;
+           iff E.FP.is_negative;
+           forward E.FP.is_infinite;
+           forward E.FP.is_zero;
+           real ])
+  | _ -> assert false
+
 let definitions term =
   match normal_pred term with
-  | Some p -> "fpa_normal_definition", [normal_definition term p]
-  | None -> "fpa_class_clauses", class_clauses term
+  | Some p -> ["fpa_normal_definition", [normal_definition term p]]
+  | None ->
+    ("fpa_class_clauses", class_clauses term)
+    ::
+    (match conv_kind term with
+    | Some Of_bits -> ["fpa_of_bits_clauses", of_bits_clauses term]
+    | Some To_fp -> ["fpa_to_fp_clauses", to_fp_clauses term]
+    | Some (Of_int | Of_real | To_int | To_bv _) | None -> [])
 
 let add env uf _r term =
   if not (Options.get_smt_lib_fpa ())
@@ -768,8 +1120,14 @@ let assume env uf _la =
     let ds =
       Uf.GlobalDomains.add (module AEFloat_arg_watch) aefloat_arg_watch ds
     in
-    let conv_facts, conv_watch =
+    let conv_facts, conv_lemmas, conv_watch =
       Conv_watch.flush (Uf.GlobalDomains.find (module Conv_watch) ds)
+    in
+    let env =
+      { env with
+        lemmas =
+          List.fold_left (fun acc l -> E.Set.add l acc) env.lemmas conv_lemmas
+      }
     in
     let ds = Uf.GlobalDomains.add (module Conv_watch) conv_watch ds in
     (* New terms of the facts, for matching. *)
@@ -806,33 +1164,40 @@ let instantiate ~do_syntactic_matching _ env _uf selector =
   if (not (Options.get_smt_lib_fpa ())) || not do_syntactic_matching
   then env, []
   else
+    let add_inst origin_name from_terms acc ff =
+      if selector ff ff
+      then
+        let gf =
+          { E.ff;
+            origin_name;
+            trigger_depth = 0;
+            gdist = -1;
+            hdist = -1;
+            nb_reductions = 0;
+            age = 0;
+            mf = true;
+            gf = false;
+            lem = None;
+            from_terms;
+            theory_elim = false
+          }
+        in
+        ([], gf, Ex.empty) :: acc
+      else acc
+    in
     let insts =
       E.Set.fold
         (fun term acc ->
-          let origin_name, ffs = definitions term in
           List.fold_left
-            (fun acc ff ->
-              if selector ff ff
-              then
-                let gf =
-                  { E.ff;
-                    origin_name;
-                    trigger_depth = 0;
-                    gdist = -1;
-                    hdist = -1;
-                    nb_reductions = 0;
-                    age = 0;
-                    mf = true;
-                    gf = false;
-                    lem = None;
-                    from_terms = [term];
-                    theory_elim = false
-                  }
-                in
-                ([], gf, Ex.empty) :: acc
-              else acc)
-            acc ffs)
+            (fun acc (origin_name, ffs) ->
+              List.fold_left (add_inst origin_name [term]) acc ffs)
+            acc (definitions term))
         env.defs []
+    in
+    let insts =
+      E.Set.fold
+        (fun l acc -> add_inst "fpa_conv_lemma" [] acc l)
+        env.lemmas insts
     in
     env, insts
 
