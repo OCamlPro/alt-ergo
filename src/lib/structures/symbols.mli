@@ -80,6 +80,7 @@ type operator =
       (** [((_ fp.to_ubv n) mode x)], applied to [(eb, sb, mode, x)]. *)
   | Float_to_sbv of int
       (** [((_ fp.to_sbv n) mode x)], applied to [(eb, sb, mode, x)]. *)
+  | Float_rem  (** [(fp.rem x y)], applied to [(x, y)]. *)
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default

@@ -879,6 +879,9 @@ module FP : sig
 
   val to_sbv : n:int -> eb:int -> sb:int -> mode:t -> t -> t
 
+  val rem : eb:int -> sb:int -> t -> t -> t
+  (** [rem ~eb ~sb x y] is the IEEE 754 remainder of [x] by [y]. *)
+
   (** {1 Helper and axiomatization functions}
 
       Not part of the SMT-LIB theory. *)
