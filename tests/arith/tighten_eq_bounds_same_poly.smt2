@@ -1,0 +1,62 @@
+; Regression test: an equality such as [2b+1 = b+2] updates the interval of [b]
+; twice, and the second update used to fail an assertion in [MP.n_add].
+(set-logic QF_ALIA)
+(declare-fun w0 () Int)
+(declare-fun v0 () Int)
+(declare-fun w1 () Int)
+(declare-fun v1 () Int)
+(declare-fun w2 () Int)
+(declare-fun v2 () Int)
+(declare-fun b3 () Int)
+(declare-fun b2 () Int)
+(declare-fun b0 () Int)
+(declare-fun a () (Array Int Int))
+(assert
+ (= v1 w1))
+(assert
+ (distinct b0 b2 b3))
+(assert
+ (>= v1 0))
+(assert
+ (<= v1 3))
+(assert
+ (>= v2 0))
+(assert
+ (<= v2 3))
+(assert
+ (let ((?x136 b2))
+ (let ((?x187 (+ v2 ?x136)))
+ (let ((?x178 (* b2 3)))
+ (let ((?x179 (+ v1 ?x178)))
+ (let ((?x169 (* b2 2)))
+ (let ((?x170 (+ v0 ?x169)))
+ (let ((?x173 (store a ?x170 (+ (select a ?x170) 1))))
+ (let ((?x182 (store ?x173 ?x179 (+ (select ?x173 ?x179) 1))))
+ (let ((?x190 (store ?x182 ?x187 (+ (select ?x182 ?x187) 1))))
+ (let ((?x183 (+ w2 ?x178)))
+ (let ((?x174 (+ w1 ?x169)))
+ (let ((?x168 (+ w0 ?x136)))
+ (let ((?x17 (store a ?x168 (+ (select a ?x168) 1))))
+ (let ((?x177 (store ?x17 ?x174 (+ (select ?x17 ?x174) 1))))
+ (let ((?x186 (store ?x177 ?x183 (+ (select ?x177 ?x183) 1))))
+ (= ?x186 ?x190)))))))))))))))))
+(assert
+ (let ((?x219 b3))
+ (let ((?x242 (+ v2 ?x219)))
+ (let ((?x233 (* b3 3)))
+ (let ((?x234 (+ v1 ?x233)))
+ (let ((?x224 (* b3 2)))
+ (let ((?x225 (+ v0 ?x224)))
+ (let ((?x228 (store a ?x225 (+ (select a ?x225) 1))))
+ (let ((?x237 (store ?x228 ?x234 (+ (select ?x228 ?x234) 1))))
+ (let ((?x245 (store ?x237 ?x242 (+ (select ?x237 ?x242) 1))))
+ (let ((?x238 (+ w2 ?x233)))
+ (let ((?x229 (+ w1 ?x224)))
+ (let ((?x220 (+ w0 ?x219)))
+ (let ((?x223 (store a ?x220 (+ (select a ?x220) 1))))
+ (let ((?x232 (store ?x223 ?x229 (+ (select ?x223 ?x229) 1))))
+ (let ((?x241 (store ?x232 ?x238 (+ (select ?x232 ?x238) 1))))
+ (= ?x241 ?x245)))))))))))))))))
+(assert
+ (not (and (= w1 v0) (= w2 v1) (= w0 v2))))
+(check-sat)
