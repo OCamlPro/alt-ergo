@@ -193,6 +193,11 @@ Tableaux solver (#1309)</p></li>
 <section id="smt-lib-support">
 <h3>SMT-LIB support<a class="headerlink" href="#smt-lib-support" title="Permalink to this heading"></a></h3>
 <ul>
+<li><p>Support parsing and reasoning over most SMT-LIB FPA Theory symbols (except
+fp.rem, fp.to_fp, and bv/fp conversion operations), usable with
+<code class="docutils literal notranslate"><span class="pre">--enable-theory</span> <span class="pre">smt.float</span></code>. The semantics of the FPA Theory symbols are
+given by an axiomatization translated from Why3’s <code class="docutils literal notranslate"><span class="pre">GenericFloat</span></code> theory
+(LGPL, installed separately from the binary). (#1364, #1371)</p></li>
 <li><p>Added support for the <code class="docutils literal notranslate"><span class="pre">:reproducible-resource-limit</span></code> and
 <code class="docutils literal notranslate"><span class="pre">--reproducible-resource-limit</span></code> options, following the SMT-LIB standard
 (#1353)</p>
