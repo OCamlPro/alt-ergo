@@ -61,3 +61,22 @@ val is_normal : eb:int -> t -> bool
 val is_subnormal : eb:int -> t -> bool
 (** [is_subnormal ~eb v] holds if [v] is a subnormal value of a format with [eb]
     exponent bits. *)
+
+val of_q :
+  ?neg_zero:bool ->
+  eb:int ->
+  sb:int ->
+  Fpa_rounding.rounding_mode ->
+  Numbers.Q.t ->
+  t
+(** [of_q ~eb ~sb mode q] rounds [q] to the format [(eb, sb)]. A zero [q] gives
+    [-0] if [neg_zero] is true, [+0] otherwise. *)
+
+val to_integer : Fpa_rounding.rounding_mode option -> t -> Numbers.Z.t option
+(** [to_integer mode v] rounds the float literal [v] to an integer. [None] if
+    [v] is NaN or infinite, or if [mode] is unknown and [v] is not a zero. *)
+
+val convert :
+  eb:int -> sb:int -> Fpa_rounding.rounding_mode option -> t -> t option
+(** [convert ~eb ~sb mode v] converts the float literal [v] to the format
+    [(eb, sb)]. [None] if [mode] is unknown and [v] is finite and nonzero. *)
