@@ -81,7 +81,7 @@ let iter_atoms f s = S.iter f s
 let fold_atoms f s acc = S.fold f s acc
 
 (* TODO : XXX : We have to choose the smallest ??? *)
-let merge s1 _s2 = s1
+let keep_first s1 _s2 = s1
 
 let fresh_exp =
   let r = ref (-1) in

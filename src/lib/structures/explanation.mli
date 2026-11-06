@@ -52,7 +52,13 @@ val singleton : exp -> t
 
 val union : t -> t -> t
 
-val merge : t -> t -> t
+val keep_first : t -> t -> t
+(** [keep_first ex1 ex2] returns [ex1] and ignores [ex2]. Use it when [ex1] and
+    [ex2] are alternative justifications of the same fact, so that either one
+    alone suffices. Unlike {!union}, it does not combine them.
+
+    TODO: maybe we should have a more sophisticated to choose one vs the other?
+*)
 
 val iter_atoms : (exp -> unit) -> t -> unit
 

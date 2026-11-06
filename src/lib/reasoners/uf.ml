@@ -906,7 +906,7 @@ let rec distinct env rl dep =
           let uex = Ex.union ex dep in
           let mdis = try MapX.find rr env.neqs with Not_found -> MapL.empty in
           let mdis =
-            try MapL.add d (Ex.merge uex (MapL.find d mdis)) mdis
+            try MapL.add d (Ex.keep_first uex (MapL.find d mdis)) mdis
             with Not_found -> MapL.add d uex mdis
           in
           let env = Env.init_leaf env rr in
