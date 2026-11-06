@@ -1176,10 +1176,11 @@ let compute_concrete_model_of_val cache =
     if
       X.is_solvable_theory_symbol f
       || is_destructor f || Sy.is_internal f || E.equal t E.vrai
-      || E.equal t E.faux
+      || E.equal t E.faux || E.FP.is_prelude_symbol f
     then
       (* These terms are built-in interpreted ones and we don't have to produce
-         a definition for them. *)
+         a definition for them. The symbols of the FPA prelude are not part of
+         models either. *)
       acc
     else begin
       let arg_vals, arg_tys, mrepr =
