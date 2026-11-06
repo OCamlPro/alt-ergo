@@ -342,7 +342,7 @@ module Main : S = struct
           (Uf.class_of env.uf bol)
       | _ -> ())
 
-  let clean_use =
+  let clean_congr =
     List.fold_left (fun env a ->
         match E.lit_view a with
         | E.Distinct _ | E.Builtin (_, _, _) ->
@@ -361,7 +361,6 @@ module Main : S = struct
     Options.exec_thread_yield ();
     Debug.cc r1 r2;
     let uf, res = Uf.union env.uf r1 r2 ex in
-    let env = { env with uf } in
     let up =
       List.fold_left
         (fun up x ->
@@ -423,7 +422,7 @@ module Main : S = struct
     let relation, domains, result = Rel.assume env.relation env.uf sa in
     let env = { env with uf = Uf.set_domains env.uf domains } in
     let env = { env with relation } in
-    let env = clean_use env result.remove in
+    let env = clean_congr env result.remove in
     env, result.assume
 
   let rec add_term env facts t ex =
@@ -454,8 +453,9 @@ module Main : S = struct
       then
         Printer.print_dbg ~module_name:"Congr" ~function_name:"print"
           "@[<v 2>congruence :@ %a@]" Congr.print ncongr;
+      let env = { uf = nuf; congr = ncongr; relation = rel } in
       E.Map.iter (fun e1 e2 -> equal_only_by_congruence env facts e1 e2) eqs;
-      { uf = nuf; congr = ncongr; relation = rel }
+      env
     end
 
   let add env facts a ex =
