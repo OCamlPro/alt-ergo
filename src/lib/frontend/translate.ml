@@ -1236,12 +1236,7 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             (* arithmetic without rounding mode *)
             | Abs { e = eb; s = sb }, [x] -> E.FP.abs ~eb ~sb (mk x)
             | Neg { e = eb; s = sb }, [x] -> E.FP.neg ~eb ~sb (mk x)
-            | Rem { e = _; s = _ }, [_x; _y] ->
-              (* TODO: rem is not currently in the axiomatization, its semantics
-                 need to be either axiomatized or implemented in Alt-Ergo. It is
-                 treated as an uninterpreted symbol in the meantime. *)
-              E.mk_uninterpreted_term (get_basename tcst.path)
-                (List.map mk args) (dty_to_ty term_ty)
+            | Rem { e = eb; s = sb }, [x; y] -> E.FP.rem ~eb ~sb (mk x) (mk y)
             | Min { e = eb; s = sb }, [x; y] -> E.FP.min ~eb ~sb (mk x) (mk y)
             | Max { e = eb; s = sb }, [x; y] -> E.FP.max ~eb ~sb (mk x) (mk y)
             (* comparisons *)

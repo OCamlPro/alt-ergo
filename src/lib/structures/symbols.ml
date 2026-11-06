@@ -78,6 +78,7 @@ type operator =
   | Float_to_fp
   | Float_to_ubv of int
   | Float_to_sbv of int
+  | Float_rem
   | Integer_round
   | Sqrt_real
   | Sqrt_real_default
@@ -255,7 +256,8 @@ let compare_operators op1 op2 =
         | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
         | Int2BV _ | Sbv_to_int | Ubv_to_int | Not_theory_constant
         | Is_theory_constant | Linear_dependency | Constr _ | Destruct _ | Tite
-        | Float_of_bits | Float_to_fp | Float_to_ubv _ | Float_to_sbv _ ) ) ->
+        | Float_of_bits | Float_to_fp | Float_to_ubv _ | Float_to_sbv _
+        | Float_rem ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -426,6 +428,7 @@ module AEPrinter = struct
     | Float_to_fp -> Fmt.pf ppf "ae.fp.to_fp"
     | Float_to_ubv n -> Fmt.pf ppf "ae.fp.to_ubv[%d]" n
     | Float_to_sbv n -> Fmt.pf ppf "ae.fp.to_sbv[%d]" n
+    | Float_rem -> Fmt.pf ppf "ae.fp.rem"
     | Not_theory_constant -> Fmt.pf ppf "not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "linear_dependency"
@@ -534,6 +537,7 @@ module SmtPrinter = struct
     | Float_to_fp -> Fmt.pf ppf "to_fp"
     | Float_to_ubv n -> Fmt.pf ppf "(_ fp.to_ubv %d)" n
     | Float_to_sbv n -> Fmt.pf ppf "(_ fp.to_sbv %d)" n
+    | Float_rem -> Fmt.pf ppf "fp.rem"
     (* Not in the SMT-LIB standard *)
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"
