@@ -761,7 +761,7 @@ let diff = Symbols.name ~ns:Internal "@diff"
 (* Whether a known index [k] has [r[k] <> s[k]]. *)
 let has_witness uf dom r s =
   let r, _ = Uf.find_r uf r in
-  XMap.exists
+  X.Map.exists
     (fun k (v, _) -> Option.is_some (distinct_value uf dom s k v))
     (Domain.values_of r dom)
 
