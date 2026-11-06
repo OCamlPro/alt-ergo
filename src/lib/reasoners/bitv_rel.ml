@@ -454,24 +454,32 @@ module BV2Nat = struct
     add_bv2nat_abstract ~ex ~size:(bitwidth bv_r) (Shostak.Bitv.embed bv_r)
       (T.Ints.of_repr nat_r) t
 
-  (* Add the equality [nat_r = [sbv_to_nat(bv_r)].
+  (* Add the equality [nat_r = sbv_to_int(bv_r)].
 
      This is done through the equality:
 
-     sbv_to_nat[n](x) = ubv_to_nat(x) - MSB(x) * 2^n
+     sbv_to_int[n](x) = ubv_to_nat(x) - MSB(x) * 2^n
 
      where MSB(x) is the most significant bit (i.e. sign bit) of [x].
 
      We use this encoding because it does not introduce (explicit) conditionals,
      and is friendly with labelling strategies that would split on the MSB of
      bit-vectors. *)
-  let add_sbv_to_nat ~ex nat_r bv_r t =
+  let add_sbv_to_int ~ex nat_r bv_r t =
     let sz = bitwidth bv_r in
     let bv = Shostak.Bitv.embed bv_r in
     let p = T.Ints.of_repr nat_r in
-    let (sgn_p, sgn_ex), t = find_or_init_asr bv_r (sz - 1) t in
-    (* sbv_to_nat[n](r) = p
-     * ubv_to_nat[n](r) = sbv_to_nat[n](r) + MSB(r)*2^n
+    let sgn_bv = Bitv.extract sz (sz - 1) (sz - 1) bv in
+    let sgn_st =
+      match sgn_bv with
+      | [{ bv = sgn_bv; sz = 1 }] -> sgn_bv
+      | _ ->
+        Util.internal_error
+          "*BUG*: extraction of one-bit cannot have more than one component"
+    in
+    let (sgn_p, sgn_ex), t = find_or_init_st sgn_st t in
+    (* sbv_to_int[n](r) = p
+     * ubv_to_nat[n](r) = sbv_to_int[n](r) + MSB(r)*2^n
      * ubv_to_nat[n](r) = p + MSB(r)*2^n *)
     let p' = T.Ints.(p + (sgn_p *$$ Z.(one lsl sz))) in
     add_bv2nat_abstract ~ex:(Ex.union ex sgn_ex) ~size:sz bv p' t
@@ -2219,7 +2227,7 @@ let add env uf r t =
     | { f = Op Sbv_to_int; xs = [x]; _ } ->
       let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
       let rx, ex = Uf.find uf x in
-      let bvconv = BV2Nat.add_sbv_to_nat ~ex r rx bvconv in
+      let bvconv = BV2Nat.add_sbv_to_int ~ex r rx bvconv in
       let eqs, bvconv = BV2Nat.flush bvconv in
       env, Uf.GlobalDomains.add (module BV2Nat) bvconv ds, eqs
     | _ -> env, ds, [])
