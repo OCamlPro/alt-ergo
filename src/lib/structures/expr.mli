@@ -254,10 +254,13 @@ val mk_uninterpreted_term : string -> t list -> Ty.t -> t
     uninterpreted symbol [name] to [args], of type [ret_ty]. *)
 
 val vrai : t
+(** The boolean constant [true] with [neg vrai == faux]. *)
 
 val faux : t
+(** The boolean constant [false] with [neg faux == vrai]. *)
 
 val void : t
+(** The unit value, i.e. the only constructor of the unit type {!Ty.tunit}. *)
 
 val int : string -> t
 
@@ -494,6 +497,9 @@ val reinit_cache : unit -> unit
 (** Constructors from the smtlib core theory.
     https://smtlib.cs.uiowa.edu/theories-Core.shtml *)
 module Core : sig
+  val bool : bool -> t
+  (** [bool b] is {!vrai} if [b] is [true] and {!faux} otherwise. *)
+
   val not : t -> t
 
   val eq : t -> t -> t
