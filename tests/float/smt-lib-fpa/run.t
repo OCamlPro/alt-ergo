@@ -915,3 +915,18 @@ Satisfiable, so this must not be unsat.
   > EOF
   
   unknown
+
+With a literal [y], the remainder is [x - y * n] for the integer [n] nearest to
+[x / y].
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.lt ((_ to_fp 8 24) RNE 2.0) x))
+  > (assert (fp.lt x ((_ to_fp 8 24) RNE 2.5)))
+  > (assert (not (fp.lt (fp.rem x ((_ to_fp 8 24) RNE 2.0))
+  >                     ((_ to_fp 8 24) RNE 0.5))))
+  > (check-sat)
+  > EOF
+  
+  unsat
