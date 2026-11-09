@@ -51,6 +51,14 @@ val to_bits : eb:int -> sb:int -> t -> (bool * int * Z.t) option
     of [v], without the hidden bit. [None] for NaN, which has several bit
     patterns. *)
 
+val bias : eb:int -> int
+(** [bias ~eb] is the exponent bias [2^(eb-1) - 1] of the formats with [eb]
+    exponent bits. *)
+
+val min_exp : eb:int -> sb:int -> int
+(** [min_exp ~eb ~sb] is [bias + sb - 2]: the subnormal values of [(eb, sb)] are
+    the multiples of [2^-min_exp]. *)
+
 val max_finite_q : eb:int -> sb:int -> Numbers.Q.t
 (** [max_finite_q ~eb ~sb] is the largest finite value of the format [(eb, sb)].
 *)
@@ -90,9 +98,6 @@ val convert :
 
     The SMT-LIB operators on float literals, following IEEE 754. The arithmetic
     operators take the format [(eb, sb)] of their result. *)
-
-val is_negative : t -> bool
-(** [is_negative v] is [true] on negative values, [-oo] and [-0]. *)
 
 val to_q : t -> Numbers.Q.t option
 (** [to_q v] is the real value of [v], [None] for infinities and NaN. *)
