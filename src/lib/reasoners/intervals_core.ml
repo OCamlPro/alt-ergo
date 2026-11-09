@@ -740,6 +740,8 @@ module Make (Ex : Explanations) : Core with type explanation = Ex.t = struct
       in
       loop acc glb Ex.empty u
 
+    let to_set u = map_to_set interval_set u
+
     let union_hull i1 i2 = { lb = min i1.lb i2.lb; ub = max i1.ub i2.ub }
 
     (* Compute the convex hull of a set as an interval. This is a *global*
