@@ -22,6 +22,7 @@ Tableaux solver.
 
 Unsat cores can be checked with the `-d unsat-core` option.
 
-  $ alt-ergo --sat-solver Tableaux --unsat-core -d unsat-core input.ae -o smtlib2 2>/dev/null
+  $ alt-ergo --sat-solver Tableaux --unsat-core -d unsat-core input.ae -o smtlib2 2>&1 | grep -Ev '^; File '
   
+  ; 
   unsat
