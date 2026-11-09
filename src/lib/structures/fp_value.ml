@@ -77,13 +77,17 @@ let q_to_bvs ~eb ~sb q =
   let bias = fp_bias eb in
   let min_exp = fp_min_exp eb sb in
   let neg = Q.sign q < 0 in
-  (* (r, m, e) with m*2^e = |q|, e = max(floor(log2|q|) + 1 - sb, -min_exp). *)
-  let r, m, e =
-    Fpa_rounding.float_of_rational sb min_exp RoundNearestTiesToEven (Q.abs q)
-  in
-  (* q is decoded from a float literal, so assert that rounding is exact which
-     means that m < 2^sb. *)
-  assert (Q.equal r (Q.abs q));
+  let a = Q.abs q in
+  (* q is decoded from a float literal: |q| = n / 2^k. (m, e) with m*2^e = |q|,
+     e = max(floor(log2|q|) + 1 - sb, -min_exp), where floor(log2|q|) =
+     numbits(n) - 1 - k. *)
+  let k = Z.numbits (Q.den a) - 1 in
+  let e = max (Z.numbits (Q.num a) - k - sb) (-min_exp) in
+  let mq = if e >= 0 then Q.div_2exp a e else Q.mult_2exp a (-e) in
+  (* The literal is exact: m is an integer and m < 2^sb. *)
+  assert (Z.equal (Q.den mq) Z.one);
+  let m = Q.num mq in
+  assert (Z.numbits m <= sb);
   (* hidden_bit = 2^(sb-1) *)
   let hidden_bit = Z.shift_left Z.one (sb - 1) in
   let biased_exp, significand =
@@ -184,20 +188,27 @@ let of_q ?(neg_zero = false) ~eb ~sb mode q =
     if Q.sign res = 0
     then if neg then Minus_zero else Plus_zero
     else
-      let max_q = max_finite_q ~eb ~sb in
-      if Q.compare (Q.abs res) max_q <= 0
+      (* [res] has [sb] significant bits, so it overflows iff [|res| >= 2^emax];
+         [floor(log2 |res|) <= numbits(num) - numbits(den)] skips computing
+         [max_q] in most cases. *)
+      let emax = fp_bias eb + 1 in
+      if Z.numbits (Q.num res) - Z.numbits (Q.den res) < emax
       then Finite res
       else
-        (* Overflow: the result is either an infinity or the largest finite
-           value of the right sign, depending on the rounding mode. *)
-        let inf = if neg then Minus_infinity else Plus_infinity in
-        let max_fin = Finite (if neg then Q.minus max_q else max_q) in
-        let module RM = Dolmen.Std.Builtin.Float in
-        match (mode : Fpa_rounding.rounding_mode) with
-        | RM.RoundNearestTiesToEven | RM.RoundNearestTiesToAway -> inf
-        | RM.RoundTowardPositive -> if neg then max_fin else inf
-        | RM.RoundTowardNegative -> if neg then inf else max_fin
-        | RM.RoundTowardZero -> max_fin
+        let max_q = max_finite_q ~eb ~sb in
+        if Q.compare (Q.abs res) max_q <= 0
+        then Finite res
+        else
+          (* Overflow: the result is either an infinity or the largest finite
+             value of the right sign, depending on the rounding mode. *)
+          let inf = if neg then Minus_infinity else Plus_infinity in
+          let max_fin = Finite (if neg then Q.minus max_q else max_q) in
+          let module RM = Dolmen.Std.Builtin.Float in
+          match (mode : Fpa_rounding.rounding_mode) with
+          | RM.RoundNearestTiesToEven | RM.RoundNearestTiesToAway -> inf
+          | RM.RoundTowardPositive -> if neg then max_fin else inf
+          | RM.RoundTowardNegative -> if neg then inf else max_fin
+          | RM.RoundTowardZero -> max_fin
 
 let to_integer mode = function
   | Plus_zero | Minus_zero -> Some Numbers.Z.zero
