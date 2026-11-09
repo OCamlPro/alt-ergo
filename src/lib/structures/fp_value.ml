@@ -67,15 +67,15 @@ let pp ppf = function
   | Finite q -> Fmt.pf ppf "fp[%s]" (hex_of_q q)
 
 (* bias = 2^(eb-1) - 1 *)
-let fp_bias eb = (1 lsl (eb - 1)) - 1
+let bias ~eb = (1 lsl (eb - 1)) - 1
 
 (* min_exp = bias + sb - 2 *)
-let fp_min_exp eb sb = fp_bias eb + sb - 2
+let min_exp ~eb ~sb = bias ~eb + sb - 2
 
 (* rational value -> (neg, biased_exp, significand) *)
 let q_to_bvs ~eb ~sb q =
-  let bias = fp_bias eb in
-  let min_exp = fp_min_exp eb sb in
+  let bias = bias ~eb in
+  let min_exp = min_exp ~eb ~sb in
   let neg = Q.sign q < 0 in
   let a = Q.abs q in
   (* q is decoded from a float literal: |q| = n / 2^k. (m, e) with m*2^e = |q|,
@@ -120,7 +120,7 @@ let pp_smtlib ~eb ~sb ppf = function
 
 (* (neg, biased_exp, significand) -> rational value *)
 let bvs_to_q ~neg ~biased_exp ~mantissa eb sb =
-  let bias = fp_bias eb in
+  let bias = bias ~eb in
   let significand_full, exp_shift =
     if biased_exp > 0
     then
@@ -130,7 +130,7 @@ let bvs_to_q ~neg ~biased_exp ~mantissa eb sb =
     else
       (* subnormal: significand_full = mantissa (no hidden bit), exp_shift = 1 -
          bias - (sb-1) = -min_exp (fixed actual_exp) *)
-      mantissa, -fp_min_exp eb sb
+      mantissa, -min_exp ~eb ~sb
   in
   (* significand_full * 2^exp_shift *)
   let abs_q =
@@ -170,11 +170,11 @@ let to_bits ~eb ~sb = function
 (* Largest finite value of the format (eb, sb): 2^emax - 2^(emax - sb). *)
 let max_finite_q ~eb ~sb =
   let pow2_q = Fpa_rounding.mult_x_by_2_pow_n Q.one in
-  let emax = fp_bias eb + 1 in
+  let emax = bias ~eb + 1 in
   Q.sub (pow2_q emax) (pow2_q (emax - sb))
 
 (* Smallest positive normal value: 2^(1 - bias). *)
-let min_normal_q ~eb = Fpa_rounding.mult_x_by_2_pow_n Q.one (1 - fp_bias eb)
+let min_normal_q ~eb = Fpa_rounding.mult_x_by_2_pow_n Q.one (1 - bias ~eb)
 
 (* [Finite q] is never zero. *)
 let is_normal ~eb = function
@@ -191,7 +191,7 @@ let of_q ?(neg_zero = false) ~eb ~sb mode q =
   else
     let neg = Q.sign q < 0 in
     let res, _, _ =
-      Fpa_rounding.float_of_rational sb (fp_min_exp eb sb) mode q
+      Fpa_rounding.float_of_rational sb (min_exp ~eb ~sb) mode q
     in
     if Q.sign res = 0
     then if neg then Minus_zero else Plus_zero
@@ -199,7 +199,7 @@ let of_q ?(neg_zero = false) ~eb ~sb mode q =
       (* [res] has [sb] significant bits, so it overflows iff [|res| >= 2^emax];
          [floor(log2 |res|) <= numbits(num) - numbits(den)] skips computing
          [max_q] in most cases. *)
-      let emax = fp_bias eb + 1 in
+      let emax = bias ~eb + 1 in
       if Z.numbits (Q.num res) - Z.numbits (Q.den res) < emax
       then Finite res
       else
@@ -349,7 +349,7 @@ let sqrt ~eb ~sb mode = function
   | Minus_infinity -> NaN
   | Finite q when Q.sign q < 0 -> NaN
   | Finite q ->
-    let k = fp_min_exp eb sb + 2 in
+    let k = min_exp ~eb ~sb + 2 in
     let n = Q.to_z (Q.mult_2exp q (2 * k)) in
     let s = Z.sqrt n in
     let r =

@@ -1157,3 +1157,77 @@ With a literal [y], the remainder is [x - y * n] for the integer [n] nearest to
   > EOF
   
   unsat
+
+Floats are discrete: nothing lies strictly between two consecutive floats.
+Reasoning only through [to_real] leaves an open real interval, so these were
+answered [unknown]; [Fpa_rel] now tightens a strict bound to the adjacent float.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
+  > (assert (fp.lt x (fp #b0 #b01111111 #b00000000000000000000001)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+The same through [fp.leq] with the endpoint excluded.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (not (fp.leq x (fp #b0 #b01111111 #b00000000000000000000000))))
+  > (assert (fp.leq x (fp #b0 #b01111111 #b00000000000000000000001)))
+  > (assert (not (fp.eq x (fp #b0 #b01111111 #b00000000000000000000001))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+With a float in between (two ulps above 1.0) the bound must not collapse.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
+  > (assert (fp.lt x (fp #b0 #b01111111 #b00000000000000000000010)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+
+Exact operations: the products by powers of two in range.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isNormal x))
+  > (assert (fp.lt (fp.abs x) ((_ to_fp 8 24) RNE 1000.0)))
+  > (assert (not (fp.eq (fp.div RNE (fp.mul RNE x ((_ to_fp 8 24) RNE 4.0))
+  >                             ((_ to_fp 8 24) RNE 4.0)) x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+The remainder: a zero has the sign of [x].
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (declare-const y Float32)
+  > (assert (fp.isNegative x))
+  > (assert (fp.isNormal x))
+  > (assert (fp.isNormal y))
+  > (assert (fp.isZero (fp.rem x y)))
+  > (assert (fp.isPositive (fp.rem x y)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
