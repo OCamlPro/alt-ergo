@@ -1231,3 +1231,179 @@ The remainder: a zero has the sign of [x].
   
   unsat
 
+Models only contain the user's symbols
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const r Real)
+  > (assert (< (fp.to_real ((_ to_fp 8 24) RNE 1.5)) r))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun r () Real (/ 5 2))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const r Real)
+  > (assert (= r 0.1))
+  > (assert (fp.isNormal ((_ to_fp 8 24) RNE r)))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun r () Real (/ 1 10))
+  )
+
+Model generation gives each float a literal
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (assert (< 1.0 (fp.to_real x)))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 8 24)
+     (fp #b0 #b10000000 #b00000000000000000000000))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 11 53))
+  > (assert (= (fp.to_real x) 0.75))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 11 53)
+     (fp #b0 #b01111111110 #b1000000000000000000000000000000000000000000000000000))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (declare-const m RoundingMode)
+  > (assert (= y (fp.add m x x)))
+  > (assert (fp.isInfinite x))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 8 24) (_ -oo 8 24))
+    (define-fun y () (_ FloatingPoint 8 24) (_ -oo 8 24))
+    (define-fun m () RoundingMode RTN)
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (fp.isNaN x))
+  > (assert (fp.isNegative y))
+  > (assert (fp.isZero y))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 8 24) (_ NaN 8 24))
+    (define-fun y () (_ FloatingPoint 8 24) (_ -zero 8 24))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (declare-const z (_ FloatingPoint 8 24))
+  > (assert (not (or (fp.isZero x) (fp.isNaN x) (fp.isInfinite x))))
+  > (assert (not (or (fp.isZero y) (fp.isNaN y) (fp.isInfinite y))))
+  > (assert (not (or (fp.isZero z) (fp.isNaN z) (fp.isInfinite z))))
+  > (assert (distinct x y z))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 8 24)
+     (fp #b1 #b01111111 #b00000000000000000000000))
+    (define-fun y () (_ FloatingPoint 8 24)
+     (fp #b1 #b10000000 #b00000000000000000000000))
+    (define-fun z () (_ FloatingPoint 8 24)
+     (fp #b1 #b10000000 #b10000000000000000000000))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (not (fp.isNaN x)))
+  > (assert (not (fp.eq x y)))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 8 24) (_ -oo 8 24))
+    (define-fun y () (_ FloatingPoint 8 24) (_ NaN 8 24))
+  )
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 5 11))
+  > (declare-const y (_ FloatingPoint 5 11))
+  > (assert (fp.lt x y))
+  > (assert (fp.lt (fp #b0 #b01111 #b0000000000) x))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 5 11) (fp #b0 #b01111 #b0000000001))
+    (define-fun y () (_ FloatingPoint 5 11) (_ +oo 5 11))
+  )
+
+When every literal is known to be distinct from a float, model generation
+proposes one anyway so that the search backtracks, instead of leaving the
+float without a value. This query used to crash, now it times out.
+
+  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 3 5))
+  > (declare-const y (_ FloatingPoint 3 5))
+  > (declare-const z (_ FloatingPoint 3 5))
+  > (assert (fp.leq (fp #b0 #b010 #b1111) x))
+  > (assert (not (fp.isNaN x)))
+  > (assert (fp.leq (fp #b0 #b101 #b0011) y))
+  > (assert (not (fp.isNaN y)))
+  > (assert (fp.leq z (fp #b1 #b110 #b0000)))
+  > (assert (not (fp.isNaN z)))
+  > (assert (not (fp.isInfinite (fp.roundToIntegral RNA x))))
+  > (check-sat)
+  > (get-model)
+  > EOF
+  
+  unknown
+  (
+    (define-fun x () (_ FloatingPoint 3 5) (fp #b0 #b010 #b1111))
+    (define-fun y () (_ FloatingPoint 3 5) (_ +oo 3 5))
+    (define-fun z () (_ FloatingPoint 3 5) (_ -oo 3 5))
+  )
+

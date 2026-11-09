@@ -3305,6 +3305,12 @@ module FP = struct
     let abs_err_denom = "ae.fp.abs_err_denom"
   end
 
+  let is_prelude_symbol = function
+    | Sy.Op (Float | FloatEbSb) -> true
+    | Sy.Name { hs; _ } ->
+      Compat.String.starts_with ~prefix:"ae.fp." (Hstring.view hs)
+    | _ -> false
+
   let is_bv_literal t =
     match t.f, t.xs with Sy.Bitv _, [] -> true | _ -> false
 
