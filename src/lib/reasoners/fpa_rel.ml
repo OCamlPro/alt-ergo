@@ -241,7 +241,7 @@ let real_of_int t = E.mk_term (Sy.Op Sy.Real_of_int) [t] Ty.Treal
 (* [to_real term] for a finite [term = fp neg biased_exp m], linear in [bv2nat
    m]. *)
 let of_bits_to_real eb sb term ~neg ~biased_exp m =
-  let bias = (1 lsl (eb - 1)) - 1 in
+  let bias = Fp_value.bias ~eb in
   let significand, k =
     if biased_exp > 0
     then
@@ -342,9 +342,9 @@ let of_bv_int_overflow term =
 
 let is_fpa_ty = function Ty.Tfloat _ -> true | _ -> false
 
-let r_true () = fst (X.make E.vrai)
+let r_true () = X.top
 
-let r_false () = fst (X.make E.faux)
+let r_false () = X.bot
 
 (* The predicates of the FPA prelude, read from the union-find. *)
 module Pred = struct
@@ -467,8 +467,46 @@ module Cls = struct
           | None -> None)
         Pred.all
 
-  (* IEEE 754 on non-NaN classes, in any rounding mode. *)
-  let add a b =
+  (* What rounding in [mode] allows for a result of sign [neg] (IEEE 754): an
+     exact zero sum of opposite signs is [-0] only in RTN, an overflow gives an
+     infinity unless it rounds toward zero, and a nonzero result can round to
+     zero unless it rounds away from it. *)
+  let zero_sum mode =
+    let module RM = Dolmen.Std.Builtin.Float in
+    match (mode : Fpa_rounding.rounding_mode option) with
+    | Some RM.RoundTowardNegative -> some [zero] true
+    | Some _ -> some [zero] false
+    | None -> both zero
+
+  let overflows mode neg =
+    let module RM = Dolmen.Std.Builtin.Float in
+    match (mode : Fpa_rounding.rounding_mode option) with
+    | None | Some (RM.RoundNearestTiesToEven | RoundNearestTiesToAway) -> true
+    | Some RM.RoundTowardPositive -> not neg
+    | Some RM.RoundTowardNegative -> neg
+    | Some RM.RoundTowardZero -> false
+
+  let underflows mode neg =
+    let module RM = Dolmen.Std.Builtin.Float in
+    match (mode : Fpa_rounding.rounding_mode option) with
+    | None
+    | Some (RM.RoundNearestTiesToEven | RoundNearestTiesToAway | RoundTowardZero)
+      ->
+      true
+    | Some RM.RoundTowardPositive -> neg
+    | Some RM.RoundTowardNegative -> not neg
+
+  (* Rounded result of sign [neg] of an operation on nonzero finite values. *)
+  let rounded mode ~can_be_zero neg =
+    some
+      (List.concat
+         [ (if can_be_zero && underflows mode neg then [zero] else []);
+           [sub; norm];
+           (if overflows mode neg then [inf] else []) ])
+      neg
+
+  (* IEEE 754 on non-NaN classes, in [mode] if known, any mode otherwise. *)
+  let add mode a b =
     let same = Bool.equal (neg a) (neg b) and ma = mag a and mb = mag b in
     if ma = inf && mb = inf
     then bit (if same then a else nan)
@@ -477,12 +515,12 @@ module Cls = struct
     else if mb = inf || (ma = zero && mb <> zero)
     then bit b
     else if ma = zero
-    then if same then bit a else both zero
+    then if same then bit a else zero_sum mode
     else if same
-    then some [sub; norm; inf] (neg a)
-    else both zero lor both sub lor both norm
+    then rounded mode ~can_be_zero:false (neg a)
+    else zero_sum mode lor both sub lor both norm
 
-  let mul s a b =
+  let mul mode s a b =
     let ma = mag a and mb = mag b in
     if (ma = inf && mb = zero) || (ma = zero && mb = inf)
     then bit nan
@@ -490,9 +528,9 @@ module Cls = struct
     then some [inf] s
     else if ma = zero || mb = zero
     then some [zero] s
-    else some [zero; sub; norm; inf] s
+    else rounded mode ~can_be_zero:true s
 
-  let div s a b =
+  let div mode s a b =
     let ma = mag a and mb = mag b in
     if ma = mb && (ma = inf || ma = zero)
     then bit nan
@@ -500,7 +538,46 @@ module Cls = struct
     then some [inf] s
     else if ma = zero || mb = inf
     then some [zero] s
-    else some [zero; sub; norm; inf] s
+    else rounded mode ~can_be_zero:true s
+
+  (* [round(a * b + c)]: the product is exact, so only the sum rounds. *)
+  let fma mode a b c =
+    let s = not (Bool.equal (neg a) (neg b)) in
+    let ma = mag a and mb = mag b in
+    if (ma = inf && mb = zero) || (ma = zero && mb = inf)
+    then bit nan
+    else if ma = inf || mb = inf
+    then add mode (mk inf s) c
+    else if ma = zero || mb = zero
+    then add mode (mk zero s) c
+    else if mag c = inf
+    then bit c
+    else if mag c = zero
+    then rounded mode ~can_be_zero:true s
+    else if Bool.equal (neg c) s
+    then
+      (* [|a * b + c| > |c|], which is a float: no rounding to zero. *)
+      rounded mode ~can_be_zero:false s
+    else
+      (* An exact cancellation, or a nonzero sum of either sign, which can be
+         below the smallest subnormal value. *)
+      zero_sum mode
+      lor rounded mode ~can_be_zero:true true
+      lor rounded mode ~can_be_zero:true false
+
+  (* IEEE 754 remainder [a - b * n], [n] the integer nearest to [a / b]: exact,
+     of magnitude at most [|a|] and [|b| / 2], and a zero has the sign of
+     [a]. *)
+  let rem a b =
+    let ma = mag a and mb = mag b in
+    if ma = inf || mb = zero
+    then bit nan
+    else if mb = inf || ma = zero
+    then bit a
+    else
+      some [zero] (neg a)
+      lor both sub
+      lor if ma = sub || mb = sub then 0 else both norm
 
   (* NaN is ignored, the zeros are unspecified. *)
   let min_max ~is_min a b =
@@ -510,31 +587,51 @@ module Cls = struct
     then bit a lor if b = nan then 0 else bit b
     else bit (if Bool.equal (key a < key b) is_min then a else b)
 
-  (* Classes of [name(args)] for the classes [args] of its float arguments. *)
-  let transfer name args =
+  (* [transfer name mode] gives the classes of [name(args)] for the classes
+     [args] of its float arguments, in the rounding [mode] if known. The
+     operator is resolved once, before [narrow] enumerates the combinations. *)
+  let transfer name mode =
     let is = String.equal name in
     let xor a b = not (Bool.equal (neg a) (neg b)) in
-    match args with
-    | [a; b] when is Names.min -> min_max ~is_min:true a b
-    | [a; b] when is Names.max -> min_max ~is_min:false a b
-    | _ when List.mem nan args -> bit nan
-    | [a] when is Names.neg -> bit (7 - a)
-    | [a] when is Names.abs -> bit (mk (mag a) false)
-    | [a] when is Names.sqrt ->
-      if mag a = zero || (mag a = inf && not (neg a))
-      then bit a
-      else if neg a
-      then bit nan
-      else some [sub; norm] false
-    | [a] when is Names.round_to_integral ->
-      if mag a = zero || mag a = inf
-      then bit a
-      else some [zero; norm; inf] (neg a)
-    | [a; b] when is Names.add -> add a b
-    | [a; b] when is Names.sub -> add a (7 - b)
-    | [a; b] when is Names.mul -> mul (xor a b) a b
-    | [a; b] when is Names.div -> div (xor a b) a b
-    | _ -> all
+    (* NaN in, NaN out, except for [min] and [max]. *)
+    let strict f args = if List.mem nan args then bit nan else f args in
+    if is Names.min
+    then function [a; b] -> min_max ~is_min:true a b | _ -> all
+    else if is Names.max
+    then function [a; b] -> min_max ~is_min:false a b | _ -> all
+    else if is Names.neg
+    then strict (function [a] -> bit (7 - a) | _ -> all)
+    else if is Names.abs
+    then strict (function [a] -> bit (mk (mag a) false) | _ -> all)
+    else if is Names.sqrt
+    then
+      strict (function
+        | [a] ->
+          if mag a = zero || (mag a = inf && not (neg a))
+          then bit a
+          else if neg a
+          then bit nan
+          else some [sub; norm] false
+        | _ -> all)
+    else if is Names.round_to_integral
+    then
+      strict (function
+        | [a] ->
+          if mag a = zero || mag a = inf
+          then bit a
+          else some [zero; norm; inf] (neg a)
+        | _ -> all)
+    else if is Names.add
+    then strict (function [a; b] -> add mode a b | _ -> all)
+    else if is Names.sub
+    then strict (function [a; b] -> add mode a (7 - b) | _ -> all)
+    else if is Names.mul
+    then strict (function [a; b] -> mul mode (xor a b) a b | _ -> all)
+    else if is Names.div
+    then strict (function [a; b] -> div mode (xor a b) a b | _ -> all)
+    else if is Names.fma
+    then strict (function [a; b; c] -> fma mode a b c | _ -> all)
+    else strict (fun _ -> all)
 
   (* Truth values of [name(a, b)], as a mask: [1] for false, [2] for true. *)
   let compare name a b =
@@ -550,20 +647,155 @@ module Cls = struct
   (* Narrows [res], the results of [op] on [args], and [args] to the
      combinations of classes of [args] whose result is in [res]. *)
   let narrow op res args =
-    let sup = Array.make (List.length args) 0 and res' = ref 0 in
-    let rec go cs = function
+    let rec aux acc classes = function
       | [] ->
-        let cs = List.rev cs in
-        let r = op cs land res in
-        if r <> 0
-        then (
-          res' := !res' lor r;
-          List.iteri (fun i c -> sup.(i) <- sup.(i) lor bit c) cs)
-      | m :: ms -> List.iter (fun c -> go (c :: cs) ms) (elements m)
+        let result, supports = acc in
+        let classes = List.rev classes in
+        let r = op classes land res in
+        if r = 0
+        then acc
+        else result lor r, List.map2 (fun s c -> s lor bit c) supports classes
+      | mask :: masks ->
+        List.fold_left
+          (fun acc c -> aux acc (c :: classes) masks)
+          acc (elements mask)
     in
-    go [] args;
-    !res', Array.to_list sup
+    aux (0, List.map (fun _ -> 0) args) [] args
 end
+
+(* Real value of the representable float adjacent to the finite literal [v]: the
+   one above when [up], below otherwise. [None] when that neighbour is not
+   finite (e.g. [v] NaN, infinite, or the largest finite float). *)
+let next_float_q ~eb ~sb ~up v =
+  match Fp_value.to_bits ~eb ~sb v with
+  | None -> None
+  | Some (sign, bexp, mant) ->
+    if bexp >= (1 lsl eb) - 1
+    then None
+    else
+      let p = Z.shift_left Z.one (sb - 1) in
+      (* [key] numbers the floats in increasing order: neighbours are [+/-1]. *)
+      let m = Z.add (Z.mult (Z.from_int bexp) p) mant in
+      let key = if sign then Z.minus m else m in
+      let key = if up then Z.add key Z.one else Z.sub key Z.one in
+      let sign, mm =
+        if Z.sign key >= 0 then false, key else true, Z.minus key
+      in
+      let bexp = z_to_int (Z.div mm p) in
+      if bexp >= (1 lsl eb) - 1
+      then None
+      else
+        Fp_value.to_q
+          (Fp_value.mk_fp_literal ~neg:sign ~biased_exp:bexp
+             ~mantissa:(Z.rem mm p) ~eb ~sb)
+
+(* [term = lt/le(x, y)] with a literal operand [k]: a finite float strictly
+   above (below) [k] is at least (most) the next (previous) float. *)
+let discreteness_lemmas term rep_x rep_y =
+  match E.term_view term with
+  | { E.f = Sy.Name { hs; _ }; xs = [_; _; xt; yt]; _ }
+    when let n = Hstring.view hs in
+         String.equal n Names.lt || String.equal n Names.le -> (
+    let is_lt = String.equal (Hstring.view hs) Names.lt in
+    let eb, sb = float_format xt in
+    (* The clause applies when the comparison is strict: [lt] or [not le]. *)
+    let guard = if is_lt then E.neg term else term in
+    let bound sym k ~above =
+      match next_float_q ~eb ~sb ~up:above k with
+      | None -> []
+      | Some q ->
+        let r = E.FP.to_real ~eb ~sb sym in
+        let qc = E.Reals.of_Q q in
+        let cmp = if above then E.Reals.(qc <= r) else E.Reals.(r <= qc) in
+        [mk_clause [guard; E.neg (E.FP.is_finite ~eb ~sb sym); cmp]]
+    in
+    match get_fp_value rep_x, get_fp_value rep_y with
+    | Some (vx, _), None ->
+      (* [cmp(k, y)] strict: [lt] puts [y] above [k], [not le] below it. *)
+      bound yt vx ~above:is_lt
+    | None, Some (vy, _) ->
+      (* [cmp(x, k)] strict: [lt] puts [x] below [k], [not le] above it. *)
+      bound xt vy ~above:(not is_lt)
+    | _ -> [])
+  | _ -> []
+
+(* [Some k] if [q = +/-2^k]. *)
+let pow2_exponent q =
+  let is_pow2 z = Z.equal z (Z.shift_left Z.one (Z.numbits z - 1)) in
+  let n = Q.num (Q.abs q) and d = Q.den q in
+  if
+    Q.sign q <> 0
+    && is_pow2 n && is_pow2 d
+    && (Z.equal n Z.one || Z.equal d Z.one)
+  then Some (Z.numbits n - Z.numbits d)
+  else None
+
+(* Lemmas for the cases where [term] is exact (not rounded):
+
+   - [c * x] for a power of two [c], when [|c * x| <= max] if [|c| >= 1], or
+   when [|c * x|] is normal if [|c| < 1]
+
+   - [x + 0], [0 + x] and [x - 0] are [x], for a nonzero [x]. *)
+let exact_lemmas term =
+  match E.term_view term with
+  | { E.f = Sy.Name { hs; _ };
+      xs = [_; _; _; x; y];
+      ty = Ty.Tfloat (eb, sb);
+      _
+    } -> (
+    let name = Hstring.view hs in
+    let fin t = E.FP.is_finite ~eb ~sb t in
+    let zero t = E.FP.is_zero ~eb ~sb t in
+    let real t = E.FP.to_real ~eb ~sb t in
+    let rt = real term in
+    let between lo v hi = E.mk_and E.Reals.(lo <= v) E.Reals.(v <= hi) false in
+    (* [cond -> term] is finite and its [to_real] is [value]. *)
+    let exact guards cond value =
+      let guards = List.map E.neg (cond :: guards) in
+      [ mk_clause (guards @ [fin term]);
+        mk_clause (guards @ [E.mk_eq ~iff:false rt value]) ]
+    in
+    let with_zero a b =
+      (* [a op b] with [b] zero and [a] nonzero is [a]. *)
+      mk_clause [E.neg (zero b); zero a; E.mk_eq ~iff:false term a]
+    in
+    let scaled lit v =
+      (* [term = c * v] for a literal [c = +/-2^k]. *)
+      match E.FP.float_view lit with
+      | Some (Fp_value.Finite c) -> (
+        match pow2_exponent c with
+        | Some k ->
+          let cv = E.Reals.(of_Q c * real v) in
+          let cond =
+            if k >= 0
+            then
+              let m = Fp_value.max_finite_q ~eb ~sb in
+              between E.Reals.(of_Q (Q.minus m)) cv E.Reals.(of_Q m)
+            else
+              let mn = Fp_value.min_normal_q ~eb in
+              E.mk_or
+                E.Reals.(cv <= of_Q (Q.minus mn))
+                E.Reals.(of_Q mn <= cv)
+                false
+          in
+          exact [fin v] cond cv
+        | None -> [])
+      | Some _ | None -> []
+    in
+    let inv lit =
+      match E.FP.float_view lit with
+      | Some (Fp_value.Finite c) when Option.is_some (pow2_exponent c) ->
+        Some (E.float (Fp_value.Finite (Q.inv c)) eb sb)
+      | Some _ | None -> None
+    in
+    match name with
+    | _ when String.equal name Names.sub -> [with_zero x y]
+    | _ when String.equal name Names.add -> [with_zero x y; with_zero y x]
+    | _ when String.equal name Names.mul -> scaled y x @ scaled x y
+    | _ when String.equal name Names.div -> (
+      match inv y with Some c -> scaled c x | None -> [])
+    | _ -> [])
+  | _ -> []
 
 (* Evaluation of the conversions of [conv_kind] once their arguments are
    constants.
@@ -885,35 +1117,6 @@ module Conv_watch = struct
           eb sb ]
     | _ -> []
 
-  (* [term = rem(x, y)] with [y] equal to a nonzero finite literal [c]: [term]
-     is exactly [x - c * n], with [n = integer_round(NearestTiesToEven, x / c)].
-     Guarded by [y = c] so that it holds as a lemma. *)
-  let rem_lemmas term rep_y =
-    match E.term_view term, get_fp_value rep_y with
-    | { E.xs = [x; y]; ty = Ty.Tfloat (eb, sb); _ }, Some ((Finite c as v), _)
-      ->
-      let rne =
-        E.mk_constr
-          (Fpa_rounding.term_cst_of_rounding_mode RoundNearestTiesToEven)
-          [] Fpa_rounding.fpa_rounding_mode
-      in
-      let rx = E.FP.to_real ~eb ~sb x in
-      let n =
-        E.mk_term (Sy.Op Sy.Integer_round)
-          [rne; E.Reals.(rx * of_Q (Q.inv c))]
-          Ty.Tint
-      in
-      let value =
-        E.mk_eq ~iff:false
-          (E.FP.to_real ~eb ~sb term)
-          E.Reals.(rx - (of_Q c * real_of_int n))
-      in
-      [ mk_clause
-          [ E.neg (E.mk_eq ~iff:false y (E.float v eb sb));
-            E.neg (E.FP.is_finite ~eb ~sb x);
-            value ] ]
-    | _ -> []
-
   let ex_of l = List.fold_left (fun acc (_, ex) -> Ex.union acc ex) Ex.empty l
 
   (* Bits of [term = fp s e m], from the predicates known on [term]. *)
@@ -999,20 +1202,71 @@ module Conv_watch = struct
       | Some _ | None -> [])
     | _ -> assert false
 
-  (* Propagates the classes between [term = op(args)] and its float arguments
-     (see [Cls]), for the operators of kind [Eval]. *)
+  (* Narrows the classes of [term = op(args)] and of [args] with [transfer],
+     which holds under [ex]. *)
+  let propagate_classes uf ex term args transfer =
+    let floats = term :: args in
+    let ms, exs = List.split (List.map (Cls.of_preds uf) floats) in
+    let ex = List.fold_left Ex.union ex exs in
+    let res, ms' = Cls.narrow transfer (List.hd ms) (List.tl ms) in
+    List.concat (List.map2 (Cls.facts uf ex) floats (res :: ms'))
+
+  (* For a finite [x] and a literal [y = c], [rem(x, y) = x - nc], where [n] is
+     the integer nearest to [x / c] (ties to even). *)
+  let rem_lemmas term rep_y =
+    match E.term_view term, get_fp_value rep_y with
+    | { E.xs = [x; y]; ty = Ty.Tfloat (eb, sb); _ }, Some ((Finite c as v), _)
+      ->
+      let rne =
+        E.mk_constr
+          (Fpa_rounding.term_cst_of_rounding_mode RoundNearestTiesToEven)
+          [] Fpa_rounding.fpa_rounding_mode
+      in
+      let rx = E.FP.to_real ~eb ~sb x in
+      let n =
+        E.mk_term (Sy.Op Sy.Integer_round)
+          [rne; E.Reals.(rx * of_Q (Q.inv c))]
+          Ty.Tint
+      in
+      let value =
+        E.mk_eq ~iff:false
+          (E.FP.to_real ~eb ~sb term)
+          E.Reals.(rx - (of_Q c * real_of_int n))
+      in
+      [ mk_clause
+          [ E.neg (E.mk_eq ~iff:false y (E.float v eb sb));
+            E.neg (E.FP.is_finite ~eb ~sb x);
+            value ] ]
+    | _ -> []
+
+  (* Propagates the classes between [term = op(args)] and its float arguments,
+     for the operators of kind [Eval]. *)
   let op_classes uf term =
     match E.term_view term with
     | { E.f = Sy.Name { hs; _ }; xs = _ :: _ :: xs; _ } ->
-      let floats =
-        term :: List.filter (fun x -> is_fpa_ty (E.type_info x)) xs
+      let mode, ex_mode =
+        match
+          List.find_opt
+            (fun x -> Ty.equal (E.type_info x) Fpa_rounding.fpa_rounding_mode)
+            xs
+        with
+        | Some m -> known_mode (Uf.find uf m)
+        | None -> None, Ex.empty
       in
-      let ms, exs = List.split (List.map (Cls.of_preds uf) floats) in
-      let ex = List.fold_left Ex.union Ex.empty exs in
-      let res, ms' =
-        Cls.narrow (Cls.transfer (Hstring.view hs)) (List.hd ms) (List.tl ms)
-      in
-      List.concat (List.map2 (Cls.facts uf ex) floats (res :: ms'))
+      propagate_classes uf ex_mode term
+        (List.filter (fun x -> is_fpa_ty (E.type_info x)) xs)
+        (Cls.transfer (Hstring.view hs) mode)
+    | _ -> []
+
+  (* Propagates the classes between [term = rem(x, y)] and [x] and [y] (see
+     [Cls.rem]); its value is given by [rem_lemmas]. *)
+  let rem_classes uf term =
+    match E.term_view term with
+    | { E.xs = [x; y]; _ } ->
+      propagate_classes uf Ex.empty term [x; y] (function
+        | [a; b] ->
+          if a = Cls.nan || b = Cls.nan then Cls.bit Cls.nan else Cls.rem a b
+        | _ -> Cls.all)
     | _ -> []
 
   (* [term = to_real x]: the real value of a known [x], none for NaN and the
@@ -1198,8 +1452,9 @@ module Conv_watch = struct
       | Eval, Ops args -> eval_op term args @ op_classes uf term, []
       | To_real, Ops [x] ->
         to_real_value app.r x @ to_real_extensionality uf t term app.r x, []
-      | Cmp, Ops [x; y] -> compare_rules uf term app.r x y, []
-      | Rem, Ops [x; y] -> rem term x y, rem_lemmas term y
+      | Cmp, Ops [x; y] ->
+        compare_rules uf term app.r x y, discreteness_lemmas term x y
+      | Rem, Ops [x; y] -> rem term x y @ rem_classes uf term, rem_lemmas term y
       | _ -> assert false
     in
     let t = watch_preds uf term app.kind t in
@@ -1242,8 +1497,8 @@ module Conv_watch = struct
         | Of_int ->
           let facts = List.map (lit_fact Ex.empty) (of_bv_int_facts term) in
           { t with facts = facts @ t.facts }
-        | Of_bits | Of_real | To_int | To_fp | To_bv _ | Eval | To_real | Cmp
-        | Rem ->
+        | Eval -> { t with lemmas = exact_lemmas term @ t.lemmas }
+        | Of_bits | Of_real | To_int | To_fp | To_bv _ | To_real | Cmp | Rem ->
           t
       in
       apply_conv_rules uf term app t
@@ -1271,13 +1526,17 @@ module Conv_watch = struct
           (fun term apps -> E.Map.update term (Option.map update_reps) apps)
           terms t.apps
       in
-      (* All the applications on [nrr] rerun, for the rules that relate two
-         applications. *)
+      (* Rerun the applications on [nrr] too, for the rules relating two
+         applications, unless [nrr] is [true] or [false]: these rules only
+         compare floats and reals. *)
       let on_nrr = E.Set.union terms (watchers nrr t) in
+      let rerun =
+        if Ty.equal (X.type_info nrr) Ty.Tbool then terms else on_nrr
+      in
       { t with
         apps;
         watched = MX.add nrr on_nrr (MX.remove rr t.watched);
-        dirty = E.Set.union on_nrr t.dirty
+        dirty = E.Set.union rerun t.dirty
       }
 
   (* Reruns the dirty applications and returns the pending facts and lemmas. *)
@@ -1374,16 +1633,10 @@ let zero_literal_fact eb sb (terms, facts) =
   ( E.Set.add lhs terms,
     mk_eq_fact ~ex:Ex.empty lhs (E.float Fp_value.Plus_zero eb sb) :: facts )
 
-let compute_emax_min_exp eb sb =
-  let bias = (1 lsl (eb - 1)) - 1 in
-  let emax = bias + 1 in
-  let min_exp = emax + sb - 3 in
-  emax, min_exp
-
 (* The constants of the prelude for the format [(eb, sb)], as facts, sent when
    the format is first seen in the current branch of the search. *)
 let type_literal_facts eb sb =
-  let _, min_exp = compute_emax_min_exp eb sb in
+  let min_exp = Fp_value.min_exp ~eb ~sb in
   let max_real_q = Fp_value.max_finite_q ~eb ~sb in
   let eb_t = E.Ints.of_int eb in
   let sb_t = E.Ints.of_int sb in
@@ -1702,7 +1955,7 @@ let to_bv_definition term ~signed n =
         (E.mk_and E.Ints.(~$$lo <= i) E.Ints.(i < ~$$hi) false)
         false
     in
-    E.mk_imp guard (E.mk_eq ~iff:false term (E.BV.int2bv n i))
+    E.mk_imp guard (E.mk_eq ~iff:false term (E.BV.int_to_bv n i))
   | _ -> assert false
 
 let overflow_name = "fpa_overflow_definition"
@@ -1777,7 +2030,7 @@ let mk_aefloat_eq_fact uf term { AEFloat_arg_watch.eb; sb; mode } =
     let r_mode, ex = Uf.find uf mode in
     (* [mode] is in [ready], so its representative is a literal. *)
     let mode = Option.get (X.to_model_term r_mode) in
-    let _, min_exp = compute_emax_min_exp eb sb in
+    let min_exp = Fp_value.min_exp ~eb ~sb in
     let repl =
       E.mk_term (Sy.Op Float)
         [E.Ints.of_int sb; E.Ints.of_int min_exp; mode; x]
