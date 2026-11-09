@@ -176,18 +176,6 @@ predicate is_minus_zero(eb: int, sb: int, x: 't) =
 predicate is_not_nan(eb: int, sb: int, x: 't) =
   is_finite(eb, sb, x) or is_infinite(eb, sb, x)
 
-axiom is_not_nan :
-  forall eb, sb: int, x: 't
-    [is_finite(eb, sb, x) | is_infinite(eb, sb, x) | is_nan(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    is_not_nan(eb, sb, x) <-> not is_nan(eb, sb, x)
-
-axiom is_not_finite :
-  forall eb, sb: int, x: 't
-    [is_finite(eb, sb, x) | is_infinite(eb, sb, x) | is_nan(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    not is_finite(eb, sb, x) <-> (is_infinite(eb, sb, x) or is_nan(eb, sb, x))
-
 (** {3 Conversions from other sorts} *)
 
 (* from bitvec binary interchange                           *)
@@ -382,11 +370,6 @@ axiom eq_feq :
   1 < eb and 1 < sb ->
     is_finite(eb, sb, x) -> is_finite(eb, sb, y) -> x = y -> eq(eb, sb, x, y)
 
-axiom eq_refl :
-  forall eb, sb: int, x: 't [is_finite(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    is_finite(eb, sb, x) -> eq(eb, sb, x, x)
-
 axiom eq_sym :
   forall eb, sb: int, x, y: 't [eq(eb, sb, x, y)].
   1 < eb and 1 < sb ->
@@ -485,42 +468,20 @@ axiom lt_lt_finite :
 axiom positive_to_real :
   forall eb, sb: int, x: 't [is_positive(eb, sb, x)].
   1 < eb and 1 < sb ->
-    is_finite(eb, sb, x) -> is_positive(eb, sb, x) -> to_real(eb, sb, x) >= 0.0
-axiom to_real_positive :
-  forall eb, sb: int, x: 't [is_positive(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    is_finite(eb, sb, x) -> to_real(eb, sb, x) > 0.0 -> is_positive(eb, sb, x)
+    is_finite(eb, sb, x) ->
+    ((is_positive(eb, sb, x) -> to_real(eb, sb, x) >= 0.0)
+     and (to_real(eb, sb, x) > 0.0 -> is_positive(eb, sb, x)))
 
 axiom negative_to_real :
   forall eb, sb: int, x: 't [is_negative(eb, sb, x)].
   1 < eb and 1 < sb ->
-    is_finite(eb, sb, x) -> is_negative(eb, sb, x) -> to_real(eb, sb, x) <= 0.0
-axiom to_real_negative :
-  forall eb, sb: int, x: 't [is_negative(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    is_finite(eb, sb, x) -> to_real(eb, sb, x) < 0.0 -> is_negative(eb, sb, x)
-
-axiom negative_xor_positive :
-  forall eb, sb: int, x: 't [is_positive(eb, sb, x) | is_negative(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    not (is_positive(eb, sb, x) and is_negative(eb, sb, x))
-axiom negative_or_positive :
-  forall eb, sb: int, x: 't [is_finite(eb, sb, x) | is_infinite(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    is_not_nan(eb, sb, x) -> (is_positive(eb, sb, x) or is_negative(eb, sb, x))
-
-(* lemma *)
-axiom diff_sign_trans :
-  forall eb, sb: int, x, y, z: 't
-    [is_negative(eb, sb, y), is_positive(eb, sb, z), is_positive(eb, sb, x)
-    | is_positive(eb, sb, y), is_negative(eb, sb, z), is_negative(eb, sb, x)].
-  1 < eb and 1 < sb ->
-    (diff_sign(eb, sb, x, y) and diff_sign(eb, sb, y, z)) ->
-    same_sign(eb, sb, x, z)
+    is_finite(eb, sb, x) ->
+    ((is_negative(eb, sb, x) -> to_real(eb, sb, x) <= 0.0)
+     and (to_real(eb, sb, x) < 0.0 -> is_negative(eb, sb, x)))
 
 (* lemma *)
 axiom diff_sign_product :
-  forall eb, sb: int, x, y: 't [is_finite(eb, sb, x), is_finite(eb, sb, y)].
+  forall eb, sb: int, m: RoundingMode, x, y: 't [mul(eb, sb, m, x, y)].
   1 < eb and 1 < sb ->
     (is_finite(eb, sb, x) and is_finite(eb, sb, y)
      and to_real(eb, sb, x) * to_real(eb, sb, y) < 0.0) ->
@@ -528,9 +489,23 @@ axiom diff_sign_product :
 
 (* lemma *)
 axiom same_sign_product :
-  forall eb, sb: int, x, y: 't
-    [is_positive(eb, sb, x), is_positive(eb, sb, y)
-    | is_negative(eb, sb, x), is_negative(eb, sb, y)].
+  forall eb, sb: int, m: RoundingMode, x, y: 't [mul(eb, sb, m, x, y)].
+  1 < eb and 1 < sb ->
+    (is_finite(eb, sb, x) and is_finite(eb, sb, y)
+     and same_sign(eb, sb, x, y)) ->
+    to_real(eb, sb, x) * to_real(eb, sb, y) >= 0.0
+
+(* lemma *)
+axiom diff_sign_product_fma :
+  forall eb, sb: int, m: RoundingMode, x, y, z: 't [fma(eb, sb, m, x, y, z)].
+  1 < eb and 1 < sb ->
+    (is_finite(eb, sb, x) and is_finite(eb, sb, y)
+     and to_real(eb, sb, x) * to_real(eb, sb, y) < 0.0) ->
+    diff_sign(eb, sb, x, y)
+
+(* lemma *)
+axiom same_sign_product_fma :
+  forall eb, sb: int, m: RoundingMode, x, y, z: 't [fma(eb, sb, m, x, y, z)].
   1 < eb and 1 < sb ->
     (is_finite(eb, sb, x) and is_finite(eb, sb, y)
      and same_sign(eb, sb, x, y)) ->
@@ -1022,15 +997,6 @@ axiom of_int_is_int :
   1 < eb and 1 < sb ->
     in_int_range(eb, sb, x) -> is_int(eb, sb, (of_int(eb, sb, m, x) : 't))
 
-axiom big_float_is_int :
-  forall eb, sb: int, m: RoundingMode, i: 't
-    [(of_int(eb, sb, m, pow2sb(eb, sb)) : 't), is_finite(eb, sb, i)].
-  1 < eb and 1 < sb ->
-    is_finite(eb, sb, i) ->
-    (le(eb, sb, i, neg(eb, sb, of_int(eb, sb, m, pow2sb(eb, sb))))
-     or le(eb, sb, of_int(eb, sb, m, pow2sb(eb, sb)), i)) ->
-    is_int(eb, sb, i)
-
 axiom roundToIntegral_is_int :
   forall eb, sb: int, m: RoundingMode, x: 't [roundToIntegral(eb, sb, m, x)].
   1 < eb and 1 < sb ->
@@ -1111,6 +1077,17 @@ axiom truncate_int :
   1 < eb and 1 < sb ->
     is_int(eb, sb, i) ->
     eq(eb, sb, roundToIntegral(eb, sb, m, i), i)
+
+(* For every mode, the result lies between the floor and the ceiling of [x]
+   (the only bound for RNE and RNA). *)
+axiom roundToIntegral_bounds :
+  forall eb, sb: int, m: RoundingMode, x: 't [roundToIntegral(eb, sb, m, x)].
+  1 < eb and 1 < sb ->
+    is_finite(eb, sb, x) ->
+    (real_of_int(int_floor(to_real(eb, sb, x)))
+       <= to_real(eb, sb, roundToIntegral(eb, sb, m, x))
+     and to_real(eb, sb, roundToIntegral(eb, sb, m, x))
+       <= real_of_int(int_ceil(to_real(eb, sb, x))))
 
 (** truncate *)
 
