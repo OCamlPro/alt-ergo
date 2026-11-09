@@ -493,7 +493,7 @@ module type Union = sig
   *)
 
   val to_set : t -> set
-  (** Convert an union to a set. *)
+  (** Convert a union to a set. *)
 
   val map_to_set : ('a interval -> set) -> 'a union -> set
   (** [map_to_set f u] computes the image of [u] by [f].
