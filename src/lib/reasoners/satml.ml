@@ -253,10 +253,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
               SAT solver to decide (see [acts_set_splits]). They do not appear
               in the formulas, but they are relevant, their assignments are sent
               to the theory, and they must be decided before answering [Sat]. *)
-      mutable resend_splits : bool;
-          (** [true] after a backtrack: the restored theory environment may
-              miss the values of the splits that are still assigned, so
-              [acts_set_splits] sends them again. *)
+      th_atoms : unit VH.t;
+          (** Variables of all the case splits given by the theory so far, never
+              cleared. They are in no formula, so the relevancy filter never
+              sends them to the theory: their values are always sent instead,
+              like semantic literals (see [theory_propagate]). *)
       irrelevants : unit VH.t;
           (** Variables that have been removed from the set of possible
               decisions due to no longer being relevant to the original formula
@@ -384,7 +385,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           ~dummy:(Matoms.singleton Atom.faux_atom (MFF.empty, FF.faux));
       stale_splits = false;
       th_splits = VH.create 17;
-      resend_splits = false;
+      th_atoms = VH.create 17;
       irrelevants = VH.create 17;
       relevants = SFF.empty;
       relevants_queue = Vec.make 100 ~dummy:(SFF.singleton FF.faux);
@@ -536,11 +537,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg "[satml] cancel until %d (current is %d)@." lvl
         (decision_level env);
     cancel_ff_lvls_until env lvl;
-    if decision_level env > lvl
-    then begin
-      env.stale_splits <- true;
-      env.resend_splits <- true
-    end;
+    if decision_level env > lvl then env.stale_splits <- true;
     let repush = ref [] in
     if decision_level env > lvl
     then begin
@@ -760,9 +757,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      formulas. *)
   let acts_set_splits env lits =
     env.stale_splits <- false;
-    let resend = env.resend_splits in
-    env.resend_splits <- false;
-    let old = VH.copy env.th_splits in
     VH.clear env.th_splits;
     List.iter
       (fun lit ->
@@ -770,19 +764,27 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         assert (not (is_semantic atom));
         List.iter (fun (v : Atom.var) -> Vec.push env.vars v) new_v;
         VH.replace env.th_splits atom.var ();
+        VH.replace env.th_atoms atom.var ();
         if atom.var.level < 0
         then (
           VH.remove env.irrelevants atom.var;
           insert_var_order env atom.var)
-        else if
-          Options.get_cdcl_tableaux_th ()
-          && (resend || not (VH.mem old atom.var))
-        then
-          (* The split is already assigned, but the relevancy filter may have
-             hidden its value from the theory: send it. *)
-          Queue.push
-            (if atom.is_true then atom else atom.neg)
-            env.th_tableaux)
+        else if Options.get_cdcl_tableaux_th ()
+        then begin
+          (* The split was assigned before the theory gave it, as an atom of a
+             formula, so the relevancy filter may have hidden its value from
+             the theory: send it, unless the theory knows it. *)
+          let a = if atom.is_true then atom else atom.neg in
+          let known =
+            match Shostak.Literal.view (Atom.literal a) with
+            | LTerm l -> (
+              match Th.query l env.tenv with
+              | Entailed _ -> true
+              | Unknown -> false)
+            | LSem _ -> true
+          in
+          if not known then Queue.push a env.th_tableaux
+        end)
       lits
 
   let acts_add_objective env fn value lit =
@@ -997,7 +999,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            splits are in no formula, so their values are added here. *)
         Queue.iter
           (fun (a : Atom.atom) ->
-            if VH.mem env.th_splits a.var then Queue.push a env.th_tableaux)
+            if VH.mem env.th_atoms a.var then Queue.push a env.th_tableaux)
           env.tatoms_queue;
         env.th_tableaux
       end
