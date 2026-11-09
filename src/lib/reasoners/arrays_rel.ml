@@ -900,15 +900,17 @@ let assume env uf la =
 
 let two = Numbers.Q.from_int 2
 
-(* Split on the most recent case split [k = i] and try [k <> i] first: this
-   branch propagates the values. *)
+(* Return all the pending case splits, the most recent first. Each case split on
+   [k = i] is returned as [k <> i], the branch to try first since it propagates
+   the values. The SAT solver then decides them in the order it chooses (see
+   [Theory.do_sat_splits]). *)
 let case_split env _uf ~for_model:_ =
-  match Util.MI.max_binding_opt env.order with
-  | Some (_, lit) ->
-    let lit = LX.neg lit in
-    Log.debug (fun k -> k "case split@ %a" LX.print lit);
-    [LX.view lit, true, Th_util.CS (Th_util.Th_arrays, two)]
-  | None -> []
+  Util.MI.fold
+    (fun _ lit acc ->
+      let lit = LX.neg lit in
+      Log.debug (fun k -> k "case split@ %a" LX.print lit);
+      (LX.view lit, true, Th_util.CS (Th_util.Th_arrays, two)) :: acc)
+    env.order []
 
 let optimizing_objective _env _uf _o = None
 

@@ -149,6 +149,14 @@ type 'literal acts =
 
             Splits added using [acts_add_split] are forgotten when backtracking.
         *)
+    acts_set_splits : 'literal list -> unit;
+        (** Give the SAT solver the whole set of case splits to decide, as term
+            literals. This replaces any splits set by a previous call. The SAT
+            solver picks the order of the decisions and keeps the clauses it
+            learns from them.
+
+            A split that is not in the list is dropped: it is not decided and
+            its value is not sent to the theory. *)
     acts_add_objective :
       Objective.Function.t -> Objective.Value.t -> 'literal -> unit
         (** Ask the SAT solver to optimistically select the appropriate value
