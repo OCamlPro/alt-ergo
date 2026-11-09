@@ -116,14 +116,13 @@ module type S = sig
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat ]
+    | `Unsat of Ex.t ]
 
   type env = private
     { used_context : used_context;
-      consistent_dep_stack : (res * Explanation.t) Stack.t;
+      consistent_dep_stack : res Stack.t;
       sat_env : sat_env;
-      mutable res : res;
-      mutable expl : Explanation.t
+      mutable res : res
     }
 
   type 'a process = ?loc:Loc.t -> 'a -> env -> unit
@@ -200,14 +199,13 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat ]
+    | `Unsat of Ex.t ]
 
   type env =
     { used_context : used_context;
-      consistent_dep_stack : (res * Explanation.t) Stack.t;
+      consistent_dep_stack : res Stack.t;
       sat_env : sat_env;
-      mutable res : res;
-      mutable expl : Explanation.t
+      mutable res : res
     }
 
   type 'a process = ?loc:Loc.t -> 'a -> env -> unit
@@ -216,8 +214,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     { used_context;
       consistent_dep_stack = Stack.create ();
       sat_env = SAT.empty ?selector:selector_inst ();
-      res = `Unknown;
-      expl = Explanation.empty
+      res = `Unknown
     }
 
   let output_used_context g_name dep =
@@ -287,25 +284,24 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     ignore loc;
     match env.res with
     | `Sat | `Unknown -> SAT.declare env.sat_env id
-    | `Unsat -> ()
+    | `Unsat _ -> ()
 
   let internal_push ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
     Util.loop
       ~f:(fun _ res () -> Stack.push res env.consistent_dep_stack)
-      ~max:n ~elt:(env.res, env.expl) ~init:();
+      ~max:n ~elt:env.res ~init:();
     Steps.apply_without_step_limit (fun () -> SAT.push env.sat_env n)
 
   let internal_pop ?(loc = Loc.dummy) (n : int) (env : env) : unit =
     ignore loc;
-    let res, expl =
+    let res =
       Util.loop
         ~f:(fun _n () _env -> Stack.pop env.consistent_dep_stack)
-        ~max:n ~elt:() ~init:(env.res, env.expl)
+        ~max:n ~elt:() ~init:env.res
     in
     SAT.pop env.sat_env n;
-    env.res <- res;
-    env.expl <- expl
+    env.res <- res
 
   let internal_assume ?(loc = Loc.dummy) ((name, f, mf) : string * E.t * bool)
       (env : env) =
@@ -329,45 +325,39 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
             from_terms = [];
             theory_elim = true
           }
-          expl;
-        env.expl <- expl
-      | `Unsat -> env.expl <- expl
+          expl
+      | `Unsat _ -> ()
 
   let internal_pred_def ?(loc = Loc.dummy) (name, f) env =
     if not (unused_context name env.used_context)
-    then (
+    then
       let expl = mk_root_dep name f loc in
-      SAT.pred_def env.sat_env f name expl loc;
-      env.expl <- expl)
+      SAT.pred_def env.sat_env f name expl loc
 
   let internal_query ?(loc = Loc.dummy) (n, f, sort) env =
     ignore loc;
     let expl =
       match env.res with
       | `Sat | `Unknown ->
-        let expl' =
-          SAT.unsat env.sat_env
-            { E.ff = f;
-              origin_name = n;
-              hdist = -1;
-              gdist = 0;
-              trigger_depth = max_int;
-              nb_reductions = 0;
-              age = 0;
-              lem = None;
-              mf = sort != Ty.Check;
-              gf = true;
-              from_terms = [];
-              theory_elim = true
-            }
-        in
-        Ex.union expl' env.expl
-      | `Unsat -> env.expl
+        SAT.unsat env.sat_env
+          { E.ff = f;
+            origin_name = n;
+            hdist = -1;
+            gdist = 0;
+            trigger_depth = max_int;
+            nb_reductions = 0;
+            age = 0;
+            lem = None;
+            mf = sort != Ty.Check;
+            gf = true;
+            from_terms = [];
+            theory_elim = true
+          }
+      | `Unsat expl -> expl
     in
     if get_debug_unsat_core () then check_produced_unsat_core expl;
     if get_save_used_context () then output_used_context n expl;
-    env.res <- `Unsat;
-    env.expl <- expl
+    env.res <- `Unsat expl
 
   let internal_th_assume ?(loc = Loc.dummy)
       ({ Expr.ax_name; Expr.ax_form; _ } as th_elt) env =
@@ -376,15 +366,14 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       match env.res with
       | `Sat | `Unknown ->
         let expl = mk_root_dep ax_name ax_form loc in
-        SAT.assume_th_elt env.sat_env th_elt expl;
-        env.expl <- expl
-      | `Unsat -> ()
+        SAT.assume_th_elt env.sat_env th_elt expl
+      | `Unsat _ -> ()
 
   let internal_optimize ?(loc = Loc.dummy) fn env =
     ignore loc;
     match env.res with
     | `Sat | `Unknown -> SAT.optimize env.sat_env fn
-    | `Unsat -> ()
+    | `Unsat _ -> ()
 
   (** Checks whether the env can be used before actually calling the function.
   *)
@@ -396,9 +385,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let handle_sat_exn f ?loc x env =
     try f ?loc x env with
     | SAT.Sat -> env.res <- `Sat
-    | SAT.Unsat expl ->
-      env.res <- `Unsat;
-      env.expl <- Ex.union expl env.expl
+    | SAT.Unsat expl -> env.res <- `Unsat expl
     | SAT.I_dont_know -> env.res <- `Unknown
 
   (* Wraps the function f to check if the step limit is reached (in which case,
@@ -442,7 +429,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         | None -> (
           internal_query ~loc:d.st_loc (n, f, sort) env;
           match env.res with
-          | `Unsat -> hook_on_status (Unsat (d, env.expl)) (Steps.get_steps ())
+          | `Unsat expl -> hook_on_status (Unsat (d, expl)) (Steps.get_steps ())
           | _ -> assert false)
       end
       | ThAssume th_elt ->
@@ -454,15 +441,13 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
          we want to print the status in this case. *)
       hook_on_status (Sat d) (Steps.get_steps ());
       env.res <- `Sat
-    | SAT.Unsat expl' ->
+    | SAT.Unsat expl ->
       (* This case should mainly occur when a new assumption results in an unsat
          env, in which case we do not want to print status, since the correct
          status should be printed at the next query. *)
-      let expl = Ex.union env.expl expl' in
       if get_debug_unsat_core () then check_produced_unsat_core expl;
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
-      env.res <- `Unsat;
-      env.expl <- expl
+      env.res <- `Unsat expl
     | SAT.I_dont_know ->
       (* TODO: always print Unknown for why3 ? *)
       let ur = SAT.get_unknown_reason env.sat_env in
