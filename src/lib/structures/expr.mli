@@ -162,6 +162,24 @@ type form_view = private
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
 
+module Labeled : sig
+  type nonrec t =
+    { name : string;
+      f : t;
+      loc : Loc.t
+    }
+  (** An expression with a name.
+
+      This is used to keep track of where expressions come from in the input
+      problem: the name is only used for display and has no semantic meaning. In
+      particular, the comparison and hashing functions ignore the name: if a
+      given expression has multiple names, it doesn't matter which one we use
+      (on the other hand, distinct expressions should not have the same name).
+  *)
+
+  include Container_types.S_plus_stdlib with type t := t
+end
+
 (** different views of an expression *)
 
 val term_view : t -> term_view
@@ -609,9 +627,11 @@ module BV : sig
   val of_Z : size:int -> Z.t -> t
 
   (* Conversion from and to integers *)
-  val int2bv : int -> t -> t
+  val int_to_bv : int -> t -> t
 
-  val bv2nat : t -> t
+  val ubv_to_int : t -> t
+
+  val sbv_to_int : t -> t
 
   (* Constant symbols with all zeros and all ones *)
   val bvzero : int -> t
@@ -692,6 +712,23 @@ module BV : sig
   val bvlshr : t -> t -> t
 
   val bvashr : t -> t -> t
+
+  (* Overflow predicates *)
+  val bvuaddo : t -> t -> t
+
+  val bvsaddo : t -> t -> t
+
+  val bvnego : t -> t
+
+  val bvusubo : t -> t -> t
+
+  val bvssubo : t -> t -> t
+
+  val bvumulo : t -> t -> t
+
+  val bvsmulo : t -> t -> t
+
+  val bvsdivo : t -> t -> t
 end
 
 (** Constructors from the smtlib theory of floating-point numbers.
@@ -857,4 +894,8 @@ module ArraysEx : sig
   val select : t -> t -> t
 
   val store : t -> t -> t -> t
+
+  val const : Ty.t -> t -> t
+  (** [const ty v] is the constant array of type [ty] whose value is [v] at
+      every index. *)
 end

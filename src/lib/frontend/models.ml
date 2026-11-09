@@ -103,6 +103,16 @@ module Pp_smtlib_term = struct
         if Options.get_output_smtlib ()
         then fprintf fmt "(not ((_ is %a) %a))" DE.Term.Const.print hs print e
         else fprintf fmt "not (%a ? %a)" print e DE.Term.Const.print hs
+      (* CR bclement: Use [Sy_print] for all builtins. *)
+      | L_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+        let (module Output_format) = Printer.output_format () in
+        let module Sy_print = Sy.Print (Output_format) in
+        Sy_print.builtin_app builtin print fmt args
+      | L_neg_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args
+        ->
+        let (module Output_format) = Printer.output_format () in
+        let module Sy_print = Sy.Print (Output_format) in
+        Output_format.(print_not (Sy_print.builtin_app builtin print)) fmt args
       | ( ( Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
           | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
           | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq

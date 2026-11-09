@@ -31,8 +31,10 @@ val init_all_used_context : unit -> used_context
 
 val choose_used_context : used_context -> goal_name:string -> used_context
 
+val unsat_core_used_context : Expr.Labeled.Set.t -> used_context
+
 type status =
-  | Unsat of Commands.sat_tdecl * Explanation.t
+  | Unsat of Commands.sat_tdecl * Expr.Labeled.Set.t
   | Inconsistent of Commands.sat_tdecl
   | Sat of Commands.sat_tdecl
   | Unknown of Commands.sat_tdecl
@@ -47,7 +49,7 @@ module type S = sig
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat of Explanation.t ]
+    | `Unsat of Expr.Labeled.Set.t ]
 
   type env = private
     { used_context : used_context;
@@ -67,7 +69,7 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * Expr.t * bool) process
+  val assume : (string * Expr.t * bool * string option) process
 
   val pred_def : (string * Expr.t) process
 

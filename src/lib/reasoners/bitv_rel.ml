@@ -450,9 +450,39 @@ module BV2Nat = struct
     loop ~ex ~size bv p t
 
   (* Add the equality [nat_r = bv2nat(bv_r)]. *)
-  let add_bv2nat ~ex nat_r bv_r t =
+  let add_ubv_to_nat ~ex nat_r bv_r t =
     add_bv2nat_abstract ~ex ~size:(bitwidth bv_r) (Shostak.Bitv.embed bv_r)
       (T.Ints.of_repr nat_r) t
+
+  (* Add the equality [nat_r = sbv_to_int(bv_r)].
+
+     This is done through the equality:
+
+     sbv_to_int[n](x) = ubv_to_nat(x) - MSB(x) * 2^n
+
+     where MSB(x) is the most significant bit (i.e. sign bit) of [x].
+
+     We use this encoding because it does not introduce (explicit) conditionals,
+     and is friendly with labelling strategies that would split on the MSB of
+     bit-vectors. *)
+  let add_sbv_to_int ~ex nat_r bv_r t =
+    let sz = bitwidth bv_r in
+    let bv = Shostak.Bitv.embed bv_r in
+    let p = T.Ints.of_repr nat_r in
+    let sgn_bv = Bitv.extract sz (sz - 1) (sz - 1) bv in
+    let sgn_st =
+      match sgn_bv with
+      | [{ bv = sgn_bv; sz = 1 }] -> sgn_bv
+      | _ ->
+        Util.internal_error
+          "*BUG*: extraction of one-bit cannot have more than one component"
+    in
+    let (sgn_p, sgn_ex), t = find_or_init_st sgn_st t in
+    (* sbv_to_int[n](r) = p
+     * ubv_to_nat[n](r) = sbv_to_int[n](r) + MSB(r)*2^n
+     * ubv_to_nat[n](r) = p + MSB(r)*2^n *)
+    let p' = T.Ints.(p + (sgn_p *$$ Z.(one lsl sz))) in
+    add_bv2nat_abstract ~ex:(Ex.union ex sgn_ex) ~size:sz bv p' t
 
   (* Add the equality [bv_r = int2bv(int_r)].
 
@@ -520,7 +550,7 @@ module BV2Nat = struct
           let delta = Z.shift_right delta ofs in
           let p = T.Ints.(p +$$ delta) in
           let nrr = T.BV.shift_right nrr ofs in
-          add_bv2nat ~ex:(Ex.union ex ex_p) (T.Ints.to_repr p) nrr t)
+          add_ubv_to_nat ~ex:(Ex.union ex ex_p) (T.Ints.to_repr p) nrr t)
         t t
 
   type _ Uf.id += Id : t Uf.id
@@ -660,10 +690,17 @@ module Constraint : sig
 
   type fun_t = Fbinop of binop * X.r * X.r
 
+  type overflow_binop =
+    | Ouadd
+    | Osadd
+    | Oumul
+    | Osmul
+
   type binrel =
     | Rule
     | Rugt
     | Rdistinct
+    | Roverflow of overflow_binop * bool
 
   type rel_t = Rbinrel of binrel * X.r * X.r
 
@@ -733,6 +770,10 @@ module Constraint : sig
 
   val distinct : X.r -> X.r -> t
   (** [distinct x y] is the constraint [(distinct x y)]. *)
+
+  val overflow : overflow_binop -> X.r -> X.r -> t
+
+  val no_overflow : overflow_binop -> X.r -> X.r -> t
 end = struct
   type binop =
     (* Bitwise operations *)
@@ -804,15 +845,30 @@ end = struct
       Fbinop (op, y, x)
     | Fbinop _ as e -> e
 
+  type overflow_binop =
+    | Ouadd
+    | Osadd
+    | Oumul
+    | Osmul
+
+  let pp_overflow_binop ppf = function
+    | Ouadd -> Fmt.pf ppf "bvuaddo"
+    | Osadd -> Fmt.pf ppf "bvsaddo"
+    | Oumul -> Fmt.pf ppf "bvumulo"
+    | Osmul -> Fmt.pf ppf "bvsmulo"
+
   type binrel =
     | Rule
     | Rugt
     | Rdistinct
+    | Roverflow of overflow_binop * bool
 
   let pp_binrel ppf = function
     | Rule -> Fmt.pf ppf "bvule"
     | Rugt -> Fmt.pf ppf "bvugt"
     | Rdistinct -> Fmt.pf ppf "distinct"
+    | Roverflow (op, true) -> pp_overflow_binop ppf op
+    | Roverflow (op, false) -> Fmt.pf ppf "not.%a" pp_overflow_binop op
 
   let equal_binrel : binrel -> binrel -> bool = Stdlib.( = )
 
@@ -922,6 +978,10 @@ end = struct
   let bvugt = cbinrel Rugt
 
   let distinct = cbinrel Rdistinct
+
+  let overflow op = cbinrel (Roverflow (op, true))
+
+  let no_overflow op = cbinrel (Roverflow (op, false))
 
   let equal c1 c2 = c1.tag = c2.tag
 
@@ -1175,11 +1235,85 @@ end = struct
         @@ Intervals.Int.Interval.singleton vy
       | None -> ())
 
-  let propagate_interval_binrel ~ex op dx dy =
+  let no_overflow_interval ~size:sz op =
+    let module I = Intervals.Int in
+    match op with
+    | Ouadd | Oumul ->
+      let width = Z.(one lsl sz) in
+      I.Interval.of_bounds (Closed Z.zero) (Open width)
+    | Osadd | Osmul ->
+      let half_width = Z.shift_left Z.one (sz - 1) in
+      I.Interval.of_bounds (Closed (Z.neg half_width)) (Open half_width)
+
+  let overflow_interval ~ex ~size op =
+    let module I = Intervals.Int in
+    match I.of_complement ~ex (no_overflow_interval ~size op) with
+    | Empty _ ->
+      (* The expected range is either [-2^{n-1}, 2^{n-1}[ or [0, 2^n[, its
+         complement is never empty. *)
+      assert false
+    | NonEmpty overflow_interval -> overflow_interval
+
+  let overflow_binop_forward ~size op dx dy =
+    let module I = Intervals.Int in
+    match op with
+    | Ouadd -> I.add dx dy
+    | Osadd ->
+      I.add
+        (I.signed_extract dx ~ofs:0 ~len:size)
+        (I.signed_extract dy ~ofs:0 ~len:size)
+    | Oumul -> I.mul dx dy
+    | Osmul ->
+      I.mul
+        (I.signed_extract dx ~ofs:0 ~len:size)
+        (I.signed_extract dy ~ofs:0 ~len:size)
+
+  let overflow_binop_backward ~ex sz d op dx dy =
+    let module I = Intervals.Int in
+    let open Interval_domains.Ephemeral.Canon in
+    let unsigned i = I.extract i ~ofs:0 ~len:sz in
+    let signed i = I.signed_extract i ~ofs:0 ~len:sz in
+    let update_signed ~ex entry domain =
+      let current = signed !!entry in
+      let domain =
+        Interval_domain.intersect current
+          (Interval_domain.add_explanation ~ex domain)
+      in
+      if not (Interval_domain.equal domain current)
+      then Entry.set_domain entry (unsigned domain)
+    in
+    match op with
+    | Ouadd ->
+      (* d = dx + dy *)
+      update ~ex dx @@ I.sub d !!dy;
+      update ~ex dy @@ I.sub d !!dx
+    | Osadd ->
+      (* d = (signed)dx + (signed)dy *)
+      update_signed ~ex dx @@ I.sub d (signed !!dy);
+      update_signed ~ex dy @@ I.sub d (signed !!dx)
+    | Oumul | Osmul ->
+      (* Backward propagation for multiplication not supported yet. *)
+      ()
+
+  let propagate_interval_binrel ~ex ~size op dx dy =
     match op with
     | Rule -> propagate_less_than ~ex ~strict:false dx dy
     | Rugt -> propagate_less_than ~ex ~strict:true dy dx
     | Rdistinct -> propagate_distinct ~ex dx dy
+    | Roverflow (op, must_overflow) -> (
+      let open Interval_domains.Ephemeral.Canon in
+      let module I = Intervals.Int in
+      let required_interval =
+        if must_overflow
+        then overflow_interval ~ex ~size op
+        else I.of_interval ~ex (no_overflow_interval ~size op)
+      in
+      let actual_interval = overflow_binop_forward ~size op !!dx !!dy in
+      match I.intersect required_interval actual_interval with
+      | Empty ex' ->
+        (* [required_interval] already contains [ex]. *)
+        raise (Interval_domains.Inconsistent ex')
+      | NonEmpty range -> overflow_binop_backward ~ex size range op dx dy)
 
   let propagate_rel_t ~ex dom r =
     let get r = Bitlist_domains.Ephemeral.Canon.entry dom r in
@@ -1188,7 +1322,9 @@ end = struct
   let propagate_interval_rel_t ~ex dom r =
     let get r = Interval_domains.Ephemeral.Canon.entry dom r in
     match r with
-    | Rbinrel (op, x, y) -> propagate_interval_binrel ~ex op (get x) (get y)
+    | Rbinrel (op, x, y) ->
+      let size = bitwidth x in
+      propagate_interval_binrel ~ex ~size op (get x) (get y)
 
   let propagate_view ~ex dom = function
     | Cfun (r, f) -> propagate_fun_t ~ex dom r f
@@ -1464,6 +1600,9 @@ end = struct
     | Rdistinct ->
       (* TODO(bclement): Is it is OK to simplify here if either side is
          constant? *)
+      false
+    | Roverflow _ ->
+      (* CR bclement: simplify if the value is already known. *)
       false
 
   let simplify_rel_t uf acts = function
@@ -2049,12 +2188,26 @@ let assume env uf la =
               match orig with Th_util.CS (Th_bitv, n) -> Q.(ss * n) | _ -> ss
             in
             match a, orig with
-            | L.Builtin (is_true, BVULE, [x; y]), _ ->
+            | ( L.Builtin
+                  ( is_true,
+                    ((BVULE | BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin),
+                    [x; y] ),
+                _ ) ->
               let x, exx = Uf.find_r uf x in
               let y, exy = Uf.find_r uf y in
               let ex = Ex.union ex @@ Ex.union exx exy in
+              let maybe_overflow =
+                if is_true then Constraint.overflow else Constraint.no_overflow
+              in
               let c =
-                if is_true then Constraint.bvule x y else Constraint.bvugt x y
+                match builtin, is_true with
+                | BVULE, true -> Constraint.bvule x y
+                | BVULE, false -> Constraint.bvugt x y
+                | BVuaddo, _ -> maybe_overflow Ouadd x y
+                | BVsaddo, _ -> maybe_overflow Osadd x y
+                | BVumulo, _ -> maybe_overflow Oumul x y
+                | BVsmulo, _ -> maybe_overflow Osmul x y
+                | _, _ -> assert false
               in
               (* Only watch comparisons on the interval domain since we don't
                  propagate them in the bitlist domain. . *)
@@ -2188,10 +2341,16 @@ let add env uf r t =
   match X.type_info r with
   | Tint -> (
     match E.term_view t with
-    | { f = Op BV2Nat; xs = [x]; _ } ->
+    | { f = Op Ubv_to_int; xs = [x]; _ } ->
       let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
       let rx, ex = Uf.find uf x in
-      let bvconv = BV2Nat.add_bv2nat ~ex r rx bvconv in
+      let bvconv = BV2Nat.add_ubv_to_nat ~ex r rx bvconv in
+      let eqs, bvconv = BV2Nat.flush bvconv in
+      env, Uf.GlobalDomains.add (module BV2Nat) bvconv ds, eqs
+    | { f = Op Sbv_to_int; xs = [x]; _ } ->
+      let bvconv = Uf.GlobalDomains.find (module BV2Nat) ds in
+      let rx, ex = Uf.find uf x in
+      let bvconv = BV2Nat.add_sbv_to_int ~ex r rx bvconv in
       let eqs, bvconv = BV2Nat.flush bvconv in
       env, Uf.GlobalDomains.add (module BV2Nat) bvconv ds, eqs
     | _ -> env, ds, [])

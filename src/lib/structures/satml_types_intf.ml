@@ -62,7 +62,7 @@ module type ATOM = sig
 
   and reason = clause option
 
-  and premise = clause list
+  and premise = Expr.Labeled.Set.t
 
   include Container_types.S_plus_stdlib with type t := atom
 
@@ -167,14 +167,6 @@ module type FLAT_FORMULA = sig
 
   val view : t -> view
 
-  val mk_lit : hcons_env -> Expr.t -> Atom.var list -> t * Atom.var list
-
-  val mk_and : hcons_env -> t list -> t
-
-  val mk_or : hcons_env -> t list -> t
-
-  val mk_not : t -> t
-
   val empty_hcons_env : unit -> hcons_env
 
   val nb_made_vars : hcons_env -> int
@@ -189,6 +181,7 @@ module type FLAT_FORMULA = sig
     Atom.var list (* new_vars *) ->
     Atom.atom list (* new_abstr_vars *) ->
     t
+    * Expr.Labeled.Set.t (* root deps used for simplification *)
     * Expr.Set.t (* toplevel lemmas *)
     * Atom.var list (* new_vars *)
     * Atom.atom list (* new_abstr_vars *)

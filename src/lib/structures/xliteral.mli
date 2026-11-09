@@ -31,6 +31,10 @@ type builtin = Symbols.builtin =
   | (* arithmetic *)
     IsConstr of Dolmen.Std.Expr.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
+  | BVuaddo
+  | BVsaddo
+  | BVumulo
+  | BVsmulo
 
 type 'a view =
   (*private*)

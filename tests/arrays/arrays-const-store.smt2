@@ -1,0 +1,6 @@
+(set-logic ALL)
+(declare-const i Int)
+(declare-const j Int)
+(assert (distinct i j))
+(assert (distinct (select (store ((as ae.const (Array Int Int)) 0) i 5) j) 0))
+(check-sat)

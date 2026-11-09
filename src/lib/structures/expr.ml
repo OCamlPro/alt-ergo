@@ -128,6 +128,9 @@ type form_view =
 (** pretty printing *)
 
 module SmtPrinter = struct
+  module Output_format = Printer.Smtlib2_format
+  module Sy_print = Sy.Print (Output_format)
+
   let is_zero sy =
     match sy with
     | Sy.Int i when Z.(equal i zero) -> true
@@ -216,6 +219,11 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>((_ is %a)@ %a@])" DE.Term.Const.print hs pp e
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "(not @[<2>((_ is %a)@ %a@]))" DE.Term.Const.print hs pp e
+    (* CR bclement: Use [Sy_print] for all builtins. *)
+    | L_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Sy_print.builtin_app builtin pp ppf args
+    | L_neg_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Output_format.(print_not (Sy_print.builtin_app builtin pp)) ppf args
     | ( ( Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -234,6 +242,8 @@ module SmtPrinter = struct
       Fmt.pf ppf "@[<2>(let@ ((%a %a))@ %a@])" Var.print x.let_v pp x.let_e
         pp_boxed x.in_e
     | Sy.Op op, [] -> Symbols.pp_smtlib_operator ppf op
+    | Sy.Op Const_array, [v] ->
+      Fmt.pf ppf "@[<2>((as const %a)@ %a@])" Ty.pp_smtlib ty pp v
     | Sy.Op Minus, [e1; { f = Sy.Real q; _ }] when is_zero e1.f ->
       pp_rational ppf (Q.neg q)
     | Sy.Op Minus, [e1; e2] when is_zero e1.f ->
@@ -288,6 +298,9 @@ module SmtPrinter = struct
 end
 
 module AEPrinter = struct
+  module Output_format = Printer.Native_format
+  module Sy_print = Sy.Print (Output_format)
+
   let pp_binder ppf (var, ty) = Fmt.pf ppf "%a:%a" Var.print var Ty.pp_smtlib ty
 
   let pp_binders ppf binders =
@@ -335,6 +348,11 @@ module AEPrinter = struct
       Fmt.pf ppf "(%a ? %a)" pp e DE.Term.Const.print hs
     | Sy.L_neg_built (Sy.IsConstr hs), [e] ->
       Fmt.pf ppf "not (%a ? %a)" pp e DE.Term.Const.print hs
+    (* CR bclement: Use [Sy_print] for all builtins. *)
+    | L_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Sy_print.builtin_app builtin pp ppf args
+    | L_neg_built ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args ->
+      Output_format.(print_not (Sy_print.builtin_app builtin pp)) ppf args
     | ( ( Sy.L_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_built (Sy.LT | Sy.LE | Sy.BVULE)
         | Sy.L_neg_pred | Sy.L_eq | Sy.L_neg_eq
@@ -610,6 +628,31 @@ module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
 
   let equal = equal
 end)
+
+module Labeled = struct
+  type t =
+    { name : string;
+      f : expr;
+      loc : Loc.t
+    }
+
+  (* Note: [equal], [hash], and [compare] only care about the underlying [expr],
+     not its [name] or [loc]ation -- if an expression has multiple names, it
+     doesn't matter which one we use. *)
+  module T0 = struct
+    type nonrec t = t
+
+    let print ppf { name; _ } = Fmt.string ppf name
+
+    let equal { f = f1; _ } { f = f2; _ } = equal f1 f2
+
+    let hash { f; _ } = hash f
+
+    let compare { f = f1; _ } { f = f2; _ } = compare f1 f2
+  end
+
+  include Container_types.Make (T0)
+end
 
 (** different views of an expression *)
 
@@ -1063,7 +1106,8 @@ let mk_ite cond th el =
 
 let rec is_model_term e =
   match e.f, e.xs with
-  | (Op (Constr _) | Op Store), xs -> List.for_all is_model_term xs
+  | (Op (Constr _) | Op Store | Op Const_array), xs ->
+    List.for_all is_model_term xs
   | Op Div, [{ f = Real _; _ }; { f = Real _; _ }] -> true
   | Op Minus, [{ f = Real q; _ }; { f = Real _; _ }] -> Q.equal q Q.zero
   | Op Minus, [{ f = Int i; _ }; { f = Int _; _ }] -> Z.equal i Z.zero
@@ -2981,21 +3025,26 @@ module BV = struct
       if i = 0 then t else concat (extract (i - 1) 0 t) (extract (m - 1) i t)
 
   (* int2bv and bv2nat *)
-  let int2bv n t =
-    (* Note: arith.ml calls [int2bv] in [make]. If additional simplifications
-       are added here, arith.ml must be updated as well. *)
+  let int_to_bv n t =
     match term_view t with
-    | { f = Op BV2Nat; xs = [t]; _ } ->
-      let m = match type_info t with Tbitv m -> m | _ -> assert false in
-      if m > n then extract (n - 1) 0 t else zero_extend (n - m) t
+    | { f = Op Ubv_to_int; xs = [s]; _ } ->
+      let m = match type_info s with Tbitv m -> m | _ -> assert false in
+      if m > n then extract (n - 1) 0 s else zero_extend (n - m) s
+    | { f = Op Sbv_to_int; xs = [s]; _ } ->
+      let m = match type_info s with Tbitv m -> m | _ -> assert false in
+      if m > n then extract (n - 1) 0 s else sign_extend (n - m) s
     | _ -> mk_term (Op (Int2BV n)) [t] (Tbitv n)
 
-  let bv2nat t =
-    (* Note: bitv.ml calls [bv2nat] in [make]. If additional simplifications are
-       added here, bitv.ml must be updated as well. *)
+  let ubv_to_int t =
     match term_view t with
     | { f = Op (Int2BV n); xs = [t]; _ } -> Ints.(t mod ~$$Z.(~$1 lsl n))
-    | _ -> mk_term (Op BV2Nat) [t] Tint
+    | _ -> mk_term (Op Ubv_to_int) [t] Tint
+
+  let sbv_to_int t =
+    (* No attempt at early simplification of [sbv_to_int (int_to_bv x)] since it
+       would introduce a disjunction. Note that theories will still simplify
+       constants. *)
+    mk_term (Op Sbv_to_int) [t] Tint
 
   (* Bit-wise operations *)
   let bvnot s = mk_term (Op BVnot) [s] (type_info s)
@@ -3115,6 +3164,63 @@ module BV = struct
   let bvsgt s t = bvslt t s
 
   let bvsge s t = bvsle t s
+
+  (* Overflow predicates *)
+
+  let builtin b args = mk_builtin ~is_pos:true b args
+
+  let bvuaddo s t =
+    (* [[(bvuaddo s t)]] := (bv2nat([[s]]) + bv2nat([[t]])) >= 2^m
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVuaddo [s; t]
+
+  let bvsaddo s t =
+    (* [[(bvsaddo s t)]] := (bv2int([[s]]) + bv2int([[t]])) >= 2^(m - 1) or
+       (bv2int([[s]]) + bv2int([[t]])) < -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVsaddo [s; t]
+
+  let bvnego s =
+    (* [[(bvnego s)]] := bv2int([[s]]) == -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    Core.eq s (of_Z ~size:(size s) (Z.shift_left Z.one (size s - 1)))
+
+  let bvumulo s t =
+    (* [[(bvumulo s t)]] := (bv2nat([[s]]) * bv2nat([[t]])) >= 2^m
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVumulo [s; t]
+
+  let bvsmulo s t =
+    (* [[(bvsmulo s t)]] := (bv2int([[s]]) * bv2int([[t]])) >= 2^(m - 1) or
+       (bv2int([[s]]) * bv2int([[t]])) < -2^(m - 1)
+
+       https://smt-lib.org/theories-FixedSizeBitVectors.shtml *)
+    builtin BVsmulo [s; t]
+
+  let bvusubo s t =
+    (* (bvusubo s t) stands for (bvult s t)
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    bvult s t
+
+  let bvssubo s t =
+    (* (bvssubo s t) abbreviates (ite (bvnego t) (bvsge s (_ bv0 m)) (bvsaddo s
+       (bvneg t)))
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    Core.ite (bvnego t)
+      (bvsge s (of_bigint_like s Z.zero))
+      (bvsaddo s (bvneg t))
+
+  let bvsdivo s t =
+    (* (bvsdivo s t) abbreviates (and (bvnego s) (= t (bvnot (_ bv0 m))))
+
+       https://smt-lib.org/logics-all.shtml#QF_BV *)
+    Core.and_ (bvnego s) (Core.eq t (of_bigint_like t Z.minus_one))
 end
 
 (** Constructors from the smtlib theory of floating-point numbers.
@@ -3315,4 +3421,6 @@ module ArraysEx = struct
     mk_term Sy.(Op Select) [a; i] rty
 
   let store a i v = mk_term Sy.(Op Store) [a; i; v] (type_info a)
+
+  let const ty v = mk_term Sy.(Op Const_array) [v] ty
 end

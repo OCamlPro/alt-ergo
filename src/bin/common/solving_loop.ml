@@ -147,7 +147,7 @@ type model = Model : 'a sat_module * 'a -> model
 type solve_res =
   | Sat of model
   | Unknown of model option
-  | Unsat
+  | Unsat of Expr.Labeled.Set.t
 
 exception StopProcessDecl
 
@@ -186,6 +186,42 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let solve (module SAT : Sat_solver_sig.S) ~limits all_context (cnf, goal_name)
       =
     let module FE = Frontend.Make (SAT) in
+    let check_produced_unsat_core expl =
+      if Options.get_verbose ()
+      then
+        Printer.print_dbg ~module_name:"Solving_loop"
+          ~function_name:"check_produced_unsat_core"
+          "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
+          Fmt.(iter Expr.Labeled.Set.iter (box Expr.Labeled.print) |> vbox)
+          expl;
+      let used_context = Frontend.unsat_core_used_context expl in
+      (* Replay should not take more steps than the initial proof, but we allow
+         some slack (differing quantifier instantiations can reasonably take a
+         bit more steps if we do them in a different order, for instance).
+
+         Note: make sure the [reproducible_resource_limit] is at least [1],
+         since [0] disables the limit. *)
+      let reproducible_resource_limit = (2 * Steps.get_steps ()) + 1 in
+      (* Note: [reset_refs] resets the steps. *)
+      SAT.reset_refs ();
+      let ftdn_env = FE.init_env ?selector_inst used_context in
+      match
+        let open Util.Syntax in
+        let& () = with_goal_limits { reproducible_resource_limit } in
+        List.iter
+          (FE.process_decl
+             ~hook_on_status:(fun _ _ -> raise StopProcessDecl)
+             ftdn_env)
+          cnf
+      with
+      | () | (exception StopProcessDecl) -> (
+        match ftdn_env.FE.res with
+        | `Unsat _ -> ()
+        | `Sat -> Errors.run_error Failed_check_unsat_core
+        | `Unknown ->
+          Printer.print_wrn "unsat core check was inconclusive";
+          ())
+    in
     if Options.get_debug_commands ()
     then
       Printer.print_dbg "@[<v 2>goal %s:@ %a@]@." ~module_name:"Solving_loop"
@@ -237,7 +273,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         end;
         Unknown (Some mdl)
       end
-      | `Unsat _ -> Unsat
+      | `Unsat expl ->
+        if Options.get_debug_unsat_core () then check_produced_unsat_core expl;
+        Unsat expl
     with Util.Timeout ->
       (* It is still necessary to leave this catch here, because we may trigger
          this exception in between calls of the sat solver. *)
@@ -247,8 +285,8 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let solver_ctx_key : solver_ctx State.key =
     State.create_key ~pipe:"" "solving_state"
   in
-  let partial_model_key : model option State.key =
-    State.create_key ~pipe:"" "sat_state"
+  let solve_res_key : solve_res State.key =
+    State.create_key ~pipe:"" "solve_res"
   in
   let named_terms : DStd.Expr.term Util.MS.t State.key =
     State.create_key ~pipe:"" "named_terms"
@@ -294,17 +332,11 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let finally ~handle_exn st e =
     match e with Some (bt, exn) -> handle_exn st bt exn | _ -> st
   in
-  let set_mode ?model mode st =
-    let st = DO.Mode.set mode st in
-    match mode with
-    | Sat -> State.set partial_model_key model st
-    | _ -> State.set partial_model_key None st
-  in
   let set_partial_model_and_mode solve_res st =
+    let st = State.set solve_res_key solve_res st in
     match solve_res with
-    | Unsat -> set_mode Unsat st
-    | Unknown None -> set_mode Sat st
-    | Unknown (Some model) | Sat model -> set_mode Sat ~model st
+    | Unsat _ -> DO.Mode.set Unsat st
+    | Unknown _ | Sat _ -> DO.Mode.set Sat st
   in
   let set_output_format fmt =
     match fmt with
@@ -372,7 +404,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
     ( logic_file,
       State.empty
       |> State.set solver_ctx_key solver_ctx
-      |> State.set partial_model_key None
+      |> State.set solve_res_key (Unknown None)
       |> State.set named_terms Util.MS.empty
       |> DO.init
       |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
@@ -412,17 +444,10 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       Options.set_produce_models false;
       st
     | ":produce-unsat-cores", Symbol { name = Simple "true"; _ } ->
-      (* The generation of unsat core is supported only with the SAT solver
-         Tableaux. *)
-      if Stdlib.(Options.get_sat_solver () = Tableaux)
-      then Options.set_unsat_core true
-      else
-        warning ~loc
-          "The generation of unsat cores is not supported for the current SAT \
-           solver. Please choose the SAT solver Tableaux.";
+      Options.set_produce_unsat_cores true;
       st
     | ":produce-unsat-cores", Symbol { name = Simple "false"; _ } ->
-      Options.set_unsat_core false;
+      Options.set_produce_unsat_cores false;
       st
     | ((":produce-models" | ":produce-unsat-cores") as name), _ ->
       print_wrn_opt ~loc ~name "boolean" value;
@@ -513,8 +538,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       let stmt =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
       in
+      let logic_file = State.get State.logic_file st in
       let cnf =
-        Translate.make (State.get State.logic_file st).loc
+        Translate.make ?lang:logic_file.lang logic_file.loc
           (State.get solver_ctx_key st).ctx stmt
       in
       State.set solver_ctx_key
@@ -532,8 +558,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
           recoverable_error ~loc
             "the selected solver does not support optimization"
         else
-          match State.get partial_model_key st with
-          | Some (Model ((module SAT), partial_model)) ->
+          match State.get solve_res_key st with
+          | Unknown (Some model) | Sat model ->
+            let (Model ((module SAT), partial_model)) = model in
             let objectives = SAT.get_objectives partial_model in
             begin match objectives with
             | Some o ->
@@ -542,7 +569,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
               Objective.Model.pp (Options.Output.get_fmt_regular ()) o
             | None -> recoverable_error ~loc "No objective generated"
             end
-          | None ->
+          | Unknown None | Unsat _ ->
             recoverable_error ~loc
               "Model generation is disabled (try --produce-models)"
     in
@@ -597,9 +624,10 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         let err () =
           recoverable_error ~loc "Invalid (get-info :reason-unknown)"
         in
-        match State.get partial_model_key st with
-        | None -> err ()
-        | Some (Model ((module SAT), sat)) -> (
+        match State.get solve_res_key st with
+        | Unknown None | Unsat _ -> err ()
+        | Unknown (Some model) | Sat model -> (
+          let (Model ((module SAT), sat)) = model in
           match SAT.get_unknown_reason sat with
           | None -> err ()
           | Some ur -> print_std Sat_solver_sig.pp_smt_unknown_reason ur)
@@ -653,8 +681,8 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
     let goal_cnt = ref 0 in
     fun all_context st td ->
       let solver_ctx = State.get solver_ctx_key st in
-      let file = (State.get State.logic_file st).loc in
-      let loc = DStd.Loc.loc file td.loc in
+      let file = State.get State.logic_file st in
+      let loc = DStd.Loc.loc file.loc td.loc in
       match td with
       | { contents = `Set_logic _; _ } ->
         cmd_on_modes st [Start] "set-logic";
@@ -689,7 +717,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         in
         let stmt = { Typer_Pipe.id; contents; loc = td.loc; attrs; implicit } in
         let cnf, is_thm =
-          match Translate.make file l stmt with
+          match Translate.make ?lang:file.lang file.loc l stmt with
           | ({ Commands.st_decl = Query (_, _, kind); _ } as cnf) :: hyps ->
             let is_thm = match kind with Ty.Thm | Sat -> true | _ -> false in
             List.rev (cnf :: hyps), is_thm
@@ -735,13 +763,15 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         if Options.get_produce_models ()
         then
           let () =
-            match State.get partial_model_key st with
-            | Some (Model ((module SAT), env)) ->
+            match State.get solve_res_key st with
+            | Sat model | Unknown (Some model) ->
+              let (Model ((module SAT), env)) = model in
               let module FE = Frontend.Make (SAT) in
               Fmt.pf
                 (Options.Output.get_fmt_regular ())
                 "%a@." FE.print_model env
-            | None -> recoverable_error ~loc "No model produced."
+            | Unknown None | Unsat _ ->
+              recoverable_error ~loc "No model produced."
           in
           st
         else begin
@@ -749,9 +779,30 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
             "Model generation disabled (try --produce-models)";
           st
         end
+      | { contents = `Get_unsat_core; _ } ->
+        cmd_on_modes st [Unsat] "get-unsat-core";
+        if Options.get_produce_unsat_cores ()
+        then
+          let () =
+            match State.get solve_res_key st with
+            | Unsat core ->
+              Fmt.pf
+                (Options.Output.get_fmt_regular ())
+                "@[<h>(%a)@]@."
+                Fmt.(iter ~sep:sp Expr.Labeled.Set.iter Expr.Labeled.print)
+                core
+            | Sat _ | Unknown _ ->
+              recoverable_error ~loc "No unsat core produced"
+          in
+          st
+        else begin
+          recoverable_error ~loc
+            "Unsat core generation disabled (try --produce-unsat-cores)";
+          st
+        end
       | { contents = `Reset; _ } ->
         st
-        |> State.set partial_model_key None
+        |> State.set solve_res_key (Unknown None)
         |> State.set solver_ctx_key empty_solver_ctx
         |> DO.Mode.clear |> DO.StrictMode.clear |> DO.ProduceAssignment.clear
         |> DO.init
@@ -767,8 +818,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         st
       | { contents = `Get_assignment; _ } -> begin
         cmd_on_modes st [Sat] "get-assignment";
-        match State.get partial_model_key st with
-        | Some (Model ((module SAT), partial_model)) ->
+        match State.get solve_res_key st with
+        | Sat model | Unknown (Some model) ->
+          let (Model ((module SAT), partial_model)) = model in
           if DO.ProduceAssignment.get st
           then handle_get_assignment ~get_value:(SAT.get_value partial_model) st
           else
@@ -776,7 +828,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
               "Produce assignments disabled; add (set-option \
                :produce-assignments true)";
           st
-        | None ->
+        | Unsat _ | Unknown None ->
           recoverable_error ~loc
             "No model produced, cannot execute get-assignment.";
           st
@@ -786,14 +838,16 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       | td ->
         let st =
           match td.contents with
-          | `Pop _ | `Push _ -> st |> set_mode Assert
+          | `Pop _ | `Push _ ->
+            st |> DO.Mode.set Assert |> State.set solve_res_key (Unknown None)
           | _ -> st
         in
         (* TODO: - Separate statements that should be ignored from unsupported
            statements and throw exception or print a warning when an unsupported
            statement is encountered. *)
         let cnf =
-          Translate.make (State.get State.logic_file st).loc
+          let file = State.get State.logic_file st in
+          Translate.make ?lang:file.lang file.loc
             (State.get solver_ctx_key st).ctx td
         in
         State.set solver_ctx_key

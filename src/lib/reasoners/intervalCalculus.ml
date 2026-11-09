@@ -552,8 +552,18 @@ let generic_add x j use is_mon env =
     assert (Q.sign d <> 0 && Q.sign c0 = 0);
     (* x = (p + c0) * d <-> p = x * 1/d - c0 / d *)
     let j = I.affine_scale ~coef:(Q.inv d) ~const:(Q.div (Q.minus c) d) j in
-    try MP.n_add p j (MP.n_find p env.polynomes) env
-    with Not_found -> MP.n_add p j (I.undefined ty) env
+    match MP.n_find p env.polynomes with
+    | ip ->
+      (* [MP.n_add] expects an interval included in [ip], but [j] may not be
+         included in [ip] and still improve it: when their intersection is
+         strictly smaller than [ip].
+
+         For example, with [b<>-1], [tighten_eq_bounds] on [2b+1=b+2] computes
+         [j=]-oo;-3]U[2;+oo[]. The first call stores [ip=]-oo;-2]U[1;+oo[] for
+         [b], from [b=(j-1)/2], and the second one computes []-oo;-5]U[0;+oo[],
+         from [b=j-2]. Their intersection keeps the bounds of both. *)
+      MP.n_add p (I.intersect j ip) ip env
+    | exception Not_found -> MP.n_add p j (I.undefined ty) env
 
 (*BISECT-IGNORE-BEGIN*)
 module Debug = struct

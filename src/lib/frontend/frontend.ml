@@ -38,7 +38,7 @@ let unused_context name context =
   match context with None -> false | Some s -> not (Util.SS.mem name s)
 
 type status =
-  | Unsat of Commands.sat_tdecl * Ex.t
+  | Unsat of Commands.sat_tdecl * Expr.Labeled.Set.t
   | Inconsistent of Commands.sat_tdecl
   | Sat of Commands.sat_tdecl
   | Unknown of Commands.sat_tdecl
@@ -86,7 +86,8 @@ let print_status status steps =
       Printer.print_fmt
         (Options.Output.get_fmt_regular ())
         "unsat-core:@,%a@."
-        (Ex.print_unsat_core ~tab:true)
+        Fmt.(
+          iter E.Labeled.Set.iter (box (any "  " ++ E.Labeled.print)) |> vbox)
         dep;
     check_status_consistency status
   | Inconsistent d ->
@@ -116,7 +117,7 @@ module type S = sig
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat of Ex.t ]
+    | `Unsat of E.Labeled.Set.t ]
 
   type env = private
     { used_context : used_context;
@@ -133,7 +134,7 @@ module type S = sig
 
   val pop : int process
 
-  val assume : (string * E.t * bool) process
+  val assume : (string * E.t * bool * string option) process
 
   val pred_def : (string * E.t) process
 
@@ -148,6 +149,12 @@ module type S = sig
 
   val print_model : sat_env Fmt.t
 end
+
+let unsat_core_used_context expl =
+  Some
+    (Expr.Labeled.Set.fold
+       (fun r s -> Util.SS.add r.E.Labeled.name s)
+       expl Util.SS.empty)
 
 let init_with_replay_used acc f =
   assert (Sys.file_exists f);
@@ -199,7 +206,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   type res =
     [ `Sat
     | `Unknown
-    | `Unsat of Ex.t ]
+    | `Unsat of E.Labeled.Set.t ]
 
   type env =
     { used_context : used_context;
@@ -221,64 +228,19 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     let f = Options.get_used_context_file () in
     let cout = open_out (sprintf "%s.%s.used" f g_name) in
     let cfmt = Format.formatter_of_out_channel cout in
-    Ex.print_unsat_core cfmt dep;
+    Fmt.vbox
+      (Fmt.iter ~sep:Fmt.sp Expr.Labeled.Set.iter (Fmt.box Expr.Labeled.print))
+      cfmt dep;
+    Format.pp_print_flush cfmt ();
     close_out cout
 
-  let check_produced_unsat_core dep =
-    if get_verbose ()
+  let mk_root_dep label f loc =
+    if Options.get_produce_unsat_cores ()
     then
-      Printer.print_dbg ~module_name:"Frontend"
-        ~function_name:"check_produced_unsat_core"
-        "@[<v 0>checking the unsat-core:@,-------------------@,@]%a"
-        (Ex.print_unsat_core ~tab:false)
-        dep;
-    try
-      let pb = E.Set.elements (Ex.formulas_of dep) in
-      let satenv = SAT.empty () in
-      let () =
-        List.iter
-          (fun f ->
-            SAT.assume satenv
-              { E.ff = f;
-                origin_name = "";
-                gdist = -1;
-                hdist = -1;
-                trigger_depth = max_int;
-                nb_reductions = 0;
-                age = 0;
-                lem = None;
-                mf = false;
-                gf = false;
-                from_terms = [];
-                theory_elim = true
-              }
-              Ex.empty)
-          pb
-      in
-      ignore
-        (SAT.unsat satenv
-           { E.ff = E.vrai;
-             origin_name = "";
-             gdist = -1;
-             hdist = -1;
-             trigger_depth = max_int;
-             nb_reductions = 0;
-             age = 0;
-             lem = None;
-             mf = false;
-             gf = false;
-             from_terms = [];
-             theory_elim = true
-           });
-      Errors.run_error Errors.Failed_check_unsat_core
-    with
-    | SAT.Unsat _ -> ()
-    | (SAT.Sat | SAT.I_dont_know) as e -> raise e
-
-  let mk_root_dep name f loc =
-    if Options.get_unsat_core ()
-    then Ex.singleton (Ex.RootDep { name; f; loc })
-    else Ex.empty
+      match label with
+      | Some name -> E.Labeled.Set.singleton { name; f; loc }
+      | None -> E.Labeled.Set.empty
+    else E.Labeled.Set.empty
 
   let internal_decl ?(loc = Loc.dummy) (id : Id.typed) (env : env) : unit =
     ignore loc;
@@ -303,12 +265,17 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     SAT.pop env.sat_env n;
     env.res <- res
 
-  let internal_assume ?(loc = Loc.dummy) ((name, f, mf) : string * E.t * bool)
-      (env : env) =
+  let internal_assume ?(loc = Loc.dummy)
+      ((name, f, mf, label) : string * E.t * bool * string option) (env : env) =
     let is_hyp = try Char.equal '@' name.[0] with _ -> false in
-    if is_hyp || not (unused_context name env.used_context)
+    if
+      match label with
+      | None -> true
+      | Some label -> is_hyp || not (unused_context label env.used_context)
     then
-      let expl = if is_hyp then Ex.empty else mk_root_dep name f loc in
+      let expl =
+        if is_hyp then E.Labeled.Set.empty else mk_root_dep label f loc
+      in
       match env.res with
       | `Sat | `Unknown ->
         SAT.assume env.sat_env
@@ -331,7 +298,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
   let internal_pred_def ?(loc = Loc.dummy) (name, f) env =
     if not (unused_context name env.used_context)
     then
-      let expl = mk_root_dep name f loc in
+      let expl = mk_root_dep (Some name) f loc in
       SAT.pred_def env.sat_env f name expl loc
 
   let internal_query ?(loc = Loc.dummy) (n, f, sort) env =
@@ -355,7 +322,6 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
           }
       | `Unsat expl -> expl
     in
-    if get_debug_unsat_core () then check_produced_unsat_core expl;
     if get_save_used_context () then output_used_context n expl;
     env.res <- `Unsat expl
 
@@ -365,7 +331,7 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     then
       match env.res with
       | `Sat | `Unknown ->
-        let expl = mk_root_dep ax_name ax_form loc in
+        let expl = mk_root_dep (Some ax_name) ax_form loc in
         SAT.assume_th_elt env.sat_env th_elt expl
       | `Unsat _ -> ()
 
@@ -413,8 +379,8 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
       | Decl id -> check_if_over (internal_decl ~loc:d.st_loc id) env
       | Push n -> check_if_over (internal_push ~loc:d.st_loc n) env
       | Pop n -> check_if_over (internal_pop ~loc:d.st_loc n) env
-      | Assume (n, f, mf) ->
-        check_if_over (internal_assume ~loc:d.st_loc (n, f, mf)) env
+      | Assume { name = n; expr = f; mf; label } ->
+        check_if_over (internal_assume ~loc:d.st_loc (n, f, mf, label)) env
       | PredDef (f, name) ->
         check_if_over (internal_pred_def ~loc:d.st_loc (name, f)) env
       | Query (n, f, sort) -> begin
@@ -439,16 +405,16 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
     | SAT.Sat ->
       (* This case should mainly occur when a query has a non-unsat result, so
          we want to print the status in this case. *)
-      hook_on_status (Sat d) (Steps.get_steps ());
-      env.res <- `Sat
+      env.res <- `Sat;
+      hook_on_status (Sat d) (Steps.get_steps ())
     | SAT.Unsat expl ->
       (* This case should mainly occur when a new assumption results in an unsat
-         env, in which case we do not want to print status, since the correct
-         status should be printed at the next query. *)
-      if get_debug_unsat_core () then check_produced_unsat_core expl;
+           env, in which case we do not want to print status, since the correct
+           status should be printed at the next query. *)
       (* print_status (Inconsistent d) (Steps.get_steps ()); *)
       env.res <- `Unsat expl
     | SAT.I_dont_know ->
+      env.res <- `Unknown;
       (* TODO: always print Unknown for why3 ? *)
       let ur = SAT.get_unknown_reason env.sat_env in
       let status =
@@ -456,10 +422,9 @@ module Make (SAT : Sat_solver_sig.S) : S with type sat_env = SAT.t = struct
         | Some (Sat_solver_sig.Timeout _) -> Timeout (Some d)
         | _ -> Unknown d
       in
-      hook_on_status status (Steps.get_steps ());
+      hook_on_status status (Steps.get_steps ())
       (* TODO: Is it an appropriate behaviour? *)
       (*       if timeout != NoTimeout then raise Util.Timeout; *)
-      env.res <- `Unknown
     | Util.Timeout as e ->
       (* In this case, we obviously want to print the status, since we exit
          right after *)

@@ -35,6 +35,7 @@ val make_form :
   string -> D_loop.DStd.Expr.term -> Loc.t -> decl_kind:Expr.decl_kind -> Expr.t
 
 val make :
+  ?lang:D_loop.Dl.Logic.language ->
   D_loop.DStd.Loc.file ->
   Commands.sat_tdecl list ->
   [< D_loop.Typer_Pipe.typechecked

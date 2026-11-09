@@ -32,6 +32,10 @@ type builtin =
   | LT (* arithmetic *)
   | IsConstr of DE.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
+  | BVuaddo
+  | BVsaddo
+  | BVumulo
+  | BVsmulo
 
 type operator =
   | Tite
@@ -48,6 +52,7 @@ type operator =
   (* Arrays *)
   | Select
   | Store
+  | Const_array
   (* BV *)
   | Concat
   | Extract of int * int (* lower bound * upper bound *)
@@ -65,7 +70,8 @@ type operator =
   | BVshl
   | BVlshr
   | Int2BV of int
-  | BV2Nat
+  | Sbv_to_int
+  | Ubv_to_int
   (* FP *)
   | Float
   | FloatEbSb
@@ -236,19 +242,22 @@ let compare_operators op1 op2 =
     | Int2BV n1, Int2BV n2 -> Int.compare n1 n2
     | ( _,
         ( Plus | Minus | Mult | Div | Modulo | Real_is_int | Concat | Extract _
-        | Sign_extend _ | Repeat _ | Select | Store | Float | FloatEbSb
-        | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor | Int_ceil
-        | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int | Max_real
-        | Max_int | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor
-        | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
-        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
-        | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
+        | Sign_extend _ | Repeat _ | Select | Store | Const_array | Float
+        | FloatEbSb | Sqrt_real | Abs_int | Abs_real | Real_of_int | Int_floor
+        | Int_ceil | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int
+        | Max_real | Max_int | Integer_log2 | Pow | Integer_round | BVnot
+        | BVand | BVor | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl
+        | BVlshr | Int2BV _ | Sbv_to_int | Ubv_to_int | Not_theory_constant
+        | Is_theory_constant | Linear_dependency | Constr _ | Destruct _ | Tite
+          ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
   Util.compare_algebraic b1 b2 (function
     | IsConstr tcst1, IsConstr tcst2 -> DE.Term.Const.compare tcst1 tcst2
-    | _, (LT | LE | BVULE | IsConstr _) -> assert false)
+    | _, (LT | LE | BVULE | IsConstr _ | BVuaddo | BVsaddo | BVumulo | BVsmulo)
+      ->
+      assert false)
 
 let compare_lits lit1 lit2 =
   Util.compare_algebraic lit1 lit2 (function
@@ -383,12 +392,14 @@ module AEPrinter = struct
     | Concat -> Fmt.pf ppf "@"
     | Sign_extend i -> Fmt.pf ppf "sign_extend[%d]" i
     | Repeat i -> Fmt.pf ppf "repeat[%d]" i
-    | BV2Nat -> Fmt.pf ppf "bv2nat"
     | Int2BV n -> Fmt.pf ppf "int2bv[%d]" n
     | BVnot -> Fmt.pf ppf "bvnot"
     | BVand -> Fmt.pf ppf "bvand"
     | BVor -> Fmt.pf ppf "bvor"
     | BVxor -> Fmt.pf ppf "bvxor"
+    (* SMT-LIB 2.7 operators *)
+    | Sbv_to_int -> Fmt.pf ppf "sbv_to_int"
+    | Ubv_to_int -> Fmt.pf ppf "ubv_to_int"
     (* BV logic *)
     | BVadd -> Fmt.pf ppf "bvadd"
     | BVsub -> Fmt.pf ppf "bvsub"
@@ -400,6 +411,7 @@ module AEPrinter = struct
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "get"
     | Store -> Fmt.pf ppf "set"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
@@ -422,6 +434,14 @@ module AEPrinter = struct
     | L_neg_built BVULE -> Fmt.pf ppf ">"
     | L_built (IsConstr h) -> Fmt.pf ppf "? %a" DE.Term.Const.print h
     | L_neg_built (IsConstr h) -> Fmt.pf ppf "?not? %a" DE.Term.Const.print h
+    | L_built BVuaddo -> Fmt.pf ppf "bvuaddo"
+    | L_built BVsaddo -> Fmt.pf ppf "bvsaddo"
+    | L_built BVumulo -> Fmt.pf ppf "bvumulo"
+    | L_built BVsmulo -> Fmt.pf ppf "bvsmulo"
+    | L_neg_built BVuaddo -> Fmt.pf ppf "?not bvuaddo"
+    | L_neg_built BVsaddo -> Fmt.pf ppf "?not bvsaddo"
+    | L_neg_built BVumulo -> Fmt.pf ppf "?not bvumulo"
+    | L_neg_built BVsmulo -> Fmt.pf ppf "?not bvsmulo"
 
   let pp_form ppf f =
     match f with
@@ -477,7 +497,6 @@ module SmtPrinter = struct
     | Concat -> Fmt.pf ppf "concat"
     | Sign_extend i -> Fmt.pf ppf "(_ sign_extend %d)" i
     | Repeat i -> Fmt.pf ppf "(_ repeat %d)" i
-    | BV2Nat -> Fmt.pf ppf "bv2nat"
     | BVnot -> Fmt.pf ppf "bvnot"
     | BVand -> Fmt.pf ppf "bvand"
     | BVor -> Fmt.pf ppf "bvor"
@@ -490,16 +509,20 @@ module SmtPrinter = struct
     | BVurem -> Fmt.pf ppf "bvurem"
     | BVshl -> Fmt.pf ppf "bvshl"
     | BVlshr -> Fmt.pf ppf "bvlshr"
+    (* SMT-LIB 2.7 operators *)
+    | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
+    | Sbv_to_int -> Fmt.pf ppf "sbv_to_int"
+    | Ubv_to_int -> Fmt.pf ppf "ubv_to_int"
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "select"
     | Store -> Fmt.pf ppf "store"
+    | Const_array -> Fmt.pf ppf "ae.const"
     (* DT theory *)
     | Constr tcst | Destruct tcst -> DE.Term.Const.print ppf tcst
     (* Float theory *)
     | Float -> Fmt.pf ppf "ae.round"
     | FloatEbSb -> Fmt.pf ppf "ae.float"
     (* Not in the SMT-LIB standard *)
-    | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "ae.linear_dependency"
@@ -549,3 +572,23 @@ module Map : Map.S with type key = t = Map.Make (struct
 
   let compare = compare
 end)
+
+module Print (Output_format : Printer.Output_format) = struct
+  open Output_format
+
+  let builtin ppf = function
+    | LE -> Fmt.pf ppf "<="
+    | LT -> Fmt.pf ppf "<"
+    | IsConstr c -> print_tester DE.Term.Const.print ppf c
+    | BVULE -> Fmt.pf ppf "bvule"
+    | BVuaddo -> Fmt.pf ppf "bvuaddo"
+    | BVsaddo -> Fmt.pf ppf "bvsaddo"
+    | BVumulo -> Fmt.pf ppf "bvumulo"
+    | BVsmulo -> Fmt.pf ppf "bvsmulo"
+
+  let builtin_app b pp =
+    match b with
+    | LE | LT -> print_infix builtin b pp
+    | IsConstr _ | BVULE | BVuaddo | BVsaddo | BVumulo | BVsmulo ->
+      print_call builtin b pp
+end

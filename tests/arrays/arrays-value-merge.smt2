@@ -1,0 +1,15 @@
+; a[i] and (store a i x)[i] become equal after the store is added, which gives
+; a = (store a i x) without extensionality.
+(set-logic QF_AX)
+(declare-sort T 0)
+(declare-sort E 0)
+(declare-const a (Array T E))
+(declare-const i T)
+(declare-const x E)
+(declare-const y E)
+(declare-const z E)
+(assert (= y (select a i)))
+(assert (or (= x y) (= x z)))
+(assert (= z y))
+(assert (distinct a (store a i x)))
+(check-sat)

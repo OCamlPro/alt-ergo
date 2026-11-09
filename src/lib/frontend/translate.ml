@@ -381,6 +381,19 @@ let smt_fpa_builtins =
     | Id { ns = Term; name = Simple "int.pow2" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env int_pow2_cst
+    (* Constant arrays: [((as ae.const (Array I E)) v)]. Dolmen only accepts
+       [((as const (Array I E)) v)] in models, we accept them in scripts under
+       the [ae.const] name. *)
+    | Id { ns = Term; name = Simple "ae.const" } ->
+      Dl.Typer.T.builtin_term (fun ast args ->
+          let index_ty =
+            Dl.Typer.T.wildcard env (Added_type_argument (ast, 0)) Any_in_scope
+          in
+          Dolmen_type.Base.term_app1
+            (module Dl.Typer.T)
+            env s
+            (DE.Term.Array.const index_ty)
+            ast args)
     | Id { ns = Term; name = Simple "ae.float" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env ae_float_cst
@@ -845,6 +858,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             (List.map (fun a -> aux_mk_expr a) args)
             (dty_to_ty term_ty)
         in
+        let unop unop =
+          match args with
+          | [x] -> unop (aux_mk_expr x)
+          | _ -> Util.internal_error "not an unary operator"
+        in
+        let binop binop =
+          match args with
+          | [x; y] -> binop (aux_mk_expr x) (aux_mk_expr y)
+          | _ -> Util.internal_error "not a binary operator"
+        in
         let invalid_app_term () =
           unsupported "Invalid application %a" DE.Term.print term
         in
@@ -1127,9 +1150,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               _ ) ->
             invalid_app_term ()
           (* Unary functions from SMT-LIB 2.7 *)
-          | Of_int { n }, _ -> op (Int2BV n)
-          | To_int { n = _; signed = false }, _ -> op BV2Nat
-          | To_int { n = _; signed = true }, _ -> unsupported_app_term ()
+          | Of_int { n }, [x] -> E.BV.int_to_bv n (mk x)
+          | To_int { n = _; signed }, [x] ->
+            if signed then E.BV.sbv_to_int (mk x) else E.BV.ubv_to_int (mk x)
+          | (Of_int _ | To_int _), _ -> invalid_app_term ()
           (* Binary functions from FixedSizeBitVectors theory *)
           | Concat _, [x; y] -> E.BV.concat (mk x) (mk y)
           | And _, [x; y] -> E.BV.bvand (mk x) (mk y)
@@ -1168,11 +1192,15 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               | Sgt _ | Sge _ ),
               _ ) ->
             invalid_app_term ()
-          (* Binary functions from SMT-LIB 2.7 *)
-          | ( ( Overflow_add _ | Overflow_neg _ | Overflow_sub _
-              | Overflow_mul _ | Overflow_div _ ),
-              _ ) ->
-            unsupported_app_term ()
+          (* Overflow functions from SMT-LIB 2.7 *)
+          | Overflow_add { n = _; signed }, _ ->
+            if signed then binop E.BV.bvsaddo else binop E.BV.bvuaddo
+          | Overflow_sub { n = _; signed }, _ ->
+            if signed then binop E.BV.bvssubo else binop E.BV.bvusubo
+          | Overflow_neg { n = _ }, _ -> unop E.BV.bvnego
+          | Overflow_mul { n = _; signed }, _ ->
+            if signed then binop E.BV.bvsmulo else binop E.BV.bvumulo
+          | Overflow_div { n = _ }, _ -> binop E.BV.bvsdivo
           (* Cannot be applied *)
           | (T _ | Binary_lit _), _ -> invalid_app_term ())
         (* Array builtins *)
@@ -1188,7 +1216,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             let e3 = aux_mk_expr z in
             E.mk_term (Sy.Op Sy.Store) [e1; e2; e3] ty
           | (Select | Store), _ -> invalid_app_term ()
-          | Const, _ -> unsupported_app_term ()
+          | Const, [x] ->
+            let ty = dty_to_ty term_ty in
+            E.ArraysEx.const ty (aux_mk_expr x)
+          | Const, _ -> invalid_app_term ()
           (* Cannot be applied *)
           | T, _ -> invalid_app_term ())
         (* Floating-point builtins *)
@@ -1634,7 +1665,7 @@ let rec is_pure_term t =
   | Sy.Op Tite -> false
   | _ -> List.for_all is_pure_term xs
 
-let make file acc stmt =
+let make ?lang file acc stmt =
   let rec aux acc (stmt : _ Typer_Pipe.stmt) =
     let loc = Dolmen.Std.Loc.loc file stmt.loc in
     let st_loc = Loc.from_dolmen_loc loc in
@@ -1701,6 +1732,7 @@ let make file acc stmt =
       assert false
     (* Axiom definitions *)
     | { id = DStd.Id.{ name = Simple name; _ }; contents = `Hyp t; attrs; _ } ->
+      let is_hyp = String.length name > 0 && Char.equal '@' name.[0] in
       let name =
         (* The custom [:lemma] attribute overrides Dolmen's default identifier,
            which is inferred as [hyp_N] in smt-lib format. *)
@@ -1708,7 +1740,7 @@ let make file acc stmt =
         | Some n -> n
         | None -> name
       in
-      let name =
+      let name_from_tags =
         (* Upon seeing a term [(! t :named n)], Dolmen translates this to a
            definition [(define-fun n () Bool f)], processed as a `Defs`
            statement, and we only see [(assert n)].
@@ -1725,9 +1757,18 @@ let make file acc stmt =
               tags
             }
           when Option.is_some (DStd.Tag.get tags DE.Tags.named) ->
-          name
-        | _ -> name
+          Some name
+        | _ -> None
       in
+      let label =
+        if is_hyp
+        then Some name
+        else
+          match lang with
+          | Some (D_loop.Dl.Logic.Smtlib2 _) -> name_from_tags
+          | _ -> Some name
+      in
+      let name = Option.value ~default:name name_from_tags in
       (* Dolmen adds information about theory extensions and case splits in the
          [attrs] field of the parsed statements. [attrs] can be arbitrary terms,
          where the information we care about is encoded as a [Colon]-list of
@@ -1802,7 +1843,8 @@ let make file acc stmt =
             C.ThAssume th_elt
           in
           E.Dtheory, th_assume
-        | None -> E.Daxiom, fun name e -> C.Assume (name, e, true)
+        | None ->
+          E.Daxiom, fun name e -> C.Assume { name; expr = e; mf = true; label }
       in
       let e = make_form name t st_loc ~decl_kind in
       let st_decl = assume name e in
@@ -1895,7 +1937,17 @@ let make file acc stmt =
                  in
                  if Options.get_verbose ()
                  then Format.eprintf "defining term of %a@." DE.Term.print body;
-                 Some C.{ st_decl = C.Assume (name_base, e, true); st_loc }
+                 Some
+                   C.
+                     { st_decl =
+                         C.Assume
+                           { name = name_base;
+                             expr = e;
+                             mf = true;
+                             label = None
+                           };
+                       st_loc
+                     }
                end
              | `Type_alias _ -> None
              | `Instanceof _ ->

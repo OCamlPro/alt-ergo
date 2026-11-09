@@ -275,7 +275,7 @@ module Make (X : Arg) : S with type theory = X.t = struct
 
     let candidate_substitutions pat_info res =
       let open Matching_types in
-      if Options.get_debug_matching () >= 1
+      if Options.get_debug_matching () >= 1 && not (Compat.List.is_empty res)
       then
         print_dbg ~module_name:"Matching"
           ~function_name:"candidate_substitutions"

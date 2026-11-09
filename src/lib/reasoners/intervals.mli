@@ -89,6 +89,8 @@ module Int : sig
       be unbounded (in which case [extract s i j] returns the full interval
       [[0, 2^(j - i + 1) - 1]]). *)
 
+  val signed_extract : t -> ofs:int -> len:int -> t
+
   val bvudiv : size:int -> t -> t -> t
   (** [bvudiv sz s t] computes an overapproximation of integer division for
       bit-vectors of width [sz] as defined in the FixedSizeBitVectors SMT-LIB
