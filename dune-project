@@ -44,7 +44,7 @@ See more details on https://alt-ergo.ocamlpro.com/")
  (name alt-ergo-smt-float-plugin)
  (synopsis "The SMT-LIB FPA prelude of the Alt-Ergo SMT prover")
  (description "\
-An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived from Why3. It is loaded by Alt-Ergo when the theory smt.float is enabled (--enable-theory smt.float).
+An axiomatization of the SMT-LIB theory of floating-point arithmetic, derived from Why3. It is loaded by Alt-Ergo when an SMT-LIB floating-point type or symbol is first used.
 
 See more details on https://alt-ergo.ocamlpro.com/"
  )
