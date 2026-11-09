@@ -22,19 +22,13 @@ type prelude =
   | Nra
   | Ria
   | Fpa
-  | SmtFloat
 
-let[@inline] prelude_to_int = function
-  | Nra -> 0
-  | Ria -> 1
-  | Fpa -> 2
-  | SmtFloat -> 3
+let[@inline] prelude_to_int = function Nra -> 0 | Ria -> 1 | Fpa -> 2
 
 let pp_prelude ppf = function
   | Fpa -> Format.fprintf ppf "fpa"
   | Ria -> Format.fprintf ppf "ria"
   | Nra -> Format.fprintf ppf "nra"
-  | SmtFloat -> Format.fprintf ppf "smt.float"
 
 let equal_prelude prelude1 prelude2 =
   Int.equal (prelude_to_int prelude1) (prelude_to_int prelude2)
@@ -71,7 +65,11 @@ let prelude_filename = function
   | Fpa -> "fpa.ae"
   | Ria -> "ria.ae"
   | Nra -> "nra.ae"
-  | SmtFloat -> "smt-lib-fpa.ae"
+
+(* The prelude of the SMT-LIB FPA theory. It is not embedded in the binary but
+   installed by the package alt-ergo-smt-float-plugin, and loaded when an
+   SMT-LIB FPA type or symbol is first used. *)
+let smt_lib_fpa_prelude = "smt-lib-fpa.ae"
 
 let filename th = Fmt.str "<builtins>/%s" (prelude_filename th)
 
@@ -88,24 +86,15 @@ let ria_prelude = get_prelude Ria
 let nra_prelude = get_prelude Nra
 
 let content = function
-  | Fpa -> Some fpa_prelude
-  | Ria -> Some ria_prelude
-  | Nra -> Some nra_prelude
-  | SmtFloat -> None
+  | Fpa -> fpa_prelude
+  | Ria -> ria_prelude
+  | Nra -> nra_prelude
 
-let installed_file = function
-  | Fpa | Ria | Nra -> None
-  | SmtFloat -> Some "smt-lib-fpa.ae"
-
-let all_preludes = [Fpa; Ria; Nra; SmtFloat]
-
-(* SmtFloat is only activated when the user passes --enable-theories
-   smt.float. *)
-let default_preludes = [Fpa; Ria; Nra]
+let all_preludes = [Fpa; Ria; Nra]
 
 let all = ADT :: AC :: List.map (fun p -> Prelude p) all_preludes
 
-let default = ADT :: AC :: List.map (fun p -> Prelude p) default_preludes
+let default = all
 
 let theory_enum = List.map (fun t -> Format.asprintf "%a" pp t, t) all
 

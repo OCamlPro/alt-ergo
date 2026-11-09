@@ -540,8 +540,6 @@ let mk_term_opt disable_ites inline_lets rewriting no_term_like_pp =
 
 let mk_theory_opt () no_contracongru no_fm no_nla no_tcp no_theory restricted
     tighten_vars theories =
-  set_smt_lib_fpa
-    (List.exists (Theories.equal (Theories.Prelude Theories.SmtFloat)) theories);
   set_no_ac (not (List.exists (Theories.equal Theories.AC) theories));
   set_no_fm no_fm;
   set_no_nla no_nla;
