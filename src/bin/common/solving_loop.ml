@@ -174,6 +174,9 @@ let with_goal_limits { reproducible_resource_limit } ~scope =
   let& () = Steps.with_step_limit reproducible_resource_limit in
   scope ()
 
+(* Directory of the theory preludes embedded in the binary or installed. *)
+let builtin_dir = "<builtin>"
+
 let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let () = Dolmen_loop.Code.init [] in
   let hook_on_status status i =
@@ -845,10 +848,22 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         (* TODO: - Separate statements that should be ignored from unsupported
            statements and throw exception or print a warning when an unsupported
            statement is encountered. *)
+        let logic_file = State.get State.logic_file st in
         let cnf =
-          let file = State.get State.logic_file st in
-          Translate.make ?lang:file.lang file.loc
+          Translate.make ?lang:logic_file.lang logic_file.loc
             (State.get solver_ctx_key st).ctx td
+        in
+        (* The symbols of the theory preludes are not part of models.
+
+           TODO: find a way to exclude prelude symbols from being used
+           externally/by users *)
+        let cnf =
+          if String.equal logic_file.dir builtin_dir
+          then
+            List.filter
+              (function Commands.{ st_decl = Decl _; _ } -> false | _ -> true)
+              cnf
+          else cnf
         in
         State.set solver_ctx_key
           (let solver_ctx = State.get solver_ctx_key st in
@@ -872,7 +887,6 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
       Options.Time.start ();
-      let builtin_dir = "<builtin>" in
       (* Using [`File] sources with preludes is currently broken, see
          https://github.com/Gbury/dolmen/issues/248 and
          https://github.com/OCamlPro/alt-ergo/issues/1330 *)
