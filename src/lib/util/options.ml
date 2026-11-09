@@ -409,7 +409,7 @@ let parse_only = ref false
 
 let preludes = ref []
 
-let theory_preludes = ref Theories.default_preludes
+let theory_preludes = ref Theories.all_preludes
 
 let type_only = ref false
 
