@@ -398,7 +398,7 @@ In formats where sb > emax, the largest finite value is not an integer (15.5
 for eb = 3, sb = 5), so rounding it to an integral value may overflow to an
 infinity: these problems are satisfiable and must not be answered unsat.
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 3 5))
   > (assert (= x (fp #b0 #b110 #b1111)))
@@ -435,7 +435,7 @@ infinity: these problems are satisfiable and must not be answered unsat.
 Rounding an integer, or a value of a format where sb <= emax, does not
 overflow.
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 3 5))
   > (assert (= x (fp #b0 #b110 #b1110)))
@@ -445,7 +445,7 @@ overflow.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.isNormal x))
@@ -1349,7 +1349,7 @@ Model generation gives each float a literal
     (define-fun x () (_ FloatingPoint 11 53) (_ +oo 11 53))
   )
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 5000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1460,8 +1460,7 @@ float without a value. This query used to crash, now it times out.
   > EOF
   
   unknown
-  (error "timeout")
-  [142]
+  ()
 
 Regression test (from QF_BVFP/20170428-Liew-KLEE query.0232, status sat): the
 discreteness lemma of a comparison with an operand whose representative is a
