@@ -618,6 +618,9 @@ module Labeled = struct
       loc : Loc.t
     }
 
+  (* Note: [equal], [hash], and [compare] only care about the underlying [expr],
+     not its [name] or [loc]ation -- if an expression has multiple names, it
+     doesn't matter which one we use. *)
   module T0 = struct
     type nonrec t = t
 

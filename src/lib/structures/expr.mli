@@ -168,6 +168,14 @@ module Labeled : sig
       f : t;
       loc : Loc.t
     }
+  (** An expression with a name.
+
+      This is used to keep track of where expressions come from in the input
+      problem: the name is only used for display and has no semantic meaning. In
+      particular, the comparison and hashing functions ignore the name: if a
+      given expression has multiple names, it doesn't matter which one we use
+      (on the other hand, distinct expressions should not have the same name).
+  *)
 
   include Container_types.S_plus_stdlib with type t := t
 end

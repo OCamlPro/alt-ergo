@@ -123,17 +123,6 @@ let to_unsat_core dep =
 let from_assumptions deps =
   E.Labeled.Set.fold (fun r acc -> S.add (RootDep r) acc) deps S.empty
 
-let print_unsat_core ?(tab = false) fmt dep =
-  iter_atoms
-    (function
-      | RootDep r ->
-        if tab
-        then Format.fprintf fmt "  %s@." r.name (* tab is too big *)
-        else Format.fprintf fmt "%s@." r.name
-      | Dep _ -> ()
-      | Bj _ | Fresh _ | Literal _ -> assert false)
-    dep
-
 let formulas_of s =
   S.fold
     (fun e acc ->

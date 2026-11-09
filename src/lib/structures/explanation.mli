@@ -75,8 +75,6 @@ val to_unsat_core : t -> Expr.Labeled.Set.t
 
 val from_assumptions : Expr.Labeled.Set.t -> t
 
-val print_unsat_core : ?tab:bool -> Format.formatter -> t -> unit
-
 val formulas_of : t -> Expr.Set.t
 
 val bj_formulas_of : t -> Expr.Set.t
