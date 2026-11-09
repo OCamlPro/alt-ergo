@@ -123,8 +123,12 @@ module Field(C : Core)(FT : FieldType) = struct
       (fun () -> interval_set inv0)
       (map_dec_to_set FT.inv)
 
-  let div ?inv0 x y =
-    mul x (inv ?inv0 y)
+  let div ?(div0 = Interval.full) x y =
+    trace2 "div" x y @@ of_set_nonempty
+    @@ trisection_map_to_set FT.zero y
+         (fun y -> mul x (map_dec_to_set FT.inv y |> of_set_nonempty) |> to_set)
+         (fun () -> interval_set div0)
+         (fun y -> mul x (map_dec_to_set FT.inv y |> of_set_nonempty) |> to_set)
 end
 
 module AlgebraicField(C : Core)(AT : AlgebraicType) = struct
