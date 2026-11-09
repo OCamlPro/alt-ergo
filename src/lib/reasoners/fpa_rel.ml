@@ -594,6 +594,35 @@ module Conv_watch = struct
           eb sb ]
     | _ -> []
 
+  (* [term = rem(x, y)] with [y] equal to a nonzero finite literal [c]: [term]
+     is exactly [x - c * n], with [n = integer_round(NearestTiesToEven, x / c)].
+     Guarded by [y = c] so that it holds as a lemma. *)
+  let rem_lemmas term rep_y =
+    match E.term_view term, get_fp_value rep_y with
+    | { E.xs = [x; y]; ty = Ty.Tfloat (eb, sb); _ }, Some ((Finite c as v), _)
+      ->
+      let rne =
+        E.mk_constr
+          (Fpa_rounding.term_cst_of_rounding_mode RoundNearestTiesToEven)
+          [] Fpa_rounding.fpa_rounding_mode
+      in
+      let rx = E.FP.to_real ~eb ~sb x in
+      let n =
+        E.mk_term (Sy.Op Sy.Integer_round)
+          [rne; E.Reals.(rx * of_Q (Q.inv c))]
+          Ty.Tint
+      in
+      let value =
+        E.mk_eq ~iff:false
+          (E.FP.to_real ~eb ~sb term)
+          E.Reals.(rx - (of_Q c * real_of_int n))
+      in
+      [ mk_clause
+          [ E.neg (E.mk_eq ~iff:false y (E.float v eb sb));
+            E.neg (E.FP.is_finite ~eb ~sb x);
+            value ] ]
+    | _ -> []
+
   (* Runs the rules of [term] and queues their facts. *)
   let apply_conv_rules term app t =
     let facts, lemmas =
@@ -606,7 +635,7 @@ module Conv_watch = struct
       | To_fp, Rounded { mode; arg } -> to_fp term ~mode ~arg, []
       | To_bv (signed, n), Rounded { mode; arg } ->
         to_bv t term ~signed n app.r ~mode ~arg, []
-      | Rem, Ops [x; y] -> rem term x y, []
+      | Rem, Ops [x; y] -> rem term x y, rem_lemmas term y
       | _ -> assert false
     in
     { t with facts = facts @ t.facts; lemmas = lemmas @ t.lemmas }
