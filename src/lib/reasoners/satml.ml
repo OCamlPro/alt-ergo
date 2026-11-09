@@ -253,13 +253,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
               SAT solver to decide (see [acts_set_splits]). They do not appear
               in the formulas, but they are relevant, their assignments are sent
               to the theory, and they must be decided before answering [Sat]. *)
-      mutable th_splits_used : bool;
-          (** Set to [true] once the theory asks the SAT solver to decide a case
-              split (see [acts_set_splits]), never reset. A case split is in no
-              formula, so the [cdcl_tableaux_th] relevancy filter would hide the
-              atoms that only matter after the split and starve the theory. From
-              the first split on we disable the filter for the rest of the
-              search (see [theory_propagate]) and send every assigned atom. *)
+      mutable resend_splits : bool;
+          (** [true] after a backtrack: the restored theory environment may
+              miss the values of the splits that are still assigned, so
+              [acts_set_splits] sends them again. *)
       irrelevants : unit VH.t;
           (** Variables that have been removed from the set of possible
               decisions due to no longer being relevant to the original formula
@@ -387,7 +384,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           ~dummy:(Matoms.singleton Atom.faux_atom (MFF.empty, FF.faux));
       stale_splits = false;
       th_splits = VH.create 17;
-      th_splits_used = false;
+      resend_splits = false;
       irrelevants = VH.create 17;
       relevants = SFF.empty;
       relevants_queue = Vec.make 100 ~dummy:(SFF.singleton FF.faux);
@@ -539,7 +536,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Printer.print_dbg "[satml] cancel until %d (current is %d)@." lvl
         (decision_level env);
     cancel_ff_lvls_until env lvl;
-    if decision_level env > lvl then env.stale_splits <- true;
+    if decision_level env > lvl
+    then begin
+      env.stale_splits <- true;
+      env.resend_splits <- true
+    end;
     let repush = ref [] in
     if decision_level env > lvl
     then begin
@@ -759,7 +760,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
      formulas. *)
   let acts_set_splits env lits =
     env.stale_splits <- false;
-    if not (Compat.List.is_empty lits) then env.th_splits_used <- true;
+    let resend = env.resend_splits in
+    env.resend_splits <- false;
+    let old = VH.copy env.th_splits in
     VH.clear env.th_splits;
     List.iter
       (fun lit ->
@@ -770,7 +773,16 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         if atom.var.level < 0
         then (
           VH.remove env.irrelevants atom.var;
-          insert_var_order env atom.var))
+          insert_var_order env atom.var)
+        else if
+          Options.get_cdcl_tableaux_th ()
+          && (resend || not (VH.mem old atom.var))
+        then
+          (* The split is already assigned, but the relevancy filter may have
+             hidden its value from the theory: send it. *)
+          Queue.push
+            (if atom.is_true then atom else atom.neg)
+            env.th_tableaux)
       lits
 
   let acts_add_objective env fn value lit =
@@ -974,24 +986,22 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         if Options.get_profiling () then Profiling.theory_conflict ();
         C_theory dep
 
-  let theory_propagate env =
+  let rec theory_propagate env =
     let facts = ref [] in
     let dlvl = decision_level env in
     if Options.get_cdcl_tableaux () then compute_facts_for_theory_propagate env;
     let tatoms_queue =
-      if Options.get_cdcl_tableaux_th () && not env.th_splits_used
-      then env.th_tableaux
-      else
-        (* The relevancy filter only sends the theory atoms taken from the
-           formulas. A case split is in no formula, so the filter hides the
-           atoms that matter only after the split. Once the theory makes a split
-           ([th_splits_used]) we drop the filter and send every assigned atom.
-           Each atom is sent only once, so we never turn the filter back on: an
-           atom hidden now would never be sent again. Before the first split the
-           filter is kept: it is a useful optimisation and is only unsafe once
-           splits exist, so problems that never split keep it for the whole
-           run. *)
-        env.tatoms_queue
+      if Options.get_cdcl_tableaux_th ()
+      then begin
+        (* The relevancy filter only keeps the atoms of the formulas. The case
+           splits are in no formula, so their values are added here. *)
+        Queue.iter
+          (fun (a : Atom.atom) ->
+            if VH.mem env.th_splits a.var then Queue.push a env.th_tableaux)
+          env.tatoms_queue;
+        env.th_tableaux
+      end
+      else env.tatoms_queue
     in
     match unit_theory_propagate env env.tatoms_queue tatoms_queue with
     | C_theory _ as res -> res
@@ -1054,7 +1064,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           in
           Steps.incr (Steps.Th_assumed cpt);
           env.tenv <- t;
-          do_case_split env Util.AfterTheoryAssume
+          match do_case_split env Util.AfterTheoryAssume with
+          | C_none when not (Queue.is_empty env.th_tableaux) ->
+            (* Send the values of the assigned splits (see [acts_set_splits]). *)
+            theory_propagate env
+          | res -> res
           (*if full_model then expensive_theory_propagate () else None*)
         with Ex.Inconsistent (dep, _terms) ->
           (* XXX what to do with terms ? *)
@@ -1697,7 +1711,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         &&
         (env.stale_splits <- false;
          match do_case_split env Util.AfterTheoryAssume with
-         | C_none -> false
+         | C_none ->
+           (* Propagate again to send the values of the assigned splits (see
+              [acts_set_splits]). *)
+           not (Queue.is_empty env.th_tableaux)
          | C_theory _ as c ->
            conflict_analyze_and_fix env c;
            true
