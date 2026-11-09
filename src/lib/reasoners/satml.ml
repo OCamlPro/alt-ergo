@@ -509,7 +509,6 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
            (fun exp unsat_core ->
              match exp with
              | Literal a -> (
-               assert (a.Atom.var.level = 0);
                match a.var.reason with
                | None -> E.Labeled.Set.union a.var.vpremise unsat_core
                | Some reason ->
@@ -1718,7 +1717,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     partition_aux [] [] [] init atoms
 
-  let add_clause env ~cnumber:_ (atoms, dep) =
+  let add_clause env (atoms, dep) =
     if env.is_unsat then raise (Unsat env.unsat_core);
     (*if not (clause_exists atoms) then XXX TODO *)
     let init0 =
@@ -1881,7 +1880,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     fun env sff -> if Options.get_cdcl_tableaux () then better_bj env sff
 
-  let assume env unit_cnf nunit_cnf _f ~cnumber sff ~dec_lvl =
+  let assume env unit_cnf nunit_cnf sff ~dec_lvl =
     if env.is_unsat then raise (Unsat env.unsat_core);
     begin match unit_cnf, nunit_cnf with
     | [], [] -> ()
@@ -1892,8 +1891,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Vec.grow_to_by_double env.clauses nbc;
       Vec.grow_to_by_double env.learnts nbc;
       env.nb_init_clauses <- nbc;
-      List.iter (add_clause env ~cnumber) unit_cnf;
-      List.iter (add_clause env ~cnumber) nunit_cnf;
+      List.iter (add_clause env) unit_cnf;
+      List.iter (add_clause env) nunit_cnf;
       if Options.get_verbose ()
       then
         Printer.print_dbg "%d clauses@ %d learnts" (Vec.size env.clauses)

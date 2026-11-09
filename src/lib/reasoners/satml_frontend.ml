@@ -416,7 +416,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             let f = FF.expand_skolem env.ff_hcons_env a in
             if (not (Options.get_cdcl_tableaux ())) && ME.mem f env.gamma
             then acc
-            else (* Skolems definitions are already guarded. *)
+            else (* Skolem definitions are already guarded. *)
               (mk_gf f, E.Labeled.Set.empty) :: acc
           else acc
         with Not_found -> acc)
@@ -704,17 +704,13 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     end
     else
       try
-        let f =
-          (E.vrai
-          [@ocaml.ppwarning "TODO: should fix for unsat cores generation"])
-        in
         let nbv = FF.nb_made_vars env.ff_hcons_env in
         let nunit =
           List.map (fun clause -> clause, E.Labeled.Set.empty) nunit
         in
         let unit, nunit = SAT.new_vars env.satml ~nbv new_vars unit nunit in
         (*update_lazy_cnf done inside assume at the right place *)
-        SAT.assume env.satml unit nunit f ~cnumber:0 activate ~dec_lvl
+        SAT.assume env.satml unit nunit activate ~dec_lvl
       with
       | Satml.Unsat lc -> raise (IUnsat (env, make_explanation lc))
       | Satml.Sat -> assert false
