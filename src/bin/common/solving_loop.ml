@@ -45,16 +45,17 @@ exception Exit_with_code of int
 type solver_ctx =
   { ctx : Commands.sat_tdecl list;
     local : Commands.sat_tdecl list;
-    global : Commands.sat_tdecl list
+    global : Commands.sat_tdecl list;
+    prelude_cmds : Commands.sat_tdecl list
   }
 
 let is_solver_ctx_empty = function
-  | { ctx = []; local = []; global = [] } -> true
+  | { ctx = []; local = []; global = []; prelude_cmds = [] } -> true
   | _ -> false
 
 type 'a sat_module = (module Sat_solver_sig.S with type t = 'a)
 
-let empty_solver_ctx = { ctx = []; local = []; global = [] }
+let empty_solver_ctx = { ctx = []; local = []; global = []; prelude_cmds = [] }
 
 (* Imported from Dolmen.Std.Loc implementation. *)
 let rec explode_path acc path =
@@ -173,6 +174,18 @@ let with_goal_limits { reproducible_resource_limit } ~scope =
   let& () = with_time_limit in
   let& () = Steps.with_step_limit reproducible_resource_limit in
   scope ()
+
+(* Directory of the theory preludes embedded in the binary or installed. *)
+let builtin_dir = "<builtin>"
+
+(* Using [`File] sources with preludes is currently broken, see
+   https://github.com/Gbury/dolmen/issues/248 and
+   https://github.com/OCamlPro/alt-ergo/issues/1330 *)
+let read_file path =
+  let ch = open_in_bin path in
+  let s = really_input_string ch (in_channel_length ch) in
+  close_in ch;
+  s
 
 let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
   let () = Dolmen_loop.Code.init [] in
@@ -385,10 +398,10 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
     let response_file = State.mk_file "" (`Raw ("", "")) in
     input_file, response_file
   in
-  let mk_state ?(debug = false) ?(report_style = State.Contextual)
+  let init_state ?(debug = false) ?(report_style = State.Contextual)
       ?(max_warn = max_int) ?(time_limit = Float.infinity)
       ?(size_limit = Float.infinity) ?(type_check = true)
-      ?(solver_ctx = empty_solver_ctx) src =
+      ?(solver_ctx = empty_solver_ctx) response_file =
     let reports =
       Dolmen_loop.Report.Conf.(
         let disable m t =
@@ -400,19 +413,80 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         |> disable "unused-type-var" |> disable "unused-term-var"
         |> disable "extra-dstr" |> disable "shadowing" |> disable "dumb-poly")
     in
+    State.empty
+    |> State.set solver_ctx_key solver_ctx
+    |> State.set solve_res_key (Unknown None)
+    |> State.set named_terms Util.MS.empty
+    |> DO.init
+    |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
+         ~size_limit ~response_file
+    |> Parser.init ~interactive_prompt
+    |> Typer.init ~additional_builtins:Translate.builtins
+         ~extension_builtins:[Dolmen_loop.Typer.Ext.bvconv]
+    |> Typer_Pipe.init ~type_check
+  in
+  let mk_state ?debug ?report_style ?max_warn ?time_limit ?size_limit
+      ?type_check ?solver_ctx src =
     let logic_file, response_file = mk_files src in
     ( logic_file,
-      State.empty
-      |> State.set solver_ctx_key solver_ctx
-      |> State.set solve_res_key (Unknown None)
-      |> State.set named_terms Util.MS.empty
-      |> DO.init
-      |> State.init ~debug ~report_style ~reports ~max_warn ~time_limit
-           ~size_limit ~response_file
-      |> Parser.init ~interactive_prompt
-      |> Typer.init ~additional_builtins:Translate.builtins
-           ~extension_builtins:[Dolmen_loop.Typer.Ext.bvconv]
-      |> Typer_Pipe.init ~type_check )
+      init_state ?debug ?report_style ?max_warn ?time_limit ?size_limit
+        ?type_check ?solver_ctx response_file )
+  in
+  (* Parses, type-checks and translates the SMT-LIB FPA prelude. Its statements
+     are renamed before type-checking, see [Fpa_namespace]. *)
+  let load_smt_float_prelude () =
+    let content =
+      match Config.lookup_prelude Theories.smt_lib_fpa_prelude with
+      | Some path -> read_file path
+      | None ->
+        let hint = "install the opam package alt-ergo-smt-float-plugin" in
+        fatal_error
+          "cannot find the prelude '%s' of the SMT-LIB FPA theory in the \
+           preludes directories (see `alt-ergo --where preludes`). When \
+           running from the build directory, it can be installed there with \
+           `dune build @install`.%a"
+          Theories.smt_lib_fpa_prelude
+          Fmt.(any "@,Hint: " ++ string)
+          hint
+    in
+    (* The prelude is type-checked in its own state, independently of the logic
+       of the problem. *)
+    let file =
+      State.mk_file builtin_dir (`Raw (Theories.smt_lib_fpa_prelude, content))
+    in
+    let fpa_namespace = Fpa_namespace.create () in
+    let rewrite st stmt =
+      st, `Continue (Fpa_namespace.rewrite fpa_namespace stmt)
+    in
+    let translate st l =
+      let loc = (State.get State.logic_file st).loc in
+      let ctx =
+        List.fold_left (Translate.make loc) (State.get solver_ctx_key st).ctx l
+      in
+      State.set solver_ctx_key { empty_solver_ctx with ctx } st, ()
+    in
+    let st =
+      let open Pipeline in
+      run ~finally:(finally ~handle_exn) (Parser.parse_logic file)
+        (init_state (State.mk_file "" (`Raw ("", ""))))
+        (op rewrite @>|> op Typer_Pipe.typecheck @>|> op translate @>>> _end)
+    in
+    (* The symbols of the theory preludes are not part of models. *)
+    List.filter
+      (function Commands.{ st_decl = Decl _; _ } -> false | _ -> true)
+      (State.get solver_ctx_key st).ctx
+  in
+  (* Puts the SMT-LIB FPA prelude before the commands [cnf] of a goal, loading
+     it if the theory is used and it is not loaded yet. *)
+  let with_smt_float_prelude st cnf =
+    let solver_ctx = State.get solver_ctx_key st in
+    let solver_ctx =
+      if solver_ctx.prelude_cmds = [] && Options.get_smt_lib_fpa ()
+      then { solver_ctx with prelude_cmds = load_smt_float_prelude () }
+      else solver_ctx
+    in
+    ( State.set solver_ctx_key solver_ctx st,
+      List.rev_append solver_ctx.prelude_cmds cnf )
   in
   let print_wrn_opt ~loc ~name ty value =
     warning "%a The option %s expects a %s, got %a" pp_loc loc name ty
@@ -723,6 +797,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
             List.rev (cnf :: hyps), is_thm
           | _ -> assert false
         in
+        let st, cnf = with_smt_float_prelude st cnf in
         let solve_res =
           solve
             ~limits:
@@ -845,10 +920,22 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         (* TODO: - Separate statements that should be ignored from unsupported
            statements and throw exception or print a warning when an unsupported
            statement is encountered. *)
+        let logic_file = State.get State.logic_file st in
         let cnf =
-          let file = State.get State.logic_file st in
-          Translate.make ?lang:file.lang file.loc
+          Translate.make ?lang:logic_file.lang logic_file.loc
             (State.get solver_ctx_key st).ctx td
+        in
+        (* The symbols of the theory preludes are not part of models.
+
+           TODO: find a way to exclude prelude symbols from being used
+           externally/by users *)
+        let cnf =
+          if String.equal logic_file.dir builtin_dir
+          then
+            List.filter
+              (function Commands.{ st_decl = Decl _; _ } -> false | _ -> true)
+              cnf
+          else cnf
         in
         State.set solver_ctx_key
           (let solver_ctx = State.get solver_ctx_key st in
@@ -872,54 +959,12 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       Options.with_timelimit_if (not (Options.get_timelimit_per_goal ()))
       @@ fun () ->
       Options.Time.start ();
-      let builtin_dir = "<builtin>" in
-      (* Using [`File] sources with preludes is currently broken, see
-         https://github.com/Gbury/dolmen/issues/248 and
-         https://github.com/OCamlPro/alt-ergo/issues/1330 *)
-      let read_file path =
-        let ch = open_in_bin path in
-        let s = really_input_string ch (in_channel_length ch) in
-        close_in ch;
-        s
-      in
       let theory_preludes =
-        Options.get_theory_preludes ()
-        |> List.filter_map (fun theory ->
-            let content =
-              match Theories.content theory with
-              | Some _ as content -> content
-              | None -> (
-                match Theories.installed_file theory with
-                | None -> None
-                | Some name -> (
-                  match Config.lookup_prelude name with
-                  | Some path -> Some (read_file path)
-                  | None ->
-                    let hint =
-                      match theory with
-                      | Theories.SmtFloat ->
-                        Some
-                          "install the opam package alt-ergo-smt-float-plugin"
-                      | Fpa | Ria | Nra -> None
-                    in
-                    fatal_error
-                      "cannot find the prelude '%s' of the theory %a in the \
-                       preludes directories (see `alt-ergo --where preludes`). \
-                       When running from the build directory, it can be \
-                       installed there with `dune build @install`.%a"
-                      name Theories.pp_prelude theory
-                      Fmt.(option (any "@,Hint: " ++ string))
-                      hint))
-            in
-            match content with
-            | None ->
-              Printer.print_wrn
-                "Theory prelude for %a is not yet implemented; ignoring."
-                Theories.pp_prelude theory;
-              None
-            | Some content ->
-              let filename = Theories.filename theory in
-              Some (State.mk_file builtin_dir (`Raw (filename, content))))
+        List.map
+          (fun theory ->
+            State.mk_file builtin_dir
+              (`Raw (Theories.filename theory, Theories.content theory)))
+          (Options.get_theory_preludes ())
       in
       let preludes =
         theory_preludes
@@ -928,17 +973,6 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
               State.mk_file (Filename.dirname path)
                 (`Raw (Filename.basename path, read_file path)))
             (Options.get_preludes ())
-      in
-      (* The statements of the SMT-LIB FPA prelude are rewritten before being
-         type-checked, see [Fpa_namespace]. *)
-      let fpa_namespace = Fpa_namespace.create () in
-      let rewrite_fpa_namespace st stmt =
-        match State.get State.logic_file st with
-        | { dir; source = `Raw (filename, _); _ }
-          when String.equal dir builtin_dir
-               && String.equal filename (Theories.filename SmtFloat) ->
-          st, `Continue (Fpa_namespace.rewrite fpa_namespace stmt)
-        | _ -> st, `Continue stmt
       in
       let g = Parser.parse_logic ~preludes logic_file in
       let all_used_context = Frontend.init_all_used_context () in
@@ -949,8 +983,7 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
         run ~finally g st
           (fix
              (op ~name:"expand" Parser.expand)
-             (op ~name:"fpa_namespace" rewrite_fpa_namespace
-             @>|> op ~name:"debug_pre" debug_parsed_pipe
+             (op ~name:"debug_pre" debug_parsed_pipe
              @>|> op ~name:"typecheck" Typer_Pipe.typecheck
              @>|> op ~name:"debug_post" debug_typed_pipe
              @>|> op_i (handle_stmts all_used_context)

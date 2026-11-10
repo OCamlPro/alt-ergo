@@ -46,6 +46,19 @@ val mk_fp_literal :
     exponent width, and [sb] is the significand width (including the hidden
     bit). *)
 
+val to_bits : eb:int -> sb:int -> t -> (bool * int * Z.t) option
+(** [to_bits ~eb ~sb v] is [(sign, biased_exp, mantissa)], the IEEE 754 fields
+    of [v], without the hidden bit. [None] for NaN, which has several bit
+    patterns. *)
+
+val bias : eb:int -> int
+(** [bias ~eb] is the exponent bias [2^(eb-1) - 1] of the formats with [eb]
+    exponent bits. *)
+
+val min_exp : eb:int -> sb:int -> int
+(** [min_exp ~eb ~sb] is [bias + sb - 2]: the subnormal values of [(eb, sb)] are
+    the multiples of [2^-min_exp]. *)
+
 val max_finite_q : eb:int -> sb:int -> Numbers.Q.t
 (** [max_finite_q ~eb ~sb] is the largest finite value of the format [(eb, sb)].
 *)
@@ -61,3 +74,65 @@ val is_normal : eb:int -> t -> bool
 val is_subnormal : eb:int -> t -> bool
 (** [is_subnormal ~eb v] holds if [v] is a subnormal value of a format with [eb]
     exponent bits. *)
+
+val of_q :
+  ?neg_zero:bool ->
+  eb:int ->
+  sb:int ->
+  Fpa_rounding.rounding_mode ->
+  Numbers.Q.t ->
+  t
+(** [of_q ~eb ~sb mode q] rounds [q] to the format [(eb, sb)]. A zero [q] gives
+    [-0] if [neg_zero] is true, [+0] otherwise. *)
+
+val to_integer : Fpa_rounding.rounding_mode option -> t -> Numbers.Z.t option
+(** [to_integer mode v] rounds the float literal [v] to an integer. [None] if
+    [v] is NaN or infinite, or if [mode] is unknown and [v] is not a zero. *)
+
+val convert :
+  eb:int -> sb:int -> Fpa_rounding.rounding_mode option -> t -> t option
+(** [convert ~eb ~sb mode v] converts the float literal [v] to the format
+    [(eb, sb)]. [None] if [mode] is unknown and [v] is finite and nonzero. *)
+
+(** {2 Evaluation}
+
+    The SMT-LIB operators on float literals, following IEEE 754. The arithmetic
+    operators take the format [(eb, sb)] of their result. *)
+
+val to_q : t -> Numbers.Q.t option
+(** [to_q v] is the real value of [v], [None] for infinities and NaN. *)
+
+val neg : t -> t
+
+val abs : t -> t
+
+val add : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t -> t
+
+val sub : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t -> t
+
+val mul : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t -> t
+
+val div : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t -> t
+
+val fma : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t -> t -> t
+(** [fma ~eb ~sb mode x y z] is [x * y + z], rounded once. *)
+
+val sqrt : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t
+
+val round_to_integral : eb:int -> sb:int -> Fpa_rounding.rounding_mode -> t -> t
+
+val eq : t -> t -> bool
+(** IEEE equality: NaN is equal to nothing, [+0] is equal to [-0]. *)
+
+val lt : t -> t -> bool
+
+val le : t -> t -> bool
+
+val min : t -> t -> t option
+(** [None] on [+0] and [-0], where the result is unspecified. *)
+
+val max : t -> t -> t option
+
+val rem : eb:int -> sb:int -> t -> t -> t
+(** [rem ~eb ~sb x y] is the IEEE 754 remainder of [x] by [y]: [x - y * n],
+    where [n] is the integer nearest to [x / y] (ties to even). *)

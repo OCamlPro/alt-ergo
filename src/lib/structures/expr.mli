@@ -802,6 +802,12 @@ module FP : sig
 
     val to_real : string
 
+    (** {2 Integer conversions} *)
+
+    val of_int : string
+
+    val to_int : string
+
     (** {2 Precision-dependent literals} *)
 
     val pow2sb : string
@@ -819,9 +825,22 @@ module FP : sig
     val abs_err_denom : string
   end
 
-  val fp : t -> t -> t -> int -> int -> t
+  val is_prelude_symbol : Symbols.t -> bool
+  (** [is_prelude_symbol sy] is [true] if [sy] is a symbol of the SMT-LIB FPA
+      prelude ([ae.fp.*]) or the rounding function [ae.float]. *)
 
-  val ieee_format_to_fp : t -> int -> int -> t
+  (** {1 SMT-LIB FPA theory} *)
+
+  (** {2 Construction from bit-vectors} *)
+
+  val fp : eb:int -> sb:int -> t -> t -> t -> t
+  (** [fp ~eb ~sb sign biased_exp mantissa] is the SMT-LIB [fp] function, where
+      [sign], [biased_exp] and [mantissa] are bit-vectors of widths [1], [eb]
+      and [sb - 1]. *)
+
+  val ieee_format_to_fp : eb:int -> sb:int -> t -> t
+  (** [ieee_format_to_fp ~eb ~sb bv] is the SMT-LIB [(_ to_fp eb sb)] applied to
+      a single bit-vector [bv]. *)
 
   (** {2 Arithmetic with rounding mode} *)
 
@@ -884,6 +903,48 @@ module FP : sig
   (** {2 Real conversion} *)
 
   val to_real : eb:int -> sb:int -> t -> t
+
+  (** {2 Floating-point conversion} *)
+
+  val to_fp : eb1:int -> sb1:int -> eb2:int -> sb2:int -> mode:t -> t -> t
+  (** [to_fp ~eb1 ~sb1 ~eb2 ~sb2 ~mode x] converts the float [x] from the format
+      [(eb1, sb1)] to the format [(eb2, sb2)]. *)
+
+  (** {2 Bit-vector conversions} *)
+
+  val of_ubv : eb:int -> sb:int -> mode:t -> t -> t
+
+  val of_sbv : eb:int -> sb:int -> mode:t -> t -> t
+
+  val to_ubv : n:int -> eb:int -> sb:int -> mode:t -> t -> t
+
+  val to_sbv : n:int -> eb:int -> sb:int -> mode:t -> t -> t
+
+  val rem : eb:int -> sb:int -> t -> t -> t
+  (** [rem ~eb ~sb x y] is the IEEE 754 remainder of [x] by [y]. *)
+
+  (** {1 Helper and axiomatization functions}
+
+      Not part of the SMT-LIB theory. *)
+
+  val of_int : eb:int -> sb:int -> mode:t -> t -> t
+  (** [of_int ~eb ~sb ~mode i] rounds the integer [i] to the format [(eb, sb)].
+  *)
+
+  val to_int : eb:int -> sb:int -> mode:t -> t -> t
+  (** [to_int ~eb ~sb ~mode x] rounds the float [x] of the format [(eb, sb)] to
+      an integer using [mode]. It is uninterpreted when [x] is not finite. *)
+
+  (** {1 Views} *)
+
+  val float_view : t -> Fp_value.t option
+  (** [float_view t] returns the value of [t] if it is a floating-point literal.
+  *)
+
+  val of_bv_int_view : t -> (t * bool) option
+  (** [of_bv_int_view i] returns [Some (bv, signed)] if [i] is the integer built
+      by {!of_ubv} ([signed = false]) or {!of_sbv} ([signed = true]) from the
+      bit-vector [bv]. *)
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality
