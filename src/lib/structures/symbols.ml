@@ -69,7 +69,8 @@ type operator =
   | BVshl
   | BVlshr
   | Int2BV of int
-  | BV2Nat
+  | Sbv_to_int
+  | Ubv_to_int
   (* FP *)
   | Float
   | FloatEbSb
@@ -245,8 +246,9 @@ let compare_operators op1 op2 =
         | Sqrt_real_default | Sqrt_real_excess | Min_real | Min_int | Max_real
         | Max_int | Integer_log2 | Pow | Integer_round | BVnot | BVand | BVor
         | BVxor | BVadd | BVsub | BVmul | BVudiv | BVurem | BVshl | BVlshr
-        | Int2BV _ | BV2Nat | Not_theory_constant | Is_theory_constant
-        | Linear_dependency | Constr _ | Destruct _ | Tite ) ) ->
+        | Int2BV _ | Sbv_to_int | Ubv_to_int | Not_theory_constant
+        | Is_theory_constant | Linear_dependency | Constr _ | Destruct _ | Tite
+          ) ) ->
       assert false)
 
 let compare_builtin b1 b2 =
@@ -389,12 +391,14 @@ module AEPrinter = struct
     | Concat -> Fmt.pf ppf "@"
     | Sign_extend i -> Fmt.pf ppf "sign_extend[%d]" i
     | Repeat i -> Fmt.pf ppf "repeat[%d]" i
-    | BV2Nat -> Fmt.pf ppf "bv2nat"
     | Int2BV n -> Fmt.pf ppf "int2bv[%d]" n
     | BVnot -> Fmt.pf ppf "bvnot"
     | BVand -> Fmt.pf ppf "bvand"
     | BVor -> Fmt.pf ppf "bvor"
     | BVxor -> Fmt.pf ppf "bvxor"
+    (* SMT-LIB 2.7 operators *)
+    | Sbv_to_int -> Fmt.pf ppf "sbv_to_int"
+    | Ubv_to_int -> Fmt.pf ppf "ubv_to_int"
     (* BV logic *)
     | BVadd -> Fmt.pf ppf "bvadd"
     | BVsub -> Fmt.pf ppf "bvsub"
@@ -491,7 +495,6 @@ module SmtPrinter = struct
     | Concat -> Fmt.pf ppf "concat"
     | Sign_extend i -> Fmt.pf ppf "(_ sign_extend %d)" i
     | Repeat i -> Fmt.pf ppf "(_ repeat %d)" i
-    | BV2Nat -> Fmt.pf ppf "bv2nat"
     | BVnot -> Fmt.pf ppf "bvnot"
     | BVand -> Fmt.pf ppf "bvand"
     | BVor -> Fmt.pf ppf "bvor"
@@ -504,6 +507,10 @@ module SmtPrinter = struct
     | BVurem -> Fmt.pf ppf "bvurem"
     | BVshl -> Fmt.pf ppf "bvshl"
     | BVlshr -> Fmt.pf ppf "bvlshr"
+    (* SMT-LIB 2.7 operators *)
+    | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
+    | Sbv_to_int -> Fmt.pf ppf "sbv_to_int"
+    | Ubv_to_int -> Fmt.pf ppf "ubv_to_int"
     (* ArraysEx theory *)
     | Select -> Fmt.pf ppf "select"
     | Store -> Fmt.pf ppf "store"
@@ -513,7 +520,6 @@ module SmtPrinter = struct
     | Float -> Fmt.pf ppf "ae.round"
     | FloatEbSb -> Fmt.pf ppf "ae.float"
     (* Not in the SMT-LIB standard *)
-    | Int2BV n -> Fmt.pf ppf "(_ int_to_bv %d)" n
     | Not_theory_constant -> Fmt.pf ppf "ae.not_theory_constant"
     | Is_theory_constant -> Fmt.pf ppf "ae.is_theory_constant"
     | Linear_dependency -> Fmt.pf ppf "ae.linear_dependency"
