@@ -954,22 +954,19 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
       (p.Atom.neg :: l) :: acc
 
   let cnf_abstr hcons f new_vars new_clauses =
-    let rec abstr hcons f new_vars new_clauses =
+    let rec abstr hcons f new_vars proxies =
       match f.view with
-      | UNIT a -> a, new_vars, new_clauses
+      | UNIT a -> a, new_vars, proxies
       | AND l | OR l -> (
         match get_proxy_of hcons f with
-        | Some p -> p, new_vars, new_clauses
+        | Some p -> p, new_vars, proxies
         | None ->
-          let l, new_vars, new_clauses =
+          let l, new_vars, proxies =
             List.fold_left
-              (fun (l, new_vars, new_clauses) f ->
-                let f, new_vars, new_clauses =
-                  abstr hcons f new_vars new_clauses
-                in
-                f :: l, new_vars, new_clauses)
-              ([], new_vars, new_clauses)
-              l
+              (fun (l, new_vars, proxies) f ->
+                let f, new_vars, proxies = abstr hcons f new_vars proxies in
+                f :: l, new_vars, proxies)
+              ([], new_vars, proxies) l
           in
           let l = List.rev l in
           let p, new_vars =
@@ -982,10 +979,10 @@ module Flat_Formula : FLAT_FORMULA with module Atom = Atom = struct
             | UNIT _ -> assert false
           in
           Numbers.Int.Tbl.add hcons.proxies f.tag (p, l, is_and);
-          let new_clauses = expand_proxy_defn new_clauses (p, l, is_and) in
-          p, new_vars, new_clauses)
+          p, new_vars, (p, l, is_and) :: proxies)
     in
-    abstr hcons f new_vars new_clauses
+    let a, new_vars, proxies = abstr hcons f new_vars [] in
+    a, new_vars, List.fold_left expand_proxy_defn new_clauses proxies
 
   let get_atom hcons a = Atom.get_atom hcons.atoms a
 
