@@ -127,7 +127,7 @@ module Field (C : Core) (FT : FieldType) = struct
     @@
     match intersect (of_interval { lb = FT.zero; ub = FT.zero }) y with
     | NonEmpty _ -> of_interval Interval.full
-    | Empty ex -> add_explanation ~ex (mul x (inv y))
+    | Empty _ -> mul x (inv y)
 end
 
 module AlgebraicField (C : Core) (AT : AlgebraicType) = struct
