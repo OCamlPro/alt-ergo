@@ -756,13 +756,25 @@ let flush_eqs uf (dom : Domain.t) =
   in
   eqs @ neqs, { dom with eqs = []; neqs = [] }
 
+let diff = Symbols.name ~ns:Internal "@diff"
+
+(* Whether a known index [k] has [r[k] <> s[k]]. *)
+let has_witness uf dom r s =
+  let r, _ = Uf.find_r uf r in
+  X.Map.exists
+    (fun k (v, _) -> Option.is_some (distinct_value uf dom s k v))
+    (Domain.values_of r dom)
+
 (* For each disequality [r <> s] where [r] and [s] are two arrays, we produce
-   the formula: exists i:ty. (select r i) <> (select s i), where [ty] denotes
-   the type of indices of [r] and [s]. *)
-let extensionality_pair (env, acc) dep r s =
+   the formula: (select r i) <> (select s i) where [i] is the index [(@diff r
+   s)], unless a known index already distinguishes them. The same index is used
+   for the same arrays. *)
+let extensionality_pair uf dom (env, acc) dep r s =
   match X.type_info r, X.term_extract r, X.term_extract s with
-  | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _) ->
-    let i = E.fresh_name ty in
+  | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _)
+    when not (has_witness uf dom r s) ->
+    let t1, t2 = if E.compare t1 t2 <= 0 then t1, t2 else t2, t1 in
+    let i = E.mk_term diff [t1; t2] ty in
     let g1 = E.ArraysEx.select t1 i in
     let g2 = E.ArraysEx.select t2 i in
     let d = E.mk_distinct ~iff:false [g1; g2] in
@@ -772,14 +784,16 @@ let extensionality_pair (env, acc) dep r s =
     env, (Literal.LTerm d, dep, Th_util.Other) :: acc
   | _ -> env, acc
 
-let extensionality acc (a, _, dep, _) =
+let extensionality uf dom acc (a, _, dep, _) =
   match a with
   | A.Distinct (false, (_ :: _ :: _ as l)) ->
     let rec aux acc = function
       | [] | [_] -> acc
       | r :: rl ->
         aux
-          (List.fold_left (fun acc s -> extensionality_pair acc dep r s) acc rl)
+          (List.fold_left
+             (fun acc s -> extensionality_pair uf dom acc dep r s)
+             acc rl)
           rl
     in
     aux acc l
@@ -836,7 +850,8 @@ let assume env uf la =
       let l = List.rev_append (term_eqs uf env dom) l in
       { env with term_eqs = [] }, set_domain uf dom, l
   in
-  let env, l = List.fold_left extensionality (env, l) la in
+  let dom = Uf.GlobalDomains.find (module Domain) domains in
+  let env, l = List.fold_left (extensionality uf dom) (env, l) la in
   env, domains, { Sig_rel.assume = l; remove = [] }
 
 let two = Numbers.Q.from_int 2
