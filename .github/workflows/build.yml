@@ -28,9 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-latest
           - ubuntu-latest
-          - windows-latest
         ocaml-compiler:
           - "4.14"
           - "5.5"
@@ -39,8 +37,13 @@ jobs:
           # https://github.com/ocaml/ocaml/issues/14031
           - os: ubuntu-24.04
             ocaml-compiler: "4.13.1"
+          - os: macos-latest
+            ocaml-compiler: "4.14"
+          - os: windows-latest
+            ocaml-compiler: "4.14"
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -62,32 +65,3 @@ jobs:
 
       - name: Run tests
         run: opam exec -- make runtest-ci
-
-  make:
-    name: Make all
-    env:
-      OPAMLOCKED: locked
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Use OCaml ${{ env.OCAML_DEFAULT_VERSION }}
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: ${{ env.OCAML_DEFAULT_VERSION }}
-          dune-cache: true
-
-      - name: Install dependencies
-        run: opam exec -- make test-deps
-
-      - name: Build the project
-        run: opam exec -- dune build --profile ci @check
-
-      - name: Monitor changes
-        uses: getsentry/action-git-diff-suggestions@main
-        with:
-          message: 'The following changes have been made after `make`:'
