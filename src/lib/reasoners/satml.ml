@@ -71,7 +71,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 exception Sat
 
-exception Unsat of Atom.clause list option
+exception Unsat of Expr.Labeled.Set.t option
 
 exception Last_UIP_reason of Atom.Set.t
 
@@ -115,7 +115,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     { hcons_env : FF.hcons_env;
       (* si vrai, les contraintes sont deja fausses *)
       mutable is_unsat : bool;
-      mutable unsat_core : Atom.clause list option;
+      mutable unsat_core : Atom.premise option;
       (* clauses du probleme *)
       clauses : Atom.clause Vec.t;
       (* clauses apprises *)
@@ -470,7 +470,61 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     a.var.level <- -1;
     a.var.index <- -1;
     a.var.reason <- None;
-    a.var.vpremise <- []
+    a.var.vpremise <- E.Labeled.Set.empty
+
+  let clause_analyze_final clause =
+    let queue = Queue.create () in
+    let seen = ref Util.SI.empty in
+    let vpremise = ref E.Labeled.Set.empty in
+    Queue.push clause queue;
+    while not (Queue.is_empty queue) do
+      let clause = Queue.pop queue in
+      vpremise := E.Labeled.Set.union clause.Atom.cpremise !vpremise;
+      Vec.iter
+        (fun atom ->
+          assert (atom.Atom.var.level >= 0 || atom.Atom.neg.is_guard);
+          if not (Util.SI.mem atom.Atom.var.vid !seen)
+          then (
+            seen := Util.SI.add atom.Atom.var.vid !seen;
+            match atom.Atom.var.reason with
+            | None ->
+              vpremise
+                := Expr.Labeled.Set.union atom.Atom.var.vpremise !vpremise
+            | Some reason -> Queue.push reason queue))
+        clause.Atom.atoms
+    done;
+    !vpremise
+
+  let clause_unsat_core clause =
+    if not (Options.get_produce_unsat_cores ())
+    then None
+    else Some (clause_analyze_final clause)
+
+  let explanation_unsat_core ex =
+    if not (Options.get_produce_unsat_cores ())
+    then None
+    else
+      Some
+        (Ex.fold_atoms
+           (fun exp unsat_core ->
+             match exp with
+             | Literal a -> (
+               match a.var.reason with
+               | None -> E.Labeled.Set.union a.var.vpremise unsat_core
+               | Some reason ->
+                 E.Labeled.Set.union (clause_analyze_final reason) unsat_core)
+             | RootDep dep -> E.Labeled.Set.add dep unsat_core
+             | Dep _ -> unsat_core
+             | Bj _ | Fresh _ -> assert false)
+           ex E.Labeled.Set.empty)
+
+  let guard_unsat_core atom reason =
+    if Options.get_produce_unsat_cores ()
+    then
+      match reason with
+      | None -> Some atom.Atom.var.vpremise
+      | Some clause -> clause_unsat_core clause
+    else None
 
   let enqueue_assigned env (a : Atom.atom) =
     if Options.get_debug_sat ()
@@ -482,7 +536,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          true (ie. a is false), then we have detected an inconsistency. *)
       assert (a.var.level <= env.next_dec_guard);
       (* guards are necessarily decided/propagated before all other atoms *)
-      raise (Unsat None)
+      raise (Unsat (guard_unsat_core a a.var.reason))
     end;
     assert (a.is_true || a.neg.is_true);
     if a.timp = 1
@@ -615,13 +669,18 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
          true (ie. a is false), then we have detected an inconsistency. *)
       assert (a.var.level <= env.next_dec_guard);
       (* guards are necessarily decided/propagated before all other atoms *)
-      raise (Unsat None)
+      raise (Unsat (guard_unsat_core a reason))
     end;
     (* Garder la reason car elle est utile pour les unsat-core *)
     (*let reason = if lvl = 0 then None else reason in*)
     a.is_true <- true;
     a.var.level <- lvl;
     a.var.reason <- reason;
+    (if lvl = 0 && Options.get_produce_unsat_cores ()
+     then
+       match reason with
+       | None -> ()
+       | Some clause -> a.var.vpremise <- clause_analyze_final clause);
     if Options.get_debug_sat ()
     then Printer.print_dbg "[satml] enqueue: %a@." Atom.pr_atom a;
     Vec.push env.trail a;
@@ -907,7 +966,11 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if ta.var.level = 0
           then begin
             incr nb_f;
-            (ta.lit, Th_util.Other, Ex.empty, 0, env.cpt_current_propagations)
+            ( ta.lit,
+              Th_util.Other,
+              Ex.from_assumptions ta.var.vpremise,
+              0,
+              env.cpt_current_propagations )
             :: acc
           end
           else acc)
@@ -961,7 +1024,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           else assert false
         in
         let ex =
-          if Options.get_unsat_core () || ta.var.level > 0
+          if Options.get_produce_unsat_cores () || ta.var.level > 0
           then Ex.singleton (Ex.Literal ta)
           else Ex.empty
         in
@@ -1071,119 +1134,28 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let hash = Hashtbl.hash
   end)
 
-  let print_aux fmt hc = Format.fprintf fmt "%a@," Atom.pr_clause hc
-
-  let report_b_unsat env linit =
-    if not (Options.get_unsat_core ())
+  let report_unsat env unsat_core =
+    if not (Options.get_produce_unsat_cores ())
     then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
     end
-    else
-      match linit with
-      | [] | _ :: _ :: _ ->
-        (* currently, report_b_unsat called with a singleton if get_unsat_core =
-           true *)
-        assert false
-      | [{ Atom.atoms; _ }] ->
-        assert (Options.get_unsat_core ());
-        let l = ref linit in
-        Vec.iter
-          (fun (atom : Atom.atom) ->
-            l := List.rev_append atom.var.vpremise !l;
-            match atom.var.reason with None -> () | Some c -> l := c :: !l)
-          atoms;
-        Printer.print_dbg ~header:false
-          "@[<v 2>UNSAT Deduction made from:@ %a@]"
-          (Printer.pp_list_no_space print_aux)
-          !l;
-        let uc = HUC.create 17 in
-        let rec roots todo =
-          match todo with
-          | [] -> ()
-          | (c : Atom.clause) :: r -> (
-            Vec.iter
-              (fun (atom : Atom.atom) ->
-                if not atom.var.seen
-                then begin
-                  atom.var.seen <- true;
-                  roots atom.var.vpremise;
-                  match atom.var.reason with None -> () | Some r -> roots [r]
-                end)
-              c.atoms;
-            match c.cpremise with
-            | [] ->
-              if not (HUC.mem uc c) then HUC.add uc c ();
-              roots r
-            | prems ->
-              roots prems;
-              roots r)
-        in
-        roots !l;
-        let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-        Printer.print_dbg ~header:false "@[<v 2>UNSAT_CORE:@ %a@]"
-          (Printer.pp_list_no_space print_aux)
-          unsat_core;
-        env.is_unsat <- true;
-        let unsat_core = Some unsat_core in
-        env.unsat_core <- unsat_core;
-        raise (Unsat unsat_core)
+    else (
+      env.is_unsat <- true;
+      env.unsat_core <- unsat_core;
+      raise (Unsat unsat_core))
+
+  let report_b_unsat env clause = report_unsat env (clause_unsat_core clause)
 
   let report_t_unsat env dep =
-    if not (Options.get_unsat_core ())
+    if not (Options.get_produce_unsat_cores ())
     then begin
       env.is_unsat <- true;
       env.unsat_core <- None;
       raise (Unsat None)
     end
-    else
-      let l =
-        Ex.fold_atoms
-          (fun ex l ->
-            match ex with
-            | Ex.Literal { var = v; _ } ->
-              let l = List.rev_append v.vpremise l in
-              begin match v.reason with None -> l | Some c -> c :: l
-              end
-            | _ -> assert false (* TODO *))
-          dep []
-      in
-      Printer.print_dbg ~header:false
-        "@[<v 2>T-UNSAT Deduction made from:@ %a@]"
-        (Printer.pp_list_no_space print_aux)
-        l;
-      let uc = HUC.create 17 in
-      let rec roots todo =
-        match todo with
-        | [] -> ()
-        | (c : Atom.clause) :: r -> (
-          Vec.iter
-            (fun (atom : Atom.atom) ->
-              if not atom.var.seen
-              then begin
-                atom.var.seen <- true;
-                roots atom.var.vpremise;
-                match atom.var.reason with None -> () | Some r -> roots [r]
-              end)
-            c.atoms;
-          match c.cpremise with
-          | [] ->
-            if not (HUC.mem uc c) then HUC.add uc c ();
-            roots r
-          | prems ->
-            roots prems;
-            roots r)
-      in
-      roots l;
-      let unsat_core = HUC.fold (fun c _ l -> c :: l) uc [] in
-      Printer.print_dbg ~header:false "@[<v 2>T-UNSAT_CORE:@ %a@]"
-        (Printer.pp_list_no_space print_aux)
-        unsat_core;
-      env.is_unsat <- true;
-      let unsat_core = Some unsat_core in
-      env.unsat_core <- unsat_core;
-      raise (Unsat unsat_core)
+    else report_unsat env (explanation_unsat_core dep)
 
   (*** experimental: taken from ctrl-ergo-2 ********************
 
@@ -1214,7 +1186,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let report_conflict env c =
     match c with
-    | C_bool confl -> report_b_unsat env [confl]
+    | C_bool confl -> report_b_unsat env confl
     | C_theory dep -> report_t_unsat env dep
     | C_none -> ()
 
@@ -1316,10 +1288,10 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     let seen = ref [] in
     let c : Atom.clause ref = ref c_clause in
     let tr_ind = ref (Vec.size env.trail - 1) in
-    let history = ref [] in
+    let history = ref E.Labeled.Set.empty in
     while !cond do
       if !c.learnt then clause_bump_activity env !c;
-      history := !c :: !history;
+      history := E.Labeled.Set.union !c.cpremise !history;
       Vec.iter
         (fun (a : Atom.atom) ->
           assert (a.is_true || (a.neg.is_true && a.var.level >= 0));
@@ -1335,7 +1307,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
             else begin
               semantic_expansion env a.var.level blevel learnt seen a
             end
-          end)
+          end
+          else if a.var.level = 0
+          then history := E.Labeled.Set.union a.var.vpremise !history)
         !c.atoms;
       while
         assert (!tr_ind >= 0);
@@ -1421,20 +1395,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           (fun ex (acc, max_lvl, c_hist) ->
             match ex with
             | Ex.Literal a ->
-              let c_hist = List.rev_append a.var.vpremise c_hist in
-              let c_hist =
-                match a.var.reason with None -> c_hist | Some r -> r :: c_hist
-              in
+              let c_hist = E.Labeled.Set.union a.var.vpremise c_hist in
               if a.var.level = 0
               then acc, max_lvl, c_hist
               else a.neg :: acc, max max_lvl a.var.level, c_hist
+            | Ex.RootDep dep -> acc, max_lvl, E.Labeled.Set.add dep c_hist
             | _ -> assert false (* TODO *))
-          dep ([], 0, [])
+          dep
+          ([], 0, E.Labeled.Set.empty)
       in
       if atoms == [] || max_lvl == 0
       then begin
         (* check_inconsistence_of dep; *)
-        report_t_unsat env dep
+        report_unsat env (Some c_hist)
         (* une conjonction de faits unitaires etaient deja unsat *)
       end;
       let name = Atom.fresh_dname () in
@@ -1451,7 +1424,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           max_lvl := max !max_lvl a.var.level;
           lv := a.var :: !lv)
         c.atoms;
-      if !max_lvl == 0 then report_b_unsat env [c];
+      if !max_lvl == 0 then report_b_unsat env c;
       match fixable_with_simple_backjump c !max_lvl !lv with
       | None ->
         let blevel, learnt, history = conflict_analyze_aux env c !max_lvl in
@@ -1507,17 +1480,18 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
 
   let clause_of_dep d fuip =
     let cpt = ref 0 in
-    let l =
+    let clause, cpremise =
       Ex.fold_atoms
-        (fun e acc ->
+        (fun e (clause, cpremise) ->
           match e with
           | Ex.Literal a ->
             incr cpt;
-            a.neg :: acc
+            a.neg :: clause, cpremise
+          | Ex.RootDep lit -> clause, E.Labeled.Set.add lit cpremise
           | _ -> assert false)
-        d []
+        d ([], E.Labeled.Set.empty)
     in
-    fuip :: l, !cpt + 1
+    (fuip :: clause, cpremise), !cpt + 1
 
   let th_entailed tenv a =
     if Options.get_no_tcp () || not (Options.get_minimal_bj ())
@@ -1547,9 +1521,9 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       if Options.get_debug_sat ()
       then Printer.print_dbg "[satml] decide: %a" Atom.pr_atom atom;
       enqueue env atom current_level None
-    | Some (c, _) ->
+    | Some ((c, premise), _) ->
       (* right decision level will be set inside record_learnt_clause *)
-      record_learnt_clause env ~is_T_learn:true (decision_level env) c []
+      record_learnt_clause env ~is_T_learn:true (decision_level env) c premise
 
   let rec pick_branch_aux env (atom : Atom.atom) =
     let v = atom.var in
@@ -1736,21 +1710,19 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
           if a.var.level = 0
           then
             partition_aux trues unassigned falses
-              (List.rev_append a.var.vpremise init)
+              (E.Labeled.Set.union a.var.vpremise init)
               r
           else partition_aux trues unassigned (a :: falses) init r
         else partition_aux trues (a :: unassigned) falses init r
     in
     partition_aux [] [] [] init atoms
 
-  let add_clause env f ~cnumber atoms =
+  let add_clause env (atoms, dep) =
     if env.is_unsat then raise (Unsat env.unsat_core);
     (*if not (clause_exists atoms) then XXX TODO *)
-    let init_name = string_of_int cnumber in
     let init0 =
-      if Options.get_unsat_core ()
-      then [Atom.make_clause init_name atoms f false []]
-      else [] (* no deps if unsat cores generation is not enabled *)
+      (* no deps if unsat cores generation is not enabled *)
+      if Options.get_produce_unsat_cores () then dep else E.Labeled.Set.empty
     in
     try
       let atoms, init =
@@ -1763,7 +1735,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
                 if a.neg.is_true
                 then begin
                   if Options.get_profiling () then Profiling.red true;
-                  atoms, List.rev_append a.var.vpremise init
+                  atoms, E.Labeled.Set.union a.var.vpremise init
                 end
                 else a :: atoms, init)
               ([], init0) atoms
@@ -1775,7 +1747,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
         else partition atoms init0
       in
       match atoms with
-      | [] -> report_b_unsat env init0
+      | [] -> report_unsat env (Some init)
       | a :: b :: _ ->
         let name = Atom.fresh_name () in
         let clause = Atom.make_clause name atoms vraie_form false init in
@@ -1908,7 +1880,7 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
     in
     fun env sff -> if Options.get_cdcl_tableaux () then better_bj env sff
 
-  let assume env unit_cnf nunit_cnf f ~cnumber sff ~dec_lvl =
+  let assume env unit_cnf nunit_cnf sff ~dec_lvl =
     if env.is_unsat then raise (Unsat env.unsat_core);
     begin match unit_cnf, nunit_cnf with
     | [], [] -> ()
@@ -1919,8 +1891,8 @@ module Make (Th : Theory.S) : SAT_ML with type th = Th.t = struct
       Vec.grow_to_by_double env.clauses nbc;
       Vec.grow_to_by_double env.learnts nbc;
       env.nb_init_clauses <- nbc;
-      List.iter (add_clause env f ~cnumber) unit_cnf;
-      List.iter (add_clause env f ~cnumber) nunit_cnf;
+      List.iter (add_clause env) unit_cnf;
+      List.iter (add_clause env) nunit_cnf;
       if Options.get_verbose ()
       then
         Printer.print_dbg "%d clauses@ %d learnts" (Vec.size env.clauses)
