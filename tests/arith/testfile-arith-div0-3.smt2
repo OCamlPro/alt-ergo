@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-fun pi () Real)
+(declare-fun skoX () Real)
+(assert (and (>= (+ pi pi) (/ (/ 0 2) (* pi skoX))) (not (<= (* pi (- (/ 15707963 5000000))) 31415927))))
+(check-sat)

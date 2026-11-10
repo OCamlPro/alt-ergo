@@ -123,8 +123,18 @@ module Field(C : Core)(FT : FieldType) = struct
       (fun () -> interval_set inv0)
       (map_dec_to_set FT.inv)
 
-  let div ?inv0 x y =
-    mul x (inv ?inv0 y)
+  let div x y =
+    trace2 "div" x y
+    @@
+    match intersect (of_interval { lb = FT.zero; ub = FT.zero }) y with
+    | NonEmpty _ -> of_interval Interval.full
+    | Empty ex ->
+        (* careful: if [y] is non-zero, we must add the explanation proving
+           that [y] is non-zero to all the impossible intervals _after_
+           multiplying by [x] (even though it has already been added in [inv]),
+           to account for the fact that multiplication by [0] is always [0] but
+           [0 / 0] is undefined. *)
+      add_explanation ~ex (mul x (inv y))
 end
 
 module AlgebraicField(C : Core)(AT : AlgebraicType) = struct

@@ -1,3 +1,7 @@
+## v2.6.5
+
+ - Fix a soundness bug with the division of `0` by `0` (#1461, #1473)
+
 ## v2.6.4
 
  - Fix more crashes and incorrect output in `--profiling` (#1354, #1355, #1356)
