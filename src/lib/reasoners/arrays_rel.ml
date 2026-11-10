@@ -585,6 +585,7 @@ let check_edge uf (env, (dom : Domain.t), todo) { a; k; v = a_k; ex } b eex =
 
    - otherwise, a case split on [k = i] is created. *)
 let cross uf acc ({ a; k; v = a_k; ex } as value) b i eex =
+  Steps.incr Steps.Arrays;
   if same_class uf k i
   then check_edge uf acc value b eex
   else
@@ -659,6 +660,7 @@ let resolve_splits uf env dom lits =
   propagate uf
     (LX.Set.fold
        (fun lit ((env, dom, todo) as acc) ->
+         Steps.incr Steps.Arrays;
          match LX.Map.find lit env.splits, LX.view lit with
          | exception Not_found -> acc
          | (_, ps), A.Eq (k, i) -> (
@@ -752,6 +754,7 @@ let check_merged_values uf env (dom : Domain.t) =
   let check acc ({ a; k; _ } as value) =
     X.Map.fold
       (fun b (i, eex) acc ->
+        Steps.incr Steps.Arrays;
         if same_class uf k i then check_edge uf acc value b eex else acc)
       (Domain.edges_of a dom) acc
   in
@@ -811,6 +814,7 @@ let has_witness uf dom r s =
    s)], unless a known index already distinguishes them. The same index is used
    for the same arrays. *)
 let extensionality_pair uf dom (env, acc) dep r s =
+  Steps.incr Steps.Arrays;
   match X.type_info r, X.term_extract r, X.term_extract s with
   | Ty.Tfarray (ty, _), (Some t1, _), (Some t2, _)
     when not (has_witness uf dom r s) ->

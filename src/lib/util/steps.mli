@@ -41,6 +41,7 @@ type incr_kind =
   | Uf  (** UF step increment *)
   | Ac  (** AC step reasoning *)
   | CP  (** Constraint propagation *)
+  | Arrays  (** Arrays: propagation of a value through an edge *)
   | Th_assumed of int
       (** Increment the counter for each term assumed in the theories
           environment *)
