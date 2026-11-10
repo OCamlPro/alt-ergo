@@ -2559,6 +2559,7 @@ let new_facts_for_axiom ~do_syntactic_matching menv uf selector optimized substs
                s_term_orig = torig;
                s_lem_orig = lorig
              } ->
+          Steps.incr Steps.Matching;
           (* Here, we'll try to extends subst 's' to conver variables appearing
              in semantic triggers *)
           let lem_name = E.name_of_lemma orig in
