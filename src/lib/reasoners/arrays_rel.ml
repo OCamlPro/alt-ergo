@@ -31,6 +31,15 @@ module Ex = Explanation
 module E = Expr
 module LX = Uf.LX
 
+(* Sets of pairs [(a, k)] of an array and an index. *)
+module XXSet = Set.Make (struct
+  type t = X.r * X.r
+
+  let compare (a1, k1) (a2, k2) =
+    let c = X.hash_cmp a1 a2 in
+    if c <> 0 then c else X.hash_cmp k1 k2
+end)
+
 (* The theory of arrays with extensionality, using global domains on the
    representatives of the union-find:
 
@@ -51,16 +60,43 @@ let add_loc k a locs =
       | None -> Some (X.Set.singleton a) | Some s -> Some (X.Set.add a s))
     locs
 
+let remove_loc k a locs =
+  X.Map.update k
+    (function
+      | None -> None
+      | Some s ->
+        let s = X.Set.remove a s in
+        if X.Set.is_empty s then None else Some s)
+    locs
+
+let add_cell v cell cells =
+  X.Map.update v
+    (function
+      | None -> Some (XXSet.singleton cell) | Some s -> Some (XXSet.add cell s))
+    cells
+
+let remove_cell v cell cells =
+  X.Map.update v
+    (function
+      | None -> None
+      | Some s ->
+        let s = XXSet.remove cell s in
+        if XXSet.is_empty s then None else Some s)
+    cells
+
 module Domain = struct
   type t =
     { values : (X.r * Ex.t) X.Map.t X.Map.t;
-      (* [a -> k -> (v, ex)]: [a[k] = v] with the explanation [ex]. *)
+      (* [a -> k -> (v, ex)]: [a[k] = v] with the explanation [ex]. [v] is a
+         representative. *)
       edges : (X.r * Ex.t) X.Map.t X.Map.t;
       (* [a -> b -> (i, ex)]: the edge [a --i-- b] with the explanation [ex].
          The edges are stored in both directions, with at most one edge between
          two arrays (see [add_edge]). *)
-      value_locs : X.Set.t X.Map.t;
+      index_locs : X.Set.t X.Map.t;
       (* Map of indices to the arrays that have a value at this index. *)
+      value_locs : XXSet.t X.Map.t;
+      (* Map of values [v] to the pairs [(a, k)] such that [a[k] = v]. *)
       edge_locs : X.Set.t X.Map.t;
       (* Map of indices to the arrays that have an edge labelled by this
          index. *)
@@ -79,10 +115,15 @@ module Domain = struct
          values were at the indices [idxs] and whose neighbours were [nbrs].
          Only the values of each side have to be propagated through the edges of
          the other side (see [process_dirty]). *)
+      merged_values : X.Set.t;
+      (* Values that have been merged with others, to check again (see
+         [check_merged_values]). *)
       split_todo : LX.Set.t;
       (* Case splits whose indices have been merged with others. *)
-      eqs : (X.r * X.r * Ex.t) list
-          (* Deduced equalities that have not been propagated yet. *)
+      eqs : (X.r * X.r * Ex.t) list;
+      (* Deduced equalities that have not been propagated yet. *)
+      neqs : (X.r * X.r * Ex.t) list
+          (* Deduced disequalities that have not been propagated yet. *)
     }
 
   type _ Uf.id += Id : t Uf.id
@@ -90,6 +131,7 @@ module Domain = struct
   let empty =
     { values = X.Map.empty;
       edges = X.Map.empty;
+      index_locs = X.Map.empty;
       value_locs = X.Map.empty;
       edge_locs = X.Map.empty;
       edge_splits = [];
@@ -97,8 +139,10 @@ module Domain = struct
       terms = X.Map.empty;
       dirty = X.Set.empty;
       merged = [];
+      merged_values = X.Set.empty;
       split_todo = LX.Set.empty;
-      eqs = []
+      eqs = [];
+      neqs = []
     }
 
   let pp ppf t =
@@ -139,9 +183,22 @@ module Domain = struct
     | exception Not_found ->
       ( { t with
           values = X.Map.add a (X.Map.add k rd m) t.values;
-          value_locs = add_loc k a t.value_locs
+          index_locs = add_loc k a t.index_locs;
+          value_locs = add_cell v (a, k) t.value_locs
         },
         true )
+
+  (* Remove the value of [a] at [k], which is [v]. *)
+  let remove_value a k v t =
+    let m = X.Map.remove k (values_of a t) in
+    { t with
+      values =
+        (if X.Map.is_empty m
+         then X.Map.remove a t.values
+         else X.Map.add a m t.values);
+      index_locs = remove_loc k a t.index_locs;
+      value_locs = remove_cell v (a, k) t.value_locs
+    }
 
   (* Add the edge [a --i-- b] in both directions. There is at most one edge
      between two arrays: if there is already an edge [a --j-- b], the new edge
@@ -169,22 +226,18 @@ module Domain = struct
      by [rr] and the case splits on [rr] are moved to [nrr]. *)
   let subst_index ~ex rr nrr t =
     let t =
-      match X.Map.find rr t.value_locs with
+      match X.Map.find rr t.index_locs with
       | exception Not_found -> t
       | arrs ->
-        let t = { t with value_locs = X.Map.remove rr t.value_locs } in
+        let t = { t with index_locs = X.Map.remove rr t.index_locs } in
         X.Set.fold
           (fun a t ->
             let m = values_of a t in
             match X.Map.find rr m with
             | exception Not_found -> t
             | v, ex_v ->
-              let t =
-                { t with
-                  values = X.Map.add a (X.Map.remove rr m) t.values;
-                  dirty = X.Set.add a t.dirty
-                }
-              in
+              let t = remove_value a rr v t in
+              let t = { t with dirty = X.Set.add a t.dirty } in
               fst (add_value a nrr (v, Ex.union ex ex_v) t))
           arrs t
     in
@@ -233,9 +286,10 @@ module Domain = struct
     let nvalues = values_of nrr t and nedges = edges_of nrr t in
     let t =
       X.Map.fold
-        (fun k (v, ex_v) t -> fst (add_value nrr k (v, Ex.union ex ex_v) t))
-        rvalues
-        { t with values = X.Map.remove rr t.values }
+        (fun k (v, ex_v) t ->
+          let t = remove_value rr k v t in
+          fst (add_value nrr k (v, Ex.union ex ex_v) t))
+        rvalues t
     in
     let t =
       X.Map.fold
@@ -256,6 +310,28 @@ module Domain = struct
       { t with merged = (nrr, keys rvalues, keys redges) :: t.merged }
     else t
 
+  (* The value [rr] is replaced by [nrr] in the values of the arrays. The values
+     in the class of [nrr] are checked again, as two of them may now be equal
+     (see [check_edge]). *)
+  let subst_value ~ex rr nrr t =
+    match X.Map.find rr t.value_locs with
+    | exception Not_found -> t
+    | cells ->
+      XXSet.fold
+        (fun ((a, k) as cell) t ->
+          let m = values_of a t in
+          let _, ex_v = X.Map.find k m in
+          { t with
+            values =
+              X.Map.add a (X.Map.add k (nrr, Ex.union ex ex_v) m) t.values;
+            value_locs = add_cell nrr cell t.value_locs
+          })
+        cells
+        { t with
+          value_locs = X.Map.remove rr t.value_locs;
+          merged_values = X.Set.add nrr t.merged_values
+        }
+
   (* The term of [rr] becomes a term of [nrr]. *)
   let subst_term rr nrr t =
     match X.Map.find_opt rr t.terms with
@@ -265,7 +341,9 @@ module Domain = struct
   let subst ~ex rr nrr t =
     (* A value can be used both as an index and as an array if we have arrays
        indexed by arrays. *)
-    subst_term rr nrr (subst_array ~ex rr nrr (subst_index ~ex rr nrr t))
+    subst_term rr nrr
+      (subst_value ~ex rr nrr
+         (subst_array ~ex rr nrr (subst_index ~ex rr nrr t)))
 end
 
 let get_domain uf = Uf.GlobalDomains.find (module Domain) (Uf.domains uf)
@@ -326,6 +404,27 @@ let empty uf =
 let same_class uf r1 r2 =
   match Uf.are_equal_r uf r1 r2 with Entailed _ -> true | Unknown -> false
 
+(* The explanation of [r1 <> r2], if they are distinct. *)
+let distinct_ex uf r1 r2 =
+  match Uf.are_distinct_r uf r1 r2 with
+  | Th_util.Entailed { ex; _ } -> Some ex
+  | Unknown -> None
+
+(* The value of [a] at [k], if any. *)
+let find_value uf (dom : Domain.t) a k =
+  let a, ex_a = Uf.find_r uf a in
+  let k, ex_k = Uf.find_r uf k in
+  match X.Map.find_opt k (Domain.values_of a dom) with
+  | Some (w, ex) -> Some (w, Ex.union ex (Ex.union ex_a ex_k))
+  | None -> None
+
+(* The explanation of [a[k] <> v], if [a] has a value at [k] that is distinct
+   from [v]. *)
+let distinct_value uf dom a k v =
+  match find_value uf dom a k with
+  | Some (w, ex_w) -> Option.map (Ex.union ex_w) (distinct_ex uf v w)
+  | None -> None
+
 let update_split_locs f r locs =
   X.Map.update r
     (fun s -> Option.value ~default:LX.Set.empty s |> f |> Option.some)
@@ -370,7 +469,8 @@ let add_new_term uf env dom b k =
 let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
   let b, ex_b = Uf.find_r uf b in
   let k, ex_k = Uf.find_r uf k in
-  let ex = Ex.union ex (Ex.union ex_b ex_k) in
+  let v, ex_v = Uf.find_r uf v in
+  let ex = List.fold_left Ex.union ex [ex_b; ex_k; ex_v] in
   let dom, is_new = Domain.add_value b k (v, ex) dom in
   if is_new
   then
@@ -385,20 +485,65 @@ let add_value ?(from_select = false) uf (env, dom, todo) b k v ex =
     env, dom, value :: todo
   else env, dom, todo
 
-(* Propagate the value [a[k] = v] through the edge [a --i-- b]: add [b[k] = v]
-   if [k <> i], otherwise create a case split on [k = i]. *)
-let cross uf ((env, dom, todo) as acc) { k; v; ex; _ } b i eex =
+(* For the edge [a --i-- b], with [k = i], and the values [a[k] = a_k] and [b[k]
+   = b_k]: [a = b] if [a_k = b_k], since [a] and [b] agree on all the other
+   indices, and [a <> b] if [a_k <> b_k]. *)
+let check_edge uf (env, (dom : Domain.t), todo) { a; k; v = a_k; ex } b eex =
+  let k, ex_k = Uf.find_r uf k in
+  match X.Map.find k (Domain.values_of b dom) with
+  | exception Not_found -> env, dom, todo
+  | b_k, ex_b -> (
+    let a_k, ex_a' = Uf.find_r uf a_k in
+    let b_k, ex_b' = Uf.find_r uf b_k in
+    let ex = List.fold_left Ex.union ex [ex_k; ex_b; ex_a'; ex_b'; eex] in
+    if X.equal a_k b_k
+    then
+      if same_class uf a b
+      then env, dom, todo
+      else env, { dom with eqs = (a, b, ex) :: dom.eqs }, todo
+    else
+      match distinct_ex uf a_k b_k with
+      | Some ex_d ->
+        env, { dom with neqs = (a, b, Ex.union ex ex_d) :: dom.neqs }, todo
+      | None -> env, dom, todo)
+
+(* Propagate the value [a[k] = a_k] through the edge [a --i-- b]: add [b[k] =
+   a_k] if [k <> i], call [check_edge] if [k = i]. Otherwise:
+
+   - if [b[k] = a_k] already holds, there is nothing to propagate;
+
+   - if [b[k] <> a_k], then [k = i], since [a] and [b] agree on all the other
+   indices;
+
+   - if [a[i] <> a_k], then [k <> i] and [b[k] = a_k];
+
+   - otherwise, a case split on [k = i] is created. *)
+let cross uf acc ({ a; k; v = a_k; ex } as value) b i eex =
   if same_class uf k i
-  then acc
+  then check_edge uf acc value b eex
   else
     let ex = Ex.union ex eex in
     match Uf.are_distinct_r uf k i with
-    | Entailed { ex = ex_d; _ } -> add_value uf acc b k v (Ex.union ex ex_d)
-    | Unknown ->
-      let env, dom = add_split env dom k i (Value { a = b; k; v; ex }) in
-      (* As the value may only be propagated during the case-split search of the
-         theory, its term is given to the instantiation engine now. *)
-      add_new_term uf env dom b k, dom, todo
+    | Entailed { ex = ex_d; _ } -> add_value uf acc b k a_k (Ex.union ex ex_d)
+    | Unknown -> (
+      let env, dom, todo = acc in
+      match find_value uf dom b k with
+      | Some (b_k, _) when same_class uf a_k b_k -> acc
+      | _ -> (
+        match distinct_value uf dom b k a_k with
+        | Some ex_w ->
+          env, { dom with eqs = (k, i, Ex.union ex ex_w) :: dom.eqs }, todo
+        | None -> (
+          match distinct_value uf dom a i a_k with
+          | Some ex_w -> add_value uf acc b k a_k (Ex.union ex ex_w)
+          | None ->
+            let env, dom =
+              add_split env dom k i (Value { a = b; k; v = a_k; ex })
+            in
+            (* As the value may only be propagated during the case-split search
+               of the theory, its term is given to the instantiation engine
+               now. *)
+            add_new_term uf env dom b k, dom, todo)))
 
 (* Propagate the values of [todo] through the edges of their arrays. *)
 let rec propagate uf (env, (dom : Domain.t), todo) =
@@ -508,6 +653,49 @@ let decided_splits uf (dom : Domain.t) la =
       | _ -> acc)
     dom.split_todo la
 
+(* The values [a[k] = v] with [v] in the class of [r]. *)
+let values_of_class uf (dom : Domain.t) todo r =
+  let r = fst (Uf.find_r uf r) in
+  match X.Map.find_opt r dom.value_locs with
+  | Some cells ->
+    XXSet.fold
+      (fun (a, k) todo ->
+        let v, ex = X.Map.find k (Domain.values_of a dom) in
+        { a; k; v; ex } :: todo)
+      cells todo
+  | None -> todo
+
+(* The values of the disequalities of [la], to propagate again: they may now be
+   distinct from other values (see [cross]). *)
+let distinct_values uf dom la =
+  List.fold_left
+    (fun todo (a, _, _, _) ->
+      match a with
+      | A.Distinct (false, l) -> List.fold_left (values_of_class uf dom) todo l
+      | _ -> todo)
+    [] la
+
+(* The values that have been merged with others are checked against the edges
+   labelled by their index: two of them may now be equal (see [check_edge]). *)
+let check_merged_values uf env (dom : Domain.t) =
+  let values =
+    X.Set.fold
+      (fun r todo -> values_of_class uf dom todo r)
+      dom.merged_values []
+  in
+  let check acc ({ a; k; _ } as value) =
+    X.Map.fold
+      (fun b (i, eex) acc ->
+        if same_class uf k i then check_edge uf acc value b eex else acc)
+      (Domain.edges_of a dom) acc
+  in
+  let env, dom, _ =
+    List.fold_left check
+      (env, { dom with merged_values = X.Set.empty }, [])
+      values
+  in
+  env, dom
+
 (* For the edge [a --i-- b] and the edge [a --j-- b] that was not added (see
    [Domain.add_edge]): [a = b] if [i <> j], since [a] and [b] agree on all the
    indices, otherwise a case split on [i = j] is created. If [i = j], the edge
@@ -525,7 +713,7 @@ let split_edges uf env (dom : Domain.t) =
     (env, { dom with edge_splits = [] })
     dom.edge_splits
 
-(* The deduced equalities that are not known yet. *)
+(* The deduced equalities and disequalities that are not known yet. *)
 let flush_eqs uf (dom : Domain.t) =
   let eqs =
     List.filter_map
@@ -533,7 +721,15 @@ let flush_eqs uf (dom : Domain.t) =
         if same_class uf v w then None else Some (LX.mkv_eq v w, ex))
       (List.rev dom.eqs)
   in
-  eqs, { dom with eqs = [] }
+  let neqs =
+    List.filter_map
+      (fun (a, b, ex) ->
+        match Uf.are_distinct_r uf a b with
+        | Th_util.Entailed _ -> None
+        | Unknown -> Some (LX.mkv_distinct false [a; b], ex))
+      (List.rev dom.neqs)
+  in
+  eqs @ neqs, { dom with eqs = []; neqs = [] }
 
 (* For each disequality [r <> s] where [r] and [s] are two arrays, we produce
    the formula: exists i:ty. (select r i) <> (select s i), where [ty] denotes
@@ -601,6 +797,8 @@ let assume env uf la =
       env, Uf.domains uf, []
     else
       let env, dom = process_dirty uf env dom in
+      let env, dom = check_merged_values uf env dom in
+      let env, dom = propagate uf (env, dom, distinct_values uf dom la) in
       let lits = decided_splits uf dom la in
       let env, dom =
         resolve_splits uf env { dom with split_todo = LX.Set.empty } lits
