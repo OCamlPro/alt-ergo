@@ -28,7 +28,7 @@ let
     minimalOCamlVersion = "4.08";
     duneVersion = "3";
 
-    nativeBuildInputs = [ ocamlPackages.crunch ];
+    propagatedNativeBuildInputs = [ ocamlPackages.crunch ];
 
     propagatedBuildInputs = with ocamlPackages; [
       dune-build-info
