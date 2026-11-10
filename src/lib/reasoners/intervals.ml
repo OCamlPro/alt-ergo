@@ -122,12 +122,12 @@ module Field (C : Core) (FT : FieldType) = struct
          (fun () -> interval_set inv0)
          (map_dec_to_set FT.inv)
 
-  let div ?(div0 = Interval.full) x y =
-    trace2 "div" x y @@ of_set_nonempty
-    @@ trisection_map_to_set FT.zero y
-         (fun y -> mul x (map_dec_to_set FT.inv y |> of_set_nonempty) |> to_set)
-         (fun () -> interval_set div0)
-         (fun y -> mul x (map_dec_to_set FT.inv y |> of_set_nonempty) |> to_set)
+  let div x y =
+    trace2 "div" x y
+    @@
+    match intersect (of_interval { lb = FT.zero; ub = FT.zero }) y with
+    | NonEmpty _ -> of_interval Interval.full
+    | Empty ex -> add_explanation ~ex (mul x (inv y))
 end
 
 module AlgebraicField (C : Core) (AT : AlgebraicType) = struct
