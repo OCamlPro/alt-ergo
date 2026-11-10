@@ -611,6 +611,31 @@ module F_Htbl : Hashtbl.S with type key = t = Hashtbl.Make (struct
   let equal = equal
 end)
 
+module Labeled = struct
+  type t =
+    { name : string;
+      f : expr;
+      loc : Loc.t
+    }
+
+  (* Note: [equal], [hash], and [compare] only care about the underlying [expr],
+     not its [name] or [loc]ation -- if an expression has multiple names, it
+     doesn't matter which one we use. *)
+  module T0 = struct
+    type nonrec t = t
+
+    let print ppf { name; _ } = Fmt.string ppf name
+
+    let equal { f = f1; _ } { f = f2; _ } = equal f1 f2
+
+    let hash { f; _ } = hash f
+
+    let compare { f = f1; _ } { f = f2; _ } = compare f1 f2
+  end
+
+  include Container_types.Make (T0)
+end
+
 (** different views of an expression *)
 
 let lit_view t =

@@ -162,6 +162,24 @@ type form_view = private
   | Skolem of quantified (* lazy skolemization *)
   | Let of letin (* a binding of an expr *)
 
+module Labeled : sig
+  type nonrec t =
+    { name : string;
+      f : t;
+      loc : Loc.t
+    }
+  (** An expression with a name.
+
+      This is used to keep track of where expressions come from in the input
+      problem: the name is only used for display and has no semantic meaning. In
+      particular, the comparison and hashing functions ignore the name: if a
+      given expression has multiple names, it doesn't matter which one we use
+      (on the other hand, distinct expressions should not have the same name).
+  *)
+
+  include Container_types.S_plus_stdlib with type t := t
+end
+
 (** different views of an expression *)
 
 val term_view : t -> term_view

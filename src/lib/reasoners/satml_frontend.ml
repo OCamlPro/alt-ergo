@@ -100,7 +100,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
 
   exception Sat
 
-  exception Unsat of Explanation.t
+  exception Unsat of Expr.Labeled.Set.t
 
   exception I_dont_know
 
@@ -108,7 +108,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     env.unknown_reason <- Some ur;
     raise I_dont_know
 
-  exception IUnsat of t * Explanation.t
+  exception IUnsat of t * Expr.Labeled.Set.t
 
   let mk_gf f =
     { E.ff = f;
@@ -290,7 +290,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   end
   (*BISECT-IGNORE-END*)
 
-  let make_explanation _ = Ex.empty
+  let make_explanation _ = Expr.Labeled.Set.empty
   (* if get_debug_sat () then fprintf fmt "make_explanation of %d clauses@."
      (List.length lc); List.fold_left (fun ex ({ST.form = f} as c) -> if
      get_debug_sat () then fprintf fmt "unsat_core: %a@." Atom.pr_clause c;
@@ -391,7 +391,9 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
     (* dep currently not used. No unsat-cores in satML yet *)
     Debug.pred_def f;
     let guard = env.guards.current_guard in
-    env.inst <- Inst.add_predicate env.inst ~guard ~name (mk_gf f) dep
+    env.inst
+      <- Inst.add_predicate env.inst ~guard ~name (mk_gf f)
+           (Ex.from_assumptions dep)
 
   let axiom_def env gf ex = env.inst <- Inst.add_lemma env.inst gf ex
 
@@ -1169,18 +1171,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
       env.inst <- Inst.register_max_term_depth env.inst max_t;
       unsat_rec_prem env ~first_call:true;
       assert false
-    with IUnsat (_env, dep) ->
-      assert
-        begin
-          Ex.fold_atoms
-            (fun e b ->
-              match e with
-              | Ex.Bj _ -> false (* only used in fun_sat *)
-              | Ex.Literal _ | Ex.Fresh _ -> false (* bug if this happens *)
-              | Ex.RootDep _ | Ex.Dep _ -> b)
-            dep true
-        end;
-      dep
+    with IUnsat (_env, dep) -> dep
 
   let assume env gf _dep =
     (* dep currently not used. No unsat-cores in satML yet *)
@@ -1203,7 +1194,8 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   let unsat t ff =
     Timers.with_timer Timers.M_Sat Timers.F_unsat @@ fun () -> unsat t ff
 
-  let assume_th_elt env th_elt dep = SAT.assume_th_elt env.satml th_elt dep
+  let assume_th_elt env th_elt dep =
+    SAT.assume_th_elt env.satml th_elt (Ex.from_assumptions dep)
 
   let optimize env fn = SAT.optimize env.satml fn
 

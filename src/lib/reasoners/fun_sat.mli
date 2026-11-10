@@ -33,7 +33,7 @@ module Make (_ : Theory.S) : sig
 
   exception Sat of t
 
-  exception Unsat of Explanation.t
+  exception Unsat of Expr.Labeled.Set.t
 
   exception I_dont_know of t
 
@@ -48,13 +48,13 @@ module Make (_ : Theory.S) : sig
 
       @raise Errors.Error if there is no [n] assertion levels in [env]. *)
 
-  val assume : t -> Expr.gformula -> Explanation.t -> t
+  val assume : t -> Expr.gformula -> Expr.Labeled.Set.t -> t
 
-  val assume_th_elt : t -> Expr.th_elt -> Explanation.t -> t
+  val assume_th_elt : t -> Expr.th_elt -> Expr.Labeled.Set.t -> t
 
-  val pred_def : t -> Expr.t -> string -> Explanation.t -> Loc.t -> t
+  val pred_def : t -> Expr.t -> string -> Expr.Labeled.Set.t -> Loc.t -> t
 
-  val unsat : t -> Expr.gformula -> Explanation.t
+  val unsat : t -> Expr.gformula -> Expr.Labeled.Set.t
 
   val reset_refs : unit -> unit
 

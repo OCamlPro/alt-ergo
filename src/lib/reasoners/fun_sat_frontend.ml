@@ -23,7 +23,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 module Make (Th : Theory.S) : Sat_solver_sig.S = struct
   exception Sat
 
-  exception Unsat of Explanation.t
+  exception Unsat of Expr.Labeled.Set.t
 
   exception I_dont_know
 
