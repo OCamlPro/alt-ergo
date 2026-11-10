@@ -34,6 +34,7 @@ type incr_kind =
   | Uf (* UF step increment *)
   | Ac (* AC step reasoning *)
   | CP (* Constraint propagation *)
+  | Arrays (* Arrays: propagation of a value through an edge *)
   | Th_assumed of int
 (* Increment the counter for each term assumed in the theories environment *)
 
@@ -57,6 +58,8 @@ let mult_a = ref 0
 
 let mult_cp = ref 0
 
+let mult_arr = ref 0
+
 let all_steps = Stack.create ()
 
 let push_steps () =
@@ -69,7 +72,8 @@ let push_steps () =
       !mult_uf,
       !mult_b,
       !mult_a,
-      !mult_cp )
+      !mult_cp,
+      !mult_arr )
     all_steps
 
 let pop_steps () =
@@ -81,7 +85,8 @@ let pop_steps () =
         p_mult_uf,
         p_mult_b,
         p_mult_a,
-        p_mult_cp ) =
+        p_mult_cp,
+        p_mult_arr ) =
     Stack.pop all_steps
   in
   naive_steps := p_naive_steps;
@@ -92,7 +97,8 @@ let pop_steps () =
   mult_uf := p_mult_uf;
   mult_b := p_mult_b;
   mult_a := p_mult_a;
-  mult_cp := p_mult_cp
+  mult_cp := p_mult_cp;
+  mult_arr := p_mult_arr
 
 let step_limit_reached n = raise (Util.Step_limit_reached n)
 
@@ -141,6 +147,12 @@ let incr k =
     then (
       steps := !steps + 1;
       mult_cp := 0)
+  | Arrays ->
+    mult_arr := !mult_arr + 1;
+    if !mult_arr = 100
+    then (
+      steps := !steps + 1;
+      mult_arr := 0)
   | Th_assumed n ->
     (* Since n refers to the number of terms sent to the theories no
      * multiplier is needed here *)
@@ -166,7 +178,8 @@ let reset_steps () =
   mult_uf := 0;
   mult_b := 0;
   mult_a := 0;
-  mult_cp := 0
+  mult_cp := 0;
+  mult_arr := 0
 
 let save_steps, reinit_steps =
   let saved_mult_uf = ref 0 in
@@ -182,7 +195,8 @@ let save_steps, reinit_steps =
     mult_uf := !saved_mult_uf;
     mult_b := 0;
     mult_a := 0;
-    mult_cp := 0
+    mult_cp := 0;
+    mult_arr := 0
   in
   save_steps, reinit_steps
 
