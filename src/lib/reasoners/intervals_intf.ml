@@ -684,12 +684,11 @@ module type Field = sig
       [inv0] is used to define the inverse of [0] and defaults to the full
       interval. *)
 
-  val div : ?inv0:bnd interval -> t -> t -> t
+  val div : t -> t -> t
   (** [div u1 u2] computes {m \{ x \times y^{-1} \mid x \in S_1, y \in S_2\}}
       when [u1] evaluates to {m S_1} and [u2] evaluates to {m S_2}.
 
-      [inv0] is used when the divisor can be [0]. It defaults to the full
-      interval. *)
+      Returns the full interval if the divisor can be 0. *)
 end
 
 module type AlgebraicType = sig

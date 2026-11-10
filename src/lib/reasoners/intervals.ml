@@ -122,7 +122,12 @@ module Field (C : Core) (FT : FieldType) = struct
          (fun () -> interval_set inv0)
          (map_dec_to_set FT.inv)
 
-  let div ?inv0 x y = mul x (inv ?inv0 y)
+  let div x y =
+    trace2 "div" x y
+    @@
+    match intersect (of_interval { lb = FT.zero; ub = FT.zero }) y with
+    | NonEmpty _ -> of_interval Interval.full
+    | Empty _ -> mul x (inv y)
 end
 
 module AlgebraicField (C : Core) (AT : AlgebraicType) = struct
