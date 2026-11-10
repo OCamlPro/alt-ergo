@@ -894,4 +894,8 @@ module ArraysEx : sig
   val select : t -> t -> t
 
   val store : t -> t -> t -> t
+
+  val const : Ty.t -> t -> t
+  (** [const ty v] is the constant array of type [ty] whose value is [v] at
+      every index. *)
 end

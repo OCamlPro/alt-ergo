@@ -381,6 +381,19 @@ let smt_fpa_builtins =
     | Id { ns = Term; name = Simple "int.pow2" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env int_pow2_cst
+    (* Constant arrays: [((as ae.const (Array I E)) v)]. Dolmen only accepts
+       [((as const (Array I E)) v)] in models, we accept them in scripts under
+       the [ae.const] name. *)
+    | Id { ns = Term; name = Simple "ae.const" } ->
+      Dl.Typer.T.builtin_term (fun ast args ->
+          let index_ty =
+            Dl.Typer.T.wildcard env (Added_type_argument (ast, 0)) Any_in_scope
+          in
+          Dolmen_type.Base.term_app1
+            (module Dl.Typer.T)
+            env s
+            (DE.Term.Array.const index_ty)
+            ast args)
     | Id { ns = Term; name = Simple "ae.float" } ->
       Dl.Typer.T.builtin_term
       @@ Dolmen_type.Base.term_app_cst (module Dl.Typer.T) env ae_float_cst
@@ -1203,7 +1216,10 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
             let e3 = aux_mk_expr z in
             E.mk_term (Sy.Op Sy.Store) [e1; e2; e3] ty
           | (Select | Store), _ -> invalid_app_term ()
-          | Const, _ -> unsupported_app_term ()
+          | Const, [x] ->
+            let ty = dty_to_ty term_ty in
+            E.ArraysEx.const ty (aux_mk_expr x)
+          | Const, _ -> invalid_app_term ()
           (* Cannot be applied *)
           | T, _ -> invalid_app_term ())
         (* Floating-point builtins *)

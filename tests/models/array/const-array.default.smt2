@@ -1,0 +1,6 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-const a (Array Int Int))
+(assert (= a ((as ae.const (Array Int Int)) 3)))
+(check-sat)
+(get-model)
