@@ -2790,6 +2790,9 @@ module Purification = struct
       let el, lets = purify_non_toplevel_ite el lets in
       mk_term e.f [c; th; el] e.ty, lets
     | (Sy.Form _ | Sy.Lit _), _ -> purify_form e, lets
+    (* A Bool binding cannot carry lifted [let]s (see [mk_lifted]): purify a
+       predicate application as a formula, which keeps them inside it. *)
+    | _ when e.ty == Ty.Tbool -> purify_form e, lets
     | _ -> purify_term e lets
 end
 
