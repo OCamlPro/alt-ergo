@@ -33,6 +33,10 @@ type builtin = Symbols.builtin =
   | (* arithmetic *)
     IsConstr of DE.term_cst (* ADT tester *)
   | BVULE (* unsigned bit-vector arithmetic *)
+  | BVuaddo
+  | BVsaddo
+  | BVumulo
+  | BVsmulo
 
 type 'a view =
   | Eq of 'a * 'a
@@ -130,6 +134,16 @@ let print_view pp_elt ppf vw =
   | Builtin (false, BVULE, [v1; v2]) ->
     Fmt.pf ppf "%a >@ %a" pp_elt v1 pp_elt v2
   | Builtin (_, BVULE, _) -> assert false (* not reachable *)
+  | Builtin (is_pos, ((BVuaddo | BVsaddo | BVumulo | BVsmulo) as builtin), args)
+    ->
+    let module Output_format = Printer.Native_format in
+    let module Sy_print = Symbols.Print (Output_format) in
+    let print_args =
+      if is_pos
+      then Sy_print.builtin_app builtin pp_elt
+      else Output_format.print_not (Sy_print.builtin_app builtin pp_elt)
+    in
+    print_args ppf args
   | Builtin (pos, IsConstr tcst, [e]) ->
     Fmt.pf ppf "%s(%a ?@ %a)"
       (if pos then "" else "~")

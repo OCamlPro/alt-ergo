@@ -168,3 +168,25 @@ val reporter : Logs.reporter
     - [Sources.default] is printed on [Options.Output.get_fmt_regular ()]
 
     The library never prints on [Sources.default] or [Sources.model]. *)
+
+module type Output_format = sig
+  val print_not : 'a Fmt.t -> 'a Fmt.t
+
+  val print_call : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_infix : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_suffix : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val print_tester : 'a Fmt.t -> 'a Fmt.t
+
+  val print_indexed : 'a Fmt.t -> 'a -> 'b Fmt.t -> 'b list Fmt.t
+
+  val alias : native:'a -> smtlib:'a -> 'a
+end
+
+module Native_format : Output_format
+
+module Smtlib2_format : Output_format
+
+val output_format : unit -> (module Output_format)
