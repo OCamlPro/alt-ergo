@@ -1,0 +1,11 @@
+; a[k] <> a[i] gives k <> i, so (store a i x)[k] = a[k] without a case split.
+(set-logic QF_AX)
+(declare-sort T 0)
+(declare-sort E 0)
+(declare-const a (Array T E))
+(declare-const i T)
+(declare-const k T)
+(declare-const x E)
+(assert (distinct (select a k) (select a i)))
+(assert (distinct (select (store a i x) k) (select a k)))
+(check-sat)

@@ -1,0 +1,11 @@
+; a and (store a i x) differ at k, so k = i without a case split.
+(set-logic QF_AX)
+(declare-sort T 0)
+(declare-sort E 0)
+(declare-const a (Array T E))
+(declare-const i T)
+(declare-const k T)
+(declare-const x E)
+(assert (distinct (select (store a i x) k) (select a k)))
+(assert (distinct (select (store a i x) k) x))
+(check-sat)
