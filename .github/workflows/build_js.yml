@@ -28,6 +28,7 @@ jobs:
     name: Compile AE with JsoO and test it with NodeJs
 
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       # Checkout the code of the current branch
