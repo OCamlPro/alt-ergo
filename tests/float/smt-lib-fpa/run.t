@@ -1231,3 +1231,42 @@ The remainder: a zero has the sign of [x].
   
   unsat
 
+
+Regression test (from QF_BVFP/20170428-Liew-KLEE query.0232, status sat): the
+discreteness lemma of a comparison with an operand whose representative is a
+literal must be guarded by that equality, otherwise it outlives the branch and
+Alt-Ergo wrongly answers unsat.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_BVFP)
+  > (declare-fun x1 () (_ BitVec 64))
+  > (declare-fun x0 () (_ BitVec 64))
+  > (declare-fun x2 () (_ BitVec 64))
+  > (declare-fun x3 () (_ BitVec 64))
+  > (declare-fun x4 () (_ BitVec 64))
+  > (declare-fun x5 () (_ BitVec 64))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (fp.gt ?x13 ((_ to_fp 11 53) x1))))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (let ((?x16 ((_ to_fp 11 53) x2)))
+  >  (fp.gt ?x16 ?x13))))
+  > (assert
+  >  (or (fp.isNaN ((_ to_fp 11 53) x2)) (fp.lt ((_ to_fp 11 53) x3) ((_ to_fp 11 53) x2))))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (let ((?x19 ((_ to_fp 11 53) x3)))
+  >  (fp.gt ?x19 ?x13))))
+  > (assert
+  >  (not (fp.isNaN ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (not (fp.lt ((_ to_fp 11 53) x4) ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (or (fp.isNaN ((_ to_fp 11 53) x5)) (fp.lt ((_ to_fp 11 53) x5) ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (not (fp.isNaN ((_ to_fp 11 53) x4))))
+  > (check-sat)
+  > EOF
+  
+  unknown

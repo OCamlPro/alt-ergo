@@ -689,8 +689,14 @@ let next_float_q ~eb ~sb ~up v =
           (Fp_value.mk_fp_literal ~neg:sign ~biased_exp:bexp
              ~mantissa:(Z.rem mm p) ~eb ~sb)
 
-(* [term = lt/le(x, y)] with a literal operand [k]: a finite float strictly
-   above (below) [k] is at least (most) the next (previous) float. *)
+(* [term = lt/le(x, y)] with an operand [k_t] whose representative is the
+   literal [k]: a finite float strictly above (below) [k] is at least (most) the
+   next (previous) float.
+
+   The bound only holds if [k_t = k], and that equality may only be true in the
+   current branch. Lemmas have no explanation, so the SAT solver keeps them
+   after backtracking. Each clause therefore states the condition itself, with
+   the literal [k_t <> k]. *)
 let discreteness_lemmas term rep_x rep_y =
   match E.term_view term with
   | { E.f = Sy.Name { hs; _ }; xs = [_; _; xt; yt]; _ }
@@ -700,22 +706,23 @@ let discreteness_lemmas term rep_x rep_y =
     let eb, sb = float_format xt in
     (* The clause applies when the comparison is strict: [lt] or [not le]. *)
     let guard = if is_lt then E.neg term else term in
-    let bound sym k ~above =
+    let bound sym k_t k ~above =
       match next_float_q ~eb ~sb ~up:above k with
       | None -> []
       | Some q ->
         let r = E.FP.to_real ~eb ~sb sym in
         let qc = E.Reals.of_Q q in
         let cmp = if above then E.Reals.(qc <= r) else E.Reals.(r <= qc) in
-        [mk_clause [guard; E.neg (E.FP.is_finite ~eb ~sb sym); cmp]]
+        let is_k = E.mk_eq ~iff:false k_t (E.float k eb sb) in
+        [mk_clause [guard; E.neg is_k; E.neg (E.FP.is_finite ~eb ~sb sym); cmp]]
     in
     match get_fp_value rep_x, get_fp_value rep_y with
     | Some (vx, _), None ->
       (* [cmp(k, y)] strict: [lt] puts [y] above [k], [not le] below it. *)
-      bound yt vx ~above:is_lt
+      bound yt xt vx ~above:is_lt
     | None, Some (vy, _) ->
       (* [cmp(x, k)] strict: [lt] puts [x] below [k], [not le] above it. *)
-      bound xt vy ~above:(not is_lt)
+      bound xt yt vy ~above:(not is_lt)
     | _ -> [])
   | _ -> []
 
