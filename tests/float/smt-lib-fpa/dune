@@ -3,4 +3,5 @@
  (deps
   %{bin:alt-ergo}
   (package alt-ergo)
-  (package alt-ergo-smt-float-plugin)))
+  (package alt-ergo-smt-float-plugin)
+  (alias %{project_root}/install)))
