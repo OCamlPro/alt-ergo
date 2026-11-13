@@ -85,12 +85,15 @@ let[@inline never] grow_to_double_size vec : unit =
   grow_to vec (2 * Array.length vec.data)
 
 let[@inline never] grow_to_by_double vec cap =
-  let cap = max 1 cap in
-  let c = ref (max 1 (Array.length vec.data)) in
-  while !c < cap do
-    c := 2 * !c
-  done;
-  grow_to vec !c
+  let len = Array.length vec.data in
+  if cap > len
+  then begin
+    let c = ref (max 1 len) in
+    while !c < cap do
+      c := 2 * !c
+    done;
+    grow_to vec !c
+  end
 
 let[@inline] push vec x : unit =
   if is_full vec then grow_to_double_size vec;
@@ -127,17 +130,18 @@ let[@inline] iteri f vec =
     f i @@ Array.unsafe_get vec.data i
   done
 
-let[@inline] iter f = iteri (fun _ elt -> f elt)
+let[@inline] iter f vec =
+  for i = 0 to vec.sz - 1 do
+    f (Array.unsafe_get vec.data i)
+  done
 
-exception Terminate
+let exists p { data; sz; _ } =
+  let rec aux i = i < sz && (p (Array.unsafe_get data i) || aux (i + 1)) in
+  aux 0
 
-let exists p vec =
-  try
-    iter (fun elt -> if p elt then raise Terminate) vec;
-    false
-  with Terminate -> true
-
-let for_all p vec = not @@ exists (fun x -> not @@ p x) vec
+let for_all p { data; sz; _ } =
+  let rec aux i = i >= sz || (p (Array.unsafe_get data i) && aux (i + 1)) in
+  aux 0
 
 let fold f acc vec =
   let acc = ref acc in
@@ -146,7 +150,12 @@ let fold f acc vec =
 
 let to_array a = Array.sub a.data 0 a.sz
 
-let to_list vec = Array.to_seq (to_array vec) |> List.of_seq
+let to_list { data; sz; _ } =
+  let l = ref [] in
+  for i = sz - 1 downto 0 do
+    l := Array.unsafe_get data i :: !l
+  done;
+  !l
 
 let to_rev_list { data; sz; _ } =
   let l = ref [] in
@@ -156,12 +165,8 @@ let to_rev_list { data; sz; _ } =
   !l
 
 let of_list l ~dummy : _ t =
-  match l with
-  | [] -> create ~dummy
-  | _ :: tl ->
-    let v = make (List.length tl + 1) ~dummy in
-    List.iter (push v) l;
-    v
+  let data = Array.of_list l in
+  { data; sz = Array.length data; dummy }
 
 let sort vec f : unit =
   let arr = to_array vec in
