@@ -456,7 +456,7 @@ let same_class uf r1 r2 =
 
 (* The explanation of [r1 <> r2], if they are distinct. *)
 let distinct_ex uf r1 r2 =
-  match Uf.are_distinct_r uf r1 r2 with
+  match Uf.are_distinct_light uf r1 r2 with
   | Th_util.Entailed { ex; _ } -> Some ex
   | Unknown -> None
 
@@ -590,7 +590,7 @@ let cross uf acc ({ a; k; v = a_k; ex } as value) b i eex =
   then check_edge uf acc value b eex
   else
     let ex = Ex.union ex eex in
-    match Uf.are_distinct_r uf k i with
+    match Uf.are_distinct_light uf k i with
     | Entailed { ex = ex_d; _ } -> add_value uf acc b k a_k (Ex.union ex ex_d)
     | Unknown -> (
       let env, dom, todo = acc in
@@ -669,7 +669,7 @@ let resolve_splits uf env dom lits =
              let env, dom = remove_split uf env dom lit k i in
              env, dom, todo
            else
-             match Uf.are_distinct_r uf k i with
+             match Uf.are_distinct_light uf k i with
              | Th_util.Entailed { ex; _ } ->
                let env, dom = remove_split uf env dom lit k i in
                Conseqs.fold
@@ -775,7 +775,7 @@ let split_edges uf env (dom : Domain.t) =
       if same_class uf a b || same_class uf i j
       then env, dom
       else
-        match Uf.are_distinct_r uf i j with
+        match Uf.are_distinct_light uf i j with
         | Entailed { ex = ex_d; _ } ->
           env, { dom with eqs = (a, b, Ex.union ex ex_d) :: dom.eqs }
         | Unknown -> add_split env dom i j (Equal (a, b, ex)))
@@ -793,7 +793,7 @@ let flush_eqs uf (dom : Domain.t) =
   let neqs =
     List.filter_map
       (fun (a, b, ex) ->
-        match Uf.are_distinct_r uf a b with
+        match Uf.are_distinct_light uf a b with
         | Th_util.Entailed _ -> None
         | Unknown -> Some (LX.mkv_distinct false [a; b], ex))
       (List.rev dom.neqs)
