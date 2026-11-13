@@ -29,6 +29,15 @@ class Smt2Lexer(RegexLexer):
 
     sorts = (
         'Int', 'Bool', 'Real', 'BitVec', 'Array', 'RoundingMode',
+        'FloatingPoint', 'Float16', 'Float32', 'Float64', 'Float128',
+    )
+
+    constants = (
+        # FloatingPoint
+        '+oo', '-oo', '+zero', '-zero', 'NaN',
+        'RNE', 'RNA', 'RTP', 'RTN', 'RTZ',
+        'roundNearestTiesToEven', 'roundNearestTiesToAway',
+        'roundTowardPositive', 'roundTowardNegative', 'roundTowardZero',
     )
 
     builtins = (
@@ -49,6 +58,14 @@ class Smt2Lexer(RegexLexer):
         # Ints, Reals and Reals_Ints
         'div', 'mod', 'abs',
         'to_real', 'to_int', 'is_int',
+
+        # FloatingPoint
+        'fp', 'fp.abs', 'fp.neg', 'fp.add', 'fp.sub', 'fp.mul', 'fp.div',
+        'fp.fma', 'fp.sqrt', 'fp.rem', 'fp.roundToIntegral', 'fp.min',
+        'fp.max', 'fp.leq', 'fp.lt', 'fp.geq', 'fp.gt', 'fp.eq',
+        'fp.isNormal', 'fp.isSubnormal', 'fp.isZero', 'fp.isInfinite',
+        'fp.isNaN', 'fp.isNegative', 'fp.isPositive', 'to_fp',
+        'to_fp_unsigned', 'fp.to_ubv', 'fp.to_sbv', 'fp.to_real',
 
         # Custom
         'ae.round',
@@ -77,6 +94,7 @@ class Smt2Lexer(RegexLexer):
 
             (r'true|false', Name.Constant),
             (r'bv[0-9]+', Name.Constant),
+            (words(constants, suffix=symbol_suffix), Name.Constant),
             (words(operators, suffix=symbol_suffix), Name.Operator),
             (words(keywords, suffix=symbol_suffix), Keyword),
             (words(sorts, suffix=symbol_suffix), Keyword.Type),
