@@ -828,6 +828,233 @@ Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
   
   unsat
 
+IEEE evaluation of the operators on literals.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= (fp.fma RNE (fp #b0 #b10000 #b0100000000) (fp #b1 #b01111 #b1000000000) (fp #b0 #b10001 #b0000000001)) (fp #b0 #b01101 #b0000010000))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= (fp.sqrt RTP ((_ to_fp 5 11) RNE 2.0)) (fp #b0 #b01111 #b0110101001))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= (fp.div RTZ ((_ to_fp 3 5) RNE 1.0) ((_ to_fp 3 5) RNE 3.0)) (fp #b0 #b001 #x5))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (= (fp.roundToIntegral RNA ((_ to_fp 8 24) RNE 2.5)) ((_ to_fp 8 24) RNE 3.0))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+is_normal and is_subnormal: exclusive classes, one of the five classes holds,
+and definition by the real value.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (fp.isNormal x))
+  > (assert (fp.isSubnormal x))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (not (fp.isNaN x)))
+  > (assert (not (fp.isInfinite x)))
+  > (assert (not (fp.isZero x)))
+  > (assert (not (fp.isNormal x)))
+  > (assert (not (fp.isSubnormal x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (fp.isSubnormal x))
+  > (assert (fp.gt x ((_ to_fp 8 24) RNE 0.5)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Evaluation of the operators on known arguments, fields of fp from the
+predicates, and propagation of the predicates through the operators.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (= x ((_ to_fp 8 24) RNE 1.5)))
+  > (assert (= y ((_ to_fp 8 24) RNE 2.25)))
+  > (assert (not (= (fp.mul RNE x y) ((_ to_fp 8 24) RNE 3.375))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const e (_ BitVec 8))
+  > (declare-const m (_ BitVec 23))
+  > (declare-const s (_ BitVec 1))
+  > (assert (fp.isNormal (fp s e m)))
+  > (assert (= e #x00))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (assert (fp.isNaN (fp.min x y)))
+  > (assert (not (fp.isNaN x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Extensionality: finite floats with the same real value are equal, except for
+zeros of different signs.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 11 53))
+  > (assert (fp.isNormal x))
+  > (assert (= (fp.to_real ((_ to_fp 8 24) RTZ x)) 1.5))
+  > (assert (not (= ((_ to_fp 8 24) RTZ x) ((_ to_fp 8 24) RNE 1.5))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (declare-const z (_ FloatingPoint 8 24))
+  > (assert (fp.isNormal y))
+  > (assert (= (fp.to_real y) (fp.to_real z)))
+  > (assert (not (fp.isNaN z)))
+  > (assert (not (fp.isInfinite z)))
+  > (assert (not (= y z)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const y (_ FloatingPoint 8 24))
+  > (declare-const z (_ FloatingPoint 8 24))
+  > (assert (fp.isZero y))
+  > (assert (= (fp.to_real y) (fp.to_real z)))
+  > (assert (not (fp.isNaN z)))
+  > (assert (not (fp.isInfinite z)))
+  > (assert (not (= y z)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+Comparisons decided from the classes and signs of their arguments, or by
+evaluation.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 8 24))
+  > (assert (= x (_ -oo 8 24)))
+  > (assert (not (fp.leq ((_ to_fp 11 53) RNA x) ((_ to_fp 11 53) RNE (- 26.0)))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (assert (not (fp.geq (_ -zero 8 24) ((_ to_fp 8 24) RNE (- 33.25)))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+Conversions of bit-vectors: never NaN nor subnormal, positive if unsigned, and
+inverted when exact.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 24))
+  > (assert (fp.isSubnormal ((_ to_fp 5 11) RNA b)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 16))
+  > (assert (fp.leq ((_ to_fp_unsigned 5 11) RTP b) ((_ to_fp 5 11) RNE (- 30377.0))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const b (_ BitVec 24))
+  > (assert (= ((_ to_fp_unsigned 11 53) RTP b) ((_ to_fp 11 53) RNE 17.5)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+The real value of a float whose value is known: 0 for both zeros, none for
+infinities.
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 11 53))
+  > (assert (= x (_ -zero 11 53)))
+  > (assert (not (= (fp.to_real x) 0.0)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 11 53))
+  > (assert (= x (_ +oo 11 53)))
+  > (assert (= (fp.to_real x) 5.0))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
 fp.rem: the quotient is rounded to the nearest integer, ties to even, and a
 zero result has the sign of x.
 
@@ -930,3 +1157,116 @@ With a literal [y], the remainder is [x - y * n] for the integer [n] nearest to
   > EOF
   
   unsat
+
+Floats are discrete: nothing lies strictly between two consecutive floats.
+Reasoning only through [to_real] leaves an open real interval, so these were
+answered [unknown]; [Fpa_rel] now tightens a strict bound to the adjacent float.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
+  > (assert (fp.lt x (fp #b0 #b01111111 #b00000000000000000000001)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+The same through [fp.leq] with the endpoint excluded.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (not (fp.leq x (fp #b0 #b01111111 #b00000000000000000000000))))
+  > (assert (fp.leq x (fp #b0 #b01111111 #b00000000000000000000001)))
+  > (assert (not (fp.eq x (fp #b0 #b01111111 #b00000000000000000000001))))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+With a float in between (two ulps above 1.0) the bound must not collapse.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
+  > (assert (fp.lt x (fp #b0 #b01111111 #b00000000000000000000010)))
+  > (check-sat)
+  > EOF
+  
+  unknown
+
+
+Exact operations: the products by powers of two in range.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isNormal x))
+  > (assert (fp.lt (fp.abs x) ((_ to_fp 8 24) RNE 1000.0)))
+  > (assert (not (fp.eq (fp.div RNE (fp.mul RNE x ((_ to_fp 8 24) RNE 4.0))
+  >                             ((_ to_fp 8 24) RNE 4.0)) x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+The remainder: a zero has the sign of [x].
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_FP)
+  > (declare-const x Float32)
+  > (declare-const y Float32)
+  > (assert (fp.isNegative x))
+  > (assert (fp.isNormal x))
+  > (assert (fp.isNormal y))
+  > (assert (fp.isZero (fp.rem x y)))
+  > (assert (fp.isPositive (fp.rem x y)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+
+Regression test (from QF_BVFP/20170428-Liew-KLEE query.0232, status sat): the
+discreteness lemma of a comparison with an operand whose representative is a
+literal must be guarded by that equality, otherwise it outlives the branch and
+Alt-Ergo wrongly answers unsat.
+
+  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic QF_BVFP)
+  > (declare-fun x1 () (_ BitVec 64))
+  > (declare-fun x0 () (_ BitVec 64))
+  > (declare-fun x2 () (_ BitVec 64))
+  > (declare-fun x3 () (_ BitVec 64))
+  > (declare-fun x4 () (_ BitVec 64))
+  > (declare-fun x5 () (_ BitVec 64))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (fp.gt ?x13 ((_ to_fp 11 53) x1))))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (let ((?x16 ((_ to_fp 11 53) x2)))
+  >  (fp.gt ?x16 ?x13))))
+  > (assert
+  >  (or (fp.isNaN ((_ to_fp 11 53) x2)) (fp.lt ((_ to_fp 11 53) x3) ((_ to_fp 11 53) x2))))
+  > (assert
+  >  (let ((?x13 ((_ to_fp 11 53) x0)))
+  >  (let ((?x19 ((_ to_fp 11 53) x3)))
+  >  (fp.gt ?x19 ?x13))))
+  > (assert
+  >  (not (fp.isNaN ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (not (fp.lt ((_ to_fp 11 53) x4) ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (or (fp.isNaN ((_ to_fp 11 53) x5)) (fp.lt ((_ to_fp 11 53) x5) ((_ to_fp 11 53) x3))))
+  > (assert
+  >  (not (fp.isNaN ((_ to_fp 11 53) x4))))
+  > (check-sat)
+  > EOF
+  
+  unknown
