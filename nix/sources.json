@@ -1,16 +1,16 @@
 {
     "dolmen": {
-        "branch": "master",
+        "branch": "v0.11",
         "description": "Dolmen provides a library and a binary to parse, typecheck, and evaluate languages used in automated deduction",
         "homepage": "",
         "owner": "Gbury",
         "repo": "dolmen",
-        "rev": "2d642d2dbecbaeea031f5b6020b818ad01d36a9c",
-        "sha256": "087pdnxc9rijmssy4x780rgnrsxm1crihzdficifx14pa5qjjs1l",
+        "rev": "bb30e996a00fa2f4769ef6a39472c461f8729b75",
+        "sha256": "0kqnklf7v8gh0k00y8yxxj25iqq6cr7pijykclzzf5wi9bzc9ndx",
         "type": "tarball",
-        "url": "https://github.com/Gbury/dolmen/archive/2d642d2dbecbaeea031f5b6020b818ad01d36a9c.tar.gz",
+        "url": "https://github.com/Gbury/dolmen/archive/bb30e996a00fa2f4769ef6a39472c461f8729b75.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "version": "0.10"
+        "version": "0.11"
     },
     "landmarks": {
         "branch": "b0c753cd2a4c4aa00dffdd3be187d8ed592fabf7",
