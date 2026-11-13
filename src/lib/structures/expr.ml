@@ -3481,6 +3481,11 @@ module FP = struct
 
   let to_sbv ~n ~eb ~sb ~mode x =
     fp_op eb sb (Sy.Op (Float_to_sbv n)) [mode; x] (Ty.Tbitv n)
+
+  let rem ~eb ~sb x y =
+    match float_view x, float_view y with
+    | Some vx, Some vy -> float (Fp_value.rem ~eb ~sb vx vy) eb sb
+    | _ -> mk_term (Sy.Op Float_rem) [x; y] (Ty.Tfloat (eb, sb))
 end
 
 (** Constructors from the smtlib theory of functional arrays with extensionality

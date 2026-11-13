@@ -122,6 +122,7 @@ type conv_kind =
   | To_bv of bool * int
       (** [Sy.Float_to_sbv n] ([true]) or [Sy.Float_to_ubv n] ([false]) applied
           to [eb sb mode x] *)
+  | Rem  (** [Sy.Float_rem] applied to [x y] *)
 
 let conv_kind term =
   match E.term_view term with
@@ -131,6 +132,7 @@ let conv_kind term =
     Some (To_bv (false, n))
   | { E.f = Sy.Op (Float_to_sbv n); xs = [_; _; _; _]; _ } ->
     Some (To_bv (true, n))
+  | { E.f = Sy.Op Float_rem; xs = [_; _]; _ } -> Some Rem
   | { E.f = Sy.Name { hs; _ }; xs = [_; _; _; _]; ty = Ty.Tfloat _; _ }
     when String.equal (Hstring.view hs) Names.of_int ->
     Some Of_int
@@ -291,6 +293,7 @@ module Conv_watch = struct
         { mode : X.r * Ex.t;
           arg : X.r * Ex.t
         }  (** of the other conversions, applied to [mode] and [arg] *)
+    | Ops of (X.r * Ex.t) list  (** of [Rem], applied to [x y] *)
 
   type app =
     { kind : conv_kind;
@@ -302,6 +305,7 @@ module Conv_watch = struct
     match app.args with
     | Bits { sign; exp; mant } -> [app.r; sign; exp; mant]
     | Rounded { mode; arg } -> [app.r; mode; arg]
+    | Ops l -> app.r :: l
 
   type t =
     { apps : app E.Map.t;
@@ -580,6 +584,45 @@ module Conv_watch = struct
     in
     eval @ of_exact
 
+  (* [term = rem x y]: the value, once [x] and [y] are literals. *)
+  let rem term x y =
+    match get_fp_value x, get_fp_value y with
+    | Some (vx, ex_x), Some (vy, ex_y) ->
+      let eb, sb = float_format term in
+      [ eq_float_fact (Ex.union ex_x ex_y) term
+          (Fp_value.rem ~eb ~sb vx vy)
+          eb sb ]
+    | _ -> []
+
+  (* [term = rem(x, y)] with [y] equal to a nonzero finite literal [c]: [term]
+     is exactly [x - c * n], with [n = integer_round(NearestTiesToEven, x / c)].
+     Guarded by [y = c] so that it holds as a lemma. *)
+  let rem_lemmas term rep_y =
+    match E.term_view term, get_fp_value rep_y with
+    | { E.xs = [x; y]; ty = Ty.Tfloat (eb, sb); _ }, Some ((Finite c as v), _)
+      ->
+      let rne =
+        E.mk_constr
+          (Fpa_rounding.term_cst_of_rounding_mode RoundNearestTiesToEven)
+          [] Fpa_rounding.fpa_rounding_mode
+      in
+      let rx = E.FP.to_real ~eb ~sb x in
+      let n =
+        E.mk_term (Sy.Op Sy.Integer_round)
+          [rne; E.Reals.(rx * of_Q (Q.inv c))]
+          Ty.Tint
+      in
+      let value =
+        E.mk_eq ~iff:false
+          (E.FP.to_real ~eb ~sb term)
+          E.Reals.(rx - (of_Q c * real_of_int n))
+      in
+      [ mk_clause
+          [ E.neg (E.mk_eq ~iff:false y (E.float v eb sb));
+            E.neg (E.FP.is_finite ~eb ~sb x);
+            value ] ]
+    | _ -> []
+
   (* Runs the rules of [term] and queues their facts. *)
   let apply_conv_rules term app t =
     let facts, lemmas =
@@ -592,6 +635,7 @@ module Conv_watch = struct
       | To_fp, Rounded { mode; arg } -> to_fp term ~mode ~arg, []
       | To_bv (signed, n), Rounded { mode; arg } ->
         to_bv t term ~signed n app.r ~mode ~arg, []
+      | Rem, Ops [x; y] -> rem term x y, rem_lemmas term y
       | _ -> assert false
     in
     { t with facts = facts @ t.facts; lemmas = lemmas @ t.lemmas }
@@ -605,6 +649,7 @@ module Conv_watch = struct
         match kind, E.term_view term with
         | Of_bits, { E.xs = [_; _; s; e; m]; _ } ->
           Bits { sign = find s; exp = find e; mant = find m }
+        | Rem, { E.xs; _ } -> Ops (List.map find xs)
         | _, { E.xs = [_; _; mode; arg]; _ } ->
           Rounded { mode = find mode; arg = find arg }
         | _ -> assert false
@@ -626,7 +671,7 @@ module Conv_watch = struct
         | Of_int ->
           let facts = List.map (lit_fact Ex.empty) (of_bv_int_facts term) in
           { t with facts = facts @ t.facts }
-        | Of_bits | Of_real | To_int | To_fp | To_bv _ -> t
+        | Of_bits | Of_real | To_int | To_fp | To_bv _ | Rem -> t
       in
       apply_conv_rules term app t
 
@@ -644,6 +689,7 @@ module Conv_watch = struct
             Bits { sign = update sign; exp = update exp; mant = update mant }
           | Rounded { mode; arg } ->
             Rounded { mode = update mode; arg = update arg }
+          | Ops l -> Ops (List.map update l)
         in
         { app with r = update app.r; args }
       in
@@ -972,6 +1018,35 @@ let to_fp_clauses term =
            real ])
   | _ -> assert false
 
+(* [term = rem x y]. NaN if [x] is NaN or infinite, or if [y] is NaN or zero.
+   [x] if [x] is finite and [y] infinite, or if [x] is zero and [y] finite and
+   nonzero. Otherwise, for [x] finite and [y] finite and nonzero, [term] is
+   finite, [|term| <= |y| / 2] and [|term| <= |x|]. *)
+let rem_clauses term =
+  match E.term_view term with
+  | { E.xs = [x; y]; ty = Ty.Tfloat (eb, sb); _ } ->
+    let p mk t = mk ~eb ~sb t in
+    let not_ mk t = E.neg (p mk t) in
+    let nan_r = p E.FP.is_nan term in
+    let eq_x = E.mk_eq ~iff:false term x in
+    let abs t = E.mk_term (Sy.Op Abs_real) [t] Ty.Treal in
+    let real t = abs (E.FP.to_real ~eb ~sb t) in
+    let finite t = [p E.FP.is_nan t; p E.FP.is_infinite t] in
+    let finite_nonzero t = p E.FP.is_zero t :: finite t in
+    let bounds =
+      let open E.Reals in
+      [p E.FP.is_finite term; real term <= real y / ~$2; real term <= real x]
+    in
+    List.map mk_clause
+      ([ [not_ E.FP.is_nan x; nan_r];
+         [not_ E.FP.is_infinite x; nan_r];
+         [not_ E.FP.is_nan y; nan_r];
+         [not_ E.FP.is_zero y; nan_r];
+         finite x @ [not_ E.FP.is_infinite y; eq_x];
+         (not_ E.FP.is_zero x :: finite_nonzero y) @ [eq_x] ]
+      @ List.map (fun b -> finite x @ finite_nonzero y @ [b]) bounds)
+  | _ -> assert false
+
 let definitions term =
   match normal_pred term with
   | Some p -> ["fpa_normal_definition", [normal_definition term p]]
@@ -981,6 +1056,7 @@ let definitions term =
     (match conv_kind term with
     | Some Of_bits -> ["fpa_of_bits_clauses", of_bits_clauses term]
     | Some To_fp -> ["fpa_to_fp_clauses", to_fp_clauses term]
+    | Some Rem -> ["fpa_rem_clauses", rem_clauses term]
     | Some (Of_int | Of_real | To_int | To_bv _) | None -> [])
 
 let add env uf _r term =
