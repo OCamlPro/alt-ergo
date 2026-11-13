@@ -18,9 +18,9 @@ depends: [
   "crunch"
   "dune" {>= "3.14"}
   "dune-build-info"
-  "dolmen" {>= "0.10" | = "dev"}
-  "dolmen_type" {>= "0.10" | = "dev"}
-  "dolmen_loop" {>= "0.10" | = "dev"}
+  "dolmen" {>= "0.11"}
+  "dolmen_type" {>= "0.11"}
+  "dolmen_loop" {>= "0.11"}
   "ocplib-simplex" {>= "0.5.1"}
   "zarith" {>= "1.11"}
   "seq"
@@ -57,19 +57,4 @@ tags: "org:OCamlPro"
 license: [
   "LicenseRef-OCamlpro-Non-Commercial"
   "Apache-2.0"
-]
-
-pin-depends: [
-  [
-    "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
-  [
-    "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
-  [
-    "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
 ]
