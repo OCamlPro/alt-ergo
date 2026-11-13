@@ -1,6 +1,6 @@
 Testing Alt-Ergo's support for parsing smt-lib FPA literals.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (or
   >     (= (_ +oo 8 24) (fp #b0 #b11111111 #b00000000000000000000000))
@@ -11,7 +11,7 @@ Testing Alt-Ergo's support for parsing smt-lib FPA literals.
   
   unsat
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (or
   >     (= (_ -oo 8 24) (fp #b1 #b11111111 #b00000000000000000000000))
@@ -22,7 +22,7 @@ Testing Alt-Ergo's support for parsing smt-lib FPA literals.
   
   unsat
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (or
   >     (= (_ +zero 8 24) (fp #b0 #b00000000 #b00000000000000000000000))
@@ -32,7 +32,7 @@ Testing Alt-Ergo's support for parsing smt-lib FPA literals.
   > EOF
   
   unsat
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (or
   >     (= (_ -zero 8 24) (fp #b1 #b00000000 #b00000000000000000000000))
@@ -42,14 +42,14 @@ Testing Alt-Ergo's support for parsing smt-lib FPA literals.
   > EOF
   
   unsat
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (= (_ NaN 8 24) (_ NaN 8 24))))
   > (check-sat)
   > EOF
   
   unsat
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (assert (not (= (fp #b0 #b01111111 #b00000000000000000000000)
   >                ((_ to_fp 8 24) #b00111111100000000000000000000000))))
@@ -59,7 +59,7 @@ Testing Alt-Ergo's support for parsing smt-lib FPA literals.
   unsat
 
 Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (fp.isPositive x))
@@ -69,7 +69,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (fp.isNegative (fp.abs x)))
@@ -78,7 +78,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -90,7 +90,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -103,7 +103,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -117,7 +117,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (=
   >   (_ +oo 11 53)
@@ -132,7 +132,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-fun x () Float64)
   > (declare-fun y () Float64)
@@ -144,7 +144,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-fun x () Float64)
   > (declare-fun y () Float64)
@@ -160,7 +160,7 @@ Testing Alt-Ergo's symbolic reasoning over smt-lib FPA symbols.
 
 Conversions of literals: to_fp_unsigned, fp.to_sbv and FP -> FP overflow.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= ((_ to_fp_unsigned 8 24) RNE #x05) ((_ to_fp 8 24) #x40a00000))))
   > (check-sat)
@@ -168,7 +168,7 @@ Conversions of literals: to_fp_unsigned, fp.to_sbv and FP -> FP overflow.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= ((_ fp.to_sbv 8) RTZ ((_ to_fp 8 24) #xc0b00000)) #xfb)))
   > (check-sat)
@@ -176,7 +176,7 @@ Conversions of literals: to_fp_unsigned, fp.to_sbv and FP -> FP overflow.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= ((_ to_fp 5 11) RNE ((_ to_fp 8 24) #x47800000)) (_ +oo 5 11))))
   > (check-sat)
@@ -186,7 +186,7 @@ Conversions of literals: to_fp_unsigned, fp.to_sbv and FP -> FP overflow.
 
 fp applied to symbolic bit-vectors, evaluated once they are known.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -200,7 +200,7 @@ fp applied to symbolic bit-vectors, evaluated once they are known.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 32))
   > (assert (= b #x7f800000))
@@ -212,7 +212,7 @@ fp applied to symbolic bit-vectors, evaluated once they are known.
 
 to_fp of a real, evaluated once its argument is known, then converted.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (= x ((_ to_fp 8 24) RNE 1.5)))
@@ -226,7 +226,7 @@ to_fp of a real, evaluated once its argument is known, then converted.
 An overflow of to_fp from a real gives the largest finite float with RTZ (and
 RTN/RTP towards zero), infinity otherwise.
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (> r 10000000000000000000000000000000000000000.0))
@@ -236,7 +236,7 @@ RTN/RTP towards zero), infinity otherwise.
   
   unknown
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (> r 10000000000000000000000000000000000000000.0))
@@ -246,7 +246,7 @@ RTN/RTP towards zero), infinity otherwise.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (< r (- 10000000000000000000000000000000000000000.0)))
@@ -256,7 +256,7 @@ RTN/RTP towards zero), infinity otherwise.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (> r 10000000000000000000000000000000000000000.0))
@@ -269,7 +269,7 @@ RTN/RTP towards zero), infinity otherwise.
 The largest finite value of Float(3,5) is 15.5, not an integer: RTP rounds -18
 to -15.5, so this is satisfiable and must not be unsat.
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (= r (- 18.0)))
@@ -279,7 +279,7 @@ to -15.5, so this is satisfiable and must not be unsat.
   
   unknown
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (= r (- 18.0)))
@@ -291,7 +291,7 @@ to -15.5, so this is satisfiable and must not be unsat.
 
 Quantified FP problems.
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic UFFP)
   > (declare-fun f ((_ FloatingPoint 8 24)) (_ FloatingPoint 8 24))
   > (assert (forall ((x (_ FloatingPoint 8 24)))
@@ -302,7 +302,7 @@ Quantified FP problems.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic UFFPLRA)
   > (declare-fun g (Real) (_ FloatingPoint 8 24))
   > (assert (forall ((r Real)) (= (g r) ((_ to_fp 8 24) RNE r))))
@@ -312,7 +312,7 @@ Quantified FP problems.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic FP)
   > (assert (exists ((x (_ FloatingPoint 8 24))) (and (fp.isNaN x) (fp.isZero x))))
   > (check-sat)
@@ -323,7 +323,7 @@ Quantified FP problems.
 is_normal and is_subnormal are exclusive, one of the five properties always 
 holds, and definition by the real value.
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (fp.isNormal x))
@@ -333,7 +333,7 @@ holds, and definition by the real value.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (not (fp.isNaN x)))
@@ -346,7 +346,7 @@ holds, and definition by the real value.
   
   unsat
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (fp.isSubnormal x))
@@ -359,7 +359,7 @@ holds, and definition by the real value.
 isNormal/isSubnormal of the smallest and largest literals in (2, 3), (3, 5), 
 Float16 and Float32
 
-  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (define-fun cls () Bool (and
   >   (fp.isSubnormal (fp #b0 #b00 #b01)) 
@@ -396,7 +396,7 @@ Float16 and Float32
 
 Classification of fp from its exponent and sign.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -408,7 +408,7 @@ Classification of fp from its exponent and sign.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -423,7 +423,7 @@ Classification of fp from its exponent and sign.
 
 Bits of fp deduced from its value.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -435,7 +435,7 @@ Bits of fp deduced from its value.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -449,7 +449,7 @@ Bits of fp deduced from its value.
 
 The real value of fp is linear in its significand, which is not enumerated.
 
-  $ alt-ergo -t 2 -o smtlib2 --sat-solver Tableaux --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --sat-solver Tableaux 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const m (_ BitVec 23))
@@ -462,7 +462,7 @@ The real value of fp is linear in its significand, which is not enumerated.
 
 Injectivity of fp on non-NaN values.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s1 (_ BitVec 1))
   > (declare-const e1 (_ BitVec 8))
@@ -480,7 +480,7 @@ Injectivity of fp on non-NaN values.
 
 BV -> FP conversions of symbolic bit-vectors.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 8))
   > (assert (not (= ((_ to_fp_unsigned 8 24) RNE b) ((_ to_fp 8 24) #x40a00000))))
@@ -490,7 +490,7 @@ BV -> FP conversions of symbolic bit-vectors.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 8))
   > (assert (not (= ((_ to_fp 8 24) RNE b) ((_ to_fp 8 24) #xc0a00000))))
@@ -502,7 +502,7 @@ BV -> FP conversions of symbolic bit-vectors.
 
 FP -> BV conversions of symbolic floats.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (not (= ((_ fp.to_ubv 8) RNE x) #x05)))
@@ -512,7 +512,7 @@ FP -> BV conversions of symbolic floats.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (not (= ((_ fp.to_sbv 8) RTZ x) #xfb)))
@@ -524,7 +524,7 @@ FP -> BV conversions of symbolic floats.
 
 The result of fp.to_ubv is unspecified on NaN: this must not be unsat.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.isNaN x))
@@ -536,7 +536,7 @@ The result of fp.to_ubv is unspecified on NaN: this must not be unsat.
 
 FP -> FP conversion of symbolic floats.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.isNaN x))
@@ -546,7 +546,7 @@ FP -> FP conversion of symbolic floats.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.isInfinite x))
@@ -559,7 +559,7 @@ FP -> FP conversion of symbolic floats.
 
 Functional consistency of fp.to_ubv, including where it is unspecified.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const y Float32)
@@ -574,7 +574,7 @@ Functional consistency of fp.to_ubv, including where it is unspecified.
 
 Symbolic FP -> FP conversions: NaN and the sign are preserved both ways.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -585,7 +585,7 @@ Symbolic FP -> FP conversions: NaN and the sign are preserved both ways.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -598,7 +598,7 @@ Symbolic FP -> FP conversions: NaN and the sign are preserved both ways.
 
 A conversion to a wider format is exact: no overflow, and the same real value.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -609,7 +609,7 @@ A conversion to a wider format is exact: no overflow, and the same real value.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -622,7 +622,7 @@ A conversion to a wider format is exact: no overflow, and the same real value.
 
 A narrowing conversion is bounded by the rounding of the real value.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -636,7 +636,7 @@ A narrowing conversion is bounded by the rounding of the real value.
 
 A conversion to the same format is the identity.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -648,7 +648,7 @@ A conversion to the same format is the identity.
 
 A narrowing conversion can underflow or overflow: these must not be unsat.
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -659,7 +659,7 @@ A narrowing conversion can underflow or overflow: these must not be unsat.
   
   unknown
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const m RoundingMode)
@@ -670,7 +670,7 @@ A narrowing conversion can underflow or overflow: these must not be unsat.
   
   unknown
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (declare-const r Real)
@@ -685,7 +685,7 @@ A narrowing conversion can underflow or overflow: these must not be unsat.
 Exact conversion of bit-vectors that fit in the format: the result is finite,
 its real value is the integer, and it is positive if unsigned.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 3000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 8))
   > (assert (< 300.0 (fp.to_real ((_ to_fp_unsigned 8 24) RTZ b))))
@@ -694,7 +694,7 @@ its real value is the integer, and it is positive if unsigned.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 3000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 8))
   > (assert (< (fp.to_real ((_ to_fp 8 24) RTZ b)) (- 128.0)))
@@ -703,7 +703,7 @@ its real value is the integer, and it is positive if unsigned.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 8))
   > (assert (fp.isInfinite ((_ to_fp_unsigned 8 24) RTP b)))
@@ -714,7 +714,7 @@ its real value is the integer, and it is positive if unsigned.
 
 Not exact in Float32, so this must not be unsat.
 
-  $ alt-ergo -t 2 --timelimit-per-goal -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 32))
   > (assert (= (fp.to_real ((_ to_fp_unsigned 8 24) RNE b)) 16777216.0))
@@ -726,7 +726,7 @@ Not exact in Float32, so this must not be unsat.
 
 FP -> BV conversion of an exact BV -> FP conversion: the bit-vector, extended.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 16))
   > (assert (not (= b ((_ fp.to_ubv 16) RTZ ((_ to_fp_unsigned 11 53) RTZ b)))))
@@ -735,7 +735,7 @@ FP -> BV conversion of an exact BV -> FP conversion: the bit-vector, extended.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 24))
   > (assert (not (= ((_ sign_extend 8) b)
@@ -747,7 +747,7 @@ FP -> BV conversion of an exact BV -> FP conversion: the bit-vector, extended.
 
 Also when the exact conversion is only known through an equality.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 16))
   > (declare-const x Float64)
@@ -760,7 +760,7 @@ Also when the exact conversion is only known through an equality.
 
 Not every value fits in 8 bits (unspecified result), so this must not be unsat.
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 16))
   > (assert (= ((_ fp.to_ubv 8) RTZ ((_ to_fp_unsigned 11 53) RTZ b))
@@ -773,7 +773,7 @@ Not every value fits in 8 bits (unspecified result), so this must not be unsat.
 A narrowing conversion that rounds toward zero overflows to the largest finite
 value, not to an infinity, so these must not be unsat.
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float64)
   > (declare-const y Float32)
@@ -785,7 +785,7 @@ value, not to an infinity, so these must not be unsat.
   
   unknown
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float64)
   > (assert (fp.isNegative x))
@@ -799,7 +799,7 @@ value, not to an infinity, so these must not be unsat.
 
 Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s (_ BitVec 1))
   > (declare-const e (_ BitVec 8))
@@ -812,7 +812,7 @@ Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 5000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const s1 (_ BitVec 1))
   > (declare-const e1 (_ BitVec 8))
@@ -830,7 +830,7 @@ Sign and injectivity of fp when it is not NaN by assumption, not by its bits.
 
 IEEE evaluation of the operators on literals.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= (fp.fma RNE (fp #b0 #b10000 #b0100000000) (fp #b1 #b01111 #b1000000000) (fp #b0 #b10001 #b0000000001)) (fp #b0 #b01101 #b0000010000))))
   > (check-sat)
@@ -838,7 +838,7 @@ IEEE evaluation of the operators on literals.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= (fp.sqrt RTP ((_ to_fp 5 11) RNE 2.0)) (fp #b0 #b01111 #b0110101001))))
   > (check-sat)
@@ -846,7 +846,7 @@ IEEE evaluation of the operators on literals.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= (fp.div RTZ ((_ to_fp 3 5) RNE 1.0) ((_ to_fp 3 5) RNE 3.0)) (fp #b0 #b001 #x5))))
   > (check-sat)
@@ -854,7 +854,7 @@ IEEE evaluation of the operators on literals.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (= (fp.roundToIntegral RNA ((_ to_fp 8 24) RNE 2.5)) ((_ to_fp 8 24) RNE 3.0))))
   > (check-sat)
@@ -865,7 +865,7 @@ IEEE evaluation of the operators on literals.
 is_normal and is_subnormal: exclusive classes, one of the five classes holds,
 and definition by the real value.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -876,7 +876,7 @@ and definition by the real value.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -890,7 +890,7 @@ and definition by the real value.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -904,7 +904,7 @@ and definition by the real value.
 Evaluation of the operators on known arguments, fields of fp from the
 predicates, and propagation of the predicates through the operators.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -916,7 +916,7 @@ predicates, and propagation of the predicates through the operators.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const e (_ BitVec 8))
   > (declare-const m (_ BitVec 23))
@@ -928,7 +928,7 @@ predicates, and propagation of the predicates through the operators.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -942,7 +942,7 @@ predicates, and propagation of the predicates through the operators.
 Extensionality: finite floats with the same real value are equal, except for
 zeros of different signs.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 11 53))
   > (assert (fp.isNormal x))
@@ -953,7 +953,7 @@ zeros of different signs.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const y (_ FloatingPoint 8 24))
   > (declare-const z (_ FloatingPoint 8 24))
@@ -967,7 +967,7 @@ zeros of different signs.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const y (_ FloatingPoint 8 24))
   > (declare-const z (_ FloatingPoint 8 24))
@@ -984,7 +984,7 @@ zeros of different signs.
 Comparisons decided from the classes and signs of their arguments, or by
 evaluation.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (= x (_ -oo 8 24)))
@@ -994,7 +994,7 @@ evaluation.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (fp.geq (_ -zero 8 24) ((_ to_fp 8 24) RNE (- 33.25)))))
   > (check-sat)
@@ -1005,7 +1005,7 @@ evaluation.
 Conversions of bit-vectors: never NaN nor subnormal, positive if unsigned, and
 inverted when exact.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 24))
   > (assert (fp.isSubnormal ((_ to_fp 5 11) RNA b)))
@@ -1014,7 +1014,7 @@ inverted when exact.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 16))
   > (assert (fp.leq ((_ to_fp_unsigned 5 11) RTP b) ((_ to_fp 5 11) RNE (- 30377.0))))
@@ -1023,7 +1023,7 @@ inverted when exact.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const b (_ BitVec 24))
   > (assert (= ((_ to_fp_unsigned 11 53) RTP b) ((_ to_fp 11 53) RNE 17.5)))
@@ -1035,7 +1035,7 @@ inverted when exact.
 The real value of a float whose value is known: 0 for both zeros, none for
 infinities.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 11 53))
   > (assert (= x (_ -zero 11 53)))
@@ -1045,7 +1045,7 @@ infinities.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 11 53))
   > (assert (= x (_ +oo 11 53)))
@@ -1058,7 +1058,7 @@ infinities.
 fp.rem: the quotient is rounded to the nearest integer, ties to even, and a
 zero result has the sign of x.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (assert (not (and
   >   (= (fp.rem ((_ to_fp 8 24) #x40a00000) ((_ to_fp 8 24) #x40000000))
@@ -1076,7 +1076,7 @@ zero result has the sign of x.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 4 6))
   > (declare-const y (_ FloatingPoint 4 6))
@@ -1090,7 +1090,7 @@ zero result has the sign of x.
 
 Special cases of fp.rem deduced from the classes of its arguments.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1103,7 +1103,7 @@ Special cases of fp.rem deduced from the classes of its arguments.
 
 fp.rem facts: |rem x y| <= |y| / 2.
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1118,7 +1118,7 @@ fp.rem facts: |rem x y| <= |y| / 2.
   
   unsat
 
-  $ alt-ergo -t 2 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1133,7 +1133,7 @@ fp.rem facts: |rem x y| <= |y| / 2.
 
 Satisfiable, so this must not be unsat.
 
-  $ alt-ergo --steps-bound 1000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --steps-bound 1000 -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1146,7 +1146,7 @@ Satisfiable, so this must not be unsat.
 With a literal [y], the remainder is [x - y * n] for the integer [n] nearest to
 [x / y].
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.lt ((_ to_fp 8 24) RNE 2.0) x))
@@ -1162,7 +1162,7 @@ Floats are discrete: nothing lies strictly between two consecutive floats.
 Reasoning only through [to_real] leaves an open real interval, so these were
 answered [unknown]; [Fpa_rel] now tightens a strict bound to the adjacent float.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x Float32)
   > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
@@ -1175,7 +1175,7 @@ answered [unknown]; [Fpa_rel] now tightens a strict bound to the adjacent float.
 
 The same through [fp.leq] with the endpoint excluded.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x Float32)
   > (assert (not (fp.leq x (fp #b0 #b01111111 #b00000000000000000000000))))
@@ -1189,7 +1189,7 @@ The same through [fp.leq] with the endpoint excluded.
 
 With a float in between (two ulps above 1.0) the bound must not collapse.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x Float32)
   > (assert (fp.lt (fp #b0 #b01111111 #b00000000000000000000000) x))
@@ -1202,7 +1202,7 @@ With a float in between (two ulps above 1.0) the bound must not collapse.
 
 Exact operations: the products by powers of two in range.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x Float32)
   > (assert (fp.isNormal x))
@@ -1217,7 +1217,7 @@ Exact operations: the products by powers of two in range.
 
 The remainder: a zero has the sign of [x].
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_FP)
   > (declare-const x Float32)
   > (declare-const y Float32)
@@ -1233,7 +1233,7 @@ The remainder: a zero has the sign of [x].
 
 Models only contain the user's symbols
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (< (fp.to_real ((_ to_fp 8 24) RNE 1.5)) r))
@@ -1246,7 +1246,7 @@ Models only contain the user's symbols
     (define-fun r () Real (/ 5 2))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const r Real)
   > (assert (= r 0.1))
@@ -1262,7 +1262,7 @@ Models only contain the user's symbols
 
 Model generation gives each float a literal
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (assert (< 1.0 (fp.to_real x)))
@@ -1276,7 +1276,7 @@ Model generation gives each float a literal
      (fp #b0 #b10000000 #b00000000000000000000000))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 11 53))
   > (assert (= (fp.to_real x) 0.75))
@@ -1290,7 +1290,7 @@ Model generation gives each float a literal
      (fp #b0 #b01111111110 #b1000000000000000000000000000000000000000000000000000))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1308,7 +1308,7 @@ Model generation gives each float a literal
     (define-fun m () RoundingMode RTN)
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1325,7 +1325,7 @@ Model generation gives each float a literal
     (define-fun y () (_ FloatingPoint 8 24) (_ -zero 8 24))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1348,7 +1348,7 @@ Model generation gives each float a literal
      (fp #b1 #b10000000 #b10000000000000000000000))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 8 24))
   > (declare-const y (_ FloatingPoint 8 24))
@@ -1364,7 +1364,7 @@ Model generation gives each float a literal
     (define-fun y () (_ FloatingPoint 8 24) (_ NaN 8 24))
   )
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 5 11))
   > (declare-const y (_ FloatingPoint 5 11))
@@ -1384,7 +1384,7 @@ When every literal is known to be distinct from a float, model generation
 proposes one anyway so that the search backtracks, instead of leaving the
 float without a value. This query used to crash, now it times out.
 
-  $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --produce-models 2>/dev/null <<EOF
   > (set-logic ALL)
   > (declare-const x (_ FloatingPoint 3 5))
   > (declare-const y (_ FloatingPoint 3 5))
@@ -1412,7 +1412,7 @@ discreteness lemma of a comparison with an operand whose representative is a
 literal must be guarded by that equality, otherwise it outlives the branch and
 Alt-Ergo wrongly answers unsat.
 
-  $ alt-ergo -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  $ alt-ergo -o smtlib2 2>/dev/null <<EOF
   > (set-logic QF_BVFP)
   > (declare-fun x1 () (_ BitVec 64))
   > (declare-fun x0 () (_ BitVec 64))
