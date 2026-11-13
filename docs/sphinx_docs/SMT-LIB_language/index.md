@@ -23,10 +23,14 @@ Alt-Ergo supports the following SMT-LIB [theories](https://smt-lib.org/theories.
  - The [Reals](https://smt-lib.org/theories-Reals.shtml) theory of real numbers.
  - The [Reals_Ints](https://smt-lib.org/theories-Reals_Ints.shtml) theory of
    real and integer numbers[^2].
+ - The [FloatingPoint](https://smt-lib.org/theories-FloatingPoint.shtml) theory
+   of IEEE 754 floating-point numbers[^3].
 
 [^1]: The `abs` primitive is incomplete without the flag `--enable-theories ria`.
 [^2]: The `to_real`, `to_int`, `is_int` and `abs` primitives are incomplete without
     the flag `--enable-theories ria`.
+[^3]: Requires the `alt-ergo-smt-float-plugin` package, see
+    [below](#the-smt-lib-floatingpoint-theory).
 
 ## Bit-vectors
 
@@ -39,8 +43,49 @@ between integers and bit-vectors are supported.
 
 ## Floating-Point Arithmetic
 
-Alt-Ergo does not currently support the `FloatingPoint` SMT-LIB theory.
-Instead, Alt-Ergo implements the second and third layers described in the paper
+### The SMT-LIB FloatingPoint theory
+
+Alt-Ergo supports the full `FloatingPoint` theory. It is axiomatized in the
+prelude `smt-lib-fpa.ae`, available through the separate opam package
+`alt-ergo-smt-float-plugin`:
+
+```console
+$ opam install alt-ergo-smt-float-plugin
+```
+
+The prelude is loaded automatically the first time a problem uses
+symbols from the `FloatingPoint` theory.
+
+#### Examples
+
+Input:
+
+```smt-lib
+(set-option :produce-models true)
+(set-logic QF_FP)
+(declare-const x Float32)
+(declare-const y Float32)
+(assert (fp.lt x y))
+(assert (fp.isNegative y))
+(assert (not (fp.isZero x)))
+(check-sat)
+(get-model)
+```
+
+Output:
+
+```smt-lib
+unknown
+(
+  (define-fun x () (_ FloatingPoint 8 24) (_ -oo 8 24))
+  (define-fun y () (_ FloatingPoint 8 24)
+   (fp #b1 #b01111111 #b00000000000000000000000))
+)
+```
+
+### Rounding real numbers
+
+Alt-Ergo also implements the second and third layers described in the paper
 "[A Three-tier Strategy for Reasoning about Floating-Point Numbers in
 SMT](https://inria.hal.science/hal-01522770)" by Conchon et al.
 
@@ -75,7 +120,7 @@ floating point representations:
  - `ae.float64` is a synonym for `(_ ae.round 53 1074)`
  - `ae.float128` is a synonym for `(_ ae.round 113 16494)`
 
-### Examples
+#### Examples
 
 Input:
 
