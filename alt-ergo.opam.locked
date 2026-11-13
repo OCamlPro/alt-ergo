@@ -25,9 +25,9 @@ depends: [
   "conf-zlib" {= "1"}
   "crunch" {= "4.1.0"}
   "csexp" {= "1.5.2"}
-  "dolmen" {= "dev"}
-  "dolmen_loop" {= "dev"}
-  "dolmen_type" {= "dev"}
+  "dolmen" {= "0.11"}
+  "dolmen_loop" {= "0.11"}
+  "dolmen_type" {= "0.11"}
   "dune" {= "3.24.2"}
   "dune-build-info" {= "3.24.2"}
   "dune-private-libs" {= "3.24.2"}
@@ -75,17 +75,3 @@ build: [
   ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/OCamlPro/alt-ergo.git"
-pin-depends: [
-  [
-    "dolmen.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
-  [
-    "dolmen_loop.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
-  [
-    "dolmen_type.dev"
-    "git+https://github.com/Gbury/dolmen.git#2d642d2dbecbaeea031f5b6020b818ad01d36a9c"
-  ]
-]
