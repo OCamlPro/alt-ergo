@@ -567,25 +567,28 @@ module Main_Default : S = struct
     { t with terms = Expr.Set.union t.terms choices_terms }, choices_terms
 
   let optimize_obj ~for_model add_objective obj t =
-    let opt_split = Option.get (CC_X.optimizing_objective t.gamma obj) in
-    match opt_split.value with
-    | Unknown ->
+    match CC_X.optimizing_objective t.gamma obj with
+    | None ->
+      (* This case happens if the model found is real but we asked for an
+         integer model. We abort to return the latest integer model. *)
+      ()
+    | Some { value = Unknown; _ } ->
       (* Cannot happen as [Rel.optimizing_objective] never returns an unknown
          value. *)
       assert false
-    | (Pinfinity | Minfinity | Limit _) when not for_model ->
+    | Some { value = Pinfinity | Minfinity | Limit _; _ } when not for_model ->
       (* We stop optimizing the objective function [obj] in this case, but we
          continue to produce a model if the flag [for_model] is up. *)
       ()
-    | Pinfinity | Minfinity | Limit _ | Value _ ->
-      let lview, is_cs, _ = opt_split.case_split in
+    | Some
+        { value = (Pinfinity | Minfinity | Limit _ | Value _) as value;
+          case_split = lview, is_cs, _
+        } ->
       assert is_cs;
       Logs.debug ~src:Options.Sources.optimize (fun k ->
           k "Objective for %a is %a [split: %a]" Objective.Function.pp obj
-            Objective.Value.pp opt_split.value Shostak.L.print
-            (Shostak.L.make lview));
-      add_objective obj opt_split.value
-        Shostak.(Literal.make @@ LSem (L.make lview))
+            Objective.Value.pp value Shostak.L.print (Shostak.L.make lview));
+      add_objective obj value Shostak.(Literal.make @@ LSem (L.make lview))
 
   let sat_splits t =
     if Options.get_enable_sat_cs ()

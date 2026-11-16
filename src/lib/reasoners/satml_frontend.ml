@@ -974,7 +974,11 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             | Pinfinity | Minfinity -> raise (Give_up acc)
             | Value v -> (e, v, is_max, true) :: acc
             | Limit (_, v) -> raise (Give_up ((e, v, is_max, false) :: acc))
-            | Unknown -> assert false)
+            | Unknown ->
+              (* This case happens if the model found is real but we asked for
+                 an integer model. We abort to return the latest integer
+                 model. *)
+              raise (Give_up acc))
           objs []
       with Give_up acc -> acc
     in

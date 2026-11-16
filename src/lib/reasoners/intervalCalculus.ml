@@ -2254,7 +2254,7 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
     let case_split =
       LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
     in
-    Th_util.{ value; case_split }
+    Some Th_util.{ value; case_split }
   | None -> begin
     let sim = if ty == Ty.Tint then env.int_sim else env.rat_sim in
     let p = if is_max then p else P.mult_const Q.m_one p in
@@ -2263,7 +2263,9 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
     let sim, mx_res = Sim.Solve.maximize sim (Sim.Core.P.from_list l) in
     match Sim.Result.get mx_res sim with
     | Sim.Core.Unknown ->
-      (* The decision procedure is complete. *)
+      (* The decision procedure is complete for LRA problem. The procedure could
+         return a real solution for LIA problem and this case is handled in
+         another branch below. *)
       assert false
     | Sim.Core.Sat _ ->
       (* This answer is only returned by OcplibSimplex if we only want to check
@@ -2287,60 +2289,65 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
           true,
           Th_util.CS (Th_util.Th_arith, Q.one) )
       in
-      Th_util.{ value; case_split }
-    | Sim.Core.Max ((lazy Sim.Core.{ max_v; is_le }), _sol) ->
-      let max_p = Q.add max_v.bvalue.v c in
-      let optim = if is_max then max_p else Q.mult Q.m_one max_p in
-      if Options.get_debug_optimize ()
-      then begin
-        if is_le
-        then
-          Printer.print_dbg "%a has a %s: %a@." Expr.print e
-            (if is_max then "maximum" else "minimum")
-            Q.print optim
-        else
-          Printer.print_dbg "%a is a %s bound of %a" Q.print optim
-            (if is_max then "upper" else "lower")
-            Expr.print e
-      end;
-      let r2 = alien_of (P.create [] optim ty) in
-      Debug.case_split r1 r2;
-      let t2 = mk_const_term optim ty in
-      let value =
-        if is_le
-        then Objective.Value.Value t2
-        else begin
-          if is_max
-          then Objective.Value.Limit (Below, t2)
-          else Objective.Value.Limit (Above, t2)
-        end
-      in
-      let r2 =
-        if is_le
-        then r2
-        else
-          (* As some bounds are strict, the value [r2] does not satisfy the
-             constraints of the problem. In this case, we pick a value in the
-             domain of the polynomial [p]. But we propagate the new value
-             [value] for this objective. Indeed, we want to be able to print it
-             while using the statement [get-objective]. *)
-          let q =
-            match P.is_const (poly_of r2) with
-            | Some q -> q
-            | None -> assert false
-          in
-          middle_value env ~is_max ty p (Some q)
-      in
-      let case_split =
-        LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
-      in
-      { value; case_split }
+      Some Th_util.{ value; case_split }
+    | Sim.Core.Max ((lazy Sim.Core.{ max_v; is_le }), (lazy sol)) -> (
+      match ty, sol.int_sol with
+      | Ty.Tint, false ->
+        (* The solution is real but we asked for an integer solution. In this
+           case, we abort the optimization phase. *)
+        None
+      | _ ->
+        let max_p = Q.add max_v.bvalue.v c in
+        let optim = if is_max then max_p else Q.mult Q.m_one max_p in
+        if Options.get_debug_optimize ()
+        then begin
+          if is_le
+          then
+            Printer.print_dbg "%a has a %s: %a@." Expr.print e
+              (if is_max then "maximum" else "minimum")
+              Q.print optim
+          else
+            Printer.print_dbg "%a is a %s bound of %a" Q.print optim
+              (if is_max then "upper" else "lower")
+              Expr.print e
+        end;
+        let r2 = alien_of (P.create [] optim ty) in
+        Debug.case_split r1 r2;
+        let t2 = mk_const_term optim ty in
+        let value =
+          if is_le
+          then Objective.Value.Value t2
+          else begin
+            if is_max
+            then Objective.Value.Limit (Below, t2)
+            else Objective.Value.Limit (Above, t2)
+          end
+        in
+        let r2 =
+          if is_le
+          then r2
+          else
+            (* As some bounds are strict, the value [r2] does not satisfy the
+               constraints of the problem. In this case, we pick a value in the
+               domain of the polynomial [p]. But we propagate the new value
+               [value] for this objective. Indeed, we want to be able to print
+               it while using the statement [get-objective]. *)
+            let q =
+              match P.is_const (poly_of r2) with
+              | Some q -> q
+              | None -> assert false
+            in
+            middle_value env ~is_max ty p (Some q)
+        in
+        let case_split =
+          LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)
+        in
+        Some { value; case_split })
   end
 
 let optimizing_objective env uf Objective.Function.{ e; is_max; _ } =
   match E.type_info e with
-  | (Tint | Treal) as ty ->
-    Some (optimizing_objective_for_ty ~is_max ty env uf e)
+  | (Tint | Treal) as ty -> optimizing_objective_for_ty ~is_max ty env uf e
   | _ -> None
 
 (*** part dedicated to FPA reasoning ************************************)
