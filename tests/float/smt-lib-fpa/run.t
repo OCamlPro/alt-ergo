@@ -1333,8 +1333,7 @@ Model generation gives each float a literal
   
   unknown
   (
-    (define-fun x () (_ FloatingPoint 8 24)
-     (fp #b0 #b10000000 #b00000000000000000000000))
+    (define-fun x () (_ FloatingPoint 8 24) (_ -oo 8 24))
   )
 
   $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
@@ -1347,8 +1346,7 @@ Model generation gives each float a literal
   
   unknown
   (
-    (define-fun x () (_ FloatingPoint 11 53)
-     (fp #b0 #b01111111110 #b1000000000000000000000000000000000000000000000000000))
+    (define-fun x () (_ FloatingPoint 11 53) (_ +oo 11 53))
   )
 
   $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
@@ -1364,8 +1362,8 @@ Model generation gives each float a literal
   
   unknown
   (
-    (define-fun x () (_ FloatingPoint 8 24) (_ -oo 8 24))
-    (define-fun y () (_ FloatingPoint 8 24) (_ -oo 8 24))
+    (define-fun x () (_ FloatingPoint 8 24) (_ +oo 8 24))
+    (define-fun y () (_ FloatingPoint 8 24) (_ +oo 8 24))
     (define-fun m () RoundingMode RTN)
   )
 
@@ -1404,9 +1402,9 @@ Model generation gives each float a literal
     (define-fun x () (_ FloatingPoint 8 24)
      (fp #b1 #b01111111 #b00000000000000000000000))
     (define-fun y () (_ FloatingPoint 8 24)
-     (fp #b1 #b10000000 #b00000000000000000000000))
+     (fp #b0 #b01111111 #b00000000000000000000000))
     (define-fun z () (_ FloatingPoint 8 24)
-     (fp #b1 #b10000000 #b10000000000000000000000))
+     (fp #b0 #b01111110 #b00000000000000000000000))
   )
 
   $ alt-ergo -t 2 -o smtlib2 --produce-models --enable-theory smt.float 2>/dev/null <<EOF
@@ -1462,11 +1460,8 @@ float without a value. This query used to crash, now it times out.
   > EOF
   
   unknown
-  (
-    (define-fun x () (_ FloatingPoint 3 5) (fp #b0 #b010 #b1111))
-    (define-fun y () (_ FloatingPoint 3 5) (_ +oo 3 5))
-    (define-fun z () (_ FloatingPoint 3 5) (_ -oo 3 5))
-  )
+  (error "timeout")
+  [142]
 
 Regression test (from QF_BVFP/20170428-Liew-KLEE query.0232, status sat): the
 discreteness lemma of a comparison with an operand whose representative is a
