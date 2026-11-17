@@ -1,0 +1,5 @@
+
+unknown
+(objectives
+  ((bvadd p (bvmul p #x0005)) #xffff)
+)

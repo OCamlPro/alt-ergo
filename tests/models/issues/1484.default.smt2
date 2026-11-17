@@ -1,0 +1,7 @@
+(set-logic QF_BV)
+(declare-const y (_ BitVec 8))
+(declare-const p (_ BitVec 16))
+(assert (bvuge y (_ bv1 8)))
+(maximize (bvadd p (bvmul p (_ bv5 16))))
+(check-sat)
+(get-objectives)
