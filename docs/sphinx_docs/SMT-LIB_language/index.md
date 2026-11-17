@@ -99,3 +99,13 @@ unknown
   (define-fun |0.3f16| () Real (/ 1229 4096))
 )
 ```
+
+## Other extensions
+
+The following additional built-ins are provided by Alt-Ergo:
+
+ - `(ae.pow_real Real Real)` is the exponentiation function on reals
+ - `(ae.pow_int Int Int)` is the exponentiation function on integers
+ - `(int.pow2 Int)` is `2^n`
+ - `(ae.sqrt_real Real)` is the square root
+ - `(ae.const A (Array B A))` is a constant array
