@@ -660,6 +660,48 @@ module Real = struct
          (float_preimage_lb ~prec ~exp mode)
          (float_preimage_ub ~prec ~exp mode)
          u
+
+  let fdiv v = Z.fdiv (Q.num v) (Q.den v)
+
+  let cdiv v = Z.cdiv (Q.num v) (Q.den v)
+
+  (* As [floor(x)] and [ceil(x)] are integers, a bound [v] on them is a bound on
+     [floor(v)] or [ceil(v)]: [floor(x) >= v] iff [floor(x) >= ceil(v)] iff [x
+     >= ceil(v)], [floor(x) > v] iff [x >= floor(v) + 1], [floor(x) <= v] iff [x
+     < floor(v) + 1] and [floor(x) < v] iff [x < ceil(v)]. *)
+  let floor_preimage_lb (b : QAlgebraicType.t) : QAlgebraicType.t =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite ((Lt | Eq), v) -> Finite (Eq, Q.of_bigint (cdiv v))
+    | Finite (Gt, v) -> Finite (Eq, Q.of_bigint (Z.succ (fdiv v)))
+
+  let floor_preimage_ub (b : QAlgebraicType.t) : QAlgebraicType.t =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite ((Eq | Gt), v) -> Finite (Lt, Q.of_bigint (Z.succ (fdiv v)))
+    | Finite (Lt, v) -> Finite (Lt, Q.of_bigint (cdiv v))
+
+  (* [ceil(x) >= v] iff [x > ceil(v) - 1], [ceil(x) > v] iff [x > floor(v)],
+     [ceil(x) <= v] iff [x <= floor(v)] and [ceil(x) < v] iff [x <= ceil(v) -
+     1]. *)
+  let ceil_preimage_lb (b : QAlgebraicType.t) : QAlgebraicType.t =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite ((Lt | Eq), v) -> Finite (Gt, Q.of_bigint (Z.pred (cdiv v)))
+    | Finite (Gt, v) -> Finite (Gt, Q.of_bigint (fdiv v))
+
+  let ceil_preimage_ub (b : QAlgebraicType.t) : QAlgebraicType.t =
+    match b with
+    | Neg_infinite | Pos_infinite -> b
+    | Finite ((Eq | Gt), v) -> Finite (Eq, Q.of_bigint (fdiv v))
+    | Finite (Lt, v) -> Finite (Eq, Q.of_bigint (Z.pred (cdiv v)))
+
+  let floor_preimage u =
+    of_set_checked
+    @@ approx_map_inc_to_set floor_preimage_lb floor_preimage_ub u
+
+  let ceil_preimage u =
+    of_set_checked @@ approx_map_inc_to_set ceil_preimage_lb ceil_preimage_ub u
 end
 
 module Int = struct
@@ -1041,6 +1083,16 @@ module Legacy = struct
       of_int @@ check
       @@ Int.partial_map_inc QAlgebraicType.ceiling QAlgebraicType.floor u
     | _ -> Fmt.invalid_arg "coerce"
+
+  let floor_preimage u =
+    match coerce Ty.Treal u with
+    | Real u -> of_real @@ check @@ Real.floor_preimage u
+    | Int _ -> assert false
+
+  let ceil_preimage u =
+    match coerce Ty.Treal u with
+    | Real u -> of_real @@ check @@ Real.ceil_preimage u
+    | Int _ -> assert false
 
   let contains u v =
     match u with

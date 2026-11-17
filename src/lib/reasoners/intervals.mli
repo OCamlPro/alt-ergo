@@ -56,6 +56,13 @@ module Real : sig
     (t, Explanation.t) kind
   (** [float_preimage ~prec ~exp mode u] is the set of the [x] such that
       [float(prec, exp, mode, x)] is in [u]. *)
+
+  val floor_preimage : t -> (t, Explanation.t) kind
+  (** [floor_preimage u] is the set of the [x] such that [floor(x)] is in [u].
+  *)
+
+  val ceil_preimage : t -> (t, Explanation.t) kind
+  (** [ceil_preimage u] is the set of the [x] such that [ceil(x)] is in [u]. *)
 end
 
 (** Union-of-intervals over integers. *)
@@ -167,6 +174,16 @@ module Legacy : sig
 
       @raise NotConsistent if the preimage is empty.
       @raise Invalid_argument if the interval is an integer interval. *)
+
+  val floor_preimage : t -> t
+  (** See {!Real.floor_preimage}. The result is a real interval.
+
+      @raise NotConsistent if the preimage is empty. *)
+
+  val ceil_preimage : t -> t
+  (** See {!Real.ceil_preimage}. The result is a real interval.
+
+      @raise NotConsistent if the preimage is empty. *)
 
   val add : t -> t -> t
 
