@@ -87,9 +87,9 @@ See more details on http://alt-ergo.ocamlpro.com/"
   crunch
   dune
   dune-build-info
-  (dolmen (or (>= 0.10) (= dev)))
-  (dolmen_type (or (>= 0.10) (= dev)))
-  (dolmen_loop (or (>= 0.10) (= dev)))
+  (dolmen (and (>= 0.11) (< 0.12)))
+  (dolmen_type (and (>= 0.11) (< 0.12)))
+  (dolmen_loop (and (>= 0.11) (< 0.12)))
   (ocplib-simplex (>= 0.5.1))
   (zarith (>= 1.11))
   seq
