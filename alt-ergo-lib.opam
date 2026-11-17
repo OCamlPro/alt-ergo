@@ -18,9 +18,9 @@ depends: [
   "crunch"
   "dune" {>= "3.14"}
   "dune-build-info"
-  "dolmen" {>= "0.11"}
-  "dolmen_type" {>= "0.11"}
-  "dolmen_loop" {>= "0.11"}
+  "dolmen" {>= "0.11" & < "0.12"}
+  "dolmen_type" {>= "0.11" & < "0.12"}
+  "dolmen_loop" {>= "0.11" & < "0.12"}
   "ocplib-simplex" {>= "0.5.1"}
   "zarith" {>= "1.11"}
   "seq"
