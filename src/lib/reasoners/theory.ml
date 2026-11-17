@@ -869,7 +869,7 @@ module Main_Default : S = struct
     (* We have to add the term [fn] and its subterms as the MaxSMT syntax allows
        to optimize expressions that are not part of the current context. *)
     let expr = fn.Objective.Function.e in
-    let env = add_term env ~add_in_cs:false expr in
+    let env = add_term env ~add_in_cs:true expr in
     (* We also have to add the term for matching. *)
     let terms = Expr.Set.add expr env.terms in
     let objectives = Objective.Model.add fn value env.objectives in
