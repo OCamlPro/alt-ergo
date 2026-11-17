@@ -1,4 +1,4 @@
-  $ alt-ergo << EOF
+  $ alt-ergo 2>/dev/null << EOF
   > (set-logic QF_LIA)
   > (set-option :produce-models true)
   > (declare-const t Int)
@@ -9,5 +9,12 @@
   > (get-model)
   > (get-objectives)
   > EOF
-  Fatal error: exception File "src/lib/util/numbers.ml", line 214, characters 4-10: Assertion failed
-  [2]
+  
+  unknown
+  (
+    (define-fun x () Int (- 2))
+    (define-fun t () Int 0)
+  )
+  (objectives 
+    (x (- 2))
+  )
