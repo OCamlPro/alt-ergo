@@ -534,6 +534,8 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
       recoverable_error ~loc "the selected solver does not support optimization";
       st)
     else
+      (* Optimization requires models. *)
+      let () = Options.set_produce_models true in
       let contents = `Optimize (term, is_max) in
       let stmt =
         { Typer_Pipe.id; contents; loc; attrs = []; implicit = false }
