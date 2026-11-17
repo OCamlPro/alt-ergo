@@ -2737,7 +2737,13 @@ module Purification = struct
           else mk_lifted (mk_term e.f [fa'; i'] e.ty) lets
         | _ -> failwith "unexpected expression in purify_form"
       end
-      | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Float _ | Sy.Op _ | Sy.MapsTo _ ->
+      | Sy.Op _ ->
+        (* An interpreted predicate with an [ite] or [let] in its arguments,
+           such as [is_int(ite(c, x, y))] or an ADT destructor of a boolean
+           field. *)
+        let e, lets = purify_term e Var.Map.empty in
+        mk_lifted e lets
+      | Sy.Int _ | Sy.Real _ | Sy.Bitv _ | Sy.Float _ | Sy.MapsTo _ ->
         failwith "unexpected expression in purify_form: not a formula"
       | Sy.Lit _ -> purify_literal e
       | Sy.Form x -> begin
