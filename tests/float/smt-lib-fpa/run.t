@@ -328,3 +328,64 @@ Float16 and Float32
   unsat
   
   unknown
+
+In formats where sb > emax, the largest finite value is not an integer (15.5
+for eb = 3, sb = 5), so rounding it to an integral value may overflow to an
+infinity: these problems are satisfiable and must not be answered unsat.
+
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 3 5))
+  > (assert (= x (fp #b0 #b110 #b1111)))
+  > (push 1)
+  > (assert (fp.isInfinite (fp.roundToIntegral RTP x)))
+  > (check-sat)
+  > (pop 1)
+  > (push 1)
+  > (assert (fp.isInfinite (fp.roundToIntegral RNE x)))
+  > (check-sat)
+  > (pop 1)
+  > (push 1)
+  > (assert (fp.isInfinite (fp.roundToIntegral RTN (fp.neg x))))
+  > (check-sat)
+  > (pop 1)
+  > (push 1)
+  > (assert (= (fp.to_real (fp.roundToIntegral RTP x)) 0.0))
+  > (check-sat)
+  > (pop 1)
+  > (assert (= (fp.to_real (fp.roundToIntegral RNE x)) 0.0))
+  > (check-sat)
+  > EOF
+  
+  unknown
+  
+  unknown
+  
+  unknown
+  
+  unknown
+  
+  unknown
+
+Rounding an integer, or a value of a format where sb <= emax, does not
+overflow.
+
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x (_ FloatingPoint 3 5))
+  > (assert (= x (fp #b0 #b110 #b1110)))
+  > (assert (fp.isInfinite (fp.roundToIntegral RTP x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
+
+  $ alt-ergo --reproducible-resource-limit 2000 -o smtlib2 --enable-theory smt.float 2>/dev/null <<EOF
+  > (set-logic ALL)
+  > (declare-const x Float32)
+  > (assert (fp.isNormal x))
+  > (assert (fp.isInfinite (fp.roundToIntegral RTP x)))
+  > (check-sat)
+  > EOF
+  
+  unsat
