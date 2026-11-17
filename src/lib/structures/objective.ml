@@ -78,9 +78,9 @@ module Model = struct
 
   let pp ppf mdl =
     if M.is_empty mdl
-    then Fmt.pf ppf "@[<v 2>(objectives @]@,)"
+    then Fmt.pf ppf "(objectives)"
     else
-      Fmt.pf ppf "@[<v 2>(objectives @,%a@]@,)"
+      Fmt.pf ppf "@[<v 2>(objectives@ %a@]@,)"
         (Fmt.iter_bindings ~sep:Fmt.cut M.iter pp_binding)
         mdl
 

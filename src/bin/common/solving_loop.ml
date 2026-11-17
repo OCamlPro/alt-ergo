@@ -566,7 +566,9 @@ let process_source ?selector_inst ~print_status ?(limits = empty_limits) src =
             | Some o ->
               if not @@ Objective.Model.has_no_limit o
               then warning ~loc "Some objectives cannot be fulfilled";
-              Objective.Model.pp (Options.Output.get_fmt_regular ()) o
+              Fmt.pf
+                (Options.Output.get_fmt_regular ())
+                "%a@." Objective.Model.pp o
             | None -> recoverable_error ~loc "No objective generated"
             end
           | Unknown None | Unsat _ ->

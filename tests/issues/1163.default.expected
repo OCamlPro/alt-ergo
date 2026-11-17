@@ -3,6 +3,6 @@ unknown
 (
   (define-fun x () Int (- 9999))
 )
-(objectives 
+(objectives
   ((myabs x) 9999)
 )

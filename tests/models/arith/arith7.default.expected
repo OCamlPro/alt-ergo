@@ -4,7 +4,7 @@ unknown
   (define-fun x () Real (/ 7 20))
   (define-fun y () Real 1.0)
 )
-(objectives 
+(objectives
   (x (- (/ 1 2) epsilon))
   (y (+ oo))
 )
