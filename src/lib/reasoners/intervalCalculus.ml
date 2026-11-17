@@ -172,9 +172,9 @@ module Sim = OcplibSimplex.Basic.Make (SimVar) (Numbers.Q) (Explanation)
 
 let timer = Timers.M_Arith
 
-(* Increasing functions [f] of an argument [x], whose other arguments must be
-   known before propagating intervals (see [monotone_of]). *)
-type monotone_fun =
+(* Functions [f] of an argument [x], whose other arguments must be known before
+   propagating intervals (see [preimage_ops_of]). *)
+type preimage_fun =
   | Float of
       { prec : E.t;
         exp : E.t;
@@ -200,9 +200,8 @@ type t =
     new_uf : Uf.t;
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
-    monotones : (monotone_fun * E.t) ME.t;
-    (* The terms [f(x)] where [f] is an increasing function of [x], with [f] and
-       [x]. See [update_monotones]. *)
+    preimages : (preimage_fun * E.t) ME.t;
+    (* The terms [f(x)], with [f] and [x]. See [update_preimages]. *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
   }
@@ -804,7 +803,7 @@ let empty uf =
       int_sim = Sim.Solve.solve (Sim.Core.empty ~is_int:true ~check_invs:false);
       th_axioms = ME.empty;
       linear_dep = ME.empty;
-      monotones = ME.empty;
+      preimages = ME.empty;
       syntactic_matching = []
     },
     Uf.GlobalDomains.add (module Pows) Pows.empty (Uf.domains uf) )
@@ -1685,16 +1684,16 @@ let float_params env prec exp mode =
     | None -> None)
   | _ -> None
 
-(* How to propagate intervals through an increasing function [f]: [f(c)] for a
-   constant [c], and the preimage of an interval by [f]. *)
-type monotone =
+(* How to propagate intervals through [f]: [f(c)] for a constant [c], and the
+   preimage of an interval by [f]. *)
+type preimage_ops =
   { eval : Q.t -> Q.t;
     preimage : I.t -> I.t
   }
 
-(* The [monotone] of [f], with its explanation, once its other arguments are
+(* The [preimage_ops] of [f], with its explanation, once its other arguments are
    known. *)
-let monotone_of env = function
+let preimage_ops_of env = function
   | Float { prec; exp; mode } ->
     Option.map
       (fun (prec, exp, mode, ex) ->
@@ -1708,20 +1707,20 @@ let monotone_of env = function
    of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
    Once [x] is a constant, the term is set to its value and removed, as there is
    nothing left to propagate. *)
-let update_monotones env =
+let update_preimages env =
   ME.fold
     (fun t (f, x) env ->
       let rx, ex_x = Uf.find env.new_uf x in
       let p = poly_of rx in
       match P.is_const p with
       | Some c -> (
-        match monotone_of env f with
+        match preimage_ops_of env f with
         | None -> env
         | Some (m, ex_p) ->
           let rt, ex_t = Uf.find env.new_uf t in
           let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
           let v = I.point (m.eval c) Ty.Treal ex in
-          let env = { env with monotones = ME.remove t env.monotones } in
+          let env = { env with preimages = ME.remove t env.preimages } in
           if is_alien rt
           then
             let it, use_t =
@@ -1731,7 +1730,7 @@ let update_monotones env =
             MX.n_add rt (I.intersect it v, use_t) it env
           else env)
       | None -> (
-        match monotone_of env f with
+        match preimage_ops_of env f with
         | None -> env
         | Some (m, ex_p) ->
           let rt, ex_t = Uf.find env.new_uf t in
@@ -1758,7 +1757,7 @@ let update_monotones env =
             in
             let i = I.intersect ip pre in
             update_monomes_from_poly np i (MP.n_add np i ip env)))
-    env.monotones env
+    env.preimages env
 
 let count_splits env la =
   let nb =
@@ -1819,7 +1818,7 @@ let rec loop_update_intervals are_eq env cpt =
   let cpt = cpt + 1 in
   let env = { env with improved_p = SP.empty; improved_x = SX.empty } in
   let env = update_non_lin_monomes_intervals are_eq env in
-  let env = update_monotones env in
+  let env = update_preimages env in
   let env = tighten_pows env in
   let env = Sim_Wrap.solve env 1 in
   let env = update_polynomes_intervals env in
@@ -2050,7 +2049,7 @@ let add =
             | _ -> x
           in
           let f = Float { prec; exp; mode } in
-          { env with monotones = ME.add t (f, x) env.monotones }
+          { env with preimages = ME.add t (f, x) env.preimages }
         | _ -> env
       in
       let p = poly_of r in
