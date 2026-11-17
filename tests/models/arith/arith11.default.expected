@@ -6,6 +6,6 @@ unknown
   (define-fun p1 () Bool false)
   (define-fun p2 () Bool true)
 )
-(objectives 
+(objectives
   (x 2.0)
 )

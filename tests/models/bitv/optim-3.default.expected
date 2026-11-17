@@ -3,6 +3,6 @@ unknown
 (
   (define-fun x () (_ BitVec 32) #xfffffffe)
 )
-(objectives 
+(objectives
   (x #xfffffffe)
 )

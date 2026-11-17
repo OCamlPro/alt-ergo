@@ -4,6 +4,6 @@ unknown
   (define-fun x () Int 5)
   (define-fun y () Int 0)
 )
-(objectives 
+(objectives
   ((- (* 5 x) y) 25)
 )
