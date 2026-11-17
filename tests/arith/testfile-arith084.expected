@@ -1,0 +1,9 @@
+
+unknown
+(
+  (define-fun x () Int 3)
+  (define-fun t () Int 1)
+)
+(objectives 
+  (x 3)
+)
