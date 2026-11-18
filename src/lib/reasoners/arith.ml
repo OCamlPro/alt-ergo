@@ -51,6 +51,9 @@ let calc_power (c : Q.t) (d : Q.t) (ty : Ty.t) =
   let n =
     match Z.to_machine_int (Q.to_z d) with Some n -> n | None -> raise Exit
   in
+  (* 0 to a negative power is undefined: [Q.power] would return the infinite
+     [1/0], which must not be used as a rational constant. *)
+  if Q.is_zero c && n < 0 then raise Exit;
   (* This lines prevent overflow from computation *)
   if power_too_large c n then raise Exit;
   let res = Q.power c n in
