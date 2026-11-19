@@ -1,0 +1,9 @@
+(* 0 to a negative power is undefined: none of these goals is valid. They used
+   to be proved by folding 0. **. (-1) to the infinite rational 1/0. *)
+
+goal g1 : 0. **. (-1) + 1. = 0. **. (-1)
+
+goal g2 : 0. **. (-1) <> 0.
+
+goal g3 :
+  forall x : real. forall n : int. x = 0. -> n = -1 -> x **. n + 1. = x **. n
