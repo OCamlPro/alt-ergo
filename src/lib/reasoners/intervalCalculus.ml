@@ -813,6 +813,20 @@ let power_too_large n i =
     (fun acc { Intervals_intf.lb; ub } -> acc || too_large lb || too_large ub)
     false i
 
+(* The sign of a non-zero term from its interval [i], with its explanation:
+   [Some (1, ex)] if [i] is positive and [Some (-1, ex)] if it is negative. *)
+let sign_of_nonzero i =
+  (* [Some (s, ex)] if the bound [borne i] excludes 0 and has sign [s]. *)
+  let check borne s =
+    match borne i with
+    | q, ex, large when Q.sign q = s || (Q.sign q = 0 && not large) ->
+      Some (s, ex)
+    | _ | (exception I.No_finite_bound) -> None
+  in
+  match check I.borne_inf 1 with
+  | Some _ as r -> r
+  | None -> check I.borne_sup (-1)
+
 (** computes an interval for vars = x_1^n_1 * ..... * x_i^n_i (1) if some var is
     not in monomes, then return undefined (2) check that all vars are in monomes
     before doing interval ops **)
@@ -934,9 +948,27 @@ and update_monome are_eq expl use_x env x =
           (* take repr into account*)
           let ia, ib =
             match cannot_be_equal_to_zero env pb ib with
-            | Entailed { ex; _ } when Q.equal ca cb && P.compare pa' pb' = 0 ->
+            | Entailed { ex; _ } when Q.equal ca cb && P.compare pa' pb' = 0
+              -> (
+              (* [a = da * k] and [b = db * k], with [k = pa' + ca] non-zero, so
+                 [a / b = da / db].
+
+                 On integers, division is Euclidean, following the SMT-LIB
+                 standard, so [a div b] is [floor(da/db)] if [b > 0] and
+                 [ceil(da/db)] if [b < 0] (e.g. [(3 * k) div (2 * k)] is [1] if
+                 [k > 0] and [2] if [k < 0]), which only coincide when [db]
+                 divides [da]. *)
               let expl = Explanation.union ex expl in
-              I.point da ty expl, I.point db ty expl
+              let r = Q.div da db in
+              if (not (Ty.equal ty Ty.Tint)) || Q.is_int r
+              then I.point da ty expl, I.point db ty expl
+              else
+                match sign_of_nonzero ib with
+                | Some (s, ex_s) ->
+                  let q = if s > 0 then Q.floor r else Q.ceiling r in
+                  let expl = Explanation.union ex_s expl in
+                  I.point q ty expl, I.point Q.one ty expl
+                | None -> ia, ib)
             | Entailed { ex; _ } -> begin
               match are_eq a b with
               | Th_util.Entailed { ex = ex_eq; _ } ->
