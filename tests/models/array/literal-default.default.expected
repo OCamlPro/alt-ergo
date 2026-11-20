@@ -1,0 +1,17 @@
+
+unknown
+(
+  (define-fun i () Int 0)
+  (define-fun a () (Array Int Int)
+   (store ((as const (Array Int Int)) 8) 0 3))
+  (define-fun b () (Array Int Real)
+   (store ((as const (Array Int Real)) 3.0) 1 2.0))
+  (define-fun c () (Array Int Bool)
+   (store ((as const (Array Int Bool)) false) 0 true))
+  (define-fun d () (Array Int (_ BitVec 4))
+   (store ((as const (Array Int (_ BitVec 4))) #x0) 0 #xf))
+  (define-fun e () (Array Int (Array Int Int))
+   (store ((as const (Array Int (Array Int Int)))
+            ((as const (Array Int Int)) 7))
+          0 (store ((as const (Array Int Int)) 6) 1 5)))
+)

@@ -177,8 +177,15 @@ val assign_next : t -> (r Xliteral.view * bool * Th_util.lit_origin) list * t
 (** {2 Counterexample function} *)
 
 val extract_concrete_model :
-  prop_model:Expr.Set.t -> defaults:(Id.typed * Expr.t) list -> t -> Models.t
-(** Compute a counterexample using the Uf environment *)
+  prop_model:Expr.Set.t ->
+  defaults:(Id.typed * Expr.t) list ->
+  array_defaults:((r -> Expr.t) -> r list -> r -> Expr.t option) ->
+  t ->
+  Models.t
+(** Compute a counterexample using the Uf environment.
+    [array_defaults value arrays r] is the default value of the array [r] of
+    [arrays], where [value] gives the model terms of the classes (see
+    [Arrays_rel.model_defaults]). *)
 
 val save_cache : unit -> unit
 (** saves the module's cache *)

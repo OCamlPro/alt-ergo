@@ -38,8 +38,6 @@ module Constraints = struct
 
   let add = M.add
 
-  let map = M.map
-
   (* A fiber of the function [f] over a value [v] is the set of all the values
      in the domain of [f] whose the image by [f] is [v].
 
@@ -170,7 +168,14 @@ let subst id e { values; suspicious } =
     P.map
       (fun graph ->
         match graph with
-        | C constraints -> C (Constraints.map (subst_in_term id e) constraints)
+        | C constraints ->
+          C
+            (M.fold
+               (fun args v acc ->
+                 M.add
+                   (List.map (subst_in_term id e) args)
+                   (subst_in_term id e v) acc)
+               constraints M.empty)
         | Free _ -> graph)
       values
   in

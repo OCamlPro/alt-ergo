@@ -1,6 +1,7 @@
 
 unknown
 (
-  (define-fun a () (Array Bool Int) (store (as @a0 (Array Bool Int)) true 2))
+  (define-fun a () (Array Bool Int)
+   (store ((as const (Array Bool Int)) 3) true 2))
   (define-fun k () Bool true)
 )
