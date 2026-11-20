@@ -655,15 +655,25 @@ let process_dirty uf env (dom : Domain.t) =
            (Domain.edges_of a dom) acc)
        acc dom.merged)
 
+(* The indices [k] and [i] of the case split [k = i]. The equalities with [true]
+   or [false] are normalized into predicates so we have to fetch the indices in
+   a special way. *)
+let split_indices lit =
+  match LX.view lit with
+  | A.Eq (k, i) -> Some (k, i)
+  | A.Pred (k, true) -> Some (k, X.top)
+  | A.Pred (k, false) -> Some (k, X.bot)
+  | _ -> None
+
 (* Decide the case splits [lits] whose indices are now equal or distinct. *)
 let resolve_splits uf env dom lits =
   propagate uf
     (LX.Set.fold
        (fun lit ((env, dom, todo) as acc) ->
          Steps.incr Steps.Arrays;
-         match LX.Map.find lit env.splits, LX.view lit with
+         match LX.Map.find lit env.splits, split_indices lit with
          | exception Not_found -> acc
-         | (_, ps), A.Eq (k, i) -> (
+         | (_, ps), Some (k, i) -> (
            if same_class uf k i
            then
              let env, dom = remove_split uf env dom lit k i in
