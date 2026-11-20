@@ -1,0 +1,7 @@
+(set-logic ALL)
+(set-option :produce-models true)
+(declare-const a (Array Bool Int))
+(declare-const k Bool)
+(assert (= (select (store a false 1) k) 2))
+(check-sat)
+(get-model)

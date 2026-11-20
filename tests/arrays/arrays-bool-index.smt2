@@ -1,0 +1,6 @@
+(set-logic ALL)
+(declare-const a (Array Bool Int))
+(declare-const k Bool)
+(assert (= (select (store a true 1) k) 2))
+(assert (= (select a false) 3))
+(check-sat)
