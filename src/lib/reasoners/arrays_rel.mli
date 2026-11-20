@@ -27,4 +27,15 @@
 
 include Sig_rel.RELATION
 
+val model_defaults :
+  Uf.t ->
+  (Shostak.Combine.r -> Expr.t) ->
+  Shostak.Combine.r list ->
+  Shostak.Combine.r ->
+  Expr.t option
+(** In the model, an array is a constant array [(const d)] updated with its
+    known values. [model_defaults uf value arrays r] is [Some d] for the array
+    [r], one of [arrays], or [None] if no suitable [d] exists. [value] gives the
+    model values of the semantic values. *)
+
 val src : Logs.src

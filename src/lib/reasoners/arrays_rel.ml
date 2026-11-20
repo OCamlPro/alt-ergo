@@ -175,6 +175,18 @@ module Domain = struct
   let edges_of a t =
     Option.value ~default:X.Map.empty (X.Map.find_opt a t.edges)
 
+  (* The arrays connected to [a] by edges, [a] included. *)
+  let connected a t =
+    let rec aux a seen =
+      if X.Set.mem a seen
+      then seen
+      else
+        X.Map.fold
+          (fun b _ seen -> aux b seen)
+          (edges_of a t) (X.Set.add a seen)
+    in
+    aux a X.Set.empty
+
   (* Record [tm] as the term of the class of [r], unless it already has one. *)
   let add_term r tm t =
     if X.Map.mem r t.terms then t else { t with terms = X.Map.add r tm t.terms }
@@ -979,6 +991,69 @@ let add env uf r t =
     let eqs, dom = flush_eqs uf dom in
     env, set_domain uf dom, eqs
   | _ -> env, Uf.domains uf, []
+
+(* A value of type [ty] built on the value [s] of the elements of its innermost
+   arrays. *)
+let rec array_const_value ty s =
+  match ty with
+  | Ty.Tfarray (_, elt) -> E.ArraysEx.const ty (array_const_value elt s)
+  | _ -> s
+
+(* The type of the elements of the innermost arrays of [ty], or [ty] if it is
+   not an array type. *)
+let rec array_base_ty = function
+  | Ty.Tfarray (_, ty) -> array_base_ty ty
+  | ty -> ty
+
+(* A model value of type [ty], chosen by the theories, distinct from the values
+   of [distincts], or [None] if there is none. *)
+let fresh ty distincts =
+  let ds = List.filter (fun t -> Ty.equal (E.type_info t) ty) distincts in
+  let r, _ = X.make (E.fresh_name ty) in
+  match X.assign_value r (List.map (fun t -> fst (X.make t)) ds) [] with
+  | Some (s, _) when E.is_model_term s && not (List.exists (E.equal s) ds) ->
+    Some s
+  | _ -> None
+
+(* [model_defaults uf value arrays] maps [arrays] to their model value at their
+   unknown indices. Connected arrays get the same value. This value is their
+   constant if they have one, and a new value otherwise. *)
+let model_defaults uf value arrays =
+  let dom = get_domain uf in
+  let add_default ((defaults, used) as acc) r =
+    let r, _ = Uf.find_r uf r in
+    match X.type_info r with
+    | Ty.Tfarray (_, ty) when not (X.Map.mem r defaults) ->
+      let comp = X.Set.elements (Domain.connected r dom) in
+      let d, used =
+        match List.find_map (fun a -> X.Map.find_opt a dom.consts) comp with
+        | Some (c, _) -> Some (value c), used
+        | None -> (
+          let stored =
+            List.fold_left
+              (fun acc a ->
+                X.Map.fold
+                  (fun _ (v, _) acc -> value v :: acc)
+                  (Domain.values_of a dom) acc)
+              [] comp
+          in
+          let consts =
+            X.Map.fold (fun _ (c, _) acc -> value c :: acc) dom.consts []
+          in
+          match fresh (array_base_ty ty) (stored @ consts @ used) with
+          | Some s -> Some (array_const_value ty s), s :: used
+          | None -> None, used)
+      in
+      let defaults =
+        match d with
+        | Some d -> List.fold_left (fun m a -> X.Map.add a d m) defaults comp
+        | None -> defaults
+      in
+      defaults, used
+    | _ -> acc
+  in
+  let defaults, _ = List.fold_left add_default (X.Map.empty, []) arrays in
+  fun r -> X.Map.find_opt (fst (Uf.find_r uf r)) defaults
 
 let new_terms env = env.new_terms
 

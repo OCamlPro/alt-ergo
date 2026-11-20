@@ -1210,6 +1210,15 @@ let compute_concrete_model_of_val cache =
         | _ -> acc
       end
       | Sy.Name { hs = id; _ }, _, _ ->
+        (* The arrays without selects also get a value. *)
+        List.iter
+          (fun r ->
+            match E.term_view r with
+            | { f = Sy.Name _; ty = Ty.Tfarray _; _ } ->
+              if not (E.Tbl.mem cache.array_selects r)
+              then E.Tbl.add cache.array_selects r (E.Tbl.create 1)
+            | _ -> ())
+          (ret_rep :: arg_vals);
         ModelMap.(add (id, arg_tys, ty) arg_vals ret_rep mdl), mrepr
       | _ ->
         Printer.print_err
@@ -1219,7 +1228,7 @@ let compute_concrete_model_of_val cache =
 
 let extract_concrete_model cache =
   let compute_concrete_model_of_val = compute_concrete_model_of_val cache in
-  fun ~prop_model ~defaults env ->
+  fun ~prop_model ~defaults ~array_defaults env ->
     let terms, suspicious = terms env in
     let model, mrepr =
       List.fold_left
@@ -1234,6 +1243,19 @@ let extract_concrete_model cache =
         (fun t _mk acc -> compute_concrete_model_of_val env t acc)
         terms (model, mrepr)
     in
+    let default =
+      let value r =
+        let r, _ = Env.find_or_normal_form env r in
+        fst (model_repr_of_term (SE.choose (MapX.find r env.classes)) env mrepr)
+      in
+      E.Tbl.fold
+        (fun t _ acc ->
+          match Env.lookup_by_t t env with
+          | r, _ -> r :: acc
+          | exception Not_found -> acc)
+        cache.array_selects []
+      |> array_defaults value
+    in
     let model =
       E.Tbl.fold
         (fun t vals mdl ->
@@ -1241,10 +1263,15 @@ let extract_concrete_model cache =
              prevent any capture. *)
           assert (E.is_model_term t);
           let ty = Expr.type_info t in
+          let base =
+            match default (fst (Env.lookup_by_t t env)) with
+            | Some d -> E.ArraysEx.const ty d
+            | None | (exception Not_found) -> t
+          in
           let arr_val =
             E.Tbl.fold
               (fun i v arr_val -> Expr.ArraysEx.store arr_val i v)
-              vals t
+              vals base
           in
           let id, is_user =
             let Expr.{ f; _ } = Expr.term_view t in
@@ -1274,6 +1301,7 @@ let extract_concrete_model cache =
     in
     { Models.propositional = prop_model; model; term_values = mrepr }
 
-let extract_concrete_model ~prop_model ~defaults =
+let extract_concrete_model ~prop_model ~defaults ~array_defaults =
   let cache : cache = { array_selects = E.Tbl.create 17 } in
-  fun env -> extract_concrete_model cache ~prop_model ~defaults env
+  fun env ->
+    extract_concrete_model cache ~prop_model ~defaults ~array_defaults env
