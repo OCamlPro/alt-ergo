@@ -180,6 +180,8 @@ type preimage_fun =
         exp : E.t;
         mode : E.t
       }  (** [float(prec, exp, mode, x)] *)
+  | Floor  (** [int_floor(x)] *)
+  | Ceil  (** [int_ceil(x)] *)
 
 type t =
   { inequations : P.t Inequalities.t MPL.t;
@@ -1702,6 +1704,8 @@ let preimage_ops_of env = function
           },
           ex ))
       (float_params env prec exp mode)
+  | Floor -> Some ({ eval = Q.floor; preimage = I.floor_preimage }, Ex.empty)
+  | Ceil -> Some ({ eval = Q.ceiling; preimage = I.ceil_preimage }, Ex.empty)
 
 (* Narrows the interval of the argument [x] of each term [f(x)] to the preimage
    of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
@@ -1719,13 +1723,13 @@ let update_preimages env =
         | Some (m, ex_p) ->
           let rt, ex_t = Uf.find env.new_uf t in
           let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
-          let v = I.point (m.eval c) Ty.Treal ex in
+          let v = I.point (m.eval c) (X.type_info rt) ex in
           let env = { env with preimages = ME.remove t env.preimages } in
           if is_alien rt
           then
             let it, use_t =
               try MX.n_find rt env.monomes
-              with Not_found -> I.undefined Ty.Treal, SX.empty
+              with Not_found -> I.undefined (X.type_info rt), SX.empty
             in
             MX.n_add rt (I.intersect it v, use_t) it env
           else env)
@@ -2050,6 +2054,10 @@ let add =
           in
           let f = Float { prec; exp; mode } in
           { env with preimages = ME.add t (f, x) env.preimages }
+        | { f = Sy.Op Sy.Int_floor; xs = [x]; _ } ->
+          { env with preimages = ME.add t (Floor, x) env.preimages }
+        | { f = Sy.Op Sy.Int_ceil; xs = [x]; _ } ->
+          { env with preimages = ME.add t (Ceil, x) env.preimages }
         | _ -> env
       in
       let p = poly_of r in

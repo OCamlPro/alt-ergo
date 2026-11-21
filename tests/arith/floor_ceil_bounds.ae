@@ -1,0 +1,5 @@
+(* The bounds of int_floor(x) and int_ceil(x) are propagated to x. *)
+
+goal floor_eq : forall x : real. 15. <= x -> x < 15.5 -> int_floor(x) = 15
+
+goal ceil_eq : forall x : real. 14.5 < x -> x <= 15. -> int_ceil(x) = 15
