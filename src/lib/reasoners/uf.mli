@@ -156,6 +156,11 @@ val are_distinct_r : t -> r -> r -> Th_util.answer
 (** [are_distinct_r uf r1 r2] is the same as {!are_distinct} but works on
     semantic values instead of terms. *)
 
+val are_distinct_light : t -> r -> r -> Th_util.answer
+(** A cheaper {!are_distinct_r} that detects fewer disequalities: it only checks
+    the disequalities and the solvability of [r1 = r2] and of the pairs it
+    solves into, without updating the other classes. *)
+
 val already_distinct : t -> r list -> bool
 
 val class_of : t -> Expr.t -> Expr.Set.t

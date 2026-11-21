@@ -958,6 +958,13 @@ let are_distinct_r env r1 r2 =
     Th_util.Unknown
   with Ex.Inconsistent (ex, classes) -> Th_util.Entailed { ex; classes }
 
+let are_distinct_light env r1 r2 =
+  try
+    let sbs, dep = x_solve env r1 r2 Ex.empty in
+    List.iter (fun (p, v) -> ignore (x_solve env p v dep)) sbs;
+    Th_util.Unknown
+  with Ex.Inconsistent (ex, classes) -> Th_util.Entailed { ex; classes }
+
 let already_distinct env lr =
   let d = LX.mk_distinct false lr in
   try
