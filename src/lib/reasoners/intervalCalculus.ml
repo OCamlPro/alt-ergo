@@ -172,6 +172,15 @@ module Sim = OcplibSimplex.Basic.Make (SimVar) (Numbers.Q) (Explanation)
 
 let timer = Timers.M_Arith
 
+(* Functions [f] of an argument [x], whose other arguments must be known before
+   propagating intervals (see [preimage_ops_of]). *)
+type preimage_fun =
+  | Float of
+      { prec : E.t;
+        exp : E.t;
+        mode : E.t
+      }  (** [float(prec, exp, mode, x)] *)
+
 type t =
   { inequations : P.t Inequalities.t MPL.t;
     monomes : (I.t * SX.t) MX0.t;
@@ -191,9 +200,8 @@ type t =
     new_uf : Uf.t;
     th_axioms : (Expr.th_elt * Explanation.t) ME.t;
     linear_dep : SE.t ME.t;
-    floats : (E.t * E.t * E.t * E.t) ME.t;
-    (* The terms [float(prec, exp, mode, x)], with their arguments ([i] instead
-       of [x] if [x] is [real_of_int(i)]). *)
+    preimages : (preimage_fun * E.t) ME.t;
+    (* The terms [f(x)], with [f] and [x]. See [update_preimages]. *)
     syntactic_matching :
       (Matching_types.trigger_info * Matching_types.gsubst list) list list
   }
@@ -795,7 +803,7 @@ let empty uf =
       int_sim = Sim.Solve.solve (Sim.Core.empty ~is_int:true ~check_invs:false);
       th_axioms = ME.empty;
       linear_dep = ME.empty;
-      floats = ME.empty;
+      preimages = ME.empty;
       syntactic_matching = []
     },
     Uf.GlobalDomains.add (module Pows) Pows.empty (Uf.domains uf) )
@@ -1676,24 +1684,43 @@ let float_params env prec exp mode =
     | None -> None)
   | _ -> None
 
-(* Narrows the interval of the argument [x] of each [float] term to the preimage
+(* How to propagate intervals through [f]: [f(c)] for a constant [c], and the
+   preimage of an interval by [f]. *)
+type preimage_ops =
+  { eval : Q.t -> Q.t;
+    preimage : I.t -> I.t
+  }
+
+(* The [preimage_ops] of [f], with its explanation, once its other arguments are
+   known. *)
+let preimage_ops_of env = function
+  | Float { prec; exp; mode } ->
+    Option.map
+      (fun (prec, exp, mode, ex) ->
+        ( { eval = Fpa_rounding.round prec exp mode;
+            preimage = I.float_preimage ~prec ~exp mode
+          },
+          ex ))
+      (float_params env prec exp mode)
+
+(* Narrows the interval of the argument [x] of each term [f(x)] to the preimage
    of the interval of the term ([i] instead of [x] if [x] is [real_of_int(i)]).
    Once [x] is a constant, the term is set to its value and removed, as there is
    nothing left to propagate. *)
-let update_floats env =
+let update_preimages env =
   ME.fold
-    (fun t (prec, exp, mode, x) env ->
+    (fun t (f, x) env ->
       let rx, ex_x = Uf.find env.new_uf x in
       let p = poly_of rx in
       match P.is_const p with
       | Some c -> (
-        match float_params env prec exp mode with
+        match preimage_ops_of env f with
         | None -> env
-        | Some (prec, exp, mode, ex_p) ->
+        | Some (m, ex_p) ->
           let rt, ex_t = Uf.find env.new_uf t in
           let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
-          let v = I.point (Fpa_rounding.round prec exp mode c) Ty.Treal ex in
-          let env = { env with floats = ME.remove t env.floats } in
+          let v = I.point (m.eval c) Ty.Treal ex in
+          let env = { env with preimages = ME.remove t env.preimages } in
           if is_alien rt
           then
             let it, use_t =
@@ -1703,14 +1730,14 @@ let update_floats env =
             MX.n_add rt (I.intersect it v, use_t) it env
           else env)
       | None -> (
-        match float_params env prec exp mode with
+        match preimage_ops_of env f with
         | None -> env
-        | Some (prec, exp, mode, ex_p) ->
+        | Some (m, ex_p) ->
           let rt, ex_t = Uf.find env.new_uf t in
           let ex = Ex.union ex_p (Ex.union ex_t ex_x) in
           let pre =
             I.add_explanation (interval_of env rt) ex
-            |> I.float_preimage ~prec ~exp mode
+            |> m.preimage
             |> I.coerce (X.type_info rx)
           in
           if is_alien rx
@@ -1730,7 +1757,7 @@ let update_floats env =
             in
             let i = I.intersect ip pre in
             update_monomes_from_poly np i (MP.n_add np i ip env)))
-    env.floats env
+    env.preimages env
 
 let count_splits env la =
   let nb =
@@ -1791,7 +1818,7 @@ let rec loop_update_intervals are_eq env cpt =
   let cpt = cpt + 1 in
   let env = { env with improved_p = SP.empty; improved_x = SX.empty } in
   let env = update_non_lin_monomes_intervals are_eq env in
-  let env = update_floats env in
+  let env = update_preimages env in
   let env = tighten_pows env in
   let env = Sim_Wrap.solve env 1 in
   let env = update_polynomes_intervals env in
@@ -2021,7 +2048,8 @@ let add =
             | { f = Op Real_of_int; xs = [x]; _ } -> x
             | _ -> x
           in
-          { env with floats = ME.add t (prec, exp, mode, x) env.floats }
+          let f = Float { prec; exp; mode } in
+          { env with preimages = ME.add t (f, x) env.preimages }
         | _ -> env
       in
       let p = poly_of r in
