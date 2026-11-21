@@ -2288,9 +2288,14 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
           Th_util.CS (Th_util.Th_arith, Q.one) )
       in
       Th_util.{ value; case_split }
-    | Sim.Core.Max ((lazy Sim.Core.{ max_v; is_le }), _sol) ->
+    | Sim.Core.Max ((lazy Sim.Core.{ max_v; is_le }), (lazy sol)) ->
       let max_p = Q.add max_v.bvalue.v c in
-      let optim = if is_max then max_p else Q.mult Q.m_one max_p in
+      let optim =
+        match ty, sol.int_sol with
+        | Ty.Tint, false -> Q.floor max_p
+        | _ -> max_p
+      in
+      let optim = if is_max then optim else Q.mult Q.m_one optim in
       if Options.get_debug_optimize ()
       then begin
         if is_le
