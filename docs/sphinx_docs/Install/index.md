@@ -58,6 +58,14 @@ The steps below will build and install additional plugins.
   2. The Fm-Simplex plugin is currently built and installed
   at the same time as the alt-ergo binary.
 
+#### The SMT-LIB floating-point plugin
+
+  1. Install with `opam install alt-ergo-smt-float-plugin`.
+
+  2. It is required to reason about the SMT-LIB
+  [FloatingPoint](../SMT-LIB_language/index.md#the-smt-lib-floatingpoint-theory)
+  theory.
+
 #### The AB-Why3 parser plugin
 
 This plugin was deprecated in Alt-Ergo 2.6.0 and removed in Alt-Ergo

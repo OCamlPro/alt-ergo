@@ -23,3 +23,14 @@ be registered in the `(alt-ergo plugins)` site using
 [dune-site](https://dune.readthedocs.io/en/stable/reference/dune/plugin.html)
 to be available as an option to `--inequalities-plugin`.
 ```
+
+## SMT-LIB floating-point plugin
+
+The `alt-ergo-smt-float-plugin` package installs the prelude `smt-lib-fpa.ae`
+required by the SMT-LIB
+[FloatingPoint](../SMT-LIB_language/index.md#the-smt-lib-floatingpoint-theory)
+theory.
+
+```console
+$ opam install alt-ergo-smt-float-plugin
+```
