@@ -2220,18 +2220,17 @@ let case_split env uf ~for_model =
    space and bias it towards the optimum in the case the value produced by the
    optimization procedure doesn't satisfy some constraints that involve strict
    inequalities or the problem is unbounded. *)
-let middle_value env ~is_max ty p bound =
+let middle_value env ~is_max ty xp bound =
   let interval =
-    match MP0.find_opt p env.polynomes, bound with
-    | Some i, Some bound -> begin
+    match generic_find xp env, bound with
+    | (i, _, _), Some bound -> begin
       try
         if is_max
         then I.new_borne_sup Ex.empty bound ~is_le:false i
         else I.new_borne_inf Ex.empty bound ~is_le:false i
       with I.NotConsistent _ -> assert false
     end
-    | Some i, None -> i
-    | None, _ -> I.point Q.zero ty Ex.empty
+    | (i, _, _), None -> i
   in
   let q = I.pick ~is_max interval in
   alien_of (P.create [] q ty)
@@ -2283,7 +2282,7 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
          value in the interval (otherwise, later objectives are computed while
          assuming that the middle value is forced, which is incorrect). *)
       let case_split =
-        ( LR.mkv_builtin false LT [r1; middle_value env ~is_max ty p None],
+        ( LR.mkv_builtin false LT [r1; middle_value env ~is_max ty repr None],
           true,
           Th_util.CS (Th_util.Th_arith, Q.one) )
       in
@@ -2329,7 +2328,7 @@ let optimizing_objective_for_ty ~is_max ty env uf e =
             | Some q -> q
             | None -> assert false
           in
-          middle_value env ~is_max ty p (Some q)
+          middle_value env ~is_max ty repr (Some q)
       in
       let case_split =
         LR.mkv_eq r1 r2, true, Th_util.CS (Th_util.Th_arith, Q.one)

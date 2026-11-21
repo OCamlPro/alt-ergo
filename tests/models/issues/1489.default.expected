@@ -1,0 +1,9 @@
+
+unknown
+(
+  (define-fun x () Real (/ (- 3) 2))
+  (define-fun t () Real (/ 1 2))
+)
+(objectives
+  (x (- (/ (- 1) 2) epsilon))
+)

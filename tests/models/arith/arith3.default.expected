@@ -1,9 +1,9 @@
 
 unknown
 (
-  (define-fun x () Int 0)
-  (define-fun y () Int 0)
-  (define-fun z () Int 0)
+  (define-fun x () Int 4)
+  (define-fun y () Int 2)
+  (define-fun z () Int 8)
 )
 (objectives
   (x (+ oo))
