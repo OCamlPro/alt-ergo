@@ -85,3 +85,7 @@ val convert :
   eb:int -> sb:int -> Fpa_rounding.rounding_mode option -> t -> t option
 (** [convert ~eb ~sb mode v] converts the float literal [v] to the format
     [(eb, sb)]. [None] if [mode] is unknown and [v] is finite and nonzero. *)
+
+val rem : eb:int -> sb:int -> t -> t -> t
+(** [rem ~eb ~sb x y] is the IEEE 754 remainder of [x] by [y]: [x - y * n],
+    where [n] is the integer nearest to [x / y] (ties to even). *)
