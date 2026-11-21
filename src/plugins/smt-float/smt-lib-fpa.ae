@@ -27,8 +27,8 @@
    https://gitlab.inria.fr/why3/why3/-/blob/d0a8072e157935d0d80a7a2156ecf5a98a2aae3e/stdlib/ieee_float.mlw#L34-826).
 
    Being derived from Why3, it is under Why3's license ([WHY3-LICENSE]): it is
-   not embedded in the binary, but installed separately, to be loaded by
-   [--enable-theory smt.float].
+   not embedded in the binary, but installed separately, to be loaded when an
+   SMT-LIB FPA type or symbol is first used.
 
    Upon loading, the declared and defined symbols are renamed to
    [ae.fp.<name>], [pow2] to the builtin [int.pow2] and [round] to the builtin

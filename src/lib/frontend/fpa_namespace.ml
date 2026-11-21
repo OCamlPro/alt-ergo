@@ -92,6 +92,7 @@ let rewrite t (stmt : Stmt.t) =
     | Defs { contents; recursive } ->
       Defs { contents = List.map (rewrite_def t) contents; recursive }
     | Antecedent f -> Antecedent (rewrite_term t f)
+    | End -> End
     | _ -> unsupported "statement %a" Stmt.print stmt
   in
   { stmt with descr }

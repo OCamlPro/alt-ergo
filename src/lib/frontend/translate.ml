@@ -445,6 +445,10 @@ let builtins =
 (** clears the cache in the [Cache] module. *)
 let clear_cache () = Cache.clear ()
 
+(** The SMT-LIB FPA theory is enabled when one of its types or symbols is first
+    translated, its prelude is then loaded by the solving loop. *)
+let enable_smt_lib_fpa () = Options.set_smt_lib_fpa true
+
 (** [dty_to_ty update is_var subst tyv_substs dty]
 
     Converts a Dolmen type to an Alt-Ergo type.
@@ -468,7 +472,9 @@ let rec dty_to_ty ?(update = false) ?(is_var = false) dty =
   | `Bitv n ->
     if n <= 0 then Errors.typing_error (NonPositiveBitvType n) Loc.dummy;
     Ty.Tbitv n
-  | `Float (e, s) when Options.get_smt_lib_fpa () -> Ty.Tfloat (e, s)
+  | `Float (e, s) ->
+    enable_smt_lib_fpa ();
+    Ty.Tfloat (e, s)
   | `App (`Builtin B.Unit, []) -> Ty.tunit
   | `App (`Builtin (B.Float B.Float.RoundingMode), []) ->
     Fpa_rounding.fpa_rounding_mode
@@ -780,6 +786,8 @@ let mk_add translate sy ty l =
   let args = aux_mk_add l in
   E.mk_term sy args ty
 
+(* Since they can be used in non-SMT-LIB FPA context, we don't call
+   [enable_smt_lib_fpa] *)
 let mk_rounding fpar =
   let tcst = Fpa_rounding.term_cst_of_rounding_mode fpar in
   let ty = Fpa_rounding.fpa_rounding_mode in
@@ -816,18 +824,17 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           let ty = dty_to_ty term_ty in
           E.mk_constr tcst [] ty
         | B.Float cst -> begin
+          let mk_fp_literal v e s =
+            enable_smt_lib_fpa ();
+            E.float v e s
+          in
           match cst with
           | RM rm -> mk_rounding rm
-          | Plus_infinity { e; s } when Options.get_smt_lib_fpa () ->
-            E.float Fp_value.Plus_infinity e s
-          | Minus_infinity { e; s } when Options.get_smt_lib_fpa () ->
-            E.float Fp_value.Minus_infinity e s
-          | Plus_zero { e; s } when Options.get_smt_lib_fpa () ->
-            E.float Fp_value.Plus_zero e s
-          | Minus_zero { e; s } when Options.get_smt_lib_fpa () ->
-            E.float Fp_value.Minus_zero e s
-          | NaN { e; s } when Options.get_smt_lib_fpa () ->
-            E.float Fp_value.NaN e s
+          | Plus_infinity { e; s } -> mk_fp_literal Fp_value.Plus_infinity e s
+          | Minus_infinity { e; s } -> mk_fp_literal Fp_value.Minus_infinity e s
+          | Plus_zero { e; s } -> mk_fp_literal Fp_value.Plus_zero e s
+          | Minus_zero { e; s } -> mk_fp_literal Fp_value.Minus_zero e s
+          | NaN { e; s } -> mk_fp_literal Fp_value.NaN e s
           | RoundingMode | T _ | Fp _ | Abs _ | Neg _ | Add _ | Sub _ | Mul _
           | Div _ | Fma _ | Sqrt _ | Rem _ | RoundToIntegral _ | Min _ | Max _
           | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _ | IsSubnormal _
@@ -835,12 +842,6 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
           | To_ubv _ | To_sbv _ | To_real _ ->
             unsupported "Literal Floating-Point Arithmetic term %a"
-              DE.Term.print term
-          | Plus_infinity _ | Minus_infinity _ | Plus_zero _ | Minus_zero _
-          | NaN _ ->
-            unsupported
-              "Constant term %a (Enable the SMT-LIB FPA with `-enable-theory \
-               smt.float` to be able to use float literals)"
               DE.Term.print term
         end
         | _ -> unsupported "Constant term %a" DE.Term.print term
@@ -1224,85 +1225,68 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
           | T, _ -> invalid_app_term ())
         (* Floating-point builtins *)
         | B.Float builtin, args -> (
+          enable_smt_lib_fpa ();
           match builtin, args with
           (* SMT-LIB FPA theory operations *)
-          | _ when Options.get_smt_lib_fpa () -> begin
-            match builtin, args with
-            | Fp { e = eb; s = sb }, [sign; biased_exp; mantissa] ->
-              E.FP.fp ~eb ~sb (mk sign) (mk biased_exp) (mk mantissa)
-            | Ieee_format_to_fp { e = eb; s = sb }, [bv] ->
-              E.FP.ieee_format_to_fp ~eb ~sb (mk bv)
-            (* arithmetic with rounding mode *)
-            | Add { e = eb; s = sb }, [mode; x; y] ->
-              E.FP.add ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
-            | Sub { e = eb; s = sb }, [mode; x; y] ->
-              E.FP.sub ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
-            | Mul { e = eb; s = sb }, [mode; x; y] ->
-              E.FP.mul ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
-            | Div { e = eb; s = sb }, [mode; x; y] ->
-              E.FP.div ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
-            | Fma { e = eb; s = sb }, [mode; x; y; z] ->
-              E.FP.fma ~eb ~sb ~mode:(mk mode) (mk x) (mk y) (mk z)
-            | Sqrt { e = eb; s = sb }, [mode; x] ->
-              E.FP.sqrt ~eb ~sb ~mode:(mk mode) (mk x)
-            | RoundToIntegral { e = eb; s = sb }, [mode; x] ->
-              E.FP.round_to_integral ~eb ~sb ~mode:(mk mode) (mk x)
-            | Of_real { e = eb; s = sb }, [mode; x] ->
-              E.FP.of_real ~eb ~sb ~mode:(mk mode) (mk x)
-            (* arithmetic without rounding mode *)
-            | Abs { e = eb; s = sb }, [x] -> E.FP.abs ~eb ~sb (mk x)
-            | Neg { e = eb; s = sb }, [x] -> E.FP.neg ~eb ~sb (mk x)
-            | Rem { e = eb; s = sb }, [x; y] -> E.FP.rem ~eb ~sb (mk x) (mk y)
-            | Min { e = eb; s = sb }, [x; y] -> E.FP.min ~eb ~sb (mk x) (mk y)
-            | Max { e = eb; s = sb }, [x; y] -> E.FP.max ~eb ~sb (mk x) (mk y)
-            (* comparisons *)
-            | Leq { e = eb; s = sb }, [x; y] -> E.FP.le ~eb ~sb (mk x) (mk y)
-            | Lt { e = eb; s = sb }, [x; y] -> E.FP.lt ~eb ~sb (mk x) (mk y)
-            | Geq { e = eb; s = sb }, [x; y] -> E.FP.ge ~eb ~sb (mk x) (mk y)
-            | Gt { e = eb; s = sb }, [x; y] -> E.FP.gt ~eb ~sb (mk x) (mk y)
-            | Eq { e = eb; s = sb }, [x; y] -> E.FP.eq ~eb ~sb (mk x) (mk y)
-            (* predicates *)
-            | IsNormal { e = eb; s = sb }, [x] -> E.FP.is_normal ~eb ~sb (mk x)
-            | IsSubnormal { e = eb; s = sb }, [x] ->
-              E.FP.is_subnormal ~eb ~sb (mk x)
-            | IsZero { e = eb; s = sb }, [x] -> E.FP.is_zero ~eb ~sb (mk x)
-            | IsInfinite { e = eb; s = sb }, [x] ->
-              E.FP.is_infinite ~eb ~sb (mk x)
-            | IsNaN { e = eb; s = sb }, [x] -> E.FP.is_nan ~eb ~sb (mk x)
-            | IsNegative { e = eb; s = sb }, [x] ->
-              E.FP.is_negative ~eb ~sb (mk x)
-            | IsPositive { e = eb; s = sb }, [x] ->
-              E.FP.is_positive ~eb ~sb (mk x)
-            (* real conversion *)
-            | To_real { e = eb; s = sb }, [x] -> E.FP.to_real ~eb ~sb (mk x)
-            (* FP <-> FP conversion *)
-            | To_fp { e1 = eb1; s1 = sb1; e2 = eb2; s2 = sb2 }, [mode; x] ->
-              E.FP.to_fp ~eb1 ~sb1 ~eb2 ~sb2 ~mode:(mk mode) (mk x)
-            (* BV <-> FP conversions *)
-            | Of_sbv { m = _; e = eb; s = sb }, [mode; bv] ->
-              E.FP.of_sbv ~eb ~sb ~mode:(mk mode) (mk bv)
-            | Of_ubv { m = _; e = eb; s = sb }, [mode; bv] ->
-              E.FP.of_ubv ~eb ~sb ~mode:(mk mode) (mk bv)
-            | To_ubv { m = n; e = eb; s = sb }, [mode; x] ->
-              E.FP.to_ubv ~n ~eb ~sb ~mode:(mk mode) (mk x)
-            | To_sbv { m = n; e = eb; s = sb }, [mode; x] ->
-              E.FP.to_sbv ~n ~eb ~sb ~mode:(mk mode) (mk x)
-            (* can't be applied *)
-            | (RoundingMode | T _ | Fp _), _
-            | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _
-                | Minus_zero _ | NaN _ ),
-                _ )
-            | RM _, _
-            (* wrong arity *)
-            | ( ( Ieee_format_to_fp _ | To_fp _ | Of_sbv _ | Of_ubv _ | To_ubv _
-                | To_sbv _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
-                | RoundToIntegral _ | Of_real _ | Abs _ | Neg _ | Rem _ | Min _
-                | Max _ | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _
-                | IsSubnormal _ | IsZero _ | IsInfinite _ | IsNaN _
-                | IsNegative _ | IsPositive _ | To_real _ ),
-                _ ) ->
-              invalid_app_term ()
-          end
+          | Fp { e = eb; s = sb }, [sign; biased_exp; mantissa] ->
+            E.FP.fp ~eb ~sb (mk sign) (mk biased_exp) (mk mantissa)
+          | Ieee_format_to_fp { e = eb; s = sb }, [bv] ->
+            E.FP.ieee_format_to_fp ~eb ~sb (mk bv)
+          (* arithmetic with rounding mode *)
+          | Add { e = eb; s = sb }, [mode; x; y] ->
+            E.FP.add ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+          | Sub { e = eb; s = sb }, [mode; x; y] ->
+            E.FP.sub ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+          | Mul { e = eb; s = sb }, [mode; x; y] ->
+            E.FP.mul ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+          | Div { e = eb; s = sb }, [mode; x; y] ->
+            E.FP.div ~eb ~sb ~mode:(mk mode) (mk x) (mk y)
+          | Fma { e = eb; s = sb }, [mode; x; y; z] ->
+            E.FP.fma ~eb ~sb ~mode:(mk mode) (mk x) (mk y) (mk z)
+          | Sqrt { e = eb; s = sb }, [mode; x] ->
+            E.FP.sqrt ~eb ~sb ~mode:(mk mode) (mk x)
+          | RoundToIntegral { e = eb; s = sb }, [mode; x] ->
+            E.FP.round_to_integral ~eb ~sb ~mode:(mk mode) (mk x)
+          | Of_real { e = eb; s = sb }, [mode; x] ->
+            E.FP.of_real ~eb ~sb ~mode:(mk mode) (mk x)
+          (* arithmetic without rounding mode *)
+          | Abs { e = eb; s = sb }, [x] -> E.FP.abs ~eb ~sb (mk x)
+          | Neg { e = eb; s = sb }, [x] -> E.FP.neg ~eb ~sb (mk x)
+          | Rem { e = eb; s = sb }, [x; y] -> E.FP.rem ~eb ~sb (mk x) (mk y)
+          | Min { e = eb; s = sb }, [x; y] -> E.FP.min ~eb ~sb (mk x) (mk y)
+          | Max { e = eb; s = sb }, [x; y] -> E.FP.max ~eb ~sb (mk x) (mk y)
+          (* comparisons *)
+          | Leq { e = eb; s = sb }, [x; y] -> E.FP.le ~eb ~sb (mk x) (mk y)
+          | Lt { e = eb; s = sb }, [x; y] -> E.FP.lt ~eb ~sb (mk x) (mk y)
+          | Geq { e = eb; s = sb }, [x; y] -> E.FP.ge ~eb ~sb (mk x) (mk y)
+          | Gt { e = eb; s = sb }, [x; y] -> E.FP.gt ~eb ~sb (mk x) (mk y)
+          | Eq { e = eb; s = sb }, [x; y] -> E.FP.eq ~eb ~sb (mk x) (mk y)
+          (* predicates *)
+          | IsNormal { e = eb; s = sb }, [x] -> E.FP.is_normal ~eb ~sb (mk x)
+          | IsSubnormal { e = eb; s = sb }, [x] ->
+            E.FP.is_subnormal ~eb ~sb (mk x)
+          | IsZero { e = eb; s = sb }, [x] -> E.FP.is_zero ~eb ~sb (mk x)
+          | IsInfinite { e = eb; s = sb }, [x] ->
+            E.FP.is_infinite ~eb ~sb (mk x)
+          | IsNaN { e = eb; s = sb }, [x] -> E.FP.is_nan ~eb ~sb (mk x)
+          | IsNegative { e = eb; s = sb }, [x] ->
+            E.FP.is_negative ~eb ~sb (mk x)
+          | IsPositive { e = eb; s = sb }, [x] ->
+            E.FP.is_positive ~eb ~sb (mk x)
+          (* real conversion *)
+          | To_real { e = eb; s = sb }, [x] -> E.FP.to_real ~eb ~sb (mk x)
+          (* FP <-> FP conversion *)
+          | To_fp { e1 = eb1; s1 = sb1; e2 = eb2; s2 = sb2 }, [mode; x] ->
+            E.FP.to_fp ~eb1 ~sb1 ~eb2 ~sb2 ~mode:(mk mode) (mk x)
+          (* BV <-> FP conversions *)
+          | Of_sbv { m = _; e = eb; s = sb }, [mode; bv] ->
+            E.FP.of_sbv ~eb ~sb ~mode:(mk mode) (mk bv)
+          | Of_ubv { m = _; e = eb; s = sb }, [mode; bv] ->
+            E.FP.of_ubv ~eb ~sb ~mode:(mk mode) (mk bv)
+          | To_ubv { m = n; e = eb; s = sb }, [mode; x] ->
+            E.FP.to_ubv ~n ~eb ~sb ~mode:(mk mode) (mk x)
+          | To_sbv { m = n; e = eb; s = sb }, [mode; x] ->
+            E.FP.to_sbv ~n ~eb ~sb ~mode:(mk mode) (mk x)
           (* can't be applied *)
           | (RoundingMode | T _ | Fp _), _
           | ( ( Plus_infinity _ | Minus_infinity _ | Plus_zero _ | Minus_zero _
@@ -1310,17 +1294,16 @@ let rec mk_expr ?(loc = Loc.dummy) ?(name_base = "") ?(prenex = false)
               _ )
           (* rounding modes are now matched as literals since we use the SMT-LIB
              FP theory ones provided by dolmen *)
-          | RM _, _ ->
-            invalid_app_term ()
-          (* not supported without [Options.get_smt_lib_fpa ()] *)
-          | ( ( Abs _ | Neg _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
-              | Rem _ | RoundToIntegral _ | Min _ | Max _ | Leq _ | Lt _ | Geq _
-              | Gt _ | Eq _ | IsNormal _ | IsSubnormal _ | IsZero _
-              | IsInfinite _ | IsNaN _ | IsNegative _ | IsPositive _
-              | Ieee_format_to_fp _ | To_fp _ | Of_real _ | Of_sbv _ | Of_ubv _
-              | To_ubv _ | To_sbv _ | To_real _ ),
+          | RM _, _
+          (* wrong arity *)
+          | ( ( Ieee_format_to_fp _ | To_fp _ | Of_sbv _ | Of_ubv _ | To_ubv _
+              | To_sbv _ | Add _ | Sub _ | Mul _ | Div _ | Fma _ | Sqrt _
+              | RoundToIntegral _ | Of_real _ | Abs _ | Neg _ | Rem _ | Min _
+              | Max _ | Leq _ | Lt _ | Geq _ | Gt _ | Eq _ | IsNormal _
+              | IsSubnormal _ | IsZero _ | IsInfinite _ | IsNaN _ | IsNegative _
+              | IsPositive _ | To_real _ ),
               _ ) ->
-            unsupported_app_term ())
+            invalid_app_term ())
         (* Semantic triggers *)
         | B.Semantic_trigger, [trigger] ->
           (* Interval triggers contain a let-bound variable that represent the

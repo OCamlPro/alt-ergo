@@ -943,7 +943,8 @@ val get_no_fm : unit -> bool
 (** Default to [false] *)
 
 (** [true] if support for the SMT-LIB floating-point arithmetic (FPA) theory is
-    enabled. *)
+    enabled. It is enabled when an SMT-LIB FPA type or symbol is first
+    translated. *)
 val get_smt_lib_fpa : unit -> bool
 (** Default to [false] *)
 
