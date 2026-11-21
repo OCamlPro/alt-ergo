@@ -46,6 +46,11 @@ val mk_fp_literal :
     exponent width, and [sb] is the significand width (including the hidden
     bit). *)
 
+val to_bits : eb:int -> sb:int -> t -> (bool * int * Z.t) option
+(** [to_bits ~eb ~sb v] is [(sign, biased_exp, mantissa)], the IEEE 754 fields
+    of [v], without the hidden bit. [None] for NaN, which has several bit
+    patterns. *)
+
 val max_finite_q : eb:int -> sb:int -> Numbers.Q.t
 (** [max_finite_q ~eb ~sb] is the largest finite value of the format [(eb, sb)].
 *)
