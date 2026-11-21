@@ -1770,11 +1770,14 @@ let class_clauses x =
   (* [is_normal] and [is_subnormal] are left out for now, they would bring the
      [normal_definition] of every float, and thus its [to_real], into
      arithmetic. *)
-  let classes = [is_nan; is_infinite; is_finite] in
+  (* The SAT solver tries the literals of a clause in order: finite and signed
+     values first give better models, e.g. not an infinity for a float whose
+     [to_real] is constrained. *)
+  let classes = [is_finite; is_infinite; is_nan] in
   List.map mk_clause
     ((classes :: at_most_one classes)
     @ [ [E.neg is_zero; is_finite];
-        [is_nan; is_positive; is_negative];
+        [is_positive; is_negative; is_nan];
         [E.neg is_positive; E.neg is_negative];
         [E.neg is_nan; E.neg is_positive];
         [E.neg is_nan; E.neg is_negative];
@@ -2123,7 +2126,132 @@ let assume env uf _la =
 
 let query _ _ _ = Th_util.Unknown
 
-let case_split _env _uf ~for_model:_ = []
+let rne = Dolmen.Std.Builtin.Float.RoundNearestTiesToEven
+
+(* Class of the value [v] in a format with [eb] exponent bits (see [Cls]). *)
+let cls_of_value ~eb v =
+  match v with
+  | Fp_value.NaN -> Cls.nan
+  | Plus_infinity -> Cls.mk Cls.inf false
+  | Minus_infinity -> Cls.mk Cls.inf true
+  | Plus_zero -> Cls.mk Cls.zero false
+  | Minus_zero -> Cls.mk Cls.zero true
+  | Finite q ->
+    let m = if Fp_value.is_subnormal ~eb v then Cls.sub else Cls.norm in
+    Cls.mk m (Q.sign q < 0)
+
+(* The values given to the floats of format [(eb, sb)] in models when nothing
+   else constrains them, in order of preference, with one value of each class.
+   The integers [+/-2], [+/-3], ... follow, see [model_value]. *)
+let model_values ~eb ~sb =
+  let min_subnormal neg =
+    Fp_value.mk_fp_literal ~neg ~biased_exp:0 ~mantissa:Z.one ~eb ~sb
+  in
+  Fp_value.
+    [ Plus_zero;
+      Minus_zero;
+      Finite Q.one;
+      Finite Q.m_one;
+      min_subnormal false;
+      min_subnormal true;
+      Plus_infinity;
+      Minus_infinity;
+      NaN ]
+
+(* The integers [n] and [-n], for [2 <= n <= 1001], tried after
+   [model_values]. *)
+let max_model_int = 1001
+
+(* [true] if [r] is known to be distinct from the literal [lit_r]. *)
+let is_distinct uf r lit_r =
+  match Uf.union uf r lit_r Ex.empty with
+  | exception Ex.Inconsistent _ -> true
+  | _ -> false
+
+(* A literal for the class [r] of the float [term], consistent with its classes
+   and with the value of [to_real term], and not known to be distinct from [r].
+   If every candidate is known to be distinct, the first one is returned anyway:
+   the conflict makes the search backtrack instead of leaving [r] without a
+   value. [None] if the real value is not assigned yet. *)
+let model_value uf term r =
+  let eb, sb = float_format term in
+  let m, _ = Cls.of_preds uf term in
+  let real_value =
+    let tr = E.FP.to_real ~eb ~sb term in
+    let special = Cls.bit Cls.nan lor Cls.both Cls.inf in
+    if m land lnot special = 0 || not (Uf.mem uf tr)
+    then Some []
+    else
+      real_value_of_repr (fst (Uf.find uf tr))
+      |> Option.map (fun q ->
+          let neg_zero = Option.is_some (Pred.is uf term Negative true) in
+          [Fp_value.of_q ~neg_zero ~eb ~sb rne q])
+  in
+  Option.bind real_value (fun vs ->
+      let lit v = fst (X.make (E.float v eb sb)) in
+      (* [v] is a value of [(eb, sb)] in one of the classes of [term]. *)
+      let fits v =
+        (match v with
+          | Fp_value.Finite q -> Fp_value.equal v (Fp_value.of_q ~eb ~sb rne q)
+          | NaN | Plus_infinity | Minus_infinity | Plus_zero | Minus_zero ->
+            true)
+        && m land Cls.bit (cls_of_value ~eb v) <> 0
+      in
+      let possible v = fits v && not (is_distinct uf r (lit v)) in
+      let values = vs @ model_values ~eb ~sb in
+      let rec ints n =
+        if n > max_model_int
+        then None
+        else
+          let i = Fp_value.Finite (Q.from_int n) in
+          let mi = Fp_value.Finite (Q.from_int (-n)) in
+          if possible i
+          then Some i
+          else if possible mi
+          then Some mi
+          else ints (n + 1)
+      in
+      let v =
+        match List.find_opt possible values with
+        | Some _ as v -> v
+        | None -> (
+          match ints 2 with
+          | Some _ as v -> v
+          | None -> List.find_opt fits values)
+      in
+      Option.map lit v)
+
+(* Model generation assigns a literal to each float, once the reals are
+   assigned. The non-literal floats are the float terms of [defs]. *)
+let case_split env uf ~for_model =
+  if not (for_model && Options.get_smt_lib_fpa ())
+  then []
+  else
+    let split =
+      E.Set.fold
+        (fun term acc ->
+          match acc, E.type_info term with
+          | None, Ty.Tfloat _ ->
+            let r, _ = Uf.find uf term in
+            if X.is_constant r
+            then None
+            else
+              Option.map
+                (fun lit_r -> Uf.LX.mkv_eq r lit_r)
+                (model_value uf term r)
+          | _ -> acc)
+        env.defs None
+    in
+    match split with
+    | Some eq ->
+      if Options.get_debug_fpa () > 0
+      then
+        Printer.print_dbg ~module_name:"Fpa_rel" ~function_name:"case_split"
+          "%a"
+          (Xliteral.print_view X.print)
+          eq;
+      [eq, true, Th_util.CS (Th_util.Th_UF, Q.one)]
+    | None -> []
 
 let optimizing_objective _env _uf _o = None
 
